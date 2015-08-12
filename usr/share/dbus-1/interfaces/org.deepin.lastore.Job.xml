@@ -1,0 +1,55 @@
+<node>
+    <interface name="org.deepin.lastore.Job">
+	<annotation name="org.deepin.DBus.configuration.DefaultServiceName" value="org.deepin.lastore"/>
+	<annotation name="org.deepin.DBus.configuration.DefaultObjectPath" value="/org/deepin/lastore/Job"/>
+	<signal name="Notify">
+	    <arg type="i"></arg>
+	</signal>
+	<property name="Id" type="s" access="read"></property>
+	<property name="Type" type="s" access="read"></property>
+	<property name="PackageId" type="s" access="read"></property>
+	<property name="Status" type="s" access="read"></property>
+	<property name="Progress" type="d" access="read"></property>
+	<property name="Description" type="s" access="read"></property>
+	<property name="ElapsedTime" type="i" access="read"></property>
+    </interface>
+    <interface name="org.freedesktop.DBus.Introspectable">
+	<method name="InterfaceName">
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="Introspect">
+	    <arg type="s" direction="out"></arg>
+	</method>
+    </interface>
+    <interface name="org.freedesktop.DBus.Properties">
+	<method name="Get">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="s" direction="in"></arg>
+	    <arg type="v" direction="out"></arg>
+	</method>
+	<method name="GetAll">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="a{sv}" direction="out"></arg>
+	</method>
+	<method name="InterfaceName">
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="Set">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="s" direction="in"></arg>
+	    <arg type="v" direction="in"></arg>
+	</method>
+	<signal name="PropertiesChanged">
+	    <arg type="s"></arg>
+	    <arg type="a{sv}"></arg>
+	    <arg type="as"></arg>
+	</signal>
+    </interface>
+    <interface name="com.deepin.DBus.LifeManager">
+	<method name="InterfaceName">
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="Ref"></method>
+	<method name="Unref"></method>
+    </interface>
+</node>

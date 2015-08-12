@@ -1,0 +1,85 @@
+<node>
+    <interface name="org.deepin.lastore.Manager">
+	<annotation name="org.deepin.DBus.configuration.DefaultServiceName" value="org.deepin.lastore"/>
+	<annotation name="org.deepin.DBus.configuration.DefaultObjectPath" value="/org/deepin/lastore"/>
+	<method name="CheckPackageExists">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="b" direction="out"></arg>
+	</method>
+	<method name="CleanJob2">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="b" direction="out"></arg>
+	</method>
+	<method name="DownloadPackages">
+	    <arg type="as" direction="in"></arg>
+	    <arg type="o" direction="out"></arg>
+	</method>
+	<method name="GetPackageCategory1">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="GetPackageDesktopPath1">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="InstallPackages">
+	    <arg type="as" direction="in"></arg>
+	    <arg type="o" direction="out"></arg>
+	</method>
+	<method name="PauseJob2">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="b" direction="out"></arg>
+	</method>
+	<method name="RemovePackages">
+	    <arg type="as" direction="in"></arg>
+	    <arg type="o" direction="out"></arg>
+	</method>
+	<method name="StartJob">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="b" direction="out"></arg>
+	</method>
+	<property name="Version" type="s" access="read"></property>
+	<property name="CacheDir" type="s" access="read"></property>
+	<property name="JobList" type="ao" access="read"></property>
+    </interface>
+    <interface name="org.freedesktop.DBus.Introspectable">
+	<method name="InterfaceName">
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="Introspect">
+	    <arg type="s" direction="out"></arg>
+	</method>
+    </interface>
+    <interface name="org.freedesktop.DBus.Properties">
+	<method name="Get">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="s" direction="in"></arg>
+	    <arg type="v" direction="out"></arg>
+	</method>
+	<method name="GetAll">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="a{sv}" direction="out"></arg>
+	</method>
+	<method name="InterfaceName">
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="Set">
+	    <arg type="s" direction="in"></arg>
+	    <arg type="s" direction="in"></arg>
+	    <arg type="v" direction="in"></arg>
+	</method>
+	<signal name="PropertiesChanged">
+	    <arg type="s"></arg>
+	    <arg type="a{sv}"></arg>
+	    <arg type="as"></arg>
+	</signal>
+    </interface>
+    <interface name="com.deepin.DBus.LifeManager">
+	<method name="InterfaceName">
+	    <arg type="s" direction="out"></arg>
+	</method>
+	<method name="Ref"></method>
+	<method name="Unref"></method>
+    </interface>
+    <node name="Job1"></node>
+</node>
