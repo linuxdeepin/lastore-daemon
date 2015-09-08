@@ -6,7 +6,7 @@
 	    <arg type="s" direction="in"></arg>
 	    <arg type="b" direction="out"></arg>
 	</method>
-	<method name="CleanJob2">
+	<method name="CleanJob">
 	    <arg type="s" direction="in"></arg>
 	</method>
 	<method name="DownloadPackages">

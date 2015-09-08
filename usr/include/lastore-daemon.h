@@ -424,10 +424,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	void CleanJob2 (QString arg0) {
+	void CleanJob (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob2"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob"), argumentList);
 	}
 	
 

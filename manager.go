@@ -2,7 +2,9 @@ package main
 
 import (
 	"./system"
+	"fmt"
 	"pkg.deepin.io/lib/dbus"
+	"sort"
 )
 
 const (
@@ -60,10 +62,6 @@ func (m *Manager) findJob(id string) *Job {
 	return nil
 }
 
-func (m *Manager) addJob(j *Job) {
-	m.JobList = append(m.JobList, j)
-	dbus.NotifyChange(m, "JobList")
-}
 func (m *Manager) InstallPackages(packageId string) (*Job, error) {
 	j, err := NewInstallJob(packageId)
 	if err != nil {
@@ -102,8 +100,19 @@ func (m *Manager) StartJob(jobId string) error {
 func (m *Manager) PauseJob2(jobId string) error {
 	return m.b.Pause(jobId)
 }
-func (m *Manager) CleanJob2(jobId string) error {
-	return system.NotImplementError
+
+func (m *Manager) CleanJob(jobId string) error {
+	j := m.findJob(jobId)
+	if j == nil {
+		return system.NotFoundError
+	}
+	if j.Status == system.FailedStatus || j.Status == system.SuccessedStatus {
+		if m.removeJobById(jobId) {
+			return nil
+		}
+		return fmt.Errorf("Couldn't found the job by %q", jobId)
+	}
+	return fmt.Errorf("Failed CleanJob.")
 }
 
 func (m *Manager) GetDBusInfo() dbus.DBusInfo {
@@ -129,4 +138,27 @@ func GetPackageDesktopPath(pid string) string {
 }
 func GetPackageCategory(pid string) string {
 	return "others"
+}
+
+func (m *Manager) removeJobById(id string) bool {
+	index := -1
+	for i, job := range m.JobList {
+		if job.Id == id {
+			index = i
+		}
+	}
+	if index == -1 {
+		return false
+	}
+	dbus.UnInstallObject(m.JobList[index])
+	m.JobList = append(m.JobList[0:index], m.JobList[index+1:]...)
+	sort.Sort(JobList(m.JobList))
+	dbus.NotifyChange(m, "JobList")
+	return true
+}
+
+func (m *Manager) addJob(j *Job) {
+	m.JobList = append(m.JobList, j)
+	sort.Sort(JobList(m.JobList))
+	dbus.NotifyChange(m, "JobList")
 }

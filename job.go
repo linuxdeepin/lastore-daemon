@@ -5,6 +5,7 @@ import (
 	"log"
 	"pkg.deepin.io/lib/dbus"
 	"strconv"
+	"time"
 )
 
 var jobId = func() func() string {
@@ -17,11 +18,25 @@ var jobId = func() func() string {
 
 var __jobIdCounter = 1
 
+type JobList []*Job
+
+func (l JobList) Len() int {
+	return len(l)
+}
+func (l JobList) Less(i, j int) bool {
+	return l[i].CreateTime < l[j].CreateTime
+}
+
+func (l JobList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
 type Job struct {
 	next *Job
 
-	Id        string
-	PackageId string
+	Id         string
+	PackageId  string
+	CreateTime int64
 
 	Type string
 
@@ -45,6 +60,7 @@ func (j *Job) GetDBusInfo() dbus.DBusInfo {
 func NewDownloadJob(packageId string, dest string) (*Job, error) {
 	j := &Job{
 		Id:          jobId(),
+		CreateTime:  time.Now().UnixNano(),
 		Type:        DownloadJobType,
 		PackageId:   packageId,
 		Status:      string(system.ReadyStatus),
@@ -58,6 +74,7 @@ func NewInstallJob(packageId string) (*Job, error) {
 	id := jobId()
 	var next = &Job{
 		Id:          id,
+		CreateTime:  time.Now().UnixNano(),
 		Type:        InstallJobType,
 		PackageId:   packageId,
 		Status:      string(system.ReadyStatus),
@@ -67,6 +84,7 @@ func NewInstallJob(packageId string) (*Job, error) {
 
 	j := &Job{
 		Id:          id,
+		CreateTime:  time.Now().UnixNano(),
 		Type:        DownloadJobType,
 		PackageId:   packageId,
 		Status:      string(system.ReadyStatus),
@@ -81,6 +99,7 @@ func NewInstallJob(packageId string) (*Job, error) {
 func NewRemoveJob(packageId string) (*Job, error) {
 	j := &Job{
 		Id:          jobId(),
+		CreateTime:  time.Now().UnixNano(),
 		Type:        RemoveJobType,
 		PackageId:   packageId,
 		Status:      string(system.ReadyStatus),

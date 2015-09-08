@@ -8,18 +8,11 @@ import (
 )
 
 func main() {
+	os.MkdirAll("/dev/shm/cache/archives", 0755)
 	b := apt.NewAPTProxy()
 	m := NewManager(b)
-	dbus.InstallOnSystem(m)
 
-	os.MkdirAll("/dev/shm/cache/archives", 0755)
-	j, err := m.InstallPackages("google-chrome-stable")
-	if err != nil {
-		panic(err)
-	}
-	dbus.InstallOnSystem(j)
-
-	err = m.StartJob(j.Id)
+	err := dbus.InstallOnSystem(m)
 	if err != nil {
 		log.Fatal("StartFailed:", err)
 		return
