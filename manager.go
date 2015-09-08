@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"./system"
 	"pkg.deepin.io/lib/dbus"
 )
@@ -39,55 +37,73 @@ func NewManager(b system.System) *Manager {
 	return m
 }
 
-func (m *Manager) update(jobId string, progress float64, desc string, status system.Status) {
-	for _, j := range m.JobList {
-		if j.Id == jobId {
-			if progress != -1 {
-				j.Progress = progress
-			}
-			j.Description = desc
-			j.Status = string(status)
-			log.Printf("JobId: %q(%q)  ----> progress:%f ----> msg:%q, status:%q\n", jobId, j.PackageId, progress, desc, j.Status)
-			dbus.NotifyChange(j, "Progress")
-			dbus.NotifyChange(j, "Description")
-			dbus.NotifyChange(j, "Status")
+func (m *Manager) update(info system.ProgressInfo) {
+	j := m.findJob(info.JobId)
+	if j == nil {
 
-		}
+		return
+	}
+
+	j.updateInfo(info)
+	if j.Status == system.SuccessedStatus && j.next != nil {
+		j.swap(j.next)
+		j.next = nil
 	}
 }
 
-func (m *Manager) InstallPackages(packages []string) *Job {
-	j, _ := NewInstallJob(packages[0], "/dev/shm/cache")
-	id := m.b.Install(packages)
-	j.Id = id
-	m.JobList = append(m.JobList, j)
-	return j
+func (m *Manager) findJob(id string) *Job {
+	for _, j := range m.JobList {
+		if j.Id == id {
+			return j
+		}
+	}
+	return nil
 }
 
-func (m *Manager) DownloadPackages(packages []string) *Job {
-	j, _ := NewDownloadJob(packages[0], "/dev/shm/cache")
-	id := m.b.Download(packages)
-	j.Id = id
+func (m *Manager) addJob(j *Job) {
 	m.JobList = append(m.JobList, j)
-	return j
+	dbus.NotifyChange(m, "JobList")
 }
-func (m *Manager) RemovePackages(packages []string) *Job {
-	j, _ := NewRemoveJob(packages[0])
-	id := m.b.Remove(packages)
-	j.Id = id
-	m.JobList = append(m.JobList, j)
-	return j
+func (m *Manager) InstallPackages(packageId string) (*Job, error) {
+	j, err := NewInstallJob(packageId)
+	if err != nil {
+		return nil, err
+	}
+	m.addJob(j)
+	return j, nil
 }
 
-func (m *Manager) StartJob(jobId string) bool {
-	r := m.b.Start(jobId)
-	return r
+func (m *Manager) DownloadPackages(packageId string) (*Job, error) {
+	j, err := NewDownloadJob(packageId, "/dev/shm/cache")
+	if err != nil {
+		return nil, err
+	}
+	m.addJob(j)
+	return j, nil
 }
-func (m *Manager) PauseJob2(jobId string) bool {
+func (m *Manager) RemovePackages(packageId string) (*Job, error) {
+	j, err := NewRemoveJob(packageId)
+	if err != nil {
+		return nil, err
+	}
+	m.addJob(j)
+	return j, nil
+}
+
+func (m *Manager) StartJob(jobId string) error {
+	//TODO: handled by Job
+	j := m.findJob(jobId)
+	if j == nil {
+		return system.NotFoundError
+	}
+	return j.start(m.b)
+}
+
+func (m *Manager) PauseJob2(jobId string) error {
 	return m.b.Pause(jobId)
 }
-func (m *Manager) CleanJob2(jobId string) bool {
-	return false
+func (m *Manager) CleanJob2(jobId string) error {
+	return system.NotImplementError
 }
 
 func (m *Manager) GetDBusInfo() dbus.DBusInfo {
@@ -99,7 +115,7 @@ func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 }
 
 func (m *Manager) CheckPackageExists(pid string) bool {
-	return m.b.CheckPackageExists(pid)
+	return m.b.CheckInstalled(pid)
 }
 func (m *Manager) GetPackageDesktopPath1(pid string) string {
 	return GetPackageDesktopPath(pid)

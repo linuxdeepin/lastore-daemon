@@ -253,10 +253,6 @@ void DBusObject::propertyChanged(const QDBusMessage& msg)
 
 	typedef QList<QDBusObjectPath > ao;
 
-	typedef QStringList  as;
-
-	typedef QMap<QString, QDBusVariant > e_sv_;
-
 
 
 	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::ao& v)
@@ -280,70 +276,16 @@ argument.endArray();
 return argument;
 
 	} 
-	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::as& v)
-	{
-		argument.beginArray(getTypeId("s"));
-for (int i=0; i < v.size(); ++i)
-    argument << v.at(i);
-argument.endArray();
-return argument;
-
-	}
-	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::as& v)
-	{
-		argument.beginArray();
-while (!argument.atEnd()) {
-    QString ele;
-    argument >> ele;
-    v.append(ele);
-}
-argument.endArray();
-return argument;
-
-	} 
-	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::e_sv_& v)
-	{
-		argument.beginMap(getTypeId("s"), getTypeId("v"));
-QList<QString > keys;
-for (int i=0; i < keys.size(); ++i) {
-    argument.beginMapEntry();
-    argument << keys[i] << v[keys[i]];
-    argument.endMapEntry();
-}
-argument.endMap();
-return argument;
-
-	}
-	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::e_sv_& v)
-	{
-		argument.beginMap();
-v.clear();
-while (!argument.atEnd()) {
-    QString key;
-    QDBusVariant value;
-    argument.beginMapEntry();
-    argument >> key >> value;
-    argument.endMapEntry();
-    v.insert(key, value);
-}
-argument.endMap();
-return argument;
-
-	} 
 
 	inline int getTypeId(const QString& s) {
 	if (0) { 
 	}  else if (s == "ao") {
 		return qDBusRegisterMetaType<dbus::types::ao>();
-	} else if (s == "as") {
-		return qDBusRegisterMetaType<dbus::types::as>();
-	} else if (s == "a{sv}") {
-		return qDBusRegisterMetaType<dbus::types::e_sv_>();
 	}
 	}
 
 	}
-namespace objects {
+	namespace objects {
 		
 namespace org {namespace deepin {namespace lastore {
 
@@ -371,15 +313,15 @@ class Job : public dbus::common::DBusObject
 		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
 	}
 	
-	Q_PROPERTY(dbus::common::R<QString > Type READ type NOTIFY typeChanged)
-	dbus::common::R<QString > type () {
-		QDBusPendingReply<> call = fetchProperty("Type");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
 	Q_PROPERTY(dbus::common::R<QString > PackageId READ packageId NOTIFY packageIdChanged)
 	dbus::common::R<QString > packageId () {
 		QDBusPendingReply<> call = fetchProperty("PackageId");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > Type READ type NOTIFY typeChanged)
+	dbus::common::R<QString > type () {
+		QDBusPendingReply<> call = fetchProperty("Type");
 		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
 	}
 	
@@ -418,206 +360,12 @@ class Job : public dbus::common::DBusObject
 
 	
 	void idChanged (); 
-	void typeChanged (); 
 	void packageIdChanged (); 
+	void typeChanged (); 
 	void statusChanged (); 
 	void progressChanged (); 
 	void descriptionChanged (); 
 	void elapsedTimeChanged (); 
-
-};
-}}}
-
-namespace org {namespace freedesktop {namespace dBus {
-
-class Introspectable : public dbus::common::DBusObject
-{
-	Q_OBJECT
-	private:
-	static const char *defaultService() { return "org.freedesktop.DBus.Introspectable";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/freedesktop/DBus/Introspectable");}
-	public:
-        Introspectable(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "org.freedesktop.DBus.Introspectable", addr)
-        {
-        }
-	Introspectable(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "org.freedesktop.DBus.Introspectable", addr)
-	{
-	}
-	~Introspectable(){}
-
-	
-
-
-	
-	
-	
-	dbus::common::R<QString> InterfaceName () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InterfaceName"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QString> Introspect () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("Introspect"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-
-	Q_SIGNALS:
-	
-
-	
-
-};
-}}}
-
-namespace org {namespace freedesktop {namespace dBus {
-
-class Properties : public dbus::common::DBusObject
-{
-	Q_OBJECT
-	private:
-	static const char *defaultService() { return "org.freedesktop.DBus.Properties";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/freedesktop/DBus/Properties");}
-	public:
-        Properties(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "org.freedesktop.DBus.Properties", addr)
-        {
-        }
-	Properties(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "org.freedesktop.DBus.Properties", addr)
-	{
-	}
-	~Properties(){}
-
-	
-
-
-	
-	
-	
-	dbus::common::R<QDBusVariant> Get (QString arg0, QString arg1) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0) << QVariant::fromValue(arg1);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("Get"), argumentList);
-		return dbus::common::R<QDBusVariant>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<dbus::types::e_sv_> GetAll (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("GetAll"), argumentList);
-		return dbus::common::R<dbus::types::e_sv_>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QString> InterfaceName () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InterfaceName"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
-	void Set (QString arg0, QString arg1, QDBusVariant arg2) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0) << QVariant::fromValue(arg1) << QVariant::fromValue(arg2);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("Set"), argumentList);
-	}
-	
-
-	
-
-	Q_SIGNALS:
-	
-	void PropertiesChanged(QString arg0, dbus::types::e_sv_ arg1, dbus::types::as arg2); 
-	
-
-	
-
-};
-}}}
-
-namespace com {namespace deepin {namespace dBus {
-
-class LifeManager : public dbus::common::DBusObject
-{
-	Q_OBJECT
-	private:
-	static const char *defaultService() { return "com.deepin.DBus.LifeManager";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/com/deepin/DBus/LifeManager");}
-	public:
-        LifeManager(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "com.deepin.DBus.LifeManager", addr)
-        {
-        }
-	LifeManager(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "com.deepin.DBus.LifeManager", addr)
-	{
-	}
-	~LifeManager(){}
-
-	
-
-
-	
-	
-	
-	dbus::common::R<QString> InterfaceName () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InterfaceName"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
-	void Ref () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("Ref"), argumentList);
-	}
-	
-
-	
-	
-	
-	void Unref () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("Unref"), argumentList);
-	}
-	
-
-	
-
-	Q_SIGNALS:
-	
-
-	
 
 };
 }}}
@@ -676,18 +424,17 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<bool> CleanJob2 (QString arg0) {
+	void CleanJob2 (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob2"), argumentList);
-		return dbus::common::R<bool>(call);
 	}
 	
 
 	
 	
 	
-	dbus::common::R<QDBusObjectPath> DownloadPackages (dbus::types::as arg0) {
+	dbus::common::R<QDBusObjectPath> DownloadPackages (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DownloadPackages"), argumentList);
@@ -720,7 +467,7 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QDBusObjectPath> InstallPackages (dbus::types::as arg0) {
+	dbus::common::R<QDBusObjectPath> InstallPackages (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InstallPackages"), argumentList);
@@ -731,18 +478,17 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<bool> PauseJob2 (QString arg0) {
+	void PauseJob2 (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob2"), argumentList);
-		return dbus::common::R<bool>(call);
 	}
 	
 
 	
 	
 	
-	dbus::common::R<QDBusObjectPath> RemovePackages (dbus::types::as arg0) {
+	dbus::common::R<QDBusObjectPath> RemovePackages (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackages"), argumentList);
@@ -753,11 +499,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<bool> StartJob (QString arg0) {
+	void StartJob (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("StartJob"), argumentList);
-		return dbus::common::R<bool>(call);
 	}
 	
 
@@ -774,11 +519,9 @@ class Manager : public dbus::common::DBusObject
 };
 }}}
 
-}
+	}
 }
 
 Q_DECLARE_METATYPE(dbus::types::ao);
-Q_DECLARE_METATYPE(dbus::types::as);
-Q_DECLARE_METATYPE(dbus::types::e_sv_);
 
 #endif

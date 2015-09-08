@@ -13,10 +13,17 @@ func main() {
 	dbus.InstallOnSystem(m)
 
 	os.MkdirAll("/dev/shm/cache/archives", 0755)
-	j := m.InstallPackages([]string{"google-chrome-stable"})
+	j, err := m.InstallPackages("google-chrome-stable")
+	if err != nil {
+		panic(err)
+	}
 	dbus.InstallOnSystem(j)
-	m.StartJob(j.Id)
 
+	err = m.StartJob(j.Id)
+	if err != nil {
+		log.Fatal("StartFailed:", err)
+		return
+	}
 	if err := dbus.Wait(); err != nil {
 		log.Fatal("DBus Error:", err)
 	}

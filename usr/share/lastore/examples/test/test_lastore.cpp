@@ -12,14 +12,12 @@ void printStatus() {
 }
 void body()
 {
-    Manager* m = new Manager(0, QString("/org/deepin/lastore"), QString("system"));
+    Manager* m = new Manager(QString("system"));
     R<bool >r = m->CheckPackageExists("deepin-movie");
     qDebug() << r.Value<0>() << r.Error();
 
-    QList<QString> ps;
-    ps << "deepin-movie";
-    R<QDBusObjectPath> rpath = m->RemovePackages(ps);
-    j = new Job(0, rpath.Value<0>().path(), QString("system"));
+    R<QDBusObjectPath> rpath = m->RemovePackages("deepin-movie");
+    j = new Job(QString("system"), "org.deepin.lastore", rpath.Value<0>().path());
     m->StartJob(j->id().Value<0>());
 
     j->connect(j, &Job::progressChanged, printStatus);
