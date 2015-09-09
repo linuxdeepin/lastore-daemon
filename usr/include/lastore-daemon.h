@@ -434,10 +434,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QDBusObjectPath> DownloadPackages (QString arg0) {
+	dbus::common::R<QDBusObjectPath> DownloadPackage (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DownloadPackages"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DownloadPackage"), argumentList);
 		return dbus::common::R<QDBusObjectPath>(call);
 	}
 	
@@ -467,10 +467,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QDBusObjectPath> InstallPackages (QString arg0) {
+	dbus::common::R<QDBusObjectPath> InstallPackage (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InstallPackages"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InstallPackage"), argumentList);
 		return dbus::common::R<QDBusObjectPath>(call);
 	}
 	
@@ -488,10 +488,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QDBusObjectPath> RemovePackages (QString arg0) {
+	dbus::common::R<QDBusObjectPath> RemovePackage (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackages"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackage"), argumentList);
 		return dbus::common::R<QDBusObjectPath>(call);
 	}
 	

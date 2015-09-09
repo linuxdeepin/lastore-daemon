@@ -9,7 +9,7 @@
 	<method name="CleanJob">
 	    <arg type="s" direction="in"></arg>
 	</method>
-	<method name="DownloadPackages">
+	<method name="DownloadPackage">
 	    <arg type="s" direction="in"></arg>
 	    <arg type="o" direction="out"></arg>
 	</method>
@@ -21,14 +21,14 @@
 	    <arg type="s" direction="in"></arg>
 	    <arg type="s" direction="out"></arg>
 	</method>
-	<method name="InstallPackages">
+	<method name="InstallPackage">
 	    <arg type="s" direction="in"></arg>
 	    <arg type="o" direction="out"></arg>
 	</method>
 	<method name="PauseJob2">
 	    <arg type="s" direction="in"></arg>
 	</method>
-	<method name="RemovePackages">
+	<method name="RemovePackage">
 	    <arg type="s" direction="in"></arg>
 	    <arg type="o" direction="out"></arg>
 	</method>

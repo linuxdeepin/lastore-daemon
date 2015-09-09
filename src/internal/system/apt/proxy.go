@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"internal/system"
 	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -150,4 +151,12 @@ func (p *APTProxy) CheckInstalled(pid string) bool {
 		return true
 	}
 	return false
+}
+
+func (p *APTProxy) SystemArchitecture() system.Architecture {
+	bs, err := exec.Command("dpkg", "--print-architecture").Output()
+	if err != nil {
+		os.Exit(1)
+	}
+	return system.Architecture(bs)
 }

@@ -22,18 +22,20 @@ const (
 )
 
 type Manager struct {
-	Version  string
-	CacheDir string
-	JobList  []*Job
-	b        system.System
+	Version            string
+	CacheDir           string
+	JobList            []*Job
+	b                  system.System
+	SystemArchitecture system.Architecture
 }
 
 func NewManager(b system.System) *Manager {
 	m := &Manager{
-		Version:  "0.1",
-		CacheDir: "/dev/shm",
-		JobList:  nil,
-		b:        b,
+		Version:            "0.1",
+		CacheDir:           "/dev/shm",
+		JobList:            nil,
+		b:                  b,
+		SystemArchitecture: b.SystemArchitecture(),
 	}
 	b.AttachIndicator(m.update)
 	return m
@@ -62,7 +64,7 @@ func (m *Manager) findJob(id string) *Job {
 	return nil
 }
 
-func (m *Manager) InstallPackages(packageId string) (*Job, error) {
+func (m *Manager) InstallPackage(packageId string) (*Job, error) {
 	j, err := NewInstallJob(packageId)
 	if err != nil {
 		return nil, err
@@ -71,7 +73,7 @@ func (m *Manager) InstallPackages(packageId string) (*Job, error) {
 	return j, nil
 }
 
-func (m *Manager) DownloadPackages(packageId string) (*Job, error) {
+func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
 	j, err := NewDownloadJob(packageId, "/dev/shm/cache")
 	if err != nil {
 		return nil, err
@@ -79,7 +81,7 @@ func (m *Manager) DownloadPackages(packageId string) (*Job, error) {
 	m.addJob(j)
 	return j, nil
 }
-func (m *Manager) RemovePackages(packageId string) (*Job, error) {
+func (m *Manager) RemovePackage(packageId string) (*Job, error) {
 	j, err := NewRemoveJob(packageId)
 	if err != nil {
 		return nil, err

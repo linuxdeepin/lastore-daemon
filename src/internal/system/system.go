@@ -20,6 +20,8 @@ type ProgressInfo struct {
 	Status      Status
 }
 
+type Architecture string
+
 var NotImplementError = errors.New("not implement")
 var NotFoundError = errors.New("not found resource")
 
@@ -36,4 +38,5 @@ type System interface {
 	Pause(jobId string) error
 	Start(jobId string) error
 	AttachIndicator(Indicator)
+	SystemArchitecture() Architecture
 }
