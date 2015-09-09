@@ -2,10 +2,10 @@ all:  build
 
 
 build: 
-	GOPATH=`pwd`/_vendor go build -o lastore-daemon
+	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-daemon lastore-daemon
 
 install:
-	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp lastore-daemon ${DESTDIR}${PREFIX}/usr/bin/
+	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/lastore-daemon ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
 	cp -rf etc ${DESTDIR}${PREFIX}/etc
 
@@ -24,3 +24,6 @@ build-deb:
 upload:
 	scp -r ../lastore-daemon_*.deb snyh@10.0.4.226:/repos/mirror/dev/tmp/
 	ssh snyh@10.0.4.226 'cd /repos/mirror/dev/ && reprepro includedeb unstable tmp/*.deb'
+
+clean:
+	rm -rf bin
