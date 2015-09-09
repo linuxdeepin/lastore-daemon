@@ -43,9 +43,10 @@ func (c aptCommand) Start() {
 		var line string
 		if err != nil {
 			line = "dstatus:" + system.FailedStatus + ":" + err.Error()
+		} else {
+			line = "dstatus:" + system.SuccessedStatus + ":successed"
 		}
-		line = "dstatus:" + system.SuccessedStatus + ":successed"
-		info, err := ParseProgressInfo("", line)
+		info, err := ParseProgressInfo("INDICATOR WILL SET THIS", line)
 		c.indicator(info)
 	}()
 }
