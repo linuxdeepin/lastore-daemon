@@ -3,6 +3,7 @@ package apt
 import (
 	"fmt"
 	"internal/system"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -153,10 +154,19 @@ func (p *APTProxy) CheckInstalled(pid string) bool {
 	return false
 }
 
-func (p *APTProxy) SystemArchitecture() system.Architecture {
-	bs, err := exec.Command("dpkg", "--print-architecture").Output()
+func (p *APTProxy) SystemArchitectures() []system.Architecture {
+	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
 	if err != nil {
+		log.Fatalln("Can't detect system architectures:", err)
 		os.Exit(1)
 	}
-	return system.Architecture(bs)
+	var r []system.Architecture
+	for _, arch := range strings.Split(string(bs), "\n") {
+		i := strings.TrimSpace(arch)
+		if i == "" {
+			continue
+		}
+		r = append(r, system.Architecture(i))
+	}
+	return r
 }

@@ -27,3 +27,4 @@ upload:
 
 clean:
 	rm -rf bin
+	rm ../lastore-daemon_* -rf

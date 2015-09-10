@@ -38,5 +38,5 @@ type System interface {
 	Pause(jobId string) error
 	Start(jobId string) error
 	AttachIndicator(Indicator)
-	SystemArchitecture() Architecture
+	SystemArchitectures() []Architecture
 }

@@ -1,4 +1,4 @@
-lastore-daemon (0.1-6) UNRELEASED; urgency=medium
+lastore-daemon (0.1-8) UNRELEASED; urgency=medium
 
   * package lastore-daemon
   * fix progress value

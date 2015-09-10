@@ -22,20 +22,22 @@ const (
 )
 
 type Manager struct {
-	Version            string
-	CacheDir           string
-	JobList            []*Job
-	b                  system.System
-	SystemArchitecture system.Architecture
+	Version  string
+	cacheDir string
+	JobList  []*Job
+	b        system.System
+
+	// the main architecture
+	SystemArchitectures []system.Architecture
 }
 
 func NewManager(b system.System) *Manager {
 	m := &Manager{
-		Version:            "0.1",
-		CacheDir:           "/dev/shm",
-		JobList:            nil,
-		b:                  b,
-		SystemArchitecture: b.SystemArchitecture(),
+		Version:             "0.1",
+		cacheDir:            "/dev/shm",
+		JobList:             nil,
+		b:                   b,
+		SystemArchitectures: b.SystemArchitectures(),
 	}
 	b.AttachIndicator(m.update)
 	return m
