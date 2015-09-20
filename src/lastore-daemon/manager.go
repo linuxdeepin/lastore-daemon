@@ -127,13 +127,19 @@ func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 	}
 }
 
-func (m *Manager) CheckPackageExists(pid string) bool {
+func (m *Manager) PackageExists(pid string) bool {
 	return m.b.CheckInstalled(pid)
 }
-func (m *Manager) GetPackageDesktopPath1(pid string) string {
+
+func (m *Manager) PackageDownloadSize(pid string) int64 {
+	return int64(GuestPackageDownloadSize(pid))
+}
+
+func (m *Manager) PackageDesktopPath1(pid string) string {
 	return GetPackageDesktopPath(pid)
 }
-func (m *Manager) GetPackageCategory1(pid string) string {
+
+func (m *Manager) PackageCategory1(pid string) string {
 	return GetPackageCategory(pid)
 }
 
