@@ -63,7 +63,7 @@ func newAptCommand(fn func(system.ProgressInfo), options map[string]string, args
 
 	c := aptCommand{
 		indicator: fn,
-		c:         exec.Command("apt-get", args...),
+		c:         exec.Command("/usr/bin/apt-get", args...),
 	}
 	c.c.Stderr = os.Stderr
 	c.c.Stdout = os.Stdout
@@ -88,7 +88,7 @@ func (c aptCommand) update() {
 func ShowFd(pid int) {
 	return
 	log.Println("PID:", pid)
-	out, err := exec.Command("ls", "-lh", fmt.Sprintf("/proc/%d/fd", pid)).Output()
+	out, err := exec.Command("/bin/ls", "-lh", fmt.Sprintf("/proc/%d/fd", pid)).Output()
 	log.Println(string(out), err)
 	log.Println("__ENDPID__________")
 }

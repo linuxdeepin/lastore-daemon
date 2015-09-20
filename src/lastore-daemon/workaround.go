@@ -15,7 +15,7 @@ func GuestPackageDownloadSize(pid string) int {
 	var needle = regexp.MustCompile("Need to get ([0-9,]+) kB of archives")
 	var size = -1
 
-	cmd := exec.Command("apt-get", "install", pid, "-o", "Debug::NoLocking=1", "--assume-no")
+	cmd := exec.Command("/usr/bin/apt-get", "install", pid, "-o", "Debug::NoLocking=1", "--assume-no")
 	r, err := cmd.StdoutPipe()
 	if err != nil {
 		return -1

@@ -12,13 +12,14 @@ void printStatus() {
 }
 void body()
 {
-    Manager* m = new Manager(QString("system"));
-    R<bool >r = m->CheckPackageExists("deepin-movie");
-    qDebug() << r.Value<0>() << r.Error();
+  Manager* m = new Manager(QString("system"));
+  m = new Manager(QString("system"));
+  R<bool >r = m->PackageExists("deepin-movie");
+  qDebug() << r.Value<0>() << r.Error();
 
-    R<QDBusObjectPath> rpath = m->RemovePackages("deepin-movie");
-    j = new Job(QString("system"), "org.deepin.lastore", rpath.Value<0>().path());
-    m->StartJob(j->id().Value<0>());
+  R<QDBusObjectPath> rpath = m->RemovePackage("deepin-movie");
+  j = new Job(QString("system"), "org.deepin.lastore", rpath.Value<0>().path());
+  m->StartJob(j->id().Value<0>());
 
-    j->connect(j, &Job::progressChanged, printStatus);
+  j->connect(j, &Job::progressChanged, printStatus);
 }

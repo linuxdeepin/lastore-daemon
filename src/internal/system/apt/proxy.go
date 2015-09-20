@@ -140,7 +140,7 @@ func (p *APTProxy) Abort(jobId string) error {
 }
 
 func (p *APTProxy) CheckInstalled(pid string) bool {
-	out, err := exec.Command("dpkg-query", "-W", "-f", "${Status}", pid).Output()
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", pid).CombinedOutput()
 	log.Println("CheckExits:", string(out))
 	if err != nil {
 		log.Println("CheckExists E:", pid, err)
