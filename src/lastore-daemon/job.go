@@ -32,7 +32,8 @@ func (l JobList) Swap(i, j int) {
 }
 
 type Job struct {
-	next *Job
+	next   *Job
+	option map[string]string
 
 	Id         string
 	PackageId  string
@@ -57,7 +58,7 @@ func (j *Job) GetDBusInfo() dbus.DBusInfo {
 	}
 }
 
-func NewDownloadJob(packageId string, dest string) (*Job, error) {
+func NewDownloadJob(packageId string, region string) (*Job, error) {
 	j := &Job{
 		Id:          jobId(),
 		CreateTime:  time.Now().UnixNano(),
@@ -66,11 +67,14 @@ func NewDownloadJob(packageId string, dest string) (*Job, error) {
 		Status:      string(system.ReadyStatus),
 		Progress:    .0,
 		ElapsedTime: 0,
+		option: map[string]string{
+			"region": region,
+		},
 	}
 	return j, nil
 }
 
-func NewInstallJob(packageId string) (*Job, error) {
+func NewInstallJob(packageId string, region string) (*Job, error) {
 	id := jobId()
 	var next = &Job{
 		Id:          id,
@@ -91,6 +95,9 @@ func NewInstallJob(packageId string) (*Job, error) {
 		Progress:    .0,
 		ElapsedTime: 0,
 		next:        next,
+		option: map[string]string{
+			"region": region,
+		},
 	}
 
 	return j, nil
@@ -146,7 +153,7 @@ func (j *Job) swap(j2 *Job) {
 func (j *Job) start(sys system.System) error {
 	switch j.Type {
 	case DownloadJobType:
-		err := sys.Download(j.Id, j.PackageId)
+		err := sys.Download(j.Id, j.PackageId, j.option["region"])
 		if err != nil {
 			return err
 		}

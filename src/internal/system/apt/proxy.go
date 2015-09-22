@@ -5,6 +5,7 @@ import (
 	"internal/system"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -69,7 +70,22 @@ func (p *APTProxy) AttachIndicator(f system.Indicator) {
 	p.indicator = f
 }
 
-func (p *APTProxy) Download(jobId string, packageId string) error {
+// workaroundTouch touch the download service of our smart mirror
+// TODO: remove this. We want handle download logical directly in apt-get
+func workaroundTouch(packageId string, region string) {
+	url := fmt.Sprintf("http://download.repository.deepin.test/get/%s?f=%s",
+		packageId, region)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("workaroundTouch :%v\n", err)
+		return
+	}
+	resp.Body.Close()
+}
+
+func (p *APTProxy) Download(jobId string, packageId string, region string) error {
+	go workaroundTouch(packageId, region)
+
 	p.downloadJobs[jobId] = buildDownloadCommand(
 		func(info system.ProgressInfo) {
 			info.JobId = jobId

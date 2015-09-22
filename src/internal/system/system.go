@@ -29,7 +29,7 @@ type Indicator func(ProgressInfo)
 
 type System interface {
 	CheckInstalled(packageId string) bool
-	Download(jobId string, packageId string) error
+	Download(jobId string, packageId string, region string) error
 	Install(jobId string, packageId string) error
 	Remove(jobId string, packageId string) error
 	SystemUpgrade()

@@ -66,8 +66,8 @@ func (m *Manager) findJob(id string) *Job {
 	return nil
 }
 
-func (m *Manager) InstallPackage(packageId string) (*Job, error) {
-	j, err := NewInstallJob(packageId)
+func (m *Manager) InstallPackage(packageId string, region string) (*Job, error) {
+	j, err := NewInstallJob(packageId, region)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,8 @@ func (m *Manager) InstallPackage(packageId string) (*Job, error) {
 	return j, nil
 }
 
-func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
-	j, err := NewDownloadJob(packageId, "/dev/shm/cache")
+func (m *Manager) DownloadPackage(packageId string, region string) (*Job, error) {
+	j, err := NewDownloadJob(packageId, region)
 	if err != nil {
 		return nil, err
 	}
