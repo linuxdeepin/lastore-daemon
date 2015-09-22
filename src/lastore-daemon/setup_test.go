@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	proxy "./dbusproxy"
 	. "github.com/smartystreets/goconvey/convey"
@@ -98,3 +99,4 @@ func TestSetup(t *testing.T) {
 		})
 	})
 }
+*/
