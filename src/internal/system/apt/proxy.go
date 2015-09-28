@@ -62,7 +62,7 @@ func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 		}
 	}
 	return system.ProgressInfo{JobId: id},
-		fmt.Errorf("W: unknow status:", line)
+		fmt.Errorf("W: unknow status:%q", line)
 
 }
 
@@ -73,7 +73,7 @@ func (p *APTProxy) AttachIndicator(f system.Indicator) {
 // workaroundTouch touch the download service of our smart mirror
 // TODO: remove this. We want handle download logical directly in apt-get
 func workaroundTouch(packageId string, region string) {
-	url := fmt.Sprintf("http://download.repository.deepin.test/get/%s?f=%s",
+	url := fmt.Sprintf("http://download.repository.deepin.test/get/i386/%s?f=%s",
 		packageId, region)
 	resp, err := http.Get(url)
 	if err != nil {
