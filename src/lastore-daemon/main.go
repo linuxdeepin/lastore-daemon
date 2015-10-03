@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"internal/system/apt"
 	"log"
 	"os"
@@ -11,21 +12,24 @@ import (
 func main() {
 	os.Setenv("PATH", "/usr/bin/:/bin:/sbin")
 	if !lib.UniqueOnSystem("org.deepin.lastore") {
+		fmt.Println("Can't obtain the org.deepin.lastore")
 		return
 	}
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	os.MkdirAll("/dev/shm/cache/archives", 0755)
-	b := apt.NewAPTProxy()
+	b := apt.New()
 	m := NewManager(b)
 
 	err := dbus.InstallOnSystem(m)
 	if err != nil {
-		log.Fatal("StartFailed:", err)
+		fmt.Println("Start failed:", err)
 		return
 	}
+	fmt.Println("Started service at system bus")
+
 	dbus.DealWithUnhandledMessage()
 
 	if err := dbus.Wait(); err != nil {
-		log.Fatal("DBus Error:", err)
+		fmt.Println("DBus Error:", err)
 	}
 }

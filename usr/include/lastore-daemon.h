@@ -438,10 +438,11 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	void CleanJob (QString arg0) {
+	dbus::common::R<void> CleanJob (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob"), argumentList);
+                return dbus::common::R<void>(call);
 	}
 	
 
@@ -514,10 +515,11 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	void PauseJob2 (QString arg0) {
+	dbus::common::R<void> PauseJob2 (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob2"), argumentList);
+                return dbus::common::R<void>(call);
 	}
 	
 
@@ -535,10 +537,11 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	void StartJob (QString arg0) {
+	dbus::common::R<void> StartJob (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("StartJob"), argumentList);
+                return dbus::common::R<void>(call);
 	}
 	
 

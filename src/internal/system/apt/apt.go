@@ -7,15 +7,84 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 )
 
-type aptCommand struct {
-	c *exec.Cmd
+type CommandSet interface {
+	AddCMD(cmd *aptCommand)
+	RemoveCMD(id string)
+	FindCMD(id string) *aptCommand
+}
 
-	reader *os.File
+func (p *APTSystem) AddCMD(cmd *aptCommand) {
+	if _, ok := p.cmdSet[cmd.OwnerId]; ok {
+		//TODO: log
+		return
+	}
+	p.cmdSet[cmd.OwnerId] = cmd
+}
+func (p *APTSystem) RemoveCMD(id string) {
+	delete(p.cmdSet, id)
+}
+func (p *APTSystem) FindCMD(id string) *aptCommand {
+	return p.cmdSet[id]
+}
+
+type aptCommand struct {
+	OwnerId string
+	Type    string
+
+	cmdSet CommandSet
+
+	osCMD *exec.Cmd
+
+	aptPipe *os.File
 
 	indicator system.Indicator
+
+	log *log.Logger
+}
+
+func newAPTCommand(
+	cmdSet CommandSet,
+	jobId string,
+	cmdType string, fn system.Indicator, packageId string, region string) *aptCommand {
+	options := map[string]string{
+		"APT::Status-Fd": "3",
+	}
+	if region != "" {
+		options["Acquire::SmartMirrors::Region"] = region
+	}
+
+	polices := []string{"-y"}
+	var args []string
+	switch cmdType {
+	case "install":
+		args = append(args, "install", packageId)
+	case "remove":
+		args = append(args, "remove", packageId)
+	case "download":
+		options["Debug::NoLocking"] = "1"
+		args = append(args, "install", "-d", packageId)
+	}
+
+	for k, v := range options {
+		args = append(args, "-o", k+"="+v)
+	}
+	args = append(args, polices...)
+
+	cmd := exec.Command("apt-get", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	ShowFd(os.Getpid())
+
+	r := &aptCommand{
+		OwnerId:   jobId,
+		cmdSet:    cmdSet,
+		indicator: fn,
+		osCMD:     cmd,
+	}
+	cmdSet.AddCMD(r)
+	return r
 }
 
 func (c aptCommand) Start() {
@@ -26,63 +95,49 @@ func (c aptCommand) Start() {
 	}
 	log.Println("Actual FD:", rr.Fd(), ww.Fd(), err)
 	log.Println("Start...", c)
-	c.c.ExtraFiles = append(c.c.ExtraFiles, ww)
-	c.c.Stderr = os.Stderr
-	c.c.Stdout = os.Stdout
-	c.reader = rr
+	c.osCMD.ExtraFiles = append(c.osCMD.ExtraFiles, ww)
+	c.aptPipe = rr
 
-	c.c.Start()
+	c.osCMD.Start()
+	ww.Close()
 
-	go c.update()
-	go func() {
-		err := c.c.Wait()
-		ShowFd(os.Getpid())
-		ww.Close()
-		fmt.Println("----------------Waited..", c.c.Args, err)
-
-		var line string
-		if err != nil {
-			line = "dstatus:" + system.FailedStatus + ":" + err.Error()
-		} else {
-			line = "dstatus:" + system.SuccessedStatus + ":successed"
-		}
-		info, err := ParseProgressInfo("INDICATOR WILL SET THIS", line)
-		c.indicator(info)
-	}()
+	go c.updateProgress()
+	go c.Wait()
 }
 
-func newAptCommand(fn func(system.ProgressInfo), options map[string]string, args ...string) aptCommand {
-	if options == nil {
-		options = make(map[string]string)
-	}
-	options["APT::Status-Fd"] = strconv.Itoa(3)
-	for key, value := range options {
-		args = append(args, "-o", key+"="+value)
-	}
-	args = append(args, "-y")
+func (c aptCommand) Wait() error {
+	c.cmdSet.RemoveCMD(c.OwnerId)
 
-	c := aptCommand{
-		indicator: fn,
-		c:         exec.Command("/usr/bin/apt-get", args...),
-	}
-	c.c.Stderr = os.Stderr
-	c.c.Stdout = os.Stdout
+	err := c.osCMD.Wait()
 	ShowFd(os.Getpid())
-	return c
+	fmt.Println("----------------Waited..", c.osCMD.Args, err)
+
+	var line string
+	if err != nil {
+		line = "dstatus:" + system.FailedStatus + ":" + err.Error()
+	} else {
+		line = "dstatus:" + system.SuccessedStatus + ":successed"
+	}
+	info, err := ParseProgressInfo(c.OwnerId, line)
+	c.indicator(info)
+	return nil
 }
 
-func (c aptCommand) update() {
-	b := bufio.NewReader(c.reader)
+func (c aptCommand) updateProgress() {
+	b := bufio.NewReader(c.aptPipe)
 	for {
-		log.Println("HH:", c.reader.Fd())
 		line, err := b.ReadString('\n')
 		if err != nil {
 			return
 		}
 
-		info, _ := ParseProgressInfo("", line)
+		info, _ := ParseProgressInfo(c.OwnerId, line)
 		c.indicator(info)
 	}
+}
+
+func (c aptCommand) Abort(jobId string) error {
+	return system.NotImplementError
 }
 
 func ShowFd(pid int) {
@@ -91,36 +146,4 @@ func ShowFd(pid int) {
 	out, err := exec.Command("/bin/ls", "-lh", fmt.Sprintf("/proc/%d/fd", pid)).Output()
 	log.Println(string(out), err)
 	log.Println("__ENDPID__________")
-}
-
-func buildDownloadCommand(fn system.Indicator, packageId string, region string) aptCommand {
-	options := map[string]string{
-		"Debug::NoLocking": "1",
-		"dir::cache":       "/dev/shm/cache",
-	}
-
-	var args []string
-	args = append(args, "install")
-	args = append(args, "-d")
-	args = append(args, "-o", "Acquire::SmartMirrors::Region="+region)
-	args = append(args, packageId)
-	return newAptCommand(fn, options, args...)
-}
-
-func buildInstallCommand(fn system.Indicator, packageId string) aptCommand {
-	var args []string
-	args = append(args, "install")
-	args = append(args, packageId)
-	return newAptCommand(fn, nil, args...)
-}
-
-func buildRemoveCommand(fn system.Indicator, packageId string) aptCommand {
-	var args []string
-	args = append(args, "remove")
-	args = append(args, packageId)
-	return newAptCommand(fn, nil, args...)
-}
-
-func (c aptCommand) Abort(jobId string) error {
-	return system.NotImplementError
 }

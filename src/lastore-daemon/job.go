@@ -5,19 +5,18 @@ import (
 	"internal/system"
 	"log"
 	"pkg.deepin.io/lib/dbus"
+	"sort"
 	"strconv"
 	"time"
 )
 
-var jobId = func() func() string {
+var genJobId = func() func() string {
 	var __count = 0
 	return func() string {
 		__count++
 		return strconv.Itoa(__count)
 	}
 }()
-
-var __jobIdCounter = 1
 
 type JobList []*Job
 
@@ -38,7 +37,9 @@ func (l JobList) Add(j *Job) (JobList, error) {
 			return l, fmt.Errorf("exists job %q:%q", item.Type, item.PackageId)
 		}
 	}
-	return append(l, j), nil
+	r := append(l, j)
+	sort.Sort(r)
+	return r, nil
 }
 
 func (l JobList) Remove(id string) (JobList, error) {
@@ -53,7 +54,9 @@ func (l JobList) Remove(id string) (JobList, error) {
 		return l, system.NotFoundError
 	}
 
-	return append(l[0:index], l[index+1:]...), nil
+	r := append(l[0:index], l[index+1:]...)
+	sort.Sort(r)
+	return r, nil
 }
 
 func (l JobList) Find(id string) (*Job, error) {
@@ -86,68 +89,41 @@ type Job struct {
 
 func (j *Job) GetDBusInfo() dbus.DBusInfo {
 	return dbus.DBusInfo{
-		"org.deepin.lastore",
-		"/org/deepin/lastore/Job" + j.Id,
-		"org.deepin.lastore.Job",
+		Dest:       "org.deepin.lastore",
+		ObjectPath: "/org/deepin/lastore/Job" + j.Id,
+		Interface:  "org.deepin.lastore.Job",
 	}
 }
 
-func NewDownloadJob(packageId string, region string) (*Job, error) {
+func NewJob(packageId string, jobType string, region string) *Job {
 	j := &Job{
-		Id:          jobId(),
+		Id:          genJobId() + jobType,
 		CreateTime:  time.Now().UnixNano(),
-		Type:        DownloadJobType,
+		Type:        jobType,
 		PackageId:   packageId,
 		Status:      string(system.ReadyStatus),
 		Progress:    .0,
 		ElapsedTime: 0,
-		option: map[string]string{
-			"region": region,
-		},
+		option:      make(map[string]string),
 	}
-	return j, nil
+	if region != "" {
+		j.option["region"] = region
+	}
+	return j
 }
 
-func NewInstallJob(packageId string, region string) (*Job, error) {
-	id := jobId()
-	var next = &Job{
-		Id:          id,
-		CreateTime:  time.Now().UnixNano(),
-		Type:        InstallJobType,
-		PackageId:   packageId,
-		Status:      string(system.ReadyStatus),
-		Progress:    .0,
-		ElapsedTime: 0,
-	}
-
-	j := &Job{
-		Id:          id,
-		CreateTime:  time.Now().UnixNano(),
-		Type:        DownloadJobType,
-		PackageId:   packageId,
-		Status:      string(system.ReadyStatus),
-		Progress:    .0,
-		ElapsedTime: 0,
-		next:        next,
-		option: map[string]string{
-			"region": region,
-		},
-	}
-
-	return j, nil
+func NewRemoveJob(packageId string) *Job {
+	return NewJob(packageId, RemoveJobType, "")
 }
-
-func NewRemoveJob(packageId string) (*Job, error) {
-	j := &Job{
-		Id:          jobId(),
-		CreateTime:  time.Now().UnixNano(),
-		Type:        RemoveJobType,
-		PackageId:   packageId,
-		Status:      string(system.ReadyStatus),
-		Progress:    .0,
-		ElapsedTime: 0,
-	}
-	return j, nil
+func NewDownloadJob(packageId string, region string) *Job {
+	return NewJob(packageId, DownloadJobType, region)
+}
+func NewInstallJob(packageId string, region string) *Job {
+	installJob := NewJob(packageId, InstallJobType, region)
+	downloadJob := NewDownloadJob(packageId, region)
+	downloadJob.Id = installJob.Id
+	downloadJob.next = installJob
+	return downloadJob
 }
 
 func (j *Job) updateInfo(info system.ProgressInfo) {

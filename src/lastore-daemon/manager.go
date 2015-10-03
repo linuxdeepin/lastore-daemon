@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"internal/system"
 	"pkg.deepin.io/lib/dbus"
-	"sort"
 )
 
 const (
@@ -27,7 +26,6 @@ type Manager struct {
 	JobList  JobList
 	b        system.System
 
-	// the main architecture
 	SystemArchitectures []system.Architecture
 }
 
@@ -52,52 +50,73 @@ func (m *Manager) update(info system.ProgressInfo) {
 	if j.Status == system.SuccessedStatus && j.next != nil {
 		j.swap(j.next)
 		j.next = nil
+		m.StartJob(j.Id)
 	}
+}
+
+func (m *Manager) do(jobType string, packageId string, region string) (*Job, error) {
+	var j *Job
+	switch jobType {
+	case DownloadJobType:
+		j = NewDownloadJob(packageId, region)
+	case InstallJobType:
+		j = NewInstallJob(packageId, region)
+	case RemoveJobType:
+		j = NewRemoveJob(packageId)
+	}
+	err := m.addJob(j)
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
 }
 
 func (m *Manager) InstallPackage(packageId string, region string) (*Job, error) {
-	j, err := NewInstallJob(packageId, region)
-	if err != nil {
-		return nil, err
-	}
-	err = m.addJob(j)
-	if err != nil {
-		return nil, err
-	}
-	return j, nil
+	return m.do(InstallJobType, packageId, region)
 }
 
 func (m *Manager) DownloadPackage(packageId string, region string) (*Job, error) {
-	j, err := NewDownloadJob(packageId, region)
-	if err != nil {
-		return nil, err
-	}
-	err = m.addJob(j)
-	if err != nil {
-		return nil, err
-	}
-	return j, nil
+	return m.do(DownloadJobType, packageId, region)
 }
 
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
-	j, err := NewRemoveJob(packageId)
-	if err != nil {
-		return nil, err
-	}
-	err = m.addJob(j)
-	if err != nil {
-		return nil, err
-	}
-	return j, nil
+	return m.do(RemoveJobType, packageId, "")
 }
 
 func (m *Manager) StartJob(jobId string) error {
-	//TODO: handled by Job
 	j, err := m.JobList.Find(jobId)
 	if err != nil {
 		return err
 	}
 	return j.start(m.b)
+}
+
+func (m *Manager) removeJob(id string) error {
+	j, err := m.JobList.Find(id)
+	if err != nil {
+		return err
+	}
+	dbus.UnInstallObject(j)
+
+	l, err := m.JobList.Remove(id)
+	if err != nil {
+		return err
+	}
+	m.JobList = l
+
+	dbus.NotifyChange(m, "JobList")
+	return nil
+}
+
+func (m *Manager) addJob(j *Job) error {
+	l, err := m.JobList.Add(j)
+	if err != nil {
+		return err
+	}
+	m.JobList = l
+
+	dbus.NotifyChange(m, "JobList")
+	return nil
 }
 
 func (m *Manager) PauseJob2(jobId string) error {
@@ -109,24 +128,28 @@ func (m *Manager) CleanJob(jobId string) error {
 	if err != nil {
 		return err
 	}
-	if j.Status == system.FailedStatus || j.Status == system.SuccessedStatus {
-		if m.removeJobById(jobId) {
-			return nil
-		}
-		return fmt.Errorf("Couldn't found the job by %q", jobId)
+
+	if j.Status != system.FailedStatus && j.Status != system.SuccessedStatus {
+		return fmt.Errorf("The status of job %q is not cleanable", jobId)
 	}
-	return fmt.Errorf("Failed CleanJob.")
+
+	err = m.removeJob(jobId)
+	if err != nil {
+		return fmt.Errorf("Internal error find the job %q, but can't remove it. (%v)", jobId, err)
+	}
+	return nil
 }
 
 func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 	return dbus.DBusInfo{
-		"org.deepin.lastore",
-		"/org/deepin/lastore",
-		"org.deepin.lastore.Manager",
+		Dest:       "org.deepin.lastore",
+		ObjectPath: "/org/deepin/lastore",
+		Interface:  "org.deepin.lastore.Manager",
 	}
 }
 
 func (m *Manager) PackageExists(pid string) bool {
+	fmt.Println("Checking...Exists...", pid)
 	return m.b.CheckInstalled(pid)
 }
 
@@ -147,34 +170,4 @@ func GetPackageDesktopPath(pid string) string {
 }
 func GetPackageCategory(pid string) string {
 	return "others"
-}
-
-func (m *Manager) removeJobById(id string) bool {
-	j, err := m.JobList.Find(id)
-	if err != nil {
-		return false
-	}
-	dbus.UnInstallObject(j)
-
-	l, err := m.JobList.Remove(id)
-	if err != nil {
-		return false
-	}
-	m.JobList = l
-
-	sort.Sort(m.JobList)
-	dbus.NotifyChange(m, "JobList")
-	return true
-}
-
-func (m *Manager) addJob(j *Job) error {
-	l, err := m.JobList.Add(j)
-	if err != nil {
-		return err
-	}
-	m.JobList = l
-
-	sort.Sort(m.JobList)
-	dbus.NotifyChange(m, "JobList")
-	return nil
 }

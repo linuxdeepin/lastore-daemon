@@ -7,22 +7,19 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 )
 
-type APTProxy struct {
-	installJobs  map[string]aptCommand
-	downloadJobs map[string]aptCommand
-	removeJobs   map[string]aptCommand
-	indicator    system.Indicator
+type APTSystem struct {
+	cmdSet    map[string]*aptCommand
+	indicator system.Indicator
 }
 
-func NewAPTProxy() system.System {
-	p := &APTProxy{
-		installJobs:  make(map[string]aptCommand),
-		downloadJobs: make(map[string]aptCommand),
-		removeJobs:   make(map[string]aptCommand),
+func New() system.System {
+	p := &APTSystem{
+		cmdSet: make(map[string]*aptCommand),
 	}
 	return p
 }
@@ -65,81 +62,58 @@ func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 
 }
 
-func (p *APTProxy) AttachIndicator(f system.Indicator) {
+func (p *APTSystem) AttachIndicator(f system.Indicator) {
 	p.indicator = f
 }
 
-func (p *APTProxy) Download(jobId string, packageId string, region string) error {
-	p.downloadJobs[jobId] = buildDownloadCommand(
-		func(info system.ProgressInfo) {
-			info.JobId = jobId
-			p.indicator(info)
-			if info.Status == system.SuccessedStatus ||
-				info.Status == system.FailedStatus {
-				delete(p.downloadJobs, jobId)
-			}
-		}, packageId, region,
-	)
+func (p *APTSystem) makeLogger(jobId string, cmdType string) *log.Logger {
+	var baseLogDir = "/var/log/lastore"
+
+	var logName = path.Join(baseLogDir, jobId+":"+cmdType, ".log")
+	w, err := os.Create(logName)
+	if err != nil {
+		log.Println("create log file :", err)
+		return log.New(os.Stdout, "", log.Lshortfile|log.LstdFlags)
+	}
+	return log.New(w, "", log.Lshortfile|log.LstdFlags)
+}
+
+func (p *APTSystem) Download(jobId string, packageId string, region string) error {
+	newAPTCommand(p, jobId, "download", p.indicator, packageId, region)
 	return nil
 }
 
-func (p *APTProxy) Remove(jobId string, packageId string) error {
-	p.removeJobs[jobId] = buildRemoveCommand(
-		func(info system.ProgressInfo) {
-			info.JobId = jobId
-			p.indicator(info)
-			if info.Status == system.SuccessedStatus ||
-				info.Status == system.FailedStatus {
-				delete(p.removeJobs, jobId)
-			}
-		}, packageId,
-	)
+func (p *APTSystem) Remove(jobId string, packageId string) error {
+	newAPTCommand(p, jobId, "remove", p.indicator, packageId, "")
 	return nil
 }
 
-func (p *APTProxy) Install(jobId string, packageId string) error {
-	p.installJobs[jobId] = buildInstallCommand(
-		func(info system.ProgressInfo) {
-			info.JobId = jobId
-			p.indicator(info)
-			if info.Status == system.SuccessedStatus ||
-				info.Status == system.FailedStatus {
-				delete(p.installJobs, jobId)
-			}
-		}, packageId,
-	)
-
+func (p *APTSystem) Install(jobId string, packageId string) error {
+	newAPTCommand(p, jobId, "install", p.indicator, packageId, "")
 	return nil
 }
 
-func (APTProxy) SystemUpgrade() {
+func (APTSystem) SystemUpgrade() {
 }
 
-func (p *APTProxy) Pause(jobId string) error {
+func (p *APTSystem) Pause(jobId string) error {
 	return system.NotImplementError
 }
 
-func (p *APTProxy) Start(jobId string) error {
-	if c, ok := p.downloadJobs[jobId]; ok {
-		c.Start()
-		return nil
-	}
-	if c, ok := p.installJobs[jobId]; ok {
-		c.Start()
-		return nil
-	}
-	if c, ok := p.removeJobs[jobId]; ok {
+func (p *APTSystem) Start(jobId string) error {
+	if c := p.FindCMD(jobId); c != nil {
+		fmt.Println("Here..")
 		c.Start()
 		return nil
 	}
 	return system.NotFoundError
 }
 
-func (p *APTProxy) Abort(jobId string) error {
+func (p *APTSystem) Abort(jobId string) error {
 	return system.NotImplementError
 }
 
-func (p *APTProxy) CheckInstalled(pid string) bool {
+func (p *APTSystem) CheckInstalled(pid string) bool {
 	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", pid).CombinedOutput()
 	if err != nil {
 		return false
@@ -152,7 +126,7 @@ func (p *APTProxy) CheckInstalled(pid string) bool {
 	return false
 }
 
-func (p *APTProxy) SystemArchitectures() []system.Architecture {
+func (p *APTSystem) SystemArchitectures() []system.Architecture {
 	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
 	if err != nil {
 		log.Fatalln("Can't detect system architectures:", err)
