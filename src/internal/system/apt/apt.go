@@ -93,7 +93,7 @@ func ShowFd(pid int) {
 	log.Println("__ENDPID__________")
 }
 
-func buildDownloadCommand(fn system.Indicator, packageId string) aptCommand {
+func buildDownloadCommand(fn system.Indicator, packageId string, region string) aptCommand {
 	options := map[string]string{
 		"Debug::NoLocking": "1",
 		"dir::cache":       "/dev/shm/cache",
@@ -102,6 +102,7 @@ func buildDownloadCommand(fn system.Indicator, packageId string) aptCommand {
 	var args []string
 	args = append(args, "install")
 	args = append(args, "-d")
+	args = append(args, "-o", "Acquire::SmartMirrors::Region="+region)
 	args = append(args, packageId)
 	return newAptCommand(fn, options, args...)
 }
