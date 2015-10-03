@@ -24,7 +24,7 @@ const (
 type Manager struct {
 	Version  string
 	cacheDir string
-	JobList  []*Job
+	JobList  JobList
 	b        system.System
 
 	// the main architecture
@@ -35,7 +35,6 @@ func NewManager(b system.System) *Manager {
 	m := &Manager{
 		Version:             "0.1",
 		cacheDir:            "/dev/shm",
-		JobList:             nil,
 		b:                   b,
 		SystemArchitectures: b.SystemArchitectures(),
 	}
@@ -44,9 +43,8 @@ func NewManager(b system.System) *Manager {
 }
 
 func (m *Manager) update(info system.ProgressInfo) {
-	j := m.findJob(info.JobId)
-	if j == nil {
-
+	j, err := m.JobList.Find(info.JobId)
+	if err != nil {
 		return
 	}
 
@@ -57,21 +55,15 @@ func (m *Manager) update(info system.ProgressInfo) {
 	}
 }
 
-func (m *Manager) findJob(id string) *Job {
-	for _, j := range m.JobList {
-		if j.Id == id {
-			return j
-		}
-	}
-	return nil
-}
-
 func (m *Manager) InstallPackage(packageId string, region string) (*Job, error) {
 	j, err := NewInstallJob(packageId, region)
 	if err != nil {
 		return nil, err
 	}
-	m.addJob(j)
+	err = m.addJob(j)
+	if err != nil {
+		return nil, err
+	}
 	return j, nil
 }
 
@@ -80,23 +72,30 @@ func (m *Manager) DownloadPackage(packageId string, region string) (*Job, error)
 	if err != nil {
 		return nil, err
 	}
-	m.addJob(j)
+	err = m.addJob(j)
+	if err != nil {
+		return nil, err
+	}
 	return j, nil
 }
+
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
 	j, err := NewRemoveJob(packageId)
 	if err != nil {
 		return nil, err
 	}
-	m.addJob(j)
+	err = m.addJob(j)
+	if err != nil {
+		return nil, err
+	}
 	return j, nil
 }
 
 func (m *Manager) StartJob(jobId string) error {
 	//TODO: handled by Job
-	j := m.findJob(jobId)
-	if j == nil {
-		return system.NotFoundError
+	j, err := m.JobList.Find(jobId)
+	if err != nil {
+		return err
 	}
 	return j.start(m.b)
 }
@@ -106,9 +105,9 @@ func (m *Manager) PauseJob2(jobId string) error {
 }
 
 func (m *Manager) CleanJob(jobId string) error {
-	j := m.findJob(jobId)
-	if j == nil {
-		return system.NotFoundError
+	j, err := m.JobList.Find(jobId)
+	if err != nil {
+		return err
 	}
 	if j.Status == system.FailedStatus || j.Status == system.SuccessedStatus {
 		if m.removeJobById(jobId) {
@@ -151,24 +150,31 @@ func GetPackageCategory(pid string) string {
 }
 
 func (m *Manager) removeJobById(id string) bool {
-	index := -1
-	for i, job := range m.JobList {
-		if job.Id == id {
-			index = i
-		}
-	}
-	if index == -1 {
+	j, err := m.JobList.Find(id)
+	if err != nil {
 		return false
 	}
-	dbus.UnInstallObject(m.JobList[index])
-	m.JobList = append(m.JobList[0:index], m.JobList[index+1:]...)
-	sort.Sort(JobList(m.JobList))
+	dbus.UnInstallObject(j)
+
+	l, err := m.JobList.Remove(id)
+	if err != nil {
+		return false
+	}
+	m.JobList = l
+
+	sort.Sort(m.JobList)
 	dbus.NotifyChange(m, "JobList")
 	return true
 }
 
-func (m *Manager) addJob(j *Job) {
-	m.JobList = append(m.JobList, j)
-	sort.Sort(JobList(m.JobList))
+func (m *Manager) addJob(j *Job) error {
+	l, err := m.JobList.Add(j)
+	if err != nil {
+		return err
+	}
+	m.JobList = l
+
+	sort.Sort(m.JobList)
 	dbus.NotifyChange(m, "JobList")
+	return nil
 }

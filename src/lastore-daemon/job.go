@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"internal/system"
 	"log"
 	"pkg.deepin.io/lib/dbus"
@@ -29,6 +30,39 @@ func (l JobList) Less(i, j int) bool {
 
 func (l JobList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
+}
+
+func (l JobList) Add(j *Job) (JobList, error) {
+	for _, item := range l {
+		if item.PackageId == j.PackageId && item.Type == j.Type {
+			return l, fmt.Errorf("exists job %q:%q", item.Type, item.PackageId)
+		}
+	}
+	return append(l, j), nil
+}
+
+func (l JobList) Remove(id string) (JobList, error) {
+	index := -1
+	for i, item := range l {
+		if item.Id == id {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return l, system.NotFoundError
+	}
+
+	return append(l[0:index], l[index+1:]...), nil
+}
+
+func (l JobList) Find(id string) (*Job, error) {
+	for _, item := range l {
+		if item.Id == id {
+			return item, nil
+		}
+	}
+	return nil, system.NotFoundError
 }
 
 type Job struct {
