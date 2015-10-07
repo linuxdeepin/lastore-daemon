@@ -2,8 +2,8 @@ package apt
 
 import (
 	"bufio"
-	"fmt"
 	"internal/system"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -41,7 +41,8 @@ type aptCommand struct {
 
 	indicator system.Indicator
 
-	log *log.Logger
+	output io.WriteCloser
+	logger *log.Logger
 }
 
 func newAPTCommand(
@@ -73,32 +74,38 @@ func newAPTCommand(
 	args = append(args, polices...)
 
 	cmd := exec.Command("apt-get", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	ShowFd(os.Getpid())
+	output := system.CreateLogOutput(cmdType, packageId)
+	cmd.Stdout = output
+	cmd.Stderr = output
 
 	r := &aptCommand{
 		OwnerId:   jobId,
 		cmdSet:    cmdSet,
 		indicator: fn,
 		osCMD:     cmd,
+		output:    output,
+		logger:    log.New(output, "", log.LstdFlags|log.Lshortfile),
 	}
+
+	r.logger.Printf("add cmd(%q) from cmdset\n", r.OwnerId)
 	cmdSet.AddCMD(r)
 	return r
 }
 
 func (c aptCommand) Start() {
+	c.logger.Println("Starting with ", c.osCMD.Args)
 	rr, ww, err := os.Pipe()
 	defer ww.Close()
 	if err != nil {
-		log.Println("os.Pipe error:", err)
+		c.logger.Println("os.Pipe error:", err)
 	}
-	log.Println("Actual FD:", rr.Fd(), ww.Fd(), err)
-	log.Println("Start...", c)
 	c.osCMD.ExtraFiles = append(c.osCMD.ExtraFiles, ww)
 	c.aptPipe = rr
 
-	c.osCMD.Start()
+	err = c.osCMD.Start()
+	if err != nil {
+		c.logger.Println("apt-get start:", err)
+	}
 	ww.Close()
 
 	go c.updateProgress()
@@ -106,11 +113,18 @@ func (c aptCommand) Start() {
 }
 
 func (c aptCommand) Wait() error {
+	c.logger.Printf("remove cmd(%q) from cmdset\n", c.OwnerId)
 	c.cmdSet.RemoveCMD(c.OwnerId)
 
+	defer func() {
+		if c.output != nil {
+			c.output.Close()
+		}
+	}()
 	err := c.osCMD.Wait()
-	ShowFd(os.Getpid())
-	fmt.Println("----------------Waited..", c.osCMD.Args, err)
+	if err != nil {
+		c.logger.Println("osCMD.Wait():", err)
+	}
 
 	var line string
 	if err != nil {
@@ -119,7 +133,13 @@ func (c aptCommand) Wait() error {
 		line = "dstatus:" + system.SuccessedStatus + ":successed"
 	}
 	info, err := ParseProgressInfo(c.OwnerId, line)
+	if err != nil {
+		c.logger.Println("ParseProgressInfo:", err)
+	}
+
+	c.logger.Printf("End indicator(%v)\n", info)
 	c.indicator(info)
+
 	return nil
 }
 
@@ -132,18 +152,11 @@ func (c aptCommand) updateProgress() {
 		}
 
 		info, _ := ParseProgressInfo(c.OwnerId, line)
+		c.logger.Printf("indicator(%v)\n", info)
 		c.indicator(info)
 	}
 }
 
 func (c aptCommand) Abort(jobId string) error {
 	return system.NotImplementError
-}
-
-func ShowFd(pid int) {
-	return
-	log.Println("PID:", pid)
-	out, err := exec.Command("/bin/ls", "-lh", fmt.Sprintf("/proc/%d/fd", pid)).Output()
-	log.Println(string(out), err)
-	log.Println("__ENDPID__________")
 }

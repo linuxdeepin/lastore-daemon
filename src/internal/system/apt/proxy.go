@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 )
@@ -66,18 +65,6 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 	p.indicator = f
 }
 
-func (p *APTSystem) makeLogger(jobId string, cmdType string) *log.Logger {
-	var baseLogDir = "/var/log/lastore"
-
-	var logName = path.Join(baseLogDir, jobId+":"+cmdType, ".log")
-	w, err := os.Create(logName)
-	if err != nil {
-		log.Println("create log file :", err)
-		return log.New(os.Stdout, "", log.Lshortfile|log.LstdFlags)
-	}
-	return log.New(w, "", log.Lshortfile|log.LstdFlags)
-}
-
 func (p *APTSystem) Download(jobId string, packageId string, region string) error {
 	newAPTCommand(p, jobId, "download", p.indicator, packageId, region)
 	return nil
@@ -102,7 +89,6 @@ func (p *APTSystem) Pause(jobId string) error {
 
 func (p *APTSystem) Start(jobId string) error {
 	if c := p.FindCMD(jobId); c != nil {
-		fmt.Println("Here..")
 		c.Start()
 		return nil
 	}

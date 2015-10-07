@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"log"
 	"pkg.deepin.io/lib/dbus"
 )
 
@@ -148,26 +149,26 @@ func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 	}
 }
 
-func (m *Manager) PackageExists(pid string) bool {
-	fmt.Println("Checking...Exists...", pid)
-	return m.b.CheckInstalled(pid)
+func (m *Manager) PackageExists(packageId string) bool {
+	log.Println("Checking package exists...", packageId)
+	return m.b.CheckInstalled(packageId)
 }
 
-func (m *Manager) PackageDownloadSize(pid string) int64 {
-	return int64(GuestPackageDownloadSize(pid))
+func (m *Manager) PackageDownloadSize(packageId string) int64 {
+	return int64(GuestPackageDownloadSize(packageId))
 }
 
-func (m *Manager) PackageDesktopPath1(pid string) string {
-	return GetPackageDesktopPath(pid)
+func (m *Manager) PackageDesktopPath1(packageId string) string {
+	return GetPackageDesktopPath(packageId)
 }
 
-func (m *Manager) PackageCategory1(pid string) string {
-	return GetPackageCategory(pid)
+func (m *Manager) PackageCategory1(packageId string) string {
+	return GetPackageCategory(packageId)
 }
 
-func GetPackageDesktopPath(pid string) string {
+func GetPackageDesktopPath(packageId string) string {
 	return "/usr/share/applications/deepin-movie.desktop"
 }
-func GetPackageCategory(pid string) string {
+func GetPackageCategory(packageId string) string {
 	return "others"
 }
