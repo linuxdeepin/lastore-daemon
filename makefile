@@ -21,10 +21,6 @@ gen-dbus-codes:
 build-deb:
 	yes | debuild -us -uc
 
-upload:
-	scp -r ../lastore-daemon_*.deb snyh@10.0.4.226:/repos/mirror/dev/tmp/
-	ssh snyh@10.0.4.226 'cd /repos/mirror/dev/ && reprepro includedeb unstable tmp/*.deb'
-
 clean:
 	rm -rf bin
 	rm ../lastore-daemon_* -rf
