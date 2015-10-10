@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -21,8 +22,8 @@ var __unitTable__ = map[byte]float64{
 	'Y': 1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000,
 }
 
-func parsePackageSize(line []byte) float64 {
-	ms := __needle__.FindSubmatch(line)
+func parsePackageSize(line string) float64 {
+	ms := __needle__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
 	case 3, 4:
 		l := strings.Replace(string(ms[1]), ",", "", -1)
@@ -42,17 +43,36 @@ func parsePackageSize(line []byte) float64 {
 // GuestPackageDownloadSize parsing the total size of download archives when installing
 // the pid package.
 func GuestPackageDownloadSize(pid string) float64 {
-	var size float64 = -1
-
 	cmd := exec.Command("/usr/bin/apt-get", "install", pid, "-o", "Debug::NoLocking=1", "--assume-no")
-	// clean environments like LC_ALL, LANGUAGE and LANG
+	line, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
+		return parsePackageSize(line) != -1
+	})
+	if err != nil {
+		return -1
+	}
+	return parsePackageSize(line)
+}
+
+func QueryDesktopPath(pkgId string) (string, error) {
+	cmd := exec.Command("dpkg", "-L", pkgId)
+
+	return filterExecOutput(
+		cmd,
+		time.Second*2,
+		func(line string) bool {
+			return strings.HasSuffix(line, ".desktop")
+		},
+	)
+}
+
+func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line string) bool) (string, error) {
 	cmd.Env = make([]string, 0)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {
-		return -1
+		return "", err
 	}
-	timer := time.AfterFunc(3*time.Second, func() {
+	timer := time.AfterFunc(timeout, func() {
 		cmd.Process.Kill()
 	})
 	cmd.Start()
@@ -60,16 +80,15 @@ func GuestPackageDownloadSize(pid string) float64 {
 
 	buf.ReadFrom(r)
 
-	var line []byte
-	for ; err == nil; line, err = buf.ReadBytes('\n') {
-		size = parsePackageSize(line)
-		if size != -1 {
-			break
+	var line string
+	for ; err == nil; line, err = buf.ReadString('\n') {
+		line = strings.TrimSpace(line)
+		if filter(line) {
+			return line, nil
 		}
 	}
 
 	cmd.Wait()
 	timer.Stop()
-
-	return size
+	return "", fmt.Errorf("timeout to run %v", cmd.Args)
 }

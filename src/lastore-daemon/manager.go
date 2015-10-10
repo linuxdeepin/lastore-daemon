@@ -159,16 +159,14 @@ func (m *Manager) PackageDownloadSize(packageId string) int64 {
 }
 
 func (m *Manager) PackageDesktopPath1(packageId string) string {
-	return GetPackageDesktopPath(packageId)
+	r, _ := QueryDesktopPath(packageId)
+	return r
 }
 
 func (m *Manager) PackageCategory1(packageId string) string {
 	return GetPackageCategory(packageId)
 }
 
-func GetPackageDesktopPath(packageId string) string {
-	return "/usr/share/applications/deepin-movie.desktop"
-}
 func GetPackageCategory(packageId string) string {
 	return "others"
 }
