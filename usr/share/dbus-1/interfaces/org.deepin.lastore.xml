@@ -20,7 +20,7 @@
       <arg type="s" direction="in"></arg>
       <arg type="s" direction="out"></arg>
     </method>
-    <method name="PackageDesktopPath1">
+    <method name="PackageDesktopPath">
       <arg type="s" direction="in"></arg>
       <arg type="s" direction="out"></arg>
     </method>
@@ -31,6 +31,12 @@
     <method name="PackageExists">
       <arg type="s" direction="in"></arg>
       <arg type="b" direction="out"></arg>
+    </method>
+    <method name="PackageUpgradableInfo">
+      <arg type="s" direction="in"></arg>
+      <arg type="s" direction="out"></arg>
+      <arg type="s" direction="out"></arg>
+      <arg type="s" direction="out"></arg>
     </method>
     <method name="PauseJob2">
       <arg type="s" direction="in"></arg>
@@ -45,5 +51,6 @@
     <property name="Version" type="s" access="read"></property>
     <property name="JobList" type="ao" access="read"></property>
     <property name="SystemArchitectures" type="as" access="read"></property>
+    <property name="UpgradableApps" type="as" access="read"></property>
   </interface>
 </node>

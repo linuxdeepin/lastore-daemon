@@ -78,7 +78,7 @@ type Job struct {
 
 	Type string
 
-	Status string
+	Status system.Status
 
 	Progress    float64
 	Description string
@@ -101,7 +101,7 @@ func NewJob(packageId string, jobType string, region string) *Job {
 		CreateTime:  time.Now().UnixNano(),
 		Type:        jobType,
 		PackageId:   packageId,
-		Status:      string(system.ReadyStatus),
+		Status:      system.ReadyStatus,
 		Progress:    .0,
 		ElapsedTime: 0,
 		option:      make(map[string]string),
@@ -132,8 +132,8 @@ func (j *Job) updateInfo(info system.ProgressInfo) {
 		dbus.NotifyChange(j, "Description")
 	}
 
-	if string(info.Status) != j.Status {
-		j.Status = string(info.Status)
+	if info.Status != j.Status {
+		j.Status = info.Status
 		dbus.NotifyChange(j, "Status")
 	}
 

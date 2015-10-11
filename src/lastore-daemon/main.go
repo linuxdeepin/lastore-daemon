@@ -41,6 +41,7 @@ func setupLog() io.WriteCloser {
 	log.SetOutput(w)
 	return w
 }
+
 func main() {
 	flag.Parse()
 

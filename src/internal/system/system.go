@@ -20,6 +20,13 @@ type ProgressInfo struct {
 	Status      Status
 }
 
+type UpgradeInfo struct {
+	Package        string
+	CurrentVersion string
+	LastVersion    string
+	ChangeLog      string
+}
+
 type Architecture string
 
 var NotImplementError = errors.New("not implement")
@@ -32,7 +39,9 @@ type System interface {
 	Download(jobId string, packageId string, region string) error
 	Install(jobId string, packageId string) error
 	Remove(jobId string, packageId string) error
+
 	SystemUpgrade()
+	UpgradeInfo() []UpgradeInfo
 
 	Abort(jobId string) error
 	Pause(jobId string) error

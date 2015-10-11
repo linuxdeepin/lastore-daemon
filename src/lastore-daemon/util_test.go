@@ -21,6 +21,6 @@ func (*testWrap) TestParseSize(c *C.C) {
 		{`Need to get 9,401 kB of archives.`, 9401 * 1000},
 	}
 	for _, d := range data {
-		c.Check(parsePackageSize(([]byte)(d.Line)), C.Equals, d.Size)
+		c.Check(parsePackageSize(d.Line), C.Equals, d.Size)
 	}
 }

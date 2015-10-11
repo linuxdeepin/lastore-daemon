@@ -28,6 +28,9 @@ type Manager struct {
 	b        system.System
 
 	SystemArchitectures []system.Architecture
+
+	UpgradableApps  []string
+	upgradableInfos []system.UpgradeInfo
 }
 
 func NewManager(b system.System) *Manager {
@@ -38,6 +41,7 @@ func NewManager(b system.System) *Manager {
 		SystemArchitectures: b.SystemArchitectures(),
 	}
 	b.AttachIndicator(m.update)
+	m.refreshUpgradableApps()
 	return m
 }
 
@@ -52,6 +56,10 @@ func (m *Manager) update(info system.ProgressInfo) {
 		j.swap(j.next)
 		j.next = nil
 		m.StartJob(j.Id)
+
+	}
+	if j.Status != system.ReadyStatus && j.Status != system.RunningStatus {
+		m.refreshUpgradableApps()
 	}
 }
 
@@ -158,7 +166,7 @@ func (m *Manager) PackageDownloadSize(packageId string) int64 {
 	return int64(GuestPackageDownloadSize(packageId))
 }
 
-func (m *Manager) PackageDesktopPath1(packageId string) string {
+func (m *Manager) PackageDesktopPath(packageId string) string {
 	r, _ := QueryDesktopPath(packageId)
 	return r
 }

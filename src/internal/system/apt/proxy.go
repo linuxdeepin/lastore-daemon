@@ -3,9 +3,6 @@ package apt
 import (
 	"fmt"
 	"internal/system"
-	"io/ioutil"
-	"log"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -113,18 +110,12 @@ func (p *APTSystem) CheckInstalled(pid string) bool {
 }
 
 func (p *APTSystem) SystemArchitectures() []system.Architecture {
-	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
-	if err != nil {
-		log.Fatalln("Can't detect system architectures:", err)
-		os.Exit(1)
-	}
-	var r []system.Architecture
-	for _, arch := range strings.Split(string(bs), "\n") {
-		i := strings.TrimSpace(arch)
-		if i == "" {
-			continue
-		}
-		r = append(r, system.Architecture(i))
-	}
-	return r
+	return getSystemArchitectures()
+}
+
+func (p *APTSystem) UpgradeInfo() []system.UpgradeInfo {
+	return mapUpgradeInfo(
+		queryDpkgUpgradeInfoByAptList(),
+		buildUpgradeInfoRegex(getSystemArchitectures()),
+		buildUpgradeInfo)
 }

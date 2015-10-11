@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"internal/system"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type CommandSet interface {
@@ -159,4 +161,21 @@ func (c aptCommand) updateProgress() {
 
 func (c aptCommand) Abort(jobId string) error {
 	return system.NotImplementError
+}
+
+func getSystemArchitectures() []system.Architecture {
+	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
+	if err != nil {
+		log.Fatalln("Can't detect system architectures:", err)
+		os.Exit(1)
+	}
+	var r []system.Architecture
+	for _, arch := range strings.Split(string(bs), "\n") {
+		i := strings.TrimSpace(arch)
+		if i == "" {
+			continue
+		}
+		r = append(r, system.Architecture(i))
+	}
+	return r
 }

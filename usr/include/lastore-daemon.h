@@ -433,6 +433,12 @@ class Manager : public dbus::common::DBusObject
 		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
 	}
 	
+	Q_PROPERTY(dbus::common::R<dbus::types::as > UpgradableApps READ upgradableApps NOTIFY upgradableAppsChanged)
+	dbus::common::R<dbus::types::as > upgradableApps () {
+		QDBusPendingReply<> call = fetchProperty("UpgradableApps");
+		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
+	}
+	
 
 
 	
@@ -482,10 +488,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QString> PackageDesktopPath1 (QString arg0) {
+	dbus::common::R<QString> PackageDesktopPath (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDesktopPath1"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDesktopPath"), argumentList);
 		return dbus::common::R<QString>(call);
 	}
 	
@@ -509,6 +515,17 @@ class Manager : public dbus::common::DBusObject
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageExists"), argumentList);
 		return dbus::common::R<bool>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QString, QString, QString> PackageUpgradableInfo (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageUpgradableInfo"), argumentList);
+		return dbus::common::R<QString, QString, QString>(call);
 	}
 	
 
@@ -554,6 +571,7 @@ class Manager : public dbus::common::DBusObject
 	void versionChanged (); 
 	void jobListChanged (); 
 	void systemArchitecturesChanged (); 
+	void upgradableAppsChanged (); 
 
 };
 }}}
