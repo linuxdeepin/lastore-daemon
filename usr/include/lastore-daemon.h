@@ -521,10 +521,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QString, QString, QString> PackageUpgradableInfo (QString arg0) {
+	dbus::common::R<QString, QString, QString> PackageUpgradeInfo (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageUpgradableInfo"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageUpgradeInfo"), argumentList);
 		return dbus::common::R<QString, QString, QString>(call);
 	}
 	

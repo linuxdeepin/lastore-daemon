@@ -20,7 +20,7 @@ func (m *Manager) refreshUpgradableApps() {
 	}
 }
 
-func (m *Manager) PackageUpgradableInfo(pkgId string) (string, string, string) {
+func (m *Manager) PackageUpgradeInfo(pkgId string) (string, string, string) {
 	for _, info := range m.upgradableInfos {
 		if info.Package == pkgId {
 			return info.CurrentVersion, info.LastVersion, info.ChangeLog

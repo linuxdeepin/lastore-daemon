@@ -32,7 +32,7 @@
       <arg type="s" direction="in"></arg>
       <arg type="b" direction="out"></arg>
     </method>
-    <method name="PackageUpgradableInfo">
+    <method name="PackageUpgradeInfo">
       <arg type="s" direction="in"></arg>
       <arg type="s" direction="out"></arg>
       <arg type="s" direction="out"></arg>
