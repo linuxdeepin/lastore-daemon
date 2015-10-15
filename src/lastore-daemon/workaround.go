@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -44,33 +43,37 @@ func parsePackageSize(line string) float64 {
 // the pid package.
 func GuestPackageDownloadSize(pid string) float64 {
 	cmd := exec.Command("/usr/bin/apt-get", "install", pid, "-o", "Debug::NoLocking=1", "--assume-no")
-	line, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
+	lines, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
 		return parsePackageSize(line) != -1
 	})
-	if err != nil {
+	if err != nil && len(lines) > 0 {
 		return -1
 	}
-	return parsePackageSize(line)
+	return parsePackageSize(lines[0])
 }
 
 func QueryDesktopPath(pkgId string) (string, error) {
 	cmd := exec.Command("dpkg", "-L", pkgId)
 
-	return filterExecOutput(
+	desktopFiles, err := filterExecOutput(
 		cmd,
 		time.Second*2,
 		func(line string) bool {
 			return strings.HasSuffix(line, ".desktop")
 		},
 	)
+	if err != nil || len(desktopFiles) == 0 {
+		return "", err
+	}
+	return DesktopFiles(desktopFiles).BestOne(), nil
 }
 
-func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line string) bool) (string, error) {
+func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line string) bool) ([]string, error) {
 	cmd.Env = make([]string, 0)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	timer := time.AfterFunc(timeout, func() {
 		cmd.Process.Kill()
@@ -80,15 +83,16 @@ func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 
 	buf.ReadFrom(r)
 
+	var lines []string
 	var line string
 	for ; err == nil; line, err = buf.ReadString('\n') {
 		line = strings.TrimSpace(line)
 		if filter(line) {
-			return line, nil
+			lines = append(lines, line)
 		}
 	}
 
 	cmd.Wait()
 	timer.Stop()
-	return "", fmt.Errorf("timeout to run %v", cmd.Args)
+	return lines, nil
 }
