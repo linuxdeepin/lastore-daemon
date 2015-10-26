@@ -64,6 +64,13 @@ func main() {
 	}
 	log.Println("Started service at system bus")
 
+	u := NewUpdater()
+	err = dbus.InstallOnSystem(u)
+	if err != nil {
+		log.Println("Start failed:", err)
+		return
+	}
+
 	dbus.DealWithUnhandledMessage()
 
 	if err := dbus.Wait(); err != nil {

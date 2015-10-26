@@ -255,6 +255,10 @@ void DBusObject::propertyChanged(const QDBusMessage& msg)
 
 	typedef QStringList  as;
 
+	typedef dbus::types::BaseStruct<QString, QString, QString > r_sss_;
+
+	typedef QList<dbus::types::BaseStruct<QString, QString, QString > > ar_sss_;
+
 
 
 	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::ao& v)
@@ -299,6 +303,43 @@ argument.endArray();
 return argument;
 
 	} 
+	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::r_sss_& v)
+	{
+		argument.beginStructure();
+argument << v.m1 << v.m2 << v.m3;
+argument.endStructure();
+return argument;
+
+	}
+	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::r_sss_& v)
+	{
+		argument.beginStructure();
+argument >> v.m1 >> v.m2 >> v.m3;
+argument.endStructure();
+return argument;
+
+	} 
+	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::ar_sss_& v)
+	{
+		argument.beginArray(getTypeId("(sss)"));
+for (int i=0; i < v.size(); ++i)
+    argument << v.at(i);
+argument.endArray();
+return argument;
+
+	}
+	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::ar_sss_& v)
+	{
+		argument.beginArray();
+while (!argument.atEnd()) {
+    dbus::types::BaseStruct<QString, QString, QString > ele;
+    argument >> ele;
+    v.append(ele);
+}
+argument.endArray();
+return argument;
+
+	} 
 
 	inline int getTypeId(const QString& s) {
 	if (0) { 
@@ -306,6 +347,10 @@ return argument;
 		return qDBusRegisterMetaType<dbus::types::ao>();
 	} else if (s == "as") {
 		return qDBusRegisterMetaType<dbus::types::as>();
+	} else if (s == "(sss)") {
+		return qDBusRegisterMetaType<dbus::types::r_sss_>();
+	} else if (s == "a(sss)") {
+		return qDBusRegisterMetaType<dbus::types::ar_sss_>();
 	}
 	}
 
@@ -401,8 +446,8 @@ class Manager : public dbus::common::DBusObject
 {
 	Q_OBJECT
 	private:
-	static const char *defaultService() { return "org.deepin.lastore";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore");}
+	static const char *defaultService() { return "org.deepin.lastore.Manager";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore/Manager");}
 	public:
         Manager(QString addr="session", QObject* parent=0)
         :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore.Manager", addr)
@@ -576,10 +621,98 @@ class Manager : public dbus::common::DBusObject
 };
 }}}
 
+namespace org {namespace deepin {namespace lastore {
+
+class Updater : public dbus::common::DBusObject
+{
+	Q_OBJECT
+	private:
+	static const char *defaultService() { return "org.deepin.lastore.Updater";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore/Updater");}
+	public:
+        Updater(QString addr="session", QObject* parent=0)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore.Updater", addr)
+        {
+        }
+	Updater(QString addr, QString service, QString path, QObject* parent=0)
+	:DBusObject(parent, service, path, "org.deepin.lastore.Updater", addr)
+	{
+	}
+	~Updater(){}
+
+	
+	Q_PROPERTY(dbus::common::R<bool > AutoCheckUpdates READ autoCheckUpdates NOTIFY autoCheckUpdatesChanged)
+	dbus::common::R<bool > autoCheckUpdates () {
+		QDBusPendingReply<> call = fetchProperty("AutoCheckUpdates");
+		return dbus::common::R<bool >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > MirrorSource READ mirrorSource NOTIFY mirrorSourceChanged)
+	dbus::common::R<QString > mirrorSource () {
+		QDBusPendingReply<> call = fetchProperty("MirrorSource");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > OfficialSource READ officialSource NOTIFY officialSourceChanged)
+	dbus::common::R<QString > officialSource () {
+		QDBusPendingReply<> call = fetchProperty("OfficialSource");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+
+
+	
+	
+	
+	dbus::common::R<dbus::types::ar_sss_> ListMirrorSources (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ListMirrorSources"), argumentList);
+		return dbus::common::R<dbus::types::ar_sss_>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> SetAutoCheckUpdates (bool arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetAutoCheckUpdates"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> SetMirrorSource (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetMirrorSource"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+
+	Q_SIGNALS:
+	
+
+	
+	void autoCheckUpdatesChanged (); 
+	void mirrorSourceChanged (); 
+	void officialSourceChanged (); 
+
+};
+}}}
+
 	}
 }
 
 Q_DECLARE_METATYPE(dbus::types::ao);
 Q_DECLARE_METATYPE(dbus::types::as);
+Q_DECLARE_METATYPE(dbus::types::r_sss_);
+Q_DECLARE_METATYPE(dbus::types::ar_sss_);
 
 #endif

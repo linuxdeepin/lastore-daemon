@@ -24,3 +24,7 @@ func (*testWrap) TestParseSize(c *C.C) {
 		c.Check(parsePackageSize(d.Line), C.Equals, d.Size)
 	}
 }
+
+func (*testWrap) TestLoadSourceMirrors(c *C.C) {
+	c.Check(LoadMirrorSources("http://api.lastore.deepin.org"), C.Not(C.Equals), 0)
+}

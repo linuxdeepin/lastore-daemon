@@ -1,56 +1,68 @@
 <node>
-  <interface name="org.deepin.lastore.Manager">
-    <annotation name="org.deepin.DBus.configuration.DefaultServiceName" value="org.deepin.lastore"/>
-    <annotation name="org.deepin.DBus.configuration.DefaultObjectPath" value="/org/deepin/lastore"/>
-
-    <method name="CleanJob">
-      <arg type="s" direction="in"></arg>
-    </method>
-    <method name="DownloadPackage">
-      <arg type="s" direction="in"></arg>
-      <arg type="s" direction="in"></arg>
-      <arg type="o" direction="out"></arg>
-    </method>
-    <method name="InstallPackage">
-      <arg type="s" direction="in"></arg>
-      <arg type="s" direction="in"></arg>
-      <arg type="o" direction="out"></arg>
-    </method>
-    <method name="PackageCategory1">
-      <arg type="s" direction="in"></arg>
-      <arg type="s" direction="out"></arg>
-    </method>
-    <method name="PackageDesktopPath">
-      <arg type="s" direction="in"></arg>
-      <arg type="s" direction="out"></arg>
-    </method>
-    <method name="PackageDownloadSize">
-      <arg type="s" direction="in"></arg>
-      <arg type="x" direction="out"></arg>
-    </method>
-    <method name="PackageExists">
-      <arg type="s" direction="in"></arg>
-      <arg type="b" direction="out"></arg>
-    </method>
-    <method name="PackageUpgradeInfo">
-      <arg type="s" direction="in"></arg>
-      <arg type="s" direction="out"></arg>
-      <arg type="s" direction="out"></arg>
-      <arg type="s" direction="out"></arg>
-    </method>
-    <method name="PauseJob2">
-      <arg type="s" direction="in"></arg>
-    </method>
-    <method name="RemovePackage">
-      <arg type="s" direction="in"></arg>
-      <arg type="o" direction="out"></arg>
-    </method>
-    <method name="StartJob">
-      <arg type="s" direction="in"></arg>
-    </method>
-    <property name="Version" type="s" access="read"></property>
-    <property name="JobList" type="ao" access="read"></property>
-    <property name="SystemArchitectures" type="as" access="read"></property>
-    <property name="UpgradableApps" type="as" access="read"></property>
-  </interface>
+     <interface name="org.deepin.lastore.Manager">
+          <method name="CleanJob">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="DownloadPackage">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="InstallPackage">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="PackageCategory1">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="out"></arg>
+          </method>
+          <method name="PackageDesktopPath">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="out"></arg>
+          </method>
+          <method name="PackageDownloadSize">
+               <arg type="s" direction="in"></arg>
+               <arg type="x" direction="out"></arg>
+          </method>
+          <method name="PackageExists">
+               <arg type="s" direction="in"></arg>
+               <arg type="b" direction="out"></arg>
+          </method>
+          <method name="PackageUpgradeInfo">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="out"></arg>
+               <arg type="s" direction="out"></arg>
+               <arg type="s" direction="out"></arg>
+          </method>
+          <method name="PauseJob2">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="RemovePackage">
+               <arg type="s" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="StartJob">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <property name="Version" type="s" access="read"></property>
+          <property name="JobList" type="ao" access="read"></property>
+          <property name="SystemArchitectures" type="as" access="read"></property>
+          <property name="UpgradableApps" type="as" access="read"></property>
+     </interface>
+     <interface name="org.deepin.lastore.Updater">
+          <method name="ListMirrorSources">
+               <arg type="s" direction="in"></arg>
+               <arg type="a(sss)" direction="out"></arg>
+          </method>
+          <method name="SetAutoCheckUpdates">
+               <arg type="b" direction="in"></arg>
+          </method>
+          <method name="SetMirrorSource">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <property name="AutoCheckUpdates" type="b" access="read"></property>
+          <property name="MirrorSource" type="s" access="read"></property>
+          <property name="OfficialSource" type="s" access="read"></property>
+     </interface>
 </node>
