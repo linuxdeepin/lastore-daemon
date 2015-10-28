@@ -40,14 +40,18 @@ func parsePackageSize(line string) float64 {
 }
 
 // GuestPackageDownloadSize parsing the total size of download archives when installing
-// the pid package.
-func GuestPackageDownloadSize(pid string) float64 {
-	cmd := exec.Command("/usr/bin/apt-get", "install", pid, "-o", "Debug::NoLocking=1", "--assume-no")
+// the packages.
+func GuestPackageDownloadSize(packages ...string) float64 {
+	cmd := exec.Command("/usr/bin/apt-get", append([]string{"install", "-o", "Debug::NoLocking=1", "--assume-no"}, packages...)...)
+
 	lines, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
 		return parsePackageSize(line) != -1
 	})
 	if err != nil && len(lines) > 0 {
 		return -1
+	}
+	if len(lines) == 0 {
+		return 0
 	}
 	return parsePackageSize(lines[0])
 }

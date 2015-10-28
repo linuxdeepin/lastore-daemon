@@ -166,6 +166,10 @@ func (m *Manager) PackageDownloadSize(packageId string) int64 {
 	return int64(GuestPackageDownloadSize(packageId))
 }
 
+func (m *Manager) PackagesDownloadSize(packages []string) int64 {
+	return int64(GuestPackageDownloadSize(packages...))
+}
+
 func (m *Manager) PackageDesktopPath(packageId string) string {
 	r, _ := QueryDesktopPath(packageId)
 	return r
