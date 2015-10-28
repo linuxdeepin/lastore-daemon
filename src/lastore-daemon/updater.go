@@ -4,9 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/cihub/seelog"
+	"internal/system"
 	"net/http"
 	"pkg.deepin.io/lib/dbus"
 )
+
+type ApplicationUpdateInfo struct {
+	Id              string
+	Name            string
+	Icon            string
+	CurrentVersion  string
+	AvaiableVersion string
+
+	// There  hasn't support
+	changeLog string
+}
 
 type Updater struct {
 	AutoCheckUpdates bool
@@ -14,6 +26,14 @@ type Updater struct {
 	MirrorSource   string
 	OfficialSource string
 	mirrorSources  map[string]MirrorSource
+
+	upgradableInfos []system.UpgradeInfo
+
+	b system.System
+
+	//测试使用
+	UpdatableApps1     []string
+	UpdatablePackages1 []string
 }
 
 type MirrorSource struct {
@@ -25,17 +45,30 @@ type MirrorSource struct {
 	localeNames map[string]string
 }
 
-func NewUpdater() *Updater {
+func NewUpdater(b system.System) *Updater {
 	// TODO: Reload the cache
 	ms := LoadMirrorSources("http://api.lastore.deepin.org")
 	u := Updater{
 		OfficialSource: "http://packages.linuxdeepin.com",
 		mirrorSources:  make(map[string]MirrorSource),
+		b:              b,
 	}
 	for _, item := range ms {
 		u.mirrorSources[item.Id] = item
 	}
+
+	u.UpdatableApps1 = []string{"abiword", "anjuta", "deepin-movie", "d-feet"}
+	u.UpdatablePackages1 = UpdatableNames(u.b.UpgradeInfo())
 	return &u
+}
+
+func (u *Updater) ApplicationUpdateInfos1(lang string) []ApplicationUpdateInfo {
+	return []ApplicationUpdateInfo{
+		{"abiword", "Abiword", "abiword", "0.3", "0.55", ""},
+		{"anjuta", "anjuta", "anjuta", "1.3", "1.4", ""},
+		{"deepin-movie", "deepin movie", "deepin-movie", "2.3", "3.3", ""},
+		{"d-feet", "d-feet", "d-feet", "3.3", "5.5", ""},
+	}
 }
 
 // 设置用于下载软件的镜像源
@@ -134,4 +167,12 @@ func LoadMirrorSources(server string) []MirrorSource {
 		r = append(r, s)
 	}
 	return r
+}
+
+func UpdatableNames(infos []system.UpgradeInfo) []string {
+	var apps []string
+	for _, info := range infos {
+		apps = append(apps, info.Package)
+	}
+	return apps
 }

@@ -29,8 +29,8 @@ type Manager struct {
 
 	SystemArchitectures []system.Architecture
 
-	UpgradableApps  []string
-	upgradableInfos []system.UpgradeInfo
+	UpgradableApps []string
+	updater        *Updater
 }
 
 func NewManager(b system.System) *Manager {
@@ -41,8 +41,26 @@ func NewManager(b system.System) *Manager {
 		SystemArchitectures: b.SystemArchitectures(),
 	}
 	b.AttachIndicator(m.update)
-	m.refreshUpgradableApps()
+	m.updater = NewUpdater(b)
+	m.updatableApps()
 	return m
+}
+
+func (m *Manager) updatableApps() {
+	apps := UpdatableNames(m.b.UpgradeInfo())
+	changed := len(apps) != len(m.UpgradableApps)
+	if !changed {
+		for i, app := range apps {
+			if m.UpgradableApps[i] != app {
+				changed = true
+				break
+			}
+		}
+	}
+	if changed {
+		m.UpgradableApps = apps
+		dbus.NotifyChange(m, "UpgradableApps")
+	}
 }
 
 func (m *Manager) update(info system.ProgressInfo) {
@@ -56,10 +74,9 @@ func (m *Manager) update(info system.ProgressInfo) {
 		j.swap(j.next)
 		j.next = nil
 		m.StartJob(j.Id)
-
 	}
 	if j.Status != system.ReadyStatus && j.Status != system.RunningStatus {
-		m.refreshUpgradableApps()
+		go m.updatableApps()
 	}
 }
 

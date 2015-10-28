@@ -64,8 +64,7 @@ func main() {
 	}
 	log.Println("Started service at system bus")
 
-	u := NewUpdater()
-	err = dbus.InstallOnSystem(u)
+	err = dbus.InstallOnSystem(m.updater)
 	if err != nil {
 		log.Println("Start failed:", err)
 		return
