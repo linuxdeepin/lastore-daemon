@@ -112,14 +112,18 @@ func NewJob(packageId string, jobType string, region string) *Job {
 	return j
 }
 
+func NewDistUpgradeJob() *Job {
+	return NewJob("", system.DistUpgradeJobType, "")
+}
+
 func NewRemoveJob(packageId string) *Job {
-	return NewJob(packageId, RemoveJobType, "")
+	return NewJob(packageId, system.RemoveJobType, "")
 }
 func NewDownloadJob(packageId string, region string) *Job {
-	return NewJob(packageId, DownloadJobType, region)
+	return NewJob(packageId, system.DownloadJobType, region)
 }
 func NewInstallJob(packageId string, region string) *Job {
-	installJob := NewJob(packageId, InstallJobType, region)
+	installJob := NewJob(packageId, system.InstallJobType, region)
 	downloadJob := NewDownloadJob(packageId, region)
 	downloadJob.Id = installJob.Id
 	downloadJob.next = installJob
@@ -162,25 +166,30 @@ func (j *Job) swap(j2 *Job) {
 
 func (j *Job) start(sys system.System) error {
 	switch j.Type {
-	case DownloadJobType:
+	case system.DownloadJobType:
 		err := sys.Download(j.Id, j.PackageId, j.option["region"])
 		if err != nil {
 			return err
 		}
 		return sys.Start(j.Id)
-	case InstallJobType:
+
+	case system.InstallJobType:
 		err := sys.Install(j.Id, j.PackageId)
 		if err != nil {
 			return err
 		}
 		return sys.Start(j.Id)
 
-	case RemoveJobType:
+	case system.RemoveJobType:
 		err := sys.Remove(j.Id, j.PackageId)
 		if err != nil {
 			return err
 		}
 		return sys.Start(j.Id)
+
+	case system.DistUpgradeJobType:
+		return sys.DistUpgrade()
+
 	default:
 		return system.NotFoundError
 	}

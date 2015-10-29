@@ -61,13 +61,15 @@ func newAPTCommand(
 	polices := []string{"-y"}
 	var args []string
 	switch cmdType {
-	case "install":
+	case system.InstallJobType:
 		args = append(args, "install", packageId)
-	case "remove":
+	case system.RemoveJobType:
 		args = append(args, "remove", packageId)
-	case "download":
+	case system.DownloadJobType:
 		options["Debug::NoLocking"] = "1"
 		args = append(args, "install", "-d", packageId)
+	case system.DistUpgradeJobType:
+		args = append(args, "dist-upgrade", "--force-yes")
 	}
 
 	for k, v := range options {

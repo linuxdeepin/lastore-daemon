@@ -7,12 +7,6 @@ import (
 	"pkg.deepin.io/lib/dbus"
 )
 
-const (
-	DownloadJobType = "download"
-	InstallJobType  = "install"
-	RemoveJobType   = "remove"
-)
-
 type CMD string
 
 const (
@@ -83,30 +77,37 @@ func (m *Manager) update(info system.ProgressInfo) {
 func (m *Manager) do(jobType string, packageId string, region string) (*Job, error) {
 	var j *Job
 	switch jobType {
-	case DownloadJobType:
+	case system.DownloadJobType:
 		j = NewDownloadJob(packageId, region)
-	case InstallJobType:
+	case system.InstallJobType:
 		j = NewInstallJob(packageId, region)
-	case RemoveJobType:
+	case system.RemoveJobType:
 		j = NewRemoveJob(packageId)
+	case system.DistUpgradeJobType:
+		j = NewDistUpgradeJob()
 	}
 	err := m.addJob(j)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("JobID:", j.Id)
 	return j, nil
 }
 
 func (m *Manager) InstallPackage(packageId string, region string) (*Job, error) {
-	return m.do(InstallJobType, packageId, region)
+	return m.do(system.InstallJobType, packageId, region)
 }
 
 func (m *Manager) DownloadPackage(packageId string, region string) (*Job, error) {
-	return m.do(DownloadJobType, packageId, region)
+	return m.do(system.DownloadJobType, packageId, region)
 }
 
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
-	return m.do(RemoveJobType, packageId, "")
+	return m.do(system.RemoveJobType, packageId, "")
+}
+
+func (m *Manager) DistUpgrade3() (*Job, error) {
+	return m.do(system.DistUpgradeJobType, "", "")
 }
 
 func (m *Manager) StartJob(jobId string) error {

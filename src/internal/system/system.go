@@ -13,6 +13,13 @@ const (
 	SuccessedStatus        = "success"
 )
 
+const (
+	DownloadJobType    = "download"
+	InstallJobType     = "install"
+	RemoveJobType      = "remove"
+	DistUpgradeJobType = "dist_upgrade"
+)
+
 type ProgressInfo struct {
 	JobId       string
 	Progress    float64
@@ -40,7 +47,7 @@ type System interface {
 	Install(jobId string, packageId string) error
 	Remove(jobId string, packageId string) error
 
-	SystemUpgrade()
+	DistUpgrade() error
 	UpgradeInfo() []UpgradeInfo
 
 	Abort(jobId string) error

@@ -23,11 +23,15 @@ func New() system.System {
 func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 	fs := strings.SplitN(line, ":", 4)
 	switch fs[0] {
-	case "dlstatus", "pmstatus":
+	case "dlstatus", "pmstatus", "dist_upgrade":
 		v, err := strconv.ParseFloat(fs[2], 64)
 		if err != nil {
 			return system.ProgressInfo{JobId: id},
 				fmt.Errorf("W: unknow progress value: %q", line)
+		}
+		if v == -1 {
+			return system.ProgressInfo{JobId: id},
+				fmt.Errorf("W: failed: %q", line)
 		}
 		return system.ProgressInfo{
 			JobId:       id,
@@ -63,21 +67,26 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 }
 
 func (p *APTSystem) Download(jobId string, packageId string, region string) error {
-	newAPTCommand(p, jobId, "download", p.indicator, packageId, region)
+	newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packageId, region)
 	return nil
 }
 
 func (p *APTSystem) Remove(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, "remove", p.indicator, packageId, "")
+	newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packageId, "")
 	return nil
 }
 
 func (p *APTSystem) Install(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, "install", p.indicator, packageId, "")
+	newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packageId, "")
 	return nil
 }
 
-func (APTSystem) SystemUpgrade() {
+func (p *APTSystem) DistUpgrade() error {
+	const DistUpgradeJobId = "dist_upgrade"
+	// TODO: clean
+	c := newAPTCommand(p, DistUpgradeJobId, system.DistUpgradeJobType, p.indicator, "", "")
+	c.Start()
+	return nil
 }
 
 func (p *APTSystem) Pause(jobId string) error {
