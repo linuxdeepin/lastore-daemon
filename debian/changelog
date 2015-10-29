@@ -1,9 +1,0 @@
-lastore-daemon (0.1) UNRELEASED; urgency=medium
-
-  * package lastore-daemon
-  * fix progress value
-  * emit Manager.ListJob changed signal
-  * refine internal logical
-  * sort JobList
-  * add SystemArchitecture
- -- MAINTAINER <snyh@snyh-pc>  Thu, 20 Aug 2015 15:02:24 +0800
