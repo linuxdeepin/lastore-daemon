@@ -33,6 +33,7 @@ func decodeData(url string, data interface{}) error {
 	}
 	return nil
 }
+
 func writeData(fpath string, data interface{}) error {
 	content, err := json.Marshal(data)
 	if err != nil {
