@@ -48,7 +48,7 @@ func GenerateDesktopIndexes(scanDirectories []string, outputDir string) error {
 			dinfos = append(dinfos, *info)
 		}
 	}
-	writeDesktopExecIndex(dinfos, path.Join(outputDir, "desktop.json"))
+	writeDesktopExecIndex(dinfos, path.Join(outputDir, "exec.json"))
 	writeDesktopIconIndex(dinfos, path.Join(outputDir, "icon.json"))
 	writeDesktopPackage(dinfos, path.Join(outputDir, "pacakge.json"))
 	writeData(path.Join(outputDir, "installTime.json"), installTimeIndex)
