@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var __needle__ = regexp.MustCompile("Need to get ([0-9,]+) ([kMGTPEZY]?)B(/[0-9,]+ [kMGTPEZY]?B)? of archives")
+var __needle__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,]+ [kMGTPEZY]?B)? of archives")
 var __unitTable__ = map[byte]float64{
 	'k': 1000,
 	'M': 1000 * 1000,
@@ -43,6 +43,7 @@ func parsePackageSize(line string) float64 {
 // the packages.
 func GuestPackageDownloadSize(packages ...string) float64 {
 	cmd := exec.Command("/usr/bin/apt-get", append([]string{"install", "-o", "Debug::NoLocking=1", "--assume-no"}, packages...)...)
+	cmd.Env = make([]string, 0)
 
 	lines, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
 		return parsePackageSize(line) != -1
