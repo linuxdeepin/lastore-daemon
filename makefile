@@ -29,19 +29,19 @@ clean:
 	rm -rf bin
 	rm ../lastore-daemon_* -rf
 
-bin/tools:
-	gb build tools
+bin/lastore-tools:
+	gb build -o bin/lastore-tools tools
 
 var/lib/lastore: var/lib/lastore/application.json var/lib/lastore/categories.json var/lib/lastore/xcategories.json
 
-var/lib/lastore/application.json: bin/tools
+var/lib/lastore/application.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/tools -item applications -output $@
+	./bin/lastore-tools -item applications -output $@
 
-var/lib/lastore/categories.json: bin/tools
+var/lib/lastore/categories.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/tools -item categories -output  $@
+	./bin/lastore-tools -item categories -output  $@
 
-var/lib/lastore/xcategories.json: bin/tools
+var/lib/lastore/xcategories.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/tools -item xcategories -output  $@
+	./bin/lastore-tools -item xcategories -output  $@
