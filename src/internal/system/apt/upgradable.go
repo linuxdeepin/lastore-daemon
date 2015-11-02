@@ -45,7 +45,6 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 
 func queryDpkgUpgradeInfoByAptList() []string {
 	cmd := exec.Command("apt", "list", "--upgradable")
-	cmd.Env = make([]string, 0)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {

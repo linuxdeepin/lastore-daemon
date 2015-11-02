@@ -43,7 +43,6 @@ func parsePackageSize(line string) float64 {
 // the packages.
 func GuestPackageDownloadSize(packages ...string) float64 {
 	cmd := exec.Command("/usr/bin/apt-get", append([]string{"install", "-o", "Debug::NoLocking=1", "--assume-no"}, packages...)...)
-	cmd.Env = make([]string, 0)
 
 	lines, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
 		return parsePackageSize(line) != -1
@@ -74,8 +73,6 @@ func QueryDesktopPath(pkgId string) (string, error) {
 }
 
 func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line string) bool) ([]string, error) {
-	cmd.Env = make([]string, 0)
-
 	r, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err

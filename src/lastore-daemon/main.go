@@ -48,7 +48,14 @@ func main() {
 	w := setupLog()
 	defer w.Close()
 
-	os.Setenv("PATH", "/usr/bin/:/bin:/sbin")
+	os.Unsetenv("LC_ALL")
+	os.Unsetenv("LANGUAGE")
+	os.Unsetenv("LC_MESSAGES")
+	os.Unsetenv("LANG")
+
+	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
+		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
+	}
 	if !lib.UniqueOnSystem("org.deepin.lastore") {
 		log.Println("Can't obtain the org.deepin.lastore")
 		return
