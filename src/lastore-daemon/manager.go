@@ -156,8 +156,8 @@ func (m *Manager) CleanJob(jobId string) error {
 		return err
 	}
 
-	if j.Status != system.FailedStatus && j.Status != system.SucceedStatus {
-		return fmt.Errorf("The status of job %q is not cleanable", jobId)
+	if j.Status == system.RunningStatus {
+		return fmt.Errorf("The job %q is running, it can't be cleaned.", jobId)
 	}
 
 	err = m.removeJob(jobId)
