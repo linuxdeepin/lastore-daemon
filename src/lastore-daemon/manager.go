@@ -99,8 +99,7 @@ func (m *Manager) do(jobType string, packageId string) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("JobID:", j.Id)
-	return j, nil
+	return j, StartSystemJob(m.b, j)
 }
 
 func (m *Manager) InstallPackage(packageId string) (*Job, error) {

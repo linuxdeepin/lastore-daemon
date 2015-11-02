@@ -59,7 +59,6 @@ func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 	}
 	return system.ProgressInfo{JobId: id},
 		fmt.Errorf("W: unknow status:%q", line)
-
 }
 
 func (p *APTSystem) AttachIndicator(f system.Indicator) {
@@ -67,26 +66,24 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 }
 
 func (p *APTSystem) Download(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packageId)
-	return nil
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packageId)
+	return c.Start()
 }
 
 func (p *APTSystem) Remove(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packageId)
-	return nil
+	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packageId)
+	return c.Start()
 }
 
 func (p *APTSystem) Install(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packageId)
-	return nil
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packageId)
+	return c.Start()
 }
 
 func (p *APTSystem) DistUpgrade() error {
 	const DistUpgradeJobId = "dist_upgrade"
-	// TODO: clean
 	c := newAPTCommand(p, DistUpgradeJobId, system.DistUpgradeJobType, p.indicator, "")
-	c.Start()
-	return nil
+	return c.Start()
 }
 
 func (p *APTSystem) Abort(jobId string) error {

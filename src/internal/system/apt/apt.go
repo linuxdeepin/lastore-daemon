@@ -2,6 +2,7 @@ package apt
 
 import (
 	"bufio"
+	"fmt"
 	"internal/system"
 	"io"
 	"io/ioutil"
@@ -93,24 +94,24 @@ func newAPTCommand(
 	return r
 }
 
-func (c aptCommand) Start() {
+func (c aptCommand) Start() error {
 	c.logger.Println("Starting with ", c.osCMD.Args)
 	rr, ww, err := os.Pipe()
 	defer ww.Close()
 	if err != nil {
-		c.logger.Println("os.Pipe error:", err)
+		return fmt.Errorf("aptCommand.Start pipe : %v", err)
 	}
 	c.osCMD.ExtraFiles = append(c.osCMD.ExtraFiles, ww)
 	c.aptPipe = rr
 
 	err = c.osCMD.Start()
 	if err != nil {
-		c.logger.Println("apt-get start:", err)
+		return err
 	}
-	ww.Close()
 
 	go c.updateProgress()
 	go c.Wait()
+	return nil
 }
 
 func (c aptCommand) Wait() error {
@@ -130,7 +131,6 @@ func (c aptCommand) Wait() error {
 	var line string
 	if err != nil {
 		line = "dstatus:" + system.FailedStatus + ":" + err.Error()
-		panic("XXOO" + line)
 	} else {
 		line = "dstatus:" + system.SucceedStatus + ":succeed"
 	}

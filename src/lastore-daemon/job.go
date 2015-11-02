@@ -133,9 +133,8 @@ func (j *Job) updateInfo(info system.ProgressInfo) {
 		dbus.NotifyChange(j, "Description")
 	}
 
-	if info.Status != j.Status {
-		j.Status = info.Status
-		dbus.NotifyChange(j, "Status")
+	if !TransitionJobState(j, info.Status) {
+		panic("Can't transition job status from " + string(j.Status) + " to " + string(info.Status))
 	}
 
 	if info.Progress != j.Progress && info.Progress != -1 {
@@ -158,5 +157,8 @@ func (j *Job) swap(j2 *Job) {
 		Description: j2.Description,
 		Status:      system.Status(j2.Status),
 	}
+	// force change status
+	j.Status = j2.Status
+
 	j.updateInfo(info)
 }
