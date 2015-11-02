@@ -41,12 +41,12 @@ func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 		}, nil
 	case "dstatus":
 		switch fs[1] {
-		case system.SuccessedStatus:
+		case system.SucceedStatus:
 			return system.ProgressInfo{
 				JobId:       id,
 				Progress:    1.0,
 				Description: fs[2],
-				Status:      system.SuccessedStatus,
+				Status:      system.SucceedStatus,
 			}, nil
 		case system.FailedStatus:
 			return system.ProgressInfo{

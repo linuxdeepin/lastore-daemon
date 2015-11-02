@@ -134,7 +134,7 @@ func (c aptCommand) Wait() error {
 	if err != nil {
 		line = "dstatus:" + system.FailedStatus + ":" + err.Error()
 	} else {
-		line = "dstatus:" + system.SuccessedStatus + ":successed"
+		line = "dstatus:" + system.SucceedStatus + ":succeed"
 	}
 	info, err := ParseProgressInfo(c.OwnerId, line)
 	if err != nil {

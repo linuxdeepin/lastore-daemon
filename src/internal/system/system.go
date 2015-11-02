@@ -7,16 +7,18 @@ import (
 type Status string
 
 const (
-	ReadyStatus     Status = "ready"
-	RunningStatus          = "running"
-	FailedStatus           = "failed"
-	SuccessedStatus        = "success"
+	ReadyStatus   Status = "ready"
+	RunningStatus        = "running"
+	FailedStatus         = "failed"
+	SucceedStatus        = "succeed"
+	PausedStatus         = "paused"
 )
 
 const (
 	DownloadJobType    = "download"
 	InstallJobType     = "install"
 	RemoveJobType      = "remove"
+	UpdateJobType      = "update"
 	DistUpgradeJobType = "dist_upgrade"
 )
 

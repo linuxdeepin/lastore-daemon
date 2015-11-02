@@ -66,7 +66,7 @@ func main() {
 
 	err := dbus.InstallOnSystem(m)
 	if err != nil {
-		log.Println("Start failed:", err)
+		log.Println("Install manager on system bus :", err)
 		return
 	}
 	log.Println("Started service at system bus")

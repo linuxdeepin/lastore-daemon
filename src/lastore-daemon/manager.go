@@ -64,7 +64,7 @@ func (m *Manager) update(info system.ProgressInfo) {
 	}
 
 	j.updateInfo(info)
-	if j.Status == system.SuccessedStatus && j.next != nil {
+	if j.Status == system.SucceedStatus && j.next != nil {
 		j.swap(j.next)
 		j.next = nil
 		m.StartJob(j.Id)
@@ -156,7 +156,7 @@ func (m *Manager) CleanJob(jobId string) error {
 		return err
 	}
 
-	if j.Status != system.FailedStatus && j.Status != system.SuccessedStatus {
+	if j.Status != system.FailedStatus && j.Status != system.SucceedStatus {
 		return fmt.Errorf("The status of job %q is not cleanable", jobId)
 	}
 
