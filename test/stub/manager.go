@@ -64,16 +64,24 @@ func (obj *Manager) CleanJob(arg0 string) (_err error) {
 	return
 }
 
-func (obj *Manager) DownloadPackage(arg0 string, arg1 string) (arg2 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.DownloadPackage", 0, arg0, arg1).Store(&arg2)
+func (obj *Manager) DistUpgrade3() (arg0 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.DistUpgrade3", 0).Store(&arg0)
 	if _err != nil {
 		fmt.Println(_err)
 	}
 	return
 }
 
-func (obj *Manager) InstallPackage(arg0 string, arg1 string) (arg2 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.InstallPackage", 0, arg0, arg1).Store(&arg2)
+func (obj *Manager) DownloadPackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.DownloadPackage", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Manager) InstallPackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.InstallPackage", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -112,8 +120,8 @@ func (obj *Manager) PackageExists(arg0 string) (arg1 bool, _err error) {
 	return
 }
 
-func (obj *Manager) PackageUpgradeInfo(arg0 string) (arg1 string, arg2 string, arg3 string, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PackageUpgradeInfo", 0, arg0).Store(&arg1, &arg2, &arg3)
+func (obj *Manager) PackagesDownloadSize(arg0 []string) (arg1 int64, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.PackagesDownloadSize", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -130,6 +138,14 @@ func (obj *Manager) PauseJob2(arg0 string) (_err error) {
 
 func (obj *Manager) RemovePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
 	_err = obj.core.Call("org.deepin.lastore.Manager.RemovePackage", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Manager) SetRegion(arg0 string) (_err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.SetRegion", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -324,9 +340,11 @@ type Updater struct {
 	signals       map[<-chan *dbus.Signal]struct{}
 	signalsLocker sync.Mutex
 
-	AutoCheckUpdates *dbusPropertyUpdaterAutoCheckUpdates
-	MirrorSource     *dbusPropertyUpdaterMirrorSource
-	OfficialSource   *dbusPropertyUpdaterOfficialSource
+	AutoCheckUpdates   *dbusPropertyUpdaterAutoCheckUpdates
+	MirrorSource       *dbusPropertyUpdaterMirrorSource
+	OfficialSource     *dbusPropertyUpdaterOfficialSource
+	UpdatableApps1     *dbusPropertyUpdaterUpdatableApps1
+	UpdatablePackages1 *dbusPropertyUpdaterUpdatablePackages1
 }
 
 func (obj *Updater) _createSignalChan() <-chan *dbus.Signal {
@@ -352,6 +370,16 @@ func DestroyUpdater(obj *Updater) {
 	obj.AutoCheckUpdates.Reset()
 	obj.MirrorSource.Reset()
 	obj.OfficialSource.Reset()
+	obj.UpdatableApps1.Reset()
+	obj.UpdatablePackages1.Reset()
+}
+
+func (obj *Updater) ApplicationUpdateInfos1(arg0 string) (arg1 [][]interface{}, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Updater.ApplicationUpdateInfos1", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
 }
 
 func (obj *Updater) ListMirrorSources(arg0 string) (arg1 [][]interface{}, _err error) {
@@ -456,6 +484,58 @@ func (this *dbusPropertyUpdaterOfficialSource) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
 }
 
+type dbusPropertyUpdaterUpdatableApps1 struct {
+	*property.BaseObserver
+	core *dbus.Object
+}
+
+func (this *dbusPropertyUpdaterUpdatableApps1) SetValue(notwritable interface{}) {
+	fmt.Println("org.deepin.lastore.Updater.UpdatableApps1 is not writable")
+}
+
+func (this *dbusPropertyUpdaterUpdatableApps1) Get() []string {
+	return this.GetValue().([]string)
+}
+func (this *dbusPropertyUpdaterUpdatableApps1) GetValue() interface{} /*[]string*/ {
+	var r dbus.Variant
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "UpdatableApps1").Store(&r)
+	if err == nil && r.Signature().String() == "as" {
+		return r.Value().([]string)
+	} else {
+		fmt.Println("dbusProperty:UpdatableApps1 error:", err, "at org.deepin.lastore.Updater")
+		return *new([]string)
+	}
+}
+func (this *dbusPropertyUpdaterUpdatableApps1) GetType() reflect.Type {
+	return reflect.TypeOf((*[]string)(nil)).Elem()
+}
+
+type dbusPropertyUpdaterUpdatablePackages1 struct {
+	*property.BaseObserver
+	core *dbus.Object
+}
+
+func (this *dbusPropertyUpdaterUpdatablePackages1) SetValue(notwritable interface{}) {
+	fmt.Println("org.deepin.lastore.Updater.UpdatablePackages1 is not writable")
+}
+
+func (this *dbusPropertyUpdaterUpdatablePackages1) Get() []string {
+	return this.GetValue().([]string)
+}
+func (this *dbusPropertyUpdaterUpdatablePackages1) GetValue() interface{} /*[]string*/ {
+	var r dbus.Variant
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "UpdatablePackages1").Store(&r)
+	if err == nil && r.Signature().String() == "as" {
+		return r.Value().([]string)
+	} else {
+		fmt.Println("dbusProperty:UpdatablePackages1 error:", err, "at org.deepin.lastore.Updater")
+		return *new([]string)
+	}
+}
+func (this *dbusPropertyUpdaterUpdatablePackages1) GetType() reflect.Type {
+	return reflect.TypeOf((*[]string)(nil)).Elem()
+}
+
 func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 	if !path.IsValid() {
 		return nil, errors.New("The path of '" + string(path) + "' is invalid.")
@@ -468,6 +548,8 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 	obj.AutoCheckUpdates = &dbusPropertyUpdaterAutoCheckUpdates{&property.BaseObserver{}, core}
 	obj.MirrorSource = &dbusPropertyUpdaterMirrorSource{&property.BaseObserver{}, core}
 	obj.OfficialSource = &dbusPropertyUpdaterOfficialSource{&property.BaseObserver{}, core}
+	obj.UpdatableApps1 = &dbusPropertyUpdaterUpdatableApps1{&property.BaseObserver{}, core}
+	obj.UpdatablePackages1 = &dbusPropertyUpdaterUpdatablePackages1{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.deepin.lastore.Updater',sender='"+destName+"',member='PropertiesChanged'")
@@ -494,6 +576,12 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 
 					} else if key == "OfficialSource" {
 						obj.OfficialSource.Notify()
+
+					} else if key == "UpdatableApps1" {
+						obj.UpdatableApps1.Notify()
+
+					} else if key == "UpdatablePackages1" {
+						obj.UpdatablePackages1.Notify()
 					}
 				}
 			} else if v.Name == "org.deepin.lastore.Updater.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
@@ -507,6 +595,12 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 
 					} else if key == "OfficialSource" {
 						obj.OfficialSource.Notify()
+
+					} else if key == "UpdatableApps1" {
+						obj.UpdatableApps1.Notify()
+
+					} else if key == "UpdatablePackages1" {
+						obj.UpdatablePackages1.Notify()
 					}
 				}
 			}

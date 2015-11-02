@@ -3,13 +3,14 @@
           <method name="CleanJob">
                <arg type="s" direction="in"></arg>
           </method>
+          <method name="DistUpgrade3">
+               <arg type="o" direction="out"></arg>
+          </method>
           <method name="DownloadPackage">
-               <arg type="s" direction="in"></arg>
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
           <method name="InstallPackage">
-               <arg type="s" direction="in"></arg>
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
@@ -29,11 +30,9 @@
                <arg type="s" direction="in"></arg>
                <arg type="b" direction="out"></arg>
           </method>
-          <method name="PackageUpgradeInfo">
-               <arg type="s" direction="in"></arg>
-               <arg type="s" direction="out"></arg>
-               <arg type="s" direction="out"></arg>
-               <arg type="s" direction="out"></arg>
+          <method name="PackagesDownloadSize">
+               <arg type="as" direction="in"></arg>
+               <arg type="x" direction="out"></arg>
           </method>
           <method name="PauseJob2">
                <arg type="s" direction="in"></arg>
@@ -41,6 +40,9 @@
           <method name="RemovePackage">
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
+          </method>
+          <method name="SetRegion">
+               <arg type="s" direction="in"></arg>
           </method>
           <method name="StartJob">
                <arg type="s" direction="in"></arg>
@@ -51,6 +53,10 @@
           <property name="UpgradableApps" type="as" access="read"></property>
      </interface>
      <interface name="org.deepin.lastore.Updater">
+          <method name="ApplicationUpdateInfos1">
+               <arg type="s" direction="in"></arg>
+               <arg type="a(sssss)" direction="out"></arg>
+          </method>
           <method name="ListMirrorSources">
                <arg type="s" direction="in"></arg>
                <arg type="a(sss)" direction="out"></arg>
@@ -64,5 +70,7 @@
           <property name="AutoCheckUpdates" type="b" access="read"></property>
           <property name="MirrorSource" type="s" access="read"></property>
           <property name="OfficialSource" type="s" access="read"></property>
+          <property name="UpdatableApps1" type="as" access="read"></property>
+          <property name="UpdatablePackages1" type="as" access="read"></property>
      </interface>
 </node>

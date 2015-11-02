@@ -95,7 +95,7 @@ func (j *Job) GetDBusInfo() dbus.DBusInfo {
 	}
 }
 
-func NewJob(packageId string, jobType string, region string) *Job {
+func NewJob(packageId string, jobType string) *Job {
 	j := &Job{
 		Id:          genJobId() + jobType,
 		CreateTime:  time.Now().UnixNano(),
@@ -106,25 +106,22 @@ func NewJob(packageId string, jobType string, region string) *Job {
 		ElapsedTime: 0,
 		option:      make(map[string]string),
 	}
-	if region != "" {
-		j.option["region"] = region
-	}
 	return j
 }
 
 func NewDistUpgradeJob() *Job {
-	return NewJob("", system.DistUpgradeJobType, "")
+	return NewJob("", system.DistUpgradeJobType)
 }
 
 func NewRemoveJob(packageId string) *Job {
-	return NewJob(packageId, system.RemoveJobType, "")
+	return NewJob(packageId, system.RemoveJobType)
 }
-func NewDownloadJob(packageId string, region string) *Job {
-	return NewJob(packageId, system.DownloadJobType, region)
+func NewDownloadJob(packageId string) *Job {
+	return NewJob(packageId, system.DownloadJobType)
 }
-func NewInstallJob(packageId string, region string) *Job {
-	installJob := NewJob(packageId, system.InstallJobType, region)
-	downloadJob := NewDownloadJob(packageId, region)
+func NewInstallJob(packageId string) *Job {
+	installJob := NewJob(packageId, system.InstallJobType)
+	downloadJob := NewDownloadJob(packageId)
 	downloadJob.Id = installJob.Id
 	downloadJob.next = installJob
 	return downloadJob
@@ -162,35 +159,4 @@ func (j *Job) swap(j2 *Job) {
 		Status:      system.Status(j2.Status),
 	}
 	j.updateInfo(info)
-}
-
-func (j *Job) start(sys system.System) error {
-	switch j.Type {
-	case system.DownloadJobType:
-		err := sys.Download(j.Id, j.PackageId, j.option["region"])
-		if err != nil {
-			return err
-		}
-		return sys.Start(j.Id)
-
-	case system.InstallJobType:
-		err := sys.Install(j.Id, j.PackageId)
-		if err != nil {
-			return err
-		}
-		return sys.Start(j.Id)
-
-	case system.RemoveJobType:
-		err := sys.Remove(j.Id, j.PackageId)
-		if err != nil {
-			return err
-		}
-		return sys.Start(j.Id)
-
-	case system.DistUpgradeJobType:
-		return sys.DistUpgrade()
-
-	default:
-		return system.NotFoundError
-	}
 }

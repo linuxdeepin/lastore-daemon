@@ -41,12 +41,13 @@ func GetJob(o dbus.ObjectPath, err error) *lastore.Job {
 }
 
 func (wrap *testWrap) TestInstall(c *C.C) {
-	job := GetJob(wrap.m.InstallPackage("deepin-movie", "mainland"))
+	job := GetJob(wrap.m.InstallPackage("deepin-movie"))
 	c.Check(job, C.Not(C.Equals), nil)
 	c.Check(job.PackageId.Get(), C.Equals, "deepin-movie")
 	c.Check(job.Status.Get(), C.Equals, "ready")
 	c.Check(job.Type.Get(), C.Equals, "download")
 	c.Check(job.Progress.Get(), C.Equals, 0.0)
 
-	c.Check(wrap.m.CleanJob(job.Id.Get()), C.Equals, nil)
+	c.Check(wrap.m.StartJob(job.Id.Get()), C.Equals, nil)
+	c.Check(wrap.m.CleanJob(job.Id.Get()), C.Not(C.Equals), nil)
 }

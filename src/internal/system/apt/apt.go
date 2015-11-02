@@ -50,12 +50,9 @@ type aptCommand struct {
 func newAPTCommand(
 	cmdSet CommandSet,
 	jobId string,
-	cmdType string, fn system.Indicator, packageId string, region string) *aptCommand {
+	cmdType string, fn system.Indicator, packageId string) *aptCommand {
 	options := map[string]string{
 		"APT::Status-Fd": "3",
-	}
-	if region != "" {
-		options["Acquire::SmartMirrors::Region"] = region
 	}
 
 	polices := []string{"-y"}
@@ -133,6 +130,7 @@ func (c aptCommand) Wait() error {
 	var line string
 	if err != nil {
 		line = "dstatus:" + system.FailedStatus + ":" + err.Error()
+		panic("XXOO" + line)
 	} else {
 		line = "dstatus:" + system.SucceedStatus + ":succeed"
 	}
@@ -147,6 +145,10 @@ func (c aptCommand) Wait() error {
 	return nil
 }
 
+func (c aptCommand) Abort() error {
+	return c.osCMD.Process.Kill()
+}
+
 func (c aptCommand) updateProgress() {
 	b := bufio.NewReader(c.aptPipe)
 	for {
@@ -159,10 +161,6 @@ func (c aptCommand) updateProgress() {
 		c.logger.Printf("indicator(%v)\n", info)
 		c.indicator(info)
 	}
-}
-
-func (c aptCommand) Abort(jobId string) error {
-	return system.NotImplementError
 }
 
 func getSystemArchitectures() []system.Architecture {

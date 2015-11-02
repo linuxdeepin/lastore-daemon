@@ -25,6 +25,8 @@ type Manager struct {
 
 	UpgradableApps []string
 	updater        *Updater
+
+	config map[string]string
 }
 
 func NewManager(b system.System) *Manager {
@@ -57,6 +59,13 @@ func (m *Manager) updatableApps() {
 	}
 }
 
+func (m *Manager) SetRegion(region string) error {
+	if region != "mainland" && region != "international" {
+		return fmt.Errorf("the region of %q is not supported", region)
+	}
+	return nil
+}
+
 func (m *Manager) update(info system.ProgressInfo) {
 	j, err := m.JobList.Find(info.JobId)
 	if err != nil {
@@ -74,13 +83,13 @@ func (m *Manager) update(info system.ProgressInfo) {
 	}
 }
 
-func (m *Manager) do(jobType string, packageId string, region string) (*Job, error) {
+func (m *Manager) do(jobType string, packageId string) (*Job, error) {
 	var j *Job
 	switch jobType {
 	case system.DownloadJobType:
-		j = NewDownloadJob(packageId, region)
+		j = NewDownloadJob(packageId)
 	case system.InstallJobType:
-		j = NewInstallJob(packageId, region)
+		j = NewInstallJob(packageId)
 	case system.RemoveJobType:
 		j = NewRemoveJob(packageId)
 	case system.DistUpgradeJobType:
@@ -94,28 +103,20 @@ func (m *Manager) do(jobType string, packageId string, region string) (*Job, err
 	return j, nil
 }
 
-func (m *Manager) InstallPackage(packageId string, region string) (*Job, error) {
-	return m.do(system.InstallJobType, packageId, region)
+func (m *Manager) InstallPackage(packageId string) (*Job, error) {
+	return m.do(system.InstallJobType, packageId)
 }
 
-func (m *Manager) DownloadPackage(packageId string, region string) (*Job, error) {
-	return m.do(system.DownloadJobType, packageId, region)
+func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
+	return m.do(system.DownloadJobType, packageId)
 }
 
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
-	return m.do(system.RemoveJobType, packageId, "")
+	return m.do(system.RemoveJobType, packageId)
 }
 
 func (m *Manager) DistUpgrade3() (*Job, error) {
-	return m.do(system.DistUpgradeJobType, "", "")
-}
-
-func (m *Manager) StartJob(jobId string) error {
-	j, err := m.JobList.Find(jobId)
-	if err != nil {
-		return err
-	}
-	return j.start(m.b)
+	return m.do(system.DistUpgradeJobType, "")
 }
 
 func (m *Manager) removeJob(id string) error {
@@ -147,7 +148,7 @@ func (m *Manager) addJob(j *Job) error {
 }
 
 func (m *Manager) PauseJob2(jobId string) error {
-	return m.b.Pause(jobId)
+	return m.b.Abort(jobId)
 }
 
 func (m *Manager) CleanJob(jobId string) error {

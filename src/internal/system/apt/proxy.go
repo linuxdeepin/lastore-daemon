@@ -66,43 +66,34 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 	p.indicator = f
 }
 
-func (p *APTSystem) Download(jobId string, packageId string, region string) error {
-	newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packageId, region)
+func (p *APTSystem) Download(jobId string, packageId string) error {
+	newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packageId)
 	return nil
 }
 
 func (p *APTSystem) Remove(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packageId, "")
+	newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packageId)
 	return nil
 }
 
 func (p *APTSystem) Install(jobId string, packageId string) error {
-	newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packageId, "")
+	newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packageId)
 	return nil
 }
 
 func (p *APTSystem) DistUpgrade() error {
 	const DistUpgradeJobId = "dist_upgrade"
 	// TODO: clean
-	c := newAPTCommand(p, DistUpgradeJobId, system.DistUpgradeJobType, p.indicator, "", "")
+	c := newAPTCommand(p, DistUpgradeJobId, system.DistUpgradeJobType, p.indicator, "")
 	c.Start()
 	return nil
 }
 
-func (p *APTSystem) Pause(jobId string) error {
-	return system.NotImplementError
-}
-
-func (p *APTSystem) Start(jobId string) error {
+func (p *APTSystem) Abort(jobId string) error {
 	if c := p.FindCMD(jobId); c != nil {
-		c.Start()
-		return nil
+		return c.Abort()
 	}
 	return system.NotFoundError
-}
-
-func (p *APTSystem) Abort(jobId string) error {
-	return system.NotImplementError
 }
 
 func (p *APTSystem) CheckInstalled(pid string) bool {

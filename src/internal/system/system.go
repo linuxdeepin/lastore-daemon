@@ -45,7 +45,7 @@ type Indicator func(ProgressInfo)
 
 type System interface {
 	CheckInstalled(packageId string) bool
-	Download(jobId string, packageId string, region string) error
+	Download(jobId string, packageId string) error
 	Install(jobId string, packageId string) error
 	Remove(jobId string, packageId string) error
 
@@ -53,8 +53,6 @@ type System interface {
 	UpgradeInfo() []UpgradeInfo
 
 	Abort(jobId string) error
-	Pause(jobId string) error
-	Start(jobId string) error
 	AttachIndicator(Indicator)
 	SystemArchitectures() []Architecture
 }
