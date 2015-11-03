@@ -81,6 +81,11 @@ func (m *Manager) update(info system.ProgressInfo) {
 	if j.Status != system.ReadyStatus && j.Status != system.RunningStatus {
 		go m.updatableApps()
 	}
+
+	if j.Status == system.SucceedStatus {
+		err := m.CleanJob(j.Id)
+		log.Printf("CleanJob %v(%v) after succeed\n", j, err)
+	}
 }
 
 func (m *Manager) do(jobType string, packageId string) (*Job, error) {
@@ -156,8 +161,8 @@ func (m *Manager) CleanJob(jobId string) error {
 		return err
 	}
 
-	if j.Status == system.RunningStatus {
-		return fmt.Errorf("The job %q is running, it can't be cleaned.", jobId)
+	if !TransitionJobState(j, system.EndStatus) {
+		return fmt.Errorf("%q can't transition state from %q to %q ", jobId, j.Status, system.EndStatus)
 	}
 
 	err = m.removeJob(jobId)
