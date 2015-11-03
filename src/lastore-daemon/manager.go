@@ -53,7 +53,7 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 	return m.jobManager.CreateJob(system.DistUpgradeJobType, "")
 }
 
-func (m *Manager) PauseJob2(jobId string) error {
+func (m *Manager) PauseJob(jobId string) error {
 	return m.jobManager.PauseJob(jobId)
 }
 func (m *Manager) StartJob(jobId string) error {

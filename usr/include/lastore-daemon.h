@@ -251,9 +251,9 @@ void DBusObject::propertyChanged(const QDBusMessage& msg)
 	int getTypeId(const QString& s);
 
 
-	typedef QList<QDBusObjectPath > ao;
-
 	typedef QStringList  as;
+
+	typedef QList<QDBusObjectPath > ao;
 
 	typedef dbus::types::BaseStruct<QString, QString, QString > r_sss_;
 
@@ -265,27 +265,6 @@ void DBusObject::propertyChanged(const QDBusMessage& msg)
 
 
 
-	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::ao& v)
-	{
-		argument.beginArray(getTypeId("o"));
-for (int i=0; i < v.size(); ++i)
-    argument << v.at(i);
-argument.endArray();
-return argument;
-
-	}
-	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::ao& v)
-	{
-		argument.beginArray();
-while (!argument.atEnd()) {
-    QDBusObjectPath ele;
-    argument >> ele;
-    v.append(ele);
-}
-argument.endArray();
-return argument;
-
-	} 
 	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::as& v)
 	{
 		argument.beginArray(getTypeId("s"));
@@ -300,6 +279,27 @@ return argument;
 		argument.beginArray();
 while (!argument.atEnd()) {
     QString ele;
+    argument >> ele;
+    v.append(ele);
+}
+argument.endArray();
+return argument;
+
+	} 
+	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::ao& v)
+	{
+		argument.beginArray(getTypeId("o"));
+for (int i=0; i < v.size(); ++i)
+    argument << v.at(i);
+argument.endArray();
+return argument;
+
+	}
+	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::ao& v)
+	{
+		argument.beginArray();
+while (!argument.atEnd()) {
+    QDBusObjectPath ele;
     argument >> ele;
     v.append(ele);
 }
@@ -384,10 +384,10 @@ return argument;
 
 	inline int getTypeId(const QString& s) {
 	if (0) { 
-	}  else if (s == "ao") {
-		return qDBusRegisterMetaType<dbus::types::ao>();
-	} else if (s == "as") {
+	}  else if (s == "as") {
 		return qDBusRegisterMetaType<dbus::types::as>();
+	} else if (s == "ao") {
+		return qDBusRegisterMetaType<dbus::types::ao>();
 	} else if (s == "(sss)") {
 		return qDBusRegisterMetaType<dbus::types::r_sss_>();
 	} else if (s == "a(sss)") {
@@ -402,6 +402,80 @@ return argument;
 	}
 	namespace objects {
 		
+namespace org {namespace deepin {namespace lastore {
+
+class Job : public dbus::common::DBusObject
+{
+	Q_OBJECT
+	private:
+	static const char *defaultService() { return "org.deepin.lastore";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore/Job");}
+	public:
+        Job(QString addr="session", QObject* parent=0)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore.Job", addr)
+        {
+        }
+	Job(QString addr, QString service, QString path, QObject* parent=0)
+	:DBusObject(parent, service, path, "org.deepin.lastore.Job", addr)
+	{
+	}
+	~Job(){}
+
+	
+	Q_PROPERTY(dbus::common::R<QString > Id READ id NOTIFY idChanged)
+	dbus::common::R<QString > id () {
+		QDBusPendingReply<> call = fetchProperty("Id");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > PackageId READ packageId NOTIFY packageIdChanged)
+	dbus::common::R<QString > packageId () {
+		QDBusPendingReply<> call = fetchProperty("PackageId");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > Type READ type NOTIFY typeChanged)
+	dbus::common::R<QString > type () {
+		QDBusPendingReply<> call = fetchProperty("Type");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > Status READ status NOTIFY statusChanged)
+	dbus::common::R<QString > status () {
+		QDBusPendingReply<> call = fetchProperty("Status");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<double > Progress READ progress NOTIFY progressChanged)
+	dbus::common::R<double > progress () {
+		QDBusPendingReply<> call = fetchProperty("Progress");
+		return dbus::common::R<double >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > Description READ description NOTIFY descriptionChanged)
+	dbus::common::R<QString > description () {
+		QDBusPendingReply<> call = fetchProperty("Description");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+
+
+	
+
+	Q_SIGNALS:
+	
+
+	
+	void idChanged (); 
+	void packageIdChanged (); 
+	void typeChanged (); 
+	void statusChanged (); 
+	void progressChanged (); 
+	void descriptionChanged (); 
+
+};
+}}}
+
 namespace org {namespace deepin {namespace lastore {
 
 class Manager : public dbus::common::DBusObject
@@ -544,10 +618,10 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<void> PauseJob2 (QString arg0) {
+	dbus::common::R<void> PauseJob (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob2"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob"), argumentList);
                 return dbus::common::R<void>(call);
 	}
 	
@@ -720,85 +794,11 @@ class Updater : public dbus::common::DBusObject
 };
 }}}
 
-namespace org {namespace deepin {namespace lastore {
-
-class Job : public dbus::common::DBusObject
-{
-	Q_OBJECT
-	private:
-	static const char *defaultService() { return "org.deepin.lastore";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore/Job");}
-	public:
-        Job(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore.Job", addr)
-        {
-        }
-	Job(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "org.deepin.lastore.Job", addr)
-	{
-	}
-	~Job(){}
-
-	
-	Q_PROPERTY(dbus::common::R<QString > Id READ id NOTIFY idChanged)
-	dbus::common::R<QString > id () {
-		QDBusPendingReply<> call = fetchProperty("Id");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<QString > PackageId READ packageId NOTIFY packageIdChanged)
-	dbus::common::R<QString > packageId () {
-		QDBusPendingReply<> call = fetchProperty("PackageId");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<QString > Type READ type NOTIFY typeChanged)
-	dbus::common::R<QString > type () {
-		QDBusPendingReply<> call = fetchProperty("Type");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<QString > Status READ status NOTIFY statusChanged)
-	dbus::common::R<QString > status () {
-		QDBusPendingReply<> call = fetchProperty("Status");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<double > Progress READ progress NOTIFY progressChanged)
-	dbus::common::R<double > progress () {
-		QDBusPendingReply<> call = fetchProperty("Progress");
-		return dbus::common::R<double >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<QString > Description READ description NOTIFY descriptionChanged)
-	dbus::common::R<QString > description () {
-		QDBusPendingReply<> call = fetchProperty("Description");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-
-
-	
-
-	Q_SIGNALS:
-	
-
-	
-	void idChanged (); 
-	void packageIdChanged (); 
-	void typeChanged (); 
-	void statusChanged (); 
-	void progressChanged (); 
-	void descriptionChanged (); 
-
-};
-}}}
-
 	}
 }
 
-Q_DECLARE_METATYPE(dbus::types::ao);
 Q_DECLARE_METATYPE(dbus::types::as);
+Q_DECLARE_METATYPE(dbus::types::ao);
 Q_DECLARE_METATYPE(dbus::types::r_sss_);
 Q_DECLARE_METATYPE(dbus::types::ar_sss_);
 Q_DECLARE_METATYPE(dbus::types::r_sssss_);

@@ -49,6 +49,14 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 
 // StartJob 将对应Job调整到队列最最前端，并调用dispatch
 func (m *JobManager) StartJob(jobId string) error {
+	job := m.find(jobId)
+	if job == nil {
+		return system.NotFoundError
+	}
+	if !TransitionJobState(job, system.ReadyStatus) {
+		return fmt.Errorf("Can't transition job %q's status from %q to %q\n", job.Id, job.Status, system.ReadyStatus)
+	}
+
 	var err error
 	for _, queue := range m.queues {
 		err = queue.Raise(jobId)
@@ -74,7 +82,21 @@ func (m *JobManager) CleanJob(jobId string) error {
 
 // PauseJob abort对应Job的执行,将状态更改为PauseStatus, 并调用dispatch
 func (m *JobManager) PauseJob(jobId string) error {
-	return system.NotImplementError
+	job := m.find(jobId)
+	if job == nil {
+		return system.NotFoundError
+	}
+
+	err := m.system.Abort(job.Id)
+	if err != nil {
+		return err
+	}
+
+	if !TransitionJobState(job, system.PausedStatus) {
+		return fmt.Errorf("Can't transition the status of Job %q from %q to %q", jobId, job.Status, system.EndStatus)
+	}
+
+	return nil
 }
 
 func (m JobManager) find(jobId string) *Job {

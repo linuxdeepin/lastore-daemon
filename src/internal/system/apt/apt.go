@@ -20,12 +20,19 @@ type CommandSet interface {
 
 func (p *APTSystem) AddCMD(cmd *aptCommand) {
 	if _, ok := p.cmdSet[cmd.OwnerId]; ok {
-		//TODO: log
+		log.Printf("APTSystem AddCMD: exist cmd %q", cmd.OwnerId)
 		return
 	}
+	log.Printf("APTSystem AddCMD: %v\n", cmd)
 	p.cmdSet[cmd.OwnerId] = cmd
 }
 func (p *APTSystem) RemoveCMD(id string) {
+	c, ok := p.cmdSet[id]
+	if !ok {
+		log.Printf("APTSystem RemoveCMD with invalid Id=%q\n", id)
+		return
+	}
+	log.Printf("APTSystem RemoveCMD: %v (exitCode:%d)", c, c.exitCode)
 	delete(p.cmdSet, id)
 }
 func (p *APTSystem) FindCMD(id string) *aptCommand {
@@ -33,28 +40,32 @@ func (p *APTSystem) FindCMD(id string) *aptCommand {
 }
 
 type aptCommand struct {
-	OwnerId string
-	Type    string
+	OwnerId    string
+	Cancelable bool
 
 	cmdSet CommandSet
 
-	osCMD *exec.Cmd
+	osCMD    *exec.Cmd
+	exitCode int
 
 	aptPipe *os.File
 
 	indicator system.Indicator
 
 	output io.WriteCloser
-	logger *log.Logger
 }
 
-func newAPTCommand(
-	cmdSet CommandSet,
-	jobId string,
-	cmdType string, fn system.Indicator, packageId string) *aptCommand {
+func (c aptCommand) String() string {
+	return fmt.Sprintf("AptCommand{id:%q, Cancelable:%v, CMD:%q}",
+		c.OwnerId, c.Cancelable, strings.Join(c.osCMD.Args, " "))
+}
+
+func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, packageId string) *aptCommand {
 	options := map[string]string{
 		"APT::Status-Fd": "3",
 	}
+
+	cancelable := false
 
 	polices := []string{"-y"}
 	var args []string
@@ -66,6 +77,7 @@ func newAPTCommand(
 	case system.DownloadJobType:
 		options["Debug::NoLocking"] = "1"
 		args = append(args, "install", "-d", packageId)
+		cancelable = true
 	case system.DistUpgradeJobType:
 		args = append(args, "dist-upgrade", "--force-yes")
 	}
@@ -81,21 +93,20 @@ func newAPTCommand(
 	cmd.Stderr = output
 
 	r := &aptCommand{
-		OwnerId:   jobId,
-		cmdSet:    cmdSet,
-		indicator: fn,
-		osCMD:     cmd,
-		output:    output,
-		logger:    log.New(output, "", log.LstdFlags|log.Lshortfile),
+		OwnerId:    jobId,
+		Cancelable: cancelable,
+		cmdSet:     cmdSet,
+		indicator:  fn,
+		osCMD:      cmd,
+		output:     output,
 	}
 
-	r.logger.Printf("add cmd(%q) from cmdset\n", r.OwnerId)
 	cmdSet.AddCMD(r)
 	return r
 }
 
-func (c aptCommand) Start() error {
-	c.logger.Println("Starting with ", c.osCMD.Args)
+func (c *aptCommand) Start() error {
+	log.Printf("AptCommand.Start:%v\n", c)
 	rr, ww, err := os.Pipe()
 	defer ww.Close()
 	if err != nil {
@@ -114,39 +125,57 @@ func (c aptCommand) Start() error {
 	return nil
 }
 
-func (c aptCommand) Wait() error {
-	c.logger.Printf("remove cmd(%q) from cmdset\n", c.OwnerId)
-	c.cmdSet.RemoveCMD(c.OwnerId)
-
-	defer func() {
-		if c.output != nil {
-			c.output.Close()
+func (c *aptCommand) Wait() (err error) {
+	err = c.osCMD.Wait()
+	if c.exitCode != ExitPause {
+		fmt.Println("NNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.......", c.exitCode)
+		if err != nil {
+			c.exitCode = ExitFailure
+			log.Printf("aptCommand.Wait: %v\n", err)
+		} else {
+			c.exitCode = ExitSuccess
 		}
-	}()
-	err := c.osCMD.Wait()
-	if err != nil {
-		c.logger.Println("osCMD.Wait():", err)
+	}
+	c.atExit()
+	return err
+}
+
+const (
+	ExitSuccess = 0
+	ExitFailure = 1
+	ExitPause   = 2
+)
+
+func (c *aptCommand) atExit() {
+	if c.output != nil {
+		c.output.Close()
 	}
 
+	c.cmdSet.RemoveCMD(c.OwnerId)
+
 	var line string
-	if err != nil {
-		line = "dstatus:" + system.FailedStatus + ":" + err.Error()
-	} else {
-		line = "dstatus:" + system.SucceedStatus + ":succeed"
+	switch c.exitCode {
+	case ExitSuccess:
+		line = "dstatus:" + system.SucceedStatus + ":" + "succeed"
+	case ExitFailure:
+		line = "dstatus:" + system.FailedStatus + ":" + "failed"
+	case ExitPause:
+		line = "dstatus:" + system.PausedStatus + ":" + "paused"
 	}
 	info, err := ParseProgressInfo(c.OwnerId, line)
 	if err != nil {
-		c.logger.Println("ParseProgressInfo:", err)
+		log.Printf("aptCommand.Wait.ParseProgressInfo (%q): %v", line, err)
 	}
 
-	c.logger.Printf("End indicator(%v)\n", info)
 	c.indicator(info)
-
-	return nil
 }
 
-func (c aptCommand) Abort() error {
-	return c.osCMD.Process.Kill()
+func (c *aptCommand) Abort() error {
+	if c.Cancelable {
+		c.exitCode = ExitPause
+		return c.osCMD.Process.Kill()
+	}
+	return system.NotSupportError
 }
 
 func (c aptCommand) updateProgress() {
@@ -158,7 +187,7 @@ func (c aptCommand) updateProgress() {
 		}
 
 		info, _ := ParseProgressInfo(c.OwnerId, line)
-		c.logger.Printf("indicator(%v)\n", info)
+		log.Printf("aptCommand.updateProgress %v\n", info)
 		c.indicator(info)
 	}
 }

@@ -43,6 +43,7 @@ type Architecture string
 
 var NotImplementError = errors.New("not implement")
 var NotFoundError = errors.New("not found resource")
+var NotSupportError = errors.New("not support operation")
 
 type Indicator func(JobProgressInfo)
 

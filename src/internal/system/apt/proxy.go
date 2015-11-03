@@ -48,12 +48,12 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 				Description: fs[2],
 				Status:      system.SucceedStatus,
 			}, nil
-		case system.FailedStatus:
+		case system.FailedStatus, system.PausedStatus:
 			return system.JobProgressInfo{
 				JobId:       id,
 				Progress:    -1,
 				Description: fs[2],
-				Status:      system.FailedStatus,
+				Status:      system.Status(fs[1]),
 			}, nil
 		}
 	}

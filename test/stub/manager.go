@@ -126,8 +126,8 @@ func (obj *Manager) PackagesDownloadSize(arg0 []string) (arg1 int64, _err error)
 	return
 }
 
-func (obj *Manager) PauseJob2(arg0 string) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PauseJob2", 0, arg0).Store()
+func (obj *Manager) PauseJob(arg0 string) (_err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.PauseJob", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -598,7 +598,6 @@ type Job struct {
 	Status      *dbusPropertyJobStatus
 	Progress    *dbusPropertyJobProgress
 	Description *dbusPropertyJobDescription
-	ElapsedTime *dbusPropertyJobElapsedTime
 }
 
 func (obj *Job) _createSignalChan() <-chan *dbus.Signal {
@@ -627,28 +626,6 @@ func DestroyJob(obj *Job) {
 	obj.Status.Reset()
 	obj.Progress.Reset()
 	obj.Description.Reset()
-	obj.ElapsedTime.Reset()
-}
-
-func (obj *Job) ConnectNotify(callback func(arg0 int32)) func() {
-	__conn.BusObject().Call("org.freedesktop.DBus.AddMatch", 0,
-		"type='signal',path='"+string(obj.Path)+"', interface='org.deepin.lastore.Job',sender='"+obj.DestName+"',member='Notify'")
-	sigChan := obj._createSignalChan()
-	go func() {
-		for v := range sigChan {
-			if v.Path != obj.Path || v.Name != "org.deepin.lastore.Job.Notify" || 1 != len(v.Body) {
-				continue
-			}
-			if reflect.TypeOf(v.Body[0]) != reflect.TypeOf((*int32)(nil)).Elem() {
-				continue
-			}
-
-			callback(v.Body[0].(int32))
-		}
-	}()
-	return func() {
-		obj._deleteSignalChan(sigChan)
-	}
 }
 
 type dbusPropertyJobId struct {
@@ -807,32 +784,6 @@ func (this *dbusPropertyJobDescription) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
 }
 
-type dbusPropertyJobElapsedTime struct {
-	*property.BaseObserver
-	core *dbus.Object
-}
-
-func (this *dbusPropertyJobElapsedTime) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.ElapsedTime is not writable")
-}
-
-func (this *dbusPropertyJobElapsedTime) Get() int32 {
-	return this.GetValue().(int32)
-}
-func (this *dbusPropertyJobElapsedTime) GetValue() interface{} /*int32*/ {
-	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "ElapsedTime").Store(&r)
-	if err == nil && r.Signature().String() == "i" {
-		return r.Value().(int32)
-	} else {
-		fmt.Println("dbusProperty:ElapsedTime error:", err, "at org.deepin.lastore.Job")
-		return *new(int32)
-	}
-}
-func (this *dbusPropertyJobElapsedTime) GetType() reflect.Type {
-	return reflect.TypeOf((*int32)(nil)).Elem()
-}
-
 func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	if !path.IsValid() {
 		return nil, errors.New("The path of '" + string(path) + "' is invalid.")
@@ -848,7 +799,6 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	obj.Status = &dbusPropertyJobStatus{&property.BaseObserver{}, core}
 	obj.Progress = &dbusPropertyJobProgress{&property.BaseObserver{}, core}
 	obj.Description = &dbusPropertyJobDescription{&property.BaseObserver{}, core}
-	obj.ElapsedTime = &dbusPropertyJobElapsedTime{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.deepin.lastore.Job',sender='"+destName+"',member='PropertiesChanged'")
@@ -884,9 +834,6 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 
 					} else if key == "Description" {
 						obj.Description.Notify()
-
-					} else if key == "ElapsedTime" {
-						obj.ElapsedTime.Notify()
 					}
 				}
 			} else if v.Name == "org.deepin.lastore.Job.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
@@ -909,9 +856,6 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 
 					} else if key == "Description" {
 						obj.Description.Notify()
-
-					} else if key == "ElapsedTime" {
-						obj.ElapsedTime.Notify()
 					}
 				}
 			}

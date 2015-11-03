@@ -5,6 +5,7 @@ import "testing"
 import C "gopkg.in/check.v1"
 import "pkg.deepin.io/lib/dbus"
 import "fmt"
+import "time"
 
 type testWrap struct {
 	m *lastore.Manager
@@ -84,15 +85,23 @@ func WaitJob(j *lastore.Job) string {
 	return newState
 }
 
+func (wrap *testWrap) TestPauseApp(c *C.C) {
+	job := GetJob(wrap.m.DownloadPackage("google-chrome-stable"))
+	<-time.After(time.Second * 3)
+	err := wrap.m.PauseJob2(job.Id.Get())
+	c.Check(err, C.Equals, nil)
+
+}
 func (wrap *testWrap) TestDistUpgrade(c *C.C) {
 	job := GetJob(wrap.m.DistUpgrade())
+	<-time.After(time.Second)
+	wrap.m.PauseJob2("1dist_upgrade")
 	s := WaitJob(job)
 	c.Check(s, C.Not(C.Equals), "running")
 	fmt.Println("DistUpgrade:", job)
 }
 
 func (wrap *testWrap) TestUpdate(c *C.C) {
-	return
 	job := GetJob(wrap.m.UpdatePackage("deepin-movie"))
 	id := job.Id.Get()
 	c.Check(job, C.Not(C.Equals), nil)
