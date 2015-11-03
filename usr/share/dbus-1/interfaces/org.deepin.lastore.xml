@@ -3,7 +3,7 @@
           <method name="CleanJob">
                <arg type="s" direction="in"></arg>
           </method>
-          <method name="DistUpgrade3">
+          <method name="DistUpgrade">
                <arg type="o" direction="out"></arg>
           </method>
           <method name="DownloadPackage">
@@ -51,7 +51,6 @@
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
-          <property name="Version" type="s" access="read"></property>
           <property name="JobList" type="ao" access="read"></property>
           <property name="SystemArchitectures" type="as" access="read"></property>
           <property name="UpgradableApps" type="as" access="read"></property>

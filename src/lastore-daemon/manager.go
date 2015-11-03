@@ -49,14 +49,16 @@ func (m *Manager) RemovePackage(packageId string) (*Job, error) {
 	return m.jobManager.CreateJob(system.RemoveJobType, packageId)
 }
 
-func (m *Manager) DistUpgrade3() (*Job, error) {
+func (m *Manager) DistUpgrade() (*Job, error) {
 	return m.jobManager.CreateJob(system.DistUpgradeJobType, "")
 }
 
 func (m *Manager) PauseJob2(jobId string) error {
-	return m.b.Abort(jobId)
+	return m.jobManager.PauseJob(jobId)
 }
-
+func (m *Manager) StartJob(jobId string) error {
+	return m.jobManager.StartJob(jobId)
+}
 func (m *Manager) CleanJob(jobId string) error {
 	return m.jobManager.CleanJob(jobId)
 }

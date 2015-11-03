@@ -48,7 +48,6 @@ func NewJob(packageId string, jobType string) *Job {
 func NewDistUpgradeJob() *Job {
 	return NewJob("", system.DistUpgradeJobType)
 }
-
 func NewUpdateJob(packageId string) *Job {
 	return NewJob(packageId, system.UpdateJobType)
 }

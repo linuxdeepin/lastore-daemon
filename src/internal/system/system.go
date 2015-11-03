@@ -52,7 +52,7 @@ type System interface {
 	Install(jobId string, packageId string) error
 	Remove(jobId string, packageId string) error
 
-	DistUpgrade() error
+	DistUpgrade(jobId string) error
 	UpgradeInfo() []UpgradeInfo
 
 	Abort(jobId string) error

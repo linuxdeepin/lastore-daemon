@@ -404,6 +404,213 @@ return argument;
 		
 namespace org {namespace deepin {namespace lastore {
 
+class Manager : public dbus::common::DBusObject
+{
+	Q_OBJECT
+	private:
+	static const char *defaultService() { return "org.deepin.lastore.Manager";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore/Manager");}
+	public:
+        Manager(QString addr="session", QObject* parent=0)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore.Manager", addr)
+        {
+        }
+	Manager(QString addr, QString service, QString path, QObject* parent=0)
+	:DBusObject(parent, service, path, "org.deepin.lastore.Manager", addr)
+	{
+	}
+	~Manager(){}
+
+	
+	Q_PROPERTY(dbus::common::R<dbus::types::ao > JobList READ jobList NOTIFY jobListChanged)
+	dbus::common::R<dbus::types::ao > jobList () {
+		QDBusPendingReply<> call = fetchProperty("JobList");
+		return dbus::common::R<dbus::types::ao >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<dbus::types::as > SystemArchitectures READ systemArchitectures NOTIFY systemArchitecturesChanged)
+	dbus::common::R<dbus::types::as > systemArchitectures () {
+		QDBusPendingReply<> call = fetchProperty("SystemArchitectures");
+		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<dbus::types::as > UpgradableApps READ upgradableApps NOTIFY upgradableAppsChanged)
+	dbus::common::R<dbus::types::as > upgradableApps () {
+		QDBusPendingReply<> call = fetchProperty("UpgradableApps");
+		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
+	}
+	
+
+
+	
+	
+	
+	dbus::common::R<void> CleanJob (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> DistUpgrade () {
+		QList<QVariant> argumentList;
+		;
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DistUpgrade"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> DownloadPackage (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DownloadPackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> InstallPackage (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InstallPackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QString> PackageCategory1 (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageCategory1"), argumentList);
+		return dbus::common::R<QString>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QString> PackageDesktopPath (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDesktopPath"), argumentList);
+		return dbus::common::R<QString>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<qlonglong> PackageDownloadSize (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDownloadSize"), argumentList);
+		return dbus::common::R<qlonglong>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<bool> PackageExists (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageExists"), argumentList);
+		return dbus::common::R<bool>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<qlonglong> PackagesDownloadSize (dbus::types::as arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackagesDownloadSize"), argumentList);
+		return dbus::common::R<qlonglong>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> PauseJob2 (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob2"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> RemovePackage (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> SetRegion (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetRegion"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> StartJob (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("StartJob"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> UpdatePackage (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("UpdatePackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+
+	Q_SIGNALS:
+	
+
+	
+	void jobListChanged (); 
+	void systemArchitecturesChanged (); 
+	void upgradableAppsChanged (); 
+
+};
+}}}
+
+namespace org {namespace deepin {namespace lastore {
+
 class Updater : public dbus::common::DBusObject
 {
 	Q_OBJECT
@@ -569,19 +776,11 @@ class Job : public dbus::common::DBusObject
 		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
 	}
 	
-	Q_PROPERTY(dbus::common::R<int > ElapsedTime READ elapsedTime NOTIFY elapsedTimeChanged)
-	dbus::common::R<int > elapsedTime () {
-		QDBusPendingReply<> call = fetchProperty("ElapsedTime");
-		return dbus::common::R<int >(call, dbus::common::PropertyConverter);
-	}
-	
 
 
 	
 
 	Q_SIGNALS:
-	
-	void Notify(int arg0); 
 	
 
 	
@@ -591,210 +790,6 @@ class Job : public dbus::common::DBusObject
 	void statusChanged (); 
 	void progressChanged (); 
 	void descriptionChanged (); 
-	void elapsedTimeChanged (); 
-
-};
-}}}
-
-namespace org {namespace deepin {namespace lastore {
-
-class Manager : public dbus::common::DBusObject
-{
-	Q_OBJECT
-	private:
-	static const char *defaultService() { return "org.deepin.lastore.Manager";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore/Manager");}
-	public:
-        Manager(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore.Manager", addr)
-        {
-        }
-	Manager(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "org.deepin.lastore.Manager", addr)
-	{
-	}
-	~Manager(){}
-
-	
-	Q_PROPERTY(dbus::common::R<QString > Version READ version NOTIFY versionChanged)
-	dbus::common::R<QString > version () {
-		QDBusPendingReply<> call = fetchProperty("Version");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<dbus::types::ao > JobList READ jobList NOTIFY jobListChanged)
-	dbus::common::R<dbus::types::ao > jobList () {
-		QDBusPendingReply<> call = fetchProperty("JobList");
-		return dbus::common::R<dbus::types::ao >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<dbus::types::as > SystemArchitectures READ systemArchitectures NOTIFY systemArchitecturesChanged)
-	dbus::common::R<dbus::types::as > systemArchitectures () {
-		QDBusPendingReply<> call = fetchProperty("SystemArchitectures");
-		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<dbus::types::as > UpgradableApps READ upgradableApps NOTIFY upgradableAppsChanged)
-	dbus::common::R<dbus::types::as > upgradableApps () {
-		QDBusPendingReply<> call = fetchProperty("UpgradableApps");
-		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
-	}
-	
-
-
-	
-	
-	
-	dbus::common::R<void> CleanJob (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> DistUpgrade3 () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DistUpgrade3"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> DownloadPackage (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DownloadPackage"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> InstallPackage (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InstallPackage"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QString> PackageCategory1 (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageCategory1"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QString> PackageDesktopPath (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDesktopPath"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<qlonglong> PackageDownloadSize (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDownloadSize"), argumentList);
-		return dbus::common::R<qlonglong>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<bool> PackageExists (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageExists"), argumentList);
-		return dbus::common::R<bool>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<qlonglong> PackagesDownloadSize (dbus::types::as arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackagesDownloadSize"), argumentList);
-		return dbus::common::R<qlonglong>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<void> PauseJob2 (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob2"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> RemovePackage (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackage"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<void> SetRegion (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetRegion"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<void> StartJob (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("StartJob"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-
-	Q_SIGNALS:
-	
-
-	
-	void versionChanged (); 
-	void jobListChanged (); 
-	void systemArchitecturesChanged (); 
-	void upgradableAppsChanged (); 
 
 };
 }}}

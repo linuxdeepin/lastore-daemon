@@ -73,7 +73,8 @@ func (m *JobManager) CleanJob(jobId string) error {
 }
 
 // PauseJob abort对应Job的执行,将状态更改为PauseStatus, 并调用dispatch
-func (m *JobManager) PauseJob() {
+func (m *JobManager) PauseJob(jobId string) error {
+	return system.NotImplementError
 }
 
 func (m JobManager) find(jobId string) *Job {

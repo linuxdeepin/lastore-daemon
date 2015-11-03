@@ -80,9 +80,9 @@ func (p *APTSystem) Install(jobId string, packageId string) error {
 	return c.Start()
 }
 
-func (p *APTSystem) DistUpgrade() error {
+func (p *APTSystem) DistUpgrade(jobId string) error {
 	const DistUpgradeJobId = "dist_upgrade"
-	c := newAPTCommand(p, DistUpgradeJobId, system.DistUpgradeJobType, p.indicator, "")
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, "")
 	return c.Start()
 }
 

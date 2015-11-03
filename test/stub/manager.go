@@ -24,7 +24,6 @@ type Manager struct {
 	signals       map[<-chan *dbus.Signal]struct{}
 	signalsLocker sync.Mutex
 
-	Version             *dbusPropertyManagerVersion
 	JobList             *dbusPropertyManagerJobList
 	SystemArchitectures *dbusPropertyManagerSystemArchitectures
 	UpgradableApps      *dbusPropertyManagerUpgradableApps
@@ -50,7 +49,6 @@ func DestroyManager(obj *Manager) {
 	}
 	obj.signalsLocker.Unlock()
 
-	obj.Version.Reset()
 	obj.JobList.Reset()
 	obj.SystemArchitectures.Reset()
 	obj.UpgradableApps.Reset()
@@ -64,8 +62,8 @@ func (obj *Manager) CleanJob(arg0 string) (_err error) {
 	return
 }
 
-func (obj *Manager) DistUpgrade3() (arg0 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.DistUpgrade3", 0).Store(&arg0)
+func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.DistUpgrade", 0).Store(&arg0)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -168,32 +166,6 @@ func (obj *Manager) UpdatePackage(arg0 string) (arg1 dbus.ObjectPath, _err error
 	return
 }
 
-type dbusPropertyManagerVersion struct {
-	*property.BaseObserver
-	core *dbus.Object
-}
-
-func (this *dbusPropertyManagerVersion) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Manager.Version is not writable")
-}
-
-func (this *dbusPropertyManagerVersion) Get() string {
-	return this.GetValue().(string)
-}
-func (this *dbusPropertyManagerVersion) GetValue() interface{} /*string*/ {
-	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Manager", "Version").Store(&r)
-	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:Version error:", err, "at org.deepin.lastore.Manager")
-		return *new(string)
-	}
-}
-func (this *dbusPropertyManagerVersion) GetType() reflect.Type {
-	return reflect.TypeOf((*string)(nil)).Elem()
-}
-
 type dbusPropertyManagerJobList struct {
 	*property.BaseObserver
 	core *dbus.Object
@@ -281,7 +253,6 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 
 	obj := &Manager{Path: path, DestName: destName, core: core, signals: make(map[<-chan *dbus.Signal]struct{})}
 
-	obj.Version = &dbusPropertyManagerVersion{&property.BaseObserver{}, core}
 	obj.JobList = &dbusPropertyManagerJobList{&property.BaseObserver{}, core}
 	obj.SystemArchitectures = &dbusPropertyManagerSystemArchitectures{&property.BaseObserver{}, core}
 	obj.UpgradableApps = &dbusPropertyManagerUpgradableApps{&property.BaseObserver{}, core}
@@ -303,9 +274,6 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 				props := v.Body[1].(map[string]dbus.Variant)
 				for key, _ := range props {
 					if false {
-					} else if key == "Version" {
-						obj.Version.Notify()
-
 					} else if key == "JobList" {
 						obj.JobList.Notify()
 
@@ -319,9 +287,6 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 			} else if v.Name == "org.deepin.lastore.Manager.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
 				for key, _ := range v.Body[0].(map[string]dbus.Variant) {
 					if false {
-					} else if key == "Version" {
-						obj.Version.Notify()
-
 					} else if key == "JobList" {
 						obj.JobList.Notify()
 

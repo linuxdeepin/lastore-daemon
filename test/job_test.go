@@ -50,6 +50,8 @@ func (wrap *testWrap) TestDownload(c *C.C) {
 	c.Check(job.Type.Get(), C.Equals, "download")
 	c.Check(job.Progress.Get(), C.Equals, 0.0)
 	c.Check(wrap.m.CleanJob(job.Id.Get()), C.Not(C.Equals), nil)
+	s := WaitJob(job)
+	c.Check(s, C.Equals, "succeed")
 }
 
 func (wrap *testWrap) TestQueue(c *C.C) {
@@ -60,12 +62,37 @@ func (wrap *testWrap) TestQueue(c *C.C) {
 	for _, p := range ps {
 		job := GetJob(wrap.m.DownloadPackage(p))
 		c.Check(job.Status.Get(), C.Equals, "ready")
-
 	}
 
 }
 
+func WaitJob(j *lastore.Job) string {
+	done := make(chan bool)
+	newState := j.Status.Get()
+
+	if newState != RunningStatus {
+		return newState
+	}
+
+	j.Status.ConnectChanged(func() {
+		newState = j.Status.Get()
+		if newState != RunningStatus {
+			done <- true
+		}
+	})
+	<-done
+	return newState
+}
+
+func (wrap *testWrap) TestDistUpgrade(c *C.C) {
+	job := GetJob(wrap.m.DistUpgrade())
+	s := WaitJob(job)
+	c.Check(s, C.Not(C.Equals), "running")
+	fmt.Println("DistUpgrade:", job)
+}
+
 func (wrap *testWrap) TestUpdate(c *C.C) {
+	return
 	job := GetJob(wrap.m.UpdatePackage("deepin-movie"))
 	id := job.Id.Get()
 	c.Check(job, C.Not(C.Equals), nil)
