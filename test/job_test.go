@@ -42,15 +42,27 @@ func GetJob(o dbus.ObjectPath, err error) *lastore.Job {
 	return job
 }
 
-func (wrap *testWrap) TestInstall(c *C.C) {
-	job := GetJob(wrap.m.InstallPackage("deepin-movie"))
+func (wrap *testWrap) TestDownload(c *C.C) {
+	job := GetJob(wrap.m.DownloadPackage("deepin-movie"))
 	c.Check(job, C.Not(C.Equals), nil)
 	c.Check(job.PackageId.Get(), C.Equals, "deepin-movie")
 	c.Check(job.Status.Get(), C.Equals, "running")
 	c.Check(job.Type.Get(), C.Equals, "download")
 	c.Check(job.Progress.Get(), C.Equals, 0.0)
-
 	c.Check(wrap.m.CleanJob(job.Id.Get()), C.Not(C.Equals), nil)
+}
+
+func (wrap *testWrap) TestQueue(c *C.C) {
+	ps := []string{"deepin-movie", "deepin-music", "abiword", "abiword"}
+	for _, p := range ps {
+		wrap.m.RemovePackage(p)
+	}
+	for _, p := range ps {
+		job := GetJob(wrap.m.DownloadPackage(p))
+		c.Check(job.Status.Get(), C.Equals, "ready")
+
+	}
+
 }
 
 func (wrap *testWrap) TestUpdate(c *C.C) {
@@ -70,7 +82,7 @@ func (wrap *testWrap) TestUpdate(c *C.C) {
 		fmt.Printf("Change %q from %q to %q ... \n", id, oldState, newState)
 
 		// TODO: go-dbus lost signals cause this assert failed
-		//c.Check(ValidTransitionJobState(oldState, newState), C.Equals, true)
+		// c.Check(ValidTransitionJobState(oldState, newState), C.Equals, true)
 
 		oldState = newState
 		if newState == "end" {
@@ -80,4 +92,5 @@ func (wrap *testWrap) TestUpdate(c *C.C) {
 	c.Check(job.Status.Get(), C.Equals, "running")
 	<-done
 	c.Check(job.Status.Get(), C.Equals, "end")
+	c.Check(job.Progress.Get(), C.Equals, 1.0)
 }

@@ -1,162 +1,56 @@
 package main
 
 import (
-	"fmt"
 	"internal/system"
-	"log"
-	"pkg.deepin.io/lib/dbus"
-	"time"
-)
-
-type CMD string
-
-const (
-	StopCMD  CMD = "stop"
-	StartCMD     = "start"
-	PauseCMD     = "pause"
 )
 
 type Manager struct {
-	Version  string
-	cacheDir string
-	JobList  JobList
-	b        system.System
+	b system.System
+
+	JobList    []*Job
+	jobManager *JobManager
 
 	SystemArchitectures []system.Architecture
 
 	UpgradableApps []string
 	updater        *Updater
-
-	config map[string]string
 }
 
 func NewManager(b system.System) *Manager {
 	m := &Manager{
-		Version:             "0.1",
-		cacheDir:            "/dev/shm",
 		b:                   b,
 		SystemArchitectures: b.SystemArchitectures(),
+		updater:             NewUpdater(b),
 	}
-	b.AttachIndicator(m.update)
-	m.updater = NewUpdater(b)
+	m.jobManager = NewJobManager(b, m.updateJobList)
+
+	b.AttachIndicator(m.jobManager.handleJobProgressInfo)
+
+	go m.jobManager.Dispatch()
+
 	m.updatableApps()
+	m.updateJobList()
 	return m
 }
 
-func (m *Manager) updatableApps() {
-	apps := UpdatableNames(m.b.UpgradeInfo())
-	changed := len(apps) != len(m.UpgradableApps)
-	if !changed {
-		for i, app := range apps {
-			if m.UpgradableApps[i] != app {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		m.UpgradableApps = apps
-		dbus.NotifyChange(m, "UpgradableApps")
-	}
-}
-
-func (m *Manager) SetRegion(region string) error {
-	if region != "mainland" && region != "international" {
-		return fmt.Errorf("the region of %q is not supported", region)
-	}
-	return nil
-}
-
-func (m *Manager) update(info system.ProgressInfo) {
-	j, err := m.JobList.Find(info.JobId)
-	if err != nil {
-		return
-	}
-
-	j.updateInfo(info)
-	if j.Status == system.SucceedStatus && j.next != nil {
-		j.swap(j.next)
-		j.next = nil
-		m.StartJob(j.Id)
-	}
-	if j.Status != system.ReadyStatus && j.Status != system.RunningStatus {
-		go m.updatableApps()
-	}
-
-	if j.Status == system.SucceedStatus {
-		err := m.CleanJob(j.Id)
-		log.Printf("CleanJob %v(%v) after succeed\n", j, err)
-	}
-}
-
-func (m *Manager) do(jobType string, packageId string) (*Job, error) {
-	var j *Job
-	switch jobType {
-	case system.DownloadJobType:
-		j = NewDownloadJob(packageId)
-	case system.InstallJobType:
-		j = NewInstallJob(packageId)
-	case system.RemoveJobType:
-		j = NewRemoveJob(packageId)
-	case system.DistUpgradeJobType:
-		j = NewDistUpgradeJob()
-	case system.UpdateJobType:
-		j = NewUpdateJob(packageId)
-	}
-	err := m.addJob(j)
-	if err != nil {
-		return nil, err
-	}
-	return j, StartSystemJob(m.b, j)
-}
 func (m *Manager) UpdatePackage(packageId string) (*Job, error) {
-	return m.do(system.UpdateJobType, packageId)
+	return m.jobManager.CreateJob(system.UpdateJobType, packageId)
 }
 
 func (m *Manager) InstallPackage(packageId string) (*Job, error) {
-	return m.do(system.InstallJobType, packageId)
+	return m.jobManager.CreateJob(system.InstallJobType, packageId)
 }
 
 func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
-	return m.do(system.DownloadJobType, packageId)
+	return m.jobManager.CreateJob(system.DownloadJobType, packageId)
 }
 
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
-	return m.do(system.RemoveJobType, packageId)
+	return m.jobManager.CreateJob(system.RemoveJobType, packageId)
 }
 
 func (m *Manager) DistUpgrade3() (*Job, error) {
-	return m.do(system.DistUpgradeJobType, "")
-}
-
-func (m *Manager) removeJob(id string) error {
-	j, err := m.JobList.Find(id)
-	if err != nil {
-		return err
-	}
-	time.AfterFunc(time.Second*1, func() {
-		dbus.UnInstallObject(j)
-	})
-
-	l, err := m.JobList.Remove(id)
-	if err != nil {
-		return err
-	}
-	m.JobList = l
-
-	dbus.NotifyChange(m, "JobList")
-	return nil
-}
-
-func (m *Manager) addJob(j *Job) error {
-	l, err := m.JobList.Add(j)
-	if err != nil {
-		return err
-	}
-	m.JobList = l
-
-	dbus.NotifyChange(m, "JobList")
-	return nil
+	return m.jobManager.CreateJob(system.DistUpgradeJobType, "")
 }
 
 func (m *Manager) PauseJob2(jobId string) error {
@@ -164,32 +58,10 @@ func (m *Manager) PauseJob2(jobId string) error {
 }
 
 func (m *Manager) CleanJob(jobId string) error {
-	j, err := m.JobList.Find(jobId)
-	if err != nil {
-		return err
-	}
-
-	if !TransitionJobState(j, system.EndStatus) {
-		return fmt.Errorf("%q can't transition state from %q to %q ", jobId, j.Status, system.EndStatus)
-	}
-
-	err = m.removeJob(jobId)
-	if err != nil {
-		return fmt.Errorf("Internal error find the job %q, but can't remove it. (%v)", jobId, err)
-	}
-	return nil
-}
-
-func (m *Manager) GetDBusInfo() dbus.DBusInfo {
-	return dbus.DBusInfo{
-		Dest:       "org.deepin.lastore",
-		ObjectPath: "/org/deepin/lastore",
-		Interface:  "org.deepin.lastore.Manager",
-	}
+	return m.jobManager.CleanJob(jobId)
 }
 
 func (m *Manager) PackageExists(packageId string) bool {
-	log.Println("Checking package exists...", packageId)
 	return m.b.CheckInstalled(packageId)
 }
 

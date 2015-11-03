@@ -7,18 +7,14 @@ import (
 	"pkg.deepin.io/lib/dbus"
 )
 
-func (m *Manager) StartJob(jobId string) error {
-	j, err := m.JobList.Find(jobId)
-	if err != nil {
-		return err
-	}
-	return StartSystemJob(m.b, j)
-}
-
 // StartSystemJob start job
 // 1. Dispatch Job by type
 // 2. Check whether the work queue is empty
 func StartSystemJob(sys system.System, j *Job) error {
+	if j == nil {
+		panic("StartSystemJob with nil")
+	}
+
 	if !TransitionJobState(j, system.RunningStatus) {
 		return fmt.Errorf("Can't transition state from %q to %q",
 			j.Status, system.RunningStatus)

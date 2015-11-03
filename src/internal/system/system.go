@@ -25,7 +25,7 @@ const (
 	DistUpgradeJobType = "dist_upgrade"
 )
 
-type ProgressInfo struct {
+type JobProgressInfo struct {
 	JobId       string
 	Progress    float64
 	Description string
@@ -44,7 +44,7 @@ type Architecture string
 var NotImplementError = errors.New("not implement")
 var NotFoundError = errors.New("not found resource")
 
-type Indicator func(ProgressInfo)
+type Indicator func(JobProgressInfo)
 
 type System interface {
 	CheckInstalled(packageId string) bool

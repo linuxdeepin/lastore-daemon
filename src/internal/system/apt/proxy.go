@@ -20,20 +20,20 @@ func New() system.System {
 	return p
 }
 
-func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
+func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	fs := strings.SplitN(line, ":", 4)
 	switch fs[0] {
 	case "dlstatus", "pmstatus", "dist_upgrade":
 		v, err := strconv.ParseFloat(fs[2], 64)
 		if err != nil {
-			return system.ProgressInfo{JobId: id},
+			return system.JobProgressInfo{JobId: id},
 				fmt.Errorf("W: unknow progress value: %q", line)
 		}
 		if v == -1 {
-			return system.ProgressInfo{JobId: id},
+			return system.JobProgressInfo{JobId: id},
 				fmt.Errorf("W: failed: %q", line)
 		}
-		return system.ProgressInfo{
+		return system.JobProgressInfo{
 			JobId:       id,
 			Progress:    v / 100.0,
 			Description: fs[3],
@@ -42,14 +42,14 @@ func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 	case "dstatus":
 		switch fs[1] {
 		case system.SucceedStatus:
-			return system.ProgressInfo{
+			return system.JobProgressInfo{
 				JobId:       id,
 				Progress:    1.0,
 				Description: fs[2],
 				Status:      system.SucceedStatus,
 			}, nil
 		case system.FailedStatus:
-			return system.ProgressInfo{
+			return system.JobProgressInfo{
 				JobId:       id,
 				Progress:    -1,
 				Description: fs[2],
@@ -57,7 +57,7 @@ func ParseProgressInfo(id, line string) (system.ProgressInfo, error) {
 			}, nil
 		}
 	}
-	return system.ProgressInfo{JobId: id},
+	return system.JobProgressInfo{JobId: id},
 		fmt.Errorf("W: unknow status:%q", line)
 }
 
