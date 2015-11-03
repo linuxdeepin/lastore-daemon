@@ -5,6 +5,7 @@ import (
 	"internal/system"
 	"log"
 	"pkg.deepin.io/lib/dbus"
+	"time"
 )
 
 type CMD string
@@ -99,12 +100,17 @@ func (m *Manager) do(jobType string, packageId string) (*Job, error) {
 		j = NewRemoveJob(packageId)
 	case system.DistUpgradeJobType:
 		j = NewDistUpgradeJob()
+	case system.UpdateJobType:
+		j = NewUpdateJob(packageId)
 	}
 	err := m.addJob(j)
 	if err != nil {
 		return nil, err
 	}
 	return j, StartSystemJob(m.b, j)
+}
+func (m *Manager) UpdatePackage(packageId string) (*Job, error) {
+	return m.do(system.UpdateJobType, packageId)
 }
 
 func (m *Manager) InstallPackage(packageId string) (*Job, error) {
@@ -128,7 +134,9 @@ func (m *Manager) removeJob(id string) error {
 	if err != nil {
 		return err
 	}
-	dbus.UnInstallObject(j)
+	time.AfterFunc(time.Second*1, func() {
+		dbus.UnInstallObject(j)
+	})
 
 	l, err := m.JobList.Remove(id)
 	if err != nil {

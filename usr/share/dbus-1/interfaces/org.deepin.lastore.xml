@@ -47,6 +47,10 @@
           <method name="StartJob">
                <arg type="s" direction="in"></arg>
           </method>
+          <method name="UpdatePackage">
+               <arg type="s" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
           <property name="Version" type="s" access="read"></property>
           <property name="JobList" type="ao" access="read"></property>
           <property name="SystemArchitectures" type="as" access="read"></property>

@@ -113,6 +113,9 @@ func NewDistUpgradeJob() *Job {
 	return NewJob("", system.DistUpgradeJobType)
 }
 
+func NewUpdateJob(packageId string) *Job {
+	return NewJob(packageId, system.UpdateJobType)
+}
 func NewRemoveJob(packageId string) *Job {
 	return NewJob(packageId, system.RemoveJobType)
 }

@@ -160,6 +160,14 @@ func (obj *Manager) StartJob(arg0 string) (_err error) {
 	return
 }
 
+func (obj *Manager) UpdatePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("org.deepin.lastore.Manager.UpdatePackage", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
 type dbusPropertyManagerVersion struct {
 	*property.BaseObserver
 	core *dbus.Object

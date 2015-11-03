@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"log"
 	"pkg.deepin.io/lib/dbus"
 )
 
@@ -36,19 +37,18 @@ func StartSystemJob(sys system.System, j *Job) error {
 	case system.DistUpgradeJobType:
 		return sys.DistUpgrade()
 
+	case system.UpdateJobType:
+		return sys.Install(j.Id, j.PackageId)
+
 	default:
 		return system.NotFoundError
 	}
 }
 
-func TransitionJobState(j *Job, end system.Status) bool {
-	if j.Status == end {
-		return true
-	}
-
-	switch end {
+func ValidTransitionJobState(from system.Status, to system.Status) bool {
+	switch to {
 	case system.ReadyStatus:
-		switch j.Status {
+		switch from {
 		case system.FailedStatus,
 			system.PausedStatus,
 			system.StartStatus:
@@ -56,7 +56,7 @@ func TransitionJobState(j *Job, end system.Status) bool {
 			return false
 		}
 	case system.RunningStatus:
-		switch j.Status {
+		switch from {
 		case system.FailedStatus,
 			system.ReadyStatus,
 			system.PausedStatus:
@@ -66,16 +66,27 @@ func TransitionJobState(j *Job, end system.Status) bool {
 	case system.FailedStatus,
 		system.SucceedStatus,
 		system.PausedStatus:
-		if j.Status != system.RunningStatus {
+		if from != system.RunningStatus {
 			return false
 		}
 	case system.EndStatus:
-		if j.Status == system.RunningStatus {
+		if from == system.RunningStatus {
 			return false
 		}
 	}
+	return true
+}
 
-	j.Status = end
+func TransitionJobState(j *Job, to system.Status) bool {
+	if j.Status == to {
+		return true
+	}
+
+	if !ValidTransitionJobState(j.Status, to) {
+		return false
+	}
+	log.Printf("%q transition state from %q to %q\n", j.Id, j.Status, to)
+	j.Status = to
 	dbus.NotifyChange(j, "Status")
 	return true
 }
