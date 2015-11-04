@@ -3,25 +3,25 @@
 		"OutputDir": ".",
 		"InputDir": "../../usr/share/dbus-1/interfaces/",
 		"BusType": "System",
-		"DestName": "org.deepin.lastore"
+		"DestName": "com.deepin.lastore"
 	},
 	"Interfaces": [
 		{
-			"Interface": "org.deepin.lastore.Manager",
+			"Interface": "com.deepin.lastore.Manager",
 			"OutFile": "manager",
-			"XMLFile": "org.deepin.lastore.xml",
+			"XMLFile": "com.deepin.lastore.xml",
 			"ObjectName": "Manager"
 		},
 		{
-			"Interface": "org.deepin.lastore.Updater",
+			"Interface": "com.deepin.lastore.Updater",
 			"OutFile": "manager",
-			"XMLFile": "org.deepin.lastore.xml",
+			"XMLFile": "com.deepin.lastore.xml",
 			"ObjectName": "Updater"
 		},
 		{
-			"Interface": "org.deepin.lastore.Job",
+			"Interface": "com.deepin.lastore.Job",
 			"OutFile": "manager",
-			"XMLFile": "org.deepin.lastore.Job.xml",
+			"XMLFile": "com.deepin.lastore.Job.xml",
 			"ObjectName": "Job"
 		}
 	]

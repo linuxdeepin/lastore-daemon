@@ -55,7 +55,7 @@ func DestroyManager(obj *Manager) {
 }
 
 func (obj *Manager) CleanJob(arg0 string) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.CleanJob", 0, arg0).Store()
+	_err = obj.core.Call("com.deepin.lastore.Manager.CleanJob", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -63,7 +63,7 @@ func (obj *Manager) CleanJob(arg0 string) (_err error) {
 }
 
 func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.DistUpgrade", 0).Store(&arg0)
+	_err = obj.core.Call("com.deepin.lastore.Manager.DistUpgrade", 0).Store(&arg0)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -71,7 +71,7 @@ func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
 }
 
 func (obj *Manager) DownloadPackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.DownloadPackage", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.DownloadPackage", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -79,7 +79,7 @@ func (obj *Manager) DownloadPackage(arg0 string) (arg1 dbus.ObjectPath, _err err
 }
 
 func (obj *Manager) InstallPackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.InstallPackage", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.InstallPackage", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -87,7 +87,7 @@ func (obj *Manager) InstallPackage(arg0 string) (arg1 dbus.ObjectPath, _err erro
 }
 
 func (obj *Manager) PackageCategory1(arg0 string) (arg1 string, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PackageCategory1", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.PackageCategory1", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -95,7 +95,7 @@ func (obj *Manager) PackageCategory1(arg0 string) (arg1 string, _err error) {
 }
 
 func (obj *Manager) PackageDesktopPath(arg0 string) (arg1 string, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PackageDesktopPath", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.PackageDesktopPath", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -103,7 +103,7 @@ func (obj *Manager) PackageDesktopPath(arg0 string) (arg1 string, _err error) {
 }
 
 func (obj *Manager) PackageDownloadSize(arg0 string) (arg1 int64, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PackageDownloadSize", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.PackageDownloadSize", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -111,7 +111,7 @@ func (obj *Manager) PackageDownloadSize(arg0 string) (arg1 int64, _err error) {
 }
 
 func (obj *Manager) PackageExists(arg0 string) (arg1 bool, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PackageExists", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.PackageExists", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -119,7 +119,7 @@ func (obj *Manager) PackageExists(arg0 string) (arg1 bool, _err error) {
 }
 
 func (obj *Manager) PackagesDownloadSize(arg0 []string) (arg1 int64, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PackagesDownloadSize", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.PackagesDownloadSize", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -127,7 +127,7 @@ func (obj *Manager) PackagesDownloadSize(arg0 []string) (arg1 int64, _err error)
 }
 
 func (obj *Manager) PauseJob(arg0 string) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.PauseJob", 0, arg0).Store()
+	_err = obj.core.Call("com.deepin.lastore.Manager.PauseJob", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -135,7 +135,7 @@ func (obj *Manager) PauseJob(arg0 string) (_err error) {
 }
 
 func (obj *Manager) RemovePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.RemovePackage", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.RemovePackage", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -143,7 +143,7 @@ func (obj *Manager) RemovePackage(arg0 string) (arg1 dbus.ObjectPath, _err error
 }
 
 func (obj *Manager) SetRegion(arg0 string) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.SetRegion", 0, arg0).Store()
+	_err = obj.core.Call("com.deepin.lastore.Manager.SetRegion", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -151,7 +151,7 @@ func (obj *Manager) SetRegion(arg0 string) (_err error) {
 }
 
 func (obj *Manager) StartJob(arg0 string) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.StartJob", 0, arg0).Store()
+	_err = obj.core.Call("com.deepin.lastore.Manager.StartJob", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -159,7 +159,7 @@ func (obj *Manager) StartJob(arg0 string) (_err error) {
 }
 
 func (obj *Manager) UpdatePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Manager.UpdatePackage", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Manager.UpdatePackage", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -172,7 +172,7 @@ type dbusPropertyManagerJobList struct {
 }
 
 func (this *dbusPropertyManagerJobList) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Manager.JobList is not writable")
+	fmt.Println("com.deepin.lastore.Manager.JobList is not writable")
 }
 
 func (this *dbusPropertyManagerJobList) Get() []dbus.ObjectPath {
@@ -180,11 +180,11 @@ func (this *dbusPropertyManagerJobList) Get() []dbus.ObjectPath {
 }
 func (this *dbusPropertyManagerJobList) GetValue() interface{} /*[]dbus.ObjectPath*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Manager", "JobList").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "JobList").Store(&r)
 	if err == nil && r.Signature().String() == "ao" {
 		return r.Value().([]dbus.ObjectPath)
 	} else {
-		fmt.Println("dbusProperty:JobList error:", err, "at org.deepin.lastore.Manager")
+		fmt.Println("dbusProperty:JobList error:", err, "at com.deepin.lastore.Manager")
 		return *new([]dbus.ObjectPath)
 	}
 }
@@ -198,7 +198,7 @@ type dbusPropertyManagerSystemArchitectures struct {
 }
 
 func (this *dbusPropertyManagerSystemArchitectures) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Manager.SystemArchitectures is not writable")
+	fmt.Println("com.deepin.lastore.Manager.SystemArchitectures is not writable")
 }
 
 func (this *dbusPropertyManagerSystemArchitectures) Get() []string {
@@ -206,11 +206,11 @@ func (this *dbusPropertyManagerSystemArchitectures) Get() []string {
 }
 func (this *dbusPropertyManagerSystemArchitectures) GetValue() interface{} /*[]string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Manager", "SystemArchitectures").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "SystemArchitectures").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
 		return r.Value().([]string)
 	} else {
-		fmt.Println("dbusProperty:SystemArchitectures error:", err, "at org.deepin.lastore.Manager")
+		fmt.Println("dbusProperty:SystemArchitectures error:", err, "at com.deepin.lastore.Manager")
 		return *new([]string)
 	}
 }
@@ -224,7 +224,7 @@ type dbusPropertyManagerUpgradableApps struct {
 }
 
 func (this *dbusPropertyManagerUpgradableApps) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Manager.UpgradableApps is not writable")
+	fmt.Println("com.deepin.lastore.Manager.UpgradableApps is not writable")
 }
 
 func (this *dbusPropertyManagerUpgradableApps) Get() []string {
@@ -232,11 +232,11 @@ func (this *dbusPropertyManagerUpgradableApps) Get() []string {
 }
 func (this *dbusPropertyManagerUpgradableApps) GetValue() interface{} /*[]string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Manager", "UpgradableApps").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "UpgradableApps").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
 		return r.Value().([]string)
 	} else {
-		fmt.Println("dbusProperty:UpgradableApps error:", err, "at org.deepin.lastore.Manager")
+		fmt.Println("dbusProperty:UpgradableApps error:", err, "at com.deepin.lastore.Manager")
 		return *new([]string)
 	}
 }
@@ -258,7 +258,7 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 	obj.UpgradableApps = &dbusPropertyManagerUpgradableApps{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.deepin.lastore.Manager',sender='"+destName+"',member='PropertiesChanged'")
+	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Manager',sender='"+destName+"',member='PropertiesChanged'")
 	sigChan := obj._createSignalChan()
 	go func() {
 		typeString := reflect.TypeOf("")
@@ -270,7 +270,7 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 				reflect.TypeOf(v.Body[0]) == typeString &&
 				reflect.TypeOf(v.Body[1]) == typeKeyValues &&
 				reflect.TypeOf(v.Body[2]) == typeArrayValues &&
-				v.Body[0].(string) == "org.deepin.lastore.Manager" {
+				v.Body[0].(string) == "com.deepin.lastore.Manager" {
 				props := v.Body[1].(map[string]dbus.Variant)
 				for key, _ := range props {
 					if false {
@@ -284,7 +284,7 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 						obj.UpgradableApps.Notify()
 					}
 				}
-			} else if v.Name == "org.deepin.lastore.Manager.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
+			} else if v.Name == "com.deepin.lastore.Manager.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
 				for key, _ := range v.Body[0].(map[string]dbus.Variant) {
 					if false {
 					} else if key == "JobList" {
@@ -348,7 +348,7 @@ func DestroyUpdater(obj *Updater) {
 }
 
 func (obj *Updater) ApplicationUpdateInfos1(arg0 string) (arg1 [][]interface{}, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Updater.ApplicationUpdateInfos1", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Updater.ApplicationUpdateInfos1", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -356,7 +356,7 @@ func (obj *Updater) ApplicationUpdateInfos1(arg0 string) (arg1 [][]interface{}, 
 }
 
 func (obj *Updater) ListMirrorSources(arg0 string) (arg1 [][]interface{}, _err error) {
-	_err = obj.core.Call("org.deepin.lastore.Updater.ListMirrorSources", 0, arg0).Store(&arg1)
+	_err = obj.core.Call("com.deepin.lastore.Updater.ListMirrorSources", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -364,7 +364,7 @@ func (obj *Updater) ListMirrorSources(arg0 string) (arg1 [][]interface{}, _err e
 }
 
 func (obj *Updater) SetAutoCheckUpdates(arg0 bool) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Updater.SetAutoCheckUpdates", 0, arg0).Store()
+	_err = obj.core.Call("com.deepin.lastore.Updater.SetAutoCheckUpdates", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -372,7 +372,7 @@ func (obj *Updater) SetAutoCheckUpdates(arg0 bool) (_err error) {
 }
 
 func (obj *Updater) SetMirrorSource(arg0 string) (_err error) {
-	_err = obj.core.Call("org.deepin.lastore.Updater.SetMirrorSource", 0, arg0).Store()
+	_err = obj.core.Call("com.deepin.lastore.Updater.SetMirrorSource", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -385,7 +385,7 @@ type dbusPropertyUpdaterAutoCheckUpdates struct {
 }
 
 func (this *dbusPropertyUpdaterAutoCheckUpdates) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Updater.AutoCheckUpdates is not writable")
+	fmt.Println("com.deepin.lastore.Updater.AutoCheckUpdates is not writable")
 }
 
 func (this *dbusPropertyUpdaterAutoCheckUpdates) Get() bool {
@@ -393,11 +393,11 @@ func (this *dbusPropertyUpdaterAutoCheckUpdates) Get() bool {
 }
 func (this *dbusPropertyUpdaterAutoCheckUpdates) GetValue() interface{} /*bool*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "AutoCheckUpdates").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "AutoCheckUpdates").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
 		return r.Value().(bool)
 	} else {
-		fmt.Println("dbusProperty:AutoCheckUpdates error:", err, "at org.deepin.lastore.Updater")
+		fmt.Println("dbusProperty:AutoCheckUpdates error:", err, "at com.deepin.lastore.Updater")
 		return *new(bool)
 	}
 }
@@ -411,7 +411,7 @@ type dbusPropertyUpdaterMirrorSource struct {
 }
 
 func (this *dbusPropertyUpdaterMirrorSource) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Updater.MirrorSource is not writable")
+	fmt.Println("com.deepin.lastore.Updater.MirrorSource is not writable")
 }
 
 func (this *dbusPropertyUpdaterMirrorSource) Get() string {
@@ -419,11 +419,11 @@ func (this *dbusPropertyUpdaterMirrorSource) Get() string {
 }
 func (this *dbusPropertyUpdaterMirrorSource) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "MirrorSource").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "MirrorSource").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:MirrorSource error:", err, "at org.deepin.lastore.Updater")
+		fmt.Println("dbusProperty:MirrorSource error:", err, "at com.deepin.lastore.Updater")
 		return *new(string)
 	}
 }
@@ -437,7 +437,7 @@ type dbusPropertyUpdaterOfficialSource struct {
 }
 
 func (this *dbusPropertyUpdaterOfficialSource) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Updater.OfficialSource is not writable")
+	fmt.Println("com.deepin.lastore.Updater.OfficialSource is not writable")
 }
 
 func (this *dbusPropertyUpdaterOfficialSource) Get() string {
@@ -445,11 +445,11 @@ func (this *dbusPropertyUpdaterOfficialSource) Get() string {
 }
 func (this *dbusPropertyUpdaterOfficialSource) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "OfficialSource").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "OfficialSource").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:OfficialSource error:", err, "at org.deepin.lastore.Updater")
+		fmt.Println("dbusProperty:OfficialSource error:", err, "at com.deepin.lastore.Updater")
 		return *new(string)
 	}
 }
@@ -463,7 +463,7 @@ type dbusPropertyUpdaterUpdatableApps1 struct {
 }
 
 func (this *dbusPropertyUpdaterUpdatableApps1) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Updater.UpdatableApps1 is not writable")
+	fmt.Println("com.deepin.lastore.Updater.UpdatableApps1 is not writable")
 }
 
 func (this *dbusPropertyUpdaterUpdatableApps1) Get() []string {
@@ -471,11 +471,11 @@ func (this *dbusPropertyUpdaterUpdatableApps1) Get() []string {
 }
 func (this *dbusPropertyUpdaterUpdatableApps1) GetValue() interface{} /*[]string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "UpdatableApps1").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "UpdatableApps1").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
 		return r.Value().([]string)
 	} else {
-		fmt.Println("dbusProperty:UpdatableApps1 error:", err, "at org.deepin.lastore.Updater")
+		fmt.Println("dbusProperty:UpdatableApps1 error:", err, "at com.deepin.lastore.Updater")
 		return *new([]string)
 	}
 }
@@ -489,7 +489,7 @@ type dbusPropertyUpdaterUpdatablePackages1 struct {
 }
 
 func (this *dbusPropertyUpdaterUpdatablePackages1) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Updater.UpdatablePackages1 is not writable")
+	fmt.Println("com.deepin.lastore.Updater.UpdatablePackages1 is not writable")
 }
 
 func (this *dbusPropertyUpdaterUpdatablePackages1) Get() []string {
@@ -497,11 +497,11 @@ func (this *dbusPropertyUpdaterUpdatablePackages1) Get() []string {
 }
 func (this *dbusPropertyUpdaterUpdatablePackages1) GetValue() interface{} /*[]string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Updater", "UpdatablePackages1").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "UpdatablePackages1").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
 		return r.Value().([]string)
 	} else {
-		fmt.Println("dbusProperty:UpdatablePackages1 error:", err, "at org.deepin.lastore.Updater")
+		fmt.Println("dbusProperty:UpdatablePackages1 error:", err, "at com.deepin.lastore.Updater")
 		return *new([]string)
 	}
 }
@@ -525,7 +525,7 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 	obj.UpdatablePackages1 = &dbusPropertyUpdaterUpdatablePackages1{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.deepin.lastore.Updater',sender='"+destName+"',member='PropertiesChanged'")
+	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Updater',sender='"+destName+"',member='PropertiesChanged'")
 	sigChan := obj._createSignalChan()
 	go func() {
 		typeString := reflect.TypeOf("")
@@ -537,7 +537,7 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 				reflect.TypeOf(v.Body[0]) == typeString &&
 				reflect.TypeOf(v.Body[1]) == typeKeyValues &&
 				reflect.TypeOf(v.Body[2]) == typeArrayValues &&
-				v.Body[0].(string) == "org.deepin.lastore.Updater" {
+				v.Body[0].(string) == "com.deepin.lastore.Updater" {
 				props := v.Body[1].(map[string]dbus.Variant)
 				for key, _ := range props {
 					if false {
@@ -557,7 +557,7 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 						obj.UpdatablePackages1.Notify()
 					}
 				}
-			} else if v.Name == "org.deepin.lastore.Updater.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
+			} else if v.Name == "com.deepin.lastore.Updater.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
 				for key, _ := range v.Body[0].(map[string]dbus.Variant) {
 					if false {
 					} else if key == "AutoCheckUpdates" {
@@ -634,7 +634,7 @@ type dbusPropertyJobId struct {
 }
 
 func (this *dbusPropertyJobId) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.Id is not writable")
+	fmt.Println("com.deepin.lastore.Job.Id is not writable")
 }
 
 func (this *dbusPropertyJobId) Get() string {
@@ -642,11 +642,11 @@ func (this *dbusPropertyJobId) Get() string {
 }
 func (this *dbusPropertyJobId) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "Id").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Id").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:Id error:", err, "at org.deepin.lastore.Job")
+		fmt.Println("dbusProperty:Id error:", err, "at com.deepin.lastore.Job")
 		return *new(string)
 	}
 }
@@ -660,7 +660,7 @@ type dbusPropertyJobPackageId struct {
 }
 
 func (this *dbusPropertyJobPackageId) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.PackageId is not writable")
+	fmt.Println("com.deepin.lastore.Job.PackageId is not writable")
 }
 
 func (this *dbusPropertyJobPackageId) Get() string {
@@ -668,11 +668,11 @@ func (this *dbusPropertyJobPackageId) Get() string {
 }
 func (this *dbusPropertyJobPackageId) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "PackageId").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "PackageId").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:PackageId error:", err, "at org.deepin.lastore.Job")
+		fmt.Println("dbusProperty:PackageId error:", err, "at com.deepin.lastore.Job")
 		return *new(string)
 	}
 }
@@ -686,7 +686,7 @@ type dbusPropertyJobType struct {
 }
 
 func (this *dbusPropertyJobType) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.Type is not writable")
+	fmt.Println("com.deepin.lastore.Job.Type is not writable")
 }
 
 func (this *dbusPropertyJobType) Get() string {
@@ -694,11 +694,11 @@ func (this *dbusPropertyJobType) Get() string {
 }
 func (this *dbusPropertyJobType) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "Type").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Type").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:Type error:", err, "at org.deepin.lastore.Job")
+		fmt.Println("dbusProperty:Type error:", err, "at com.deepin.lastore.Job")
 		return *new(string)
 	}
 }
@@ -712,7 +712,7 @@ type dbusPropertyJobStatus struct {
 }
 
 func (this *dbusPropertyJobStatus) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.Status is not writable")
+	fmt.Println("com.deepin.lastore.Job.Status is not writable")
 }
 
 func (this *dbusPropertyJobStatus) Get() string {
@@ -720,11 +720,11 @@ func (this *dbusPropertyJobStatus) Get() string {
 }
 func (this *dbusPropertyJobStatus) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "Status").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Status").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:Status error:", err, "at org.deepin.lastore.Job")
+		fmt.Println("dbusProperty:Status error:", err, "at com.deepin.lastore.Job")
 		return *new(string)
 	}
 }
@@ -738,7 +738,7 @@ type dbusPropertyJobProgress struct {
 }
 
 func (this *dbusPropertyJobProgress) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.Progress is not writable")
+	fmt.Println("com.deepin.lastore.Job.Progress is not writable")
 }
 
 func (this *dbusPropertyJobProgress) Get() float64 {
@@ -746,11 +746,11 @@ func (this *dbusPropertyJobProgress) Get() float64 {
 }
 func (this *dbusPropertyJobProgress) GetValue() interface{} /*float64*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "Progress").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Progress").Store(&r)
 	if err == nil && r.Signature().String() == "d" {
 		return r.Value().(float64)
 	} else {
-		fmt.Println("dbusProperty:Progress error:", err, "at org.deepin.lastore.Job")
+		fmt.Println("dbusProperty:Progress error:", err, "at com.deepin.lastore.Job")
 		return *new(float64)
 	}
 }
@@ -764,7 +764,7 @@ type dbusPropertyJobDescription struct {
 }
 
 func (this *dbusPropertyJobDescription) SetValue(notwritable interface{}) {
-	fmt.Println("org.deepin.lastore.Job.Description is not writable")
+	fmt.Println("com.deepin.lastore.Job.Description is not writable")
 }
 
 func (this *dbusPropertyJobDescription) Get() string {
@@ -772,11 +772,11 @@ func (this *dbusPropertyJobDescription) Get() string {
 }
 func (this *dbusPropertyJobDescription) GetValue() interface{} /*string*/ {
 	var r dbus.Variant
-	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "org.deepin.lastore.Job", "Description").Store(&r)
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Description").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
 		return r.Value().(string)
 	} else {
-		fmt.Println("dbusProperty:Description error:", err, "at org.deepin.lastore.Job")
+		fmt.Println("dbusProperty:Description error:", err, "at com.deepin.lastore.Job")
 		return *new(string)
 	}
 }
@@ -801,7 +801,7 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	obj.Description = &dbusPropertyJobDescription{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.deepin.lastore.Job',sender='"+destName+"',member='PropertiesChanged'")
+	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Job',sender='"+destName+"',member='PropertiesChanged'")
 	sigChan := obj._createSignalChan()
 	go func() {
 		typeString := reflect.TypeOf("")
@@ -813,7 +813,7 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 				reflect.TypeOf(v.Body[0]) == typeString &&
 				reflect.TypeOf(v.Body[1]) == typeKeyValues &&
 				reflect.TypeOf(v.Body[2]) == typeArrayValues &&
-				v.Body[0].(string) == "org.deepin.lastore.Job" {
+				v.Body[0].(string) == "com.deepin.lastore.Job" {
 				props := v.Body[1].(map[string]dbus.Variant)
 				for key, _ := range props {
 					if false {
@@ -836,7 +836,7 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 						obj.Description.Notify()
 					}
 				}
-			} else if v.Name == "org.deepin.lastore.Job.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
+			} else if v.Name == "com.deepin.lastore.Job.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
 				for key, _ := range v.Body[0].(map[string]dbus.Variant) {
 					if false {
 					} else if key == "Id" {

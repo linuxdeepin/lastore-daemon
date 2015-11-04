@@ -4,7 +4,7 @@
 #include "lastore-daemon.h"
 using namespace dbus::common;
 using namespace dbus::objects;
-using namespace dbus::objects::org::deepin::lastore;
+using namespace dbus::objects::com::deepin::lastore;
 
 Job* j = 0;
 void printStatus() {
@@ -21,7 +21,7 @@ void install_package(const char* package)
     return;
   }
 
-  j = new Job(QString("system"), "org.deepin.lastore", rpath.Value<0>().path());
+  j = new Job(QString("system"), "com.deepin.lastore", rpath.Value<0>().path());
   j->connect(j, &Job::progressChanged, printStatus);
   R<void> r =  m->StartJob(j->id().Value<0>());
  
@@ -41,7 +41,7 @@ void remove_package(const char* package)
     return;
   }
 
-  j = new Job(QString("system"), "org.deepin.lastore", rpath.Value<0>().path());
+  j = new Job(QString("system"), "com.deepin.lastore", rpath.Value<0>().path());
   j->connect(j, &Job::progressChanged, printStatus);
   R<void> r =  m->StartJob(j->id().Value<0>());
   

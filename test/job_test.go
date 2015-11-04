@@ -14,9 +14,9 @@ type testWrap struct {
 
 func (wrap *testWrap) SetUpSuite(c *C.C) {
 	var err error
-	wrap.m, err = lastore.NewManager("org.deepin.lastore", "/org/deepin/lastore")
+	wrap.m, err = lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
 	c.Check(err, C.Equals, nil)
-	wrap.u, err = lastore.NewUpdater("org.deepin.lastore", "/org/deepin/lastore")
+	wrap.u, err = lastore.NewUpdater("com.deepin.lastore", "/com/deepin/lastore")
 	c.Check(err, C.Equals, nil)
 }
 
@@ -35,7 +35,7 @@ func GetJob(o dbus.ObjectPath, err error) *lastore.Job {
 	if err != nil {
 		panic(err)
 	}
-	job, err := lastore.NewJob("org.deepin.lastore", o)
+	job, err := lastore.NewJob("com.deepin.lastore", o)
 	if err != nil {
 		panic(err)
 	}

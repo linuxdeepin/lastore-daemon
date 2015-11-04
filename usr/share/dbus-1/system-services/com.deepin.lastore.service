@@ -1,4 +1,4 @@
 [D-BUS Service]
-Name=org.deepin.lastore
+Name=com.deepin.lastore
 Exec=/usr/bin/lastore-daemon
 User=root

@@ -6,9 +6,9 @@ import (
 
 func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 	return dbus.DBusInfo{
-		Dest:       "org.deepin.lastore",
-		ObjectPath: "/org/deepin/lastore",
-		Interface:  "org.deepin.lastore.Manager",
+		Dest:       "com.deepin.lastore",
+		ObjectPath: "/com/deepin/lastore",
+		Interface:  "com.deepin.lastore.Manager",
 	}
 }
 
@@ -54,8 +54,16 @@ func DestroyJob(j *Job) {
 
 func (j *Job) GetDBusInfo() dbus.DBusInfo {
 	return dbus.DBusInfo{
-		Dest:       "org.deepin.lastore",
-		ObjectPath: "/org/deepin/lastore/Job" + j.Id,
-		Interface:  "org.deepin.lastore.Job",
+		Dest:       "com.deepin.lastore",
+		ObjectPath: "/com/deepin/lastore/Job" + j.Id,
+		Interface:  "com.deepin.lastore.Job",
+	}
+}
+
+func (u Updater) GetDBusInfo() dbus.DBusInfo {
+	return dbus.DBusInfo{
+		Dest:       "com.deepin.lastore",
+		ObjectPath: "/com/deepin/lastore",
+		Interface:  "com.deepin.lastore.Updater",
 	}
 }

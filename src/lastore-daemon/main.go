@@ -56,8 +56,8 @@ func main() {
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
-	if !lib.UniqueOnSystem("org.deepin.lastore") {
-		log.Println("Can't obtain the org.deepin.lastore")
+	if !lib.UniqueOnSystem("com.deepin.lastore") {
+		log.Println("Can't obtain the com.deepin.lastore")
 		return
 	}
 

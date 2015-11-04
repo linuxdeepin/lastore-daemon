@@ -82,14 +82,6 @@ func (u *Updater) SetMirrorSource(id string) error {
 	return nil
 }
 
-func (u Updater) GetDBusInfo() dbus.DBusInfo {
-	return dbus.DBusInfo{
-		Dest:       "org.deepin.lastore",
-		ObjectPath: "/org/deepin/lastore",
-		Interface:  "org.deepin.lastore.Updater",
-	}
-}
-
 func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 	//TODO: sync the value
 	if u.AutoCheckUpdates != enable {

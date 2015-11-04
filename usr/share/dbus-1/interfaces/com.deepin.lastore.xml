@@ -1,5 +1,5 @@
 <node>
-     <interface name="org.deepin.lastore.Manager">
+     <interface name="com.deepin.lastore.Manager">
           <method name="CleanJob">
                <arg type="s" direction="in"></arg>
           </method>
@@ -55,7 +55,7 @@
           <property name="SystemArchitectures" type="as" access="read"></property>
           <property name="UpgradableApps" type="as" access="read"></property>
      </interface>
-     <interface name="org.deepin.lastore.Updater">
+     <interface name="com.deepin.lastore.Updater">
           <method name="ApplicationUpdateInfos1">
                <arg type="s" direction="in"></arg>
                <arg type="a(sssss)" direction="out"></arg>
