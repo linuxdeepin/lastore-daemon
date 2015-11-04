@@ -64,6 +64,10 @@ func (fs DesktopFiles) score(i int) int {
 		score = score - 3
 	}
 
+	if strings.Contains(content, "NoDisplay=true") {
+		score = score - 100
+	}
+
 	if strings.Contains(fpath, "/usr/share/applications") {
 		score = score + 10
 	}

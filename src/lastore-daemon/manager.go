@@ -99,8 +99,11 @@ func (m *Manager) PackagesDownloadSize(packages []string) int64 {
 }
 
 func (m *Manager) PackageDesktopPath(packageId string) string {
-	r, _ := QueryDesktopPath(packageId)
-	return r
+	r := QueryDesktopPath(packageId)
+	if r != "" {
+		return r
+	}
+	return QueryDesktopPath(QueryPackageSameNameDepends(packageId)...)
 }
 
 func (m *Manager) PackageCategory1(packageId string) string {

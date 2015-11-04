@@ -56,8 +56,42 @@ func GuestPackageDownloadSize(packages ...string) float64 {
 	return parsePackageSize(lines[0])
 }
 
-func QueryDesktopPath(pkgId string) (string, error) {
-	cmd := exec.Command("dpkg", "-L", pkgId)
+func guestBasePackageName(pkgId string) string {
+	for _, sep := range []byte{'-', ':', '_'} {
+		index := strings.LastIndexByte(pkgId, sep)
+		if index != -1 {
+			return pkgId[:index]
+		}
+	}
+	return pkgId
+}
+
+// QueryPackageSameNameDepends guest packages may be contain the desktop files.
+// e.g.
+//    stardict-gtk --> stardict-common
+//    stardict-gnome --> stardict-common
+//    evince --> evince-common
+//    evince-gtk --> evince, evince-common  Note: (recursion guest)
+func QueryPackageSameNameDepends(pkgId string) []string {
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Depends}", pkgId).CombinedOutput()
+	if err != nil {
+		return nil
+	}
+
+	baseName := guestBasePackageName(pkgId)
+
+	var r []string
+	for _, name := range strings.Fields(string(out)) {
+		if strings.Contains(name, baseName) {
+			r = append(r, name)
+			r = append(r, QueryPackageSameNameDepends(name)...)
+		}
+	}
+	return r
+}
+
+func QueryDesktopPath(packages ...string) string {
+	cmd := exec.Command("dpkg", append([]string{"-L"}, packages...)...)
 
 	desktopFiles, err := filterExecOutput(
 		cmd,
@@ -67,9 +101,9 @@ func QueryDesktopPath(pkgId string) (string, error) {
 		},
 	)
 	if err != nil || len(desktopFiles) == 0 {
-		return "", err
+		return ""
 	}
-	return DesktopFiles(desktopFiles).BestOne(), nil
+	return DesktopFiles(desktopFiles).BestOne()
 }
 
 func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line string) bool) ([]string, error) {
