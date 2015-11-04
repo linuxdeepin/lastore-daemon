@@ -59,10 +59,15 @@ func NewDownloadJob(packageId string) *Job {
 }
 func NewInstallJob(packageId string) *Job {
 	installJob := NewJob(packageId, system.InstallJobType)
+
 	downloadJob := NewDownloadJob(packageId)
 	downloadJob.Id = installJob.Id
 	downloadJob.next = installJob
 	return downloadJob
+}
+
+func (j *Job) changeType(jobType string) {
+	j.Type = jobType
 }
 
 func (j *Job) updateInfo(info system.JobProgressInfo) {
@@ -72,7 +77,8 @@ func (j *Job) updateInfo(info system.JobProgressInfo) {
 	}
 
 	if !TransitionJobState(j, info.Status) {
-		panic("Can't transition job " + j.Id + " status from " + string(j.Status) + " to " + string(info.Status))
+		log.Printf("Can't transition job %q status from %q to %q\n", j.Id, j.Status, info.Status)
+		return
 	}
 
 	if info.Progress != j.Progress && info.Progress != -1 {
@@ -82,30 +88,6 @@ func (j *Job) updateInfo(info system.JobProgressInfo) {
 	log.Printf("JobId: %q(%q)  ----> progress:%f ----> msg:%q, status:%q\n", j.Id, j.PackageId, j.Progress, j.Description, j.Status)
 
 	if j.Status == system.SucceedStatus {
-		if j.next != nil {
-			j.swap(j.next)
-			j.next = nil
-		} else {
-			TransitionJobState(j, system.EndStatus)
-		}
+		TransitionJobState(j, system.EndStatus)
 	}
-}
-
-func (j *Job) swap(j2 *Job) {
-	log.Printf("Swaping from %v to %v", j, j2)
-	if j2.Id != j.Id {
-		panic("Can't swap Job with differnt Id")
-	}
-	j.Type = j2.Type
-	dbus.NotifyChange(j, "Type")
-	info := system.JobProgressInfo{
-		JobId:       j.Id,
-		Progress:    j2.Progress,
-		Description: j2.Description,
-		Status:      system.Status(j2.Status),
-	}
-	// force change status
-	j.Status = j2.Status
-
-	j.updateInfo(info)
 }

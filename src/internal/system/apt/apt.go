@@ -128,7 +128,6 @@ func (c *aptCommand) Start() error {
 func (c *aptCommand) Wait() (err error) {
 	err = c.osCMD.Wait()
 	if c.exitCode != ExitPause {
-		fmt.Println("NNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.......", c.exitCode)
 		if err != nil {
 			c.exitCode = ExitFailure
 			log.Printf("aptCommand.Wait: %v\n", err)

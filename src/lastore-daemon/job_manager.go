@@ -5,6 +5,7 @@ import (
 	"internal/system"
 	"log"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -16,12 +17,17 @@ const (
 )
 
 // JobManager
-// 1. 维护downloads 和 systemChanges 队列, 并隐藏其细节
-// 2. 负责Job的创建以及其状态变更 (但不做实际的任务处理)
+// 1. maintain DownloadQueue and SystemchangeQueue
+// 2. Create, Delete and Pause Jobs and schedule they.
 type JobManager struct {
 	queues map[string]*JobList
-	notify func()
+
 	system system.System
+
+	dispatchLock sync.Mutex
+
+	notify  func()
+	changed bool
 }
 
 // CreateJob create the job and try starting it
@@ -29,7 +35,6 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 	for _, job := range m.List() {
 		if job.PackageId == packageId {
 			if job.Type == jobType || (job.next != nil && job.next.Type == jobType) {
-				fmt.Println("XXXXXXXXXXXX>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", jobType, packageId)
 				return nil, system.ResourceExitError
 			}
 		}
@@ -56,7 +61,8 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 	return job, m.StartJob(job.Id)
 }
 
-// StartJob 将对应Job调整到队列最最前端，并调用dispatch
+// StartJob transition the Job status to ReadyStatus
+// and move the it to the head of queue.
 func (m *JobManager) StartJob(jobId string) error {
 	job := m.find(jobId)
 	if job == nil {
@@ -76,7 +82,8 @@ func (m *JobManager) StartJob(jobId string) error {
 	return err
 }
 
-// CleanJob 将对应Job的状态更改为EndStatus, 并调用dispatch
+// CleanJob transition the Job status to EndStatus,
+// so the job will be auto clean in next dispatch run.
 func (m *JobManager) CleanJob(jobId string) error {
 	job := m.find(jobId)
 	if job == nil {
@@ -85,11 +92,10 @@ func (m *JobManager) CleanJob(jobId string) error {
 	if !TransitionJobState(job, system.EndStatus) {
 		return fmt.Errorf("Can't transition the status of Job %q from %q to %q", jobId, job.Status, system.EndStatus)
 	}
-	m.dispatch()
 	return nil
 }
 
-// PauseJob abort对应Job的执行,将状态更改为PauseStatus, 并调用dispatch
+// PauseJob try aborting the job and transition the status to PauseStatus
 func (m *JobManager) PauseJob(jobId string) error {
 	job := m.find(jobId)
 	if job == nil {
@@ -108,7 +114,7 @@ func (m *JobManager) PauseJob(jobId string) error {
 	return nil
 }
 
-func (m JobManager) find(jobId string) *Job {
+func (m *JobManager) find(jobId string) *Job {
 	for _, queue := range m.queues {
 		job := queue.Find(jobId)
 		if job != nil {
@@ -142,17 +148,33 @@ func (m *JobManager) List() []*Job {
 	return r
 }
 
-// Dispatch 根据当前队列情况, 进行Job的状态自动变更
-// 1. 清理所有状态为system.EndStatus的Job
-// 2. 取出所有Pending的Job并开始执行
+// Dispatch transition Job status in Job Queues
+// 1. Clean Jobs whose status is system.EenStatus
+// 2. Run all Pending Jobs.
 func (m *JobManager) dispatch() {
+	m.dispatchLock.Lock()
+	defer m.dispatchLock.Unlock()
+
 	for _, queue := range m.queues {
+		var pendingDeleteJobIds []string
+
 		// 1. Clean Jobs with EndStatus
 		for _, job := range queue.Jobs {
 			if job.Status == system.EndStatus {
-				m.removeJob(job.Id)
-				log.Printf("Clean Job %q with Status %q\n", job.Id, system.EndStatus)
+				// 1.1 Try replace if it has next Job
+				if job.next != nil {
+					job.Status = system.ReadyStatus
+					job.Type = job.next.Type
+					job.next = nil
+				} else {
+					pendingDeleteJobIds = append(pendingDeleteJobIds, job.Id)
+				}
+
 			}
+		}
+
+		for _, id := range pendingDeleteJobIds {
+			m.removeJob(id, queue.Name)
 		}
 
 		// 2. Try starting jobs with ReadyStatus
@@ -160,6 +182,11 @@ func (m *JobManager) dispatch() {
 		for _, job := range jobs {
 			StartSystemJob(m.system, job)
 		}
+	}
+
+	if m.changed && m.notify != nil {
+		m.changed = false
+		m.notify()
 	}
 }
 
@@ -185,23 +212,20 @@ func (m *JobManager) addJob(j *Job, queueName string) error {
 	if err != nil {
 		return err
 	}
-	m.notify()
-	m.dispatch()
+	m.changed = true
 	return nil
 }
-func (m *JobManager) removeJob(jobId string) error {
-	var err error
-	for _, queue := range m.queues {
-		err = queue.Remove(jobId)
-		if err == nil {
-			break
-		}
+func (m *JobManager) removeJob(jobId string, queueName string) error {
+	queue, ok := m.queues[queueName]
+	if !ok {
+		return system.NotFoundError
 	}
+
+	err := queue.Remove(jobId)
 	if err != nil {
 		return err
 	}
-	m.notify()
-	m.dispatch()
+	m.changed = true
 	return nil
 }
 
@@ -303,7 +327,7 @@ func (l *JobList) Raise(jobId string) error {
 	return nil
 }
 
-func (l JobList) Find(id string) *Job {
+func (l *JobList) Find(id string) *Job {
 	for _, job := range l.Jobs {
 		if job.Id == id {
 			return job
