@@ -34,22 +34,45 @@ func NewManager(b system.System) *Manager {
 }
 
 func (m *Manager) UpdatePackage(packageId string) (*Job, error) {
+	// TODO: Check whether the package can be updated
 	return m.jobManager.CreateJob(system.UpdateJobType, packageId)
 }
 
 func (m *Manager) InstallPackage(packageId string) (*Job, error) {
+	if m.PackageExists(packageId) {
+		return nil, system.ResourceExitError
+	}
 	return m.jobManager.CreateJob(system.InstallJobType, packageId)
 }
 
 func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
+	if m.PackageExists(packageId) {
+		return nil, system.ResourceExitError
+	}
 	return m.jobManager.CreateJob(system.DownloadJobType, packageId)
 }
 
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
+	if !m.PackageExists(packageId) {
+		return nil, system.NotFoundError
+	}
 	return m.jobManager.CreateJob(system.RemoveJobType, packageId)
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
+	var updateJobIds []string
+	for _, job := range m.JobList {
+		if job.Type == system.DistUpgradeJobType {
+			return nil, system.ResourceExitError
+		}
+		if job.Type == system.UpdateJobType && job.Status != system.RunningStatus {
+			updateJobIds = append(updateJobIds, job.Id)
+		}
+	}
+	for _, jobId := range updateJobIds {
+		m.CleanJob(jobId)
+	}
+
 	return m.jobManager.CreateJob(system.DistUpgradeJobType, "")
 }
 

@@ -26,6 +26,15 @@ type JobManager struct {
 
 // CreateJob create the job and try starting it
 func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
+	for _, job := range m.List() {
+		if job.PackageId == packageId {
+			if job.Type == jobType || (job.next != nil && job.next.Type == jobType) {
+				fmt.Println("XXXXXXXXXXXX>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", jobType, packageId)
+				return nil, system.ResourceExitError
+			}
+		}
+	}
+
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:

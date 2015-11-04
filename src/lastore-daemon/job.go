@@ -38,7 +38,7 @@ func NewJob(packageId string, jobType string) *Job {
 		CreateTime: time.Now().UnixNano(),
 		Type:       jobType,
 		PackageId:  packageId,
-		Status:     system.ReadyStatus,
+		Status:     system.StartStatus,
 		Progress:   .0,
 		option:     make(map[string]string),
 	}
