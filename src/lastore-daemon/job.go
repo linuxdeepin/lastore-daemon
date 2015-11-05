@@ -30,6 +30,8 @@ type Job struct {
 
 	Progress    float64
 	Description string
+
+	Cancelable bool
 }
 
 func NewJob(packageId string, jobType string) *Job {
@@ -40,6 +42,7 @@ func NewJob(packageId string, jobType string) *Job {
 		PackageId:  packageId,
 		Status:     system.StartStatus,
 		Progress:   .0,
+		Cancelable: true,
 		option:     make(map[string]string),
 	}
 	return j
@@ -71,21 +74,26 @@ func (j *Job) changeType(jobType string) {
 }
 
 func (j *Job) updateInfo(info system.JobProgressInfo) {
-	if info.Description != j.Description {
-		j.Description = info.Description
-		dbus.NotifyChange(j, "Description")
-	}
-
 	if !TransitionJobState(j, info.Status) {
 		log.Printf("Can't transition job %q status from %q to %q\n", j.Id, j.Status, info.Status)
 		return
+	}
+	if info.Description != j.Description {
+		j.Description = info.Description
+		dbus.NotifyChange(j, "Description")
 	}
 
 	if info.Progress != j.Progress && info.Progress != -1 {
 		j.Progress = info.Progress
 		dbus.NotifyChange(j, "Progress")
 	}
-	log.Printf("JobId: %q(%q)  ----> progress:%f ----> msg:%q, status:%q\n", j.Id, j.PackageId, j.Progress, j.Description, j.Status)
+
+	if info.Cancelable != j.Cancelable {
+		j.Cancelable = info.Cancelable
+		dbus.NotifyChange(j, "Cancelable")
+	}
+
+	log.Printf("JobId: %q(%q)  ----> progress:%f ----> msg:%q, status:%q (%v)\n", j.Id, j.PackageId, j.Progress, j.Description, j.Status, j.Cancelable)
 
 	if j.Status == system.SucceedStatus {
 		TransitionJobState(j, system.EndStatus)

@@ -65,8 +65,6 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 		"APT::Status-Fd": "3",
 	}
 
-	cancelable := false
-
 	polices := []string{"-y"}
 	var args []string
 	switch cmdType {
@@ -77,7 +75,6 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 	case system.DownloadJobType:
 		options["Debug::NoLocking"] = "1"
 		args = append(args, "install", "-d", packageId)
-		cancelable = true
 	case system.DistUpgradeJobType:
 		args = append(args, "dist-upgrade", "--force-yes")
 	}
@@ -94,11 +91,11 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 
 	r := &aptCommand{
 		OwnerId:    jobId,
-		Cancelable: cancelable,
 		cmdSet:     cmdSet,
 		indicator:  fn,
 		osCMD:      cmd,
 		output:     output,
+		Cancelable: true,
 	}
 
 	cmdSet.AddCMD(r)
@@ -177,7 +174,7 @@ func (c *aptCommand) Abort() error {
 	return system.NotSupportError
 }
 
-func (c aptCommand) updateProgress() {
+func (c *aptCommand) updateProgress() {
 	b := bufio.NewReader(c.aptPipe)
 	for {
 		line, err := b.ReadString('\n')
@@ -187,6 +184,7 @@ func (c aptCommand) updateProgress() {
 
 		info, _ := ParseProgressInfo(c.OwnerId, line)
 		log.Printf("aptCommand.updateProgress %v\n", info)
+		c.Cancelable = info.Cancelable
 		c.indicator(info)
 	}
 }

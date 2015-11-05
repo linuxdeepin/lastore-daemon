@@ -30,6 +30,7 @@ type JobProgressInfo struct {
 	Progress    float64
 	Description string
 	Status      Status
+	Cancelable  bool
 }
 
 type UpgradeInfo struct {

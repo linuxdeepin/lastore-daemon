@@ -38,6 +38,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 			Progress:    v / 100.0,
 			Description: fs[3],
 			Status:      system.RunningStatus,
+			Cancelable:  fs[0] == "dlstatus",
 		}, nil
 	case "dstatus":
 		switch fs[1] {
@@ -47,6 +48,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 				Progress:    1.0,
 				Description: fs[2],
 				Status:      system.SucceedStatus,
+				Cancelable:  fs[0] == "dlstatus",
 			}, nil
 		case system.FailedStatus, system.PausedStatus:
 			return system.JobProgressInfo{
@@ -54,6 +56,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 				Progress:    -1,
 				Description: fs[2],
 				Status:      system.Status(fs[1]),
+				Cancelable:  fs[0] == "dlstatus",
 			}, nil
 		}
 	}

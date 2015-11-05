@@ -81,7 +81,7 @@ func TransitionJobState(j *Job, to system.Status) bool {
 	if !ValidTransitionJobState(j.Status, to) {
 		return false
 	}
-	log.Printf("%q transition state from %q to %q\n", j.Id, j.Status, to)
+	log.Printf("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 	j.Status = to
 	dbus.NotifyChange(j, "Status")
 	return true

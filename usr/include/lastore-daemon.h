@@ -458,6 +458,12 @@ class Job : public dbus::common::DBusObject
 		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
 	}
 	
+	Q_PROPERTY(dbus::common::R<bool > Cancelable READ cancelable NOTIFY cancelableChanged)
+	dbus::common::R<bool > cancelable () {
+		QDBusPendingReply<> call = fetchProperty("Cancelable");
+		return dbus::common::R<bool >(call, dbus::common::PropertyConverter);
+	}
+	
 
 
 	
@@ -472,6 +478,7 @@ class Job : public dbus::common::DBusObject
 	void statusChanged (); 
 	void progressChanged (); 
 	void descriptionChanged (); 
+	void cancelableChanged (); 
 
 };
 }}}
