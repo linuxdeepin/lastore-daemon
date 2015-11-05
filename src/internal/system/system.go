@@ -13,8 +13,7 @@ const (
 	SucceedStatus        = "succeed"
 	PausedStatus         = "paused"
 
-	StartStatus = "start"
-	EndStatus   = "end"
+	EndStatus = "end"
 )
 
 const (

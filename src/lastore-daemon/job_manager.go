@@ -44,26 +44,22 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 	switch jobType {
 	case system.DownloadJobType:
 		job = NewDownloadJob(packageId)
-		m.addJob(job, DownloadQueue)
 	case system.InstallJobType:
 		job = NewInstallJob(packageId)
-		m.addJob(job, SystemChangeQueue)
 	case system.RemoveJobType:
 		job = NewRemoveJob(packageId)
-		m.addJob(job, SystemChangeQueue)
 	case system.DistUpgradeJobType:
 		job = NewDistUpgradeJob()
-		m.addJob(job, SystemChangeQueue)
 	case system.UpdateJobType:
 		job = NewUpdateJob(packageId)
-		m.addJob(job, SystemChangeQueue)
 	}
-	return job, m.StartJob(job.Id)
+	m.addJob(job)
+	return job, m.MarkStart(job.Id)
 }
 
-// StartJob transition the Job status to ReadyStatus
+// MarkStart transition the Job status to ReadyStatus
 // and move the it to the head of queue.
-func (m *JobManager) StartJob(jobId string) error {
+func (m *JobManager) MarkStart(jobId string) error {
 	job := m.find(jobId)
 	if job == nil {
 		return system.NotFoundError
@@ -149,34 +145,30 @@ func (m *JobManager) List() []*Job {
 }
 
 // Dispatch transition Job status in Job Queues
-// 1. Clean Jobs whose status is system.EenStatus
+// 1. Clean Jobs whose status is system.EndStatus
 // 2. Run all Pending Jobs.
 func (m *JobManager) dispatch() {
 	m.dispatchLock.Lock()
 	defer m.dispatchLock.Unlock()
 
+	var pendingDeleteJobs []*Job
 	for _, queue := range m.queues {
-		var pendingDeleteJobIds []string
-
 		// 1. Clean Jobs with EndStatus
 		for _, job := range queue.Jobs {
 			if job.Status == system.EndStatus {
-				// 1.1 Try replace if it has next Job
-				if job.next != nil {
-					job.Status = system.ReadyStatus
-					job.Type = job.next.Type
-					job.next = nil
-				} else {
-					pendingDeleteJobIds = append(pendingDeleteJobIds, job.Id)
-				}
-
+				pendingDeleteJobs = append(pendingDeleteJobs, job)
 			}
 		}
-
-		for _, id := range pendingDeleteJobIds {
-			m.removeJob(id, queue.Name)
+	}
+	for _, job := range pendingDeleteJobs {
+		m.removeJob(job.Id, job.queueName)
+		if job.next != nil {
+			job = job.next
+			m.addJob(job)
+			m.MarkStart(job.Id)
 		}
-
+	}
+	for _, queue := range m.queues {
 		// 2. Try starting jobs with ReadyStatus
 		jobs := queue.PendingJobs()
 		for _, job := range jobs {
@@ -202,7 +194,8 @@ func (m *JobManager) createJobList(name string, cap int) {
 	m.queues[name] = list
 }
 
-func (m *JobManager) addJob(j *Job, queueName string) error {
+func (m *JobManager) addJob(j *Job) error {
+	queueName := j.queueName
 	queue, ok := m.queues[queueName]
 	if !ok {
 		return system.NotFoundError

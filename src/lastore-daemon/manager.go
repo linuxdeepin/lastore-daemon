@@ -80,7 +80,7 @@ func (m *Manager) PauseJob(jobId string) error {
 	return m.jobManager.PauseJob(jobId)
 }
 func (m *Manager) StartJob(jobId string) error {
-	return m.jobManager.StartJob(jobId)
+	return m.jobManager.MarkStart(jobId)
 }
 func (m *Manager) CleanJob(jobId string) error {
 	return m.jobManager.CleanJob(jobId)

@@ -46,8 +46,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 	case system.ReadyStatus:
 		switch from {
 		case system.FailedStatus,
-			system.PausedStatus,
-			system.StartStatus:
+			system.PausedStatus:
 		default:
 			return false
 		}
