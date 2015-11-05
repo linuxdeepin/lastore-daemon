@@ -25,7 +25,7 @@ func (m *Manager) updateJobList() {
 	}
 	if changed {
 		m.JobList = list
-		dbus.NotifyChange(m, "UpgradableApps")
+		dbus.NotifyChange(m, "JobList")
 
 		m.updatableApps()
 	}
