@@ -85,6 +85,10 @@ func (m *JobManager) CleanJob(jobId string) error {
 	if job == nil {
 		return system.NotFoundError
 	}
+
+	if ValidTransitionJobState(job.Status, system.EndStatus) {
+		job.next = nil
+	}
 	if !TransitionJobState(job, system.EndStatus) {
 		return fmt.Errorf("Can't transition the status of Job %q from %q to %q", jobId, job.Status, system.EndStatus)
 	}
