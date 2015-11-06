@@ -3,29 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
-	"net/http"
+	"os"
+	"path"
 	"pkg.deepin.io/lib/dbus"
 )
 
-type ApplicationUpdateInfo struct {
-	Id              string
-	Name            string
-	Icon            string
-	CurrentVersion  string
-	AvaiableVersion string
-
-	// There  hasn't support
-	changeLog string
-}
+var VarLibDir = "/var/lib/lastore"
 
 type Updater struct {
 	AutoCheckUpdates bool
 
-	MirrorSource   string
-	OfficialSource string
-	mirrorSources  map[string]MirrorSource
+	MirrorSource  string
+	mirrorSources []MirrorSource
 
 	upgradableInfos []system.UpgradeInfo
 
@@ -36,50 +26,129 @@ type Updater struct {
 	UpdatablePackages1 []string
 }
 
-type MirrorSource struct {
-	Id   string
-	Name string
-	Url  string
-
-	location    string
-	localeNames map[string]string
-}
-
 func NewUpdater(b system.System) *Updater {
 	// TODO: Reload the cache
-	ms := LoadMirrorSources("http://api.lastore.deepin.org")
-	u := Updater{
-		OfficialSource: "http://packages.linuxdeepin.com",
-		mirrorSources:  make(map[string]MirrorSource),
-		b:              b,
+	u := &Updater{
+		b: b,
 	}
-	for _, item := range ms {
-		u.mirrorSources[item.Id] = item
-	}
+
+	go func() {
+		u.updateMirrorSources()
+		u.UpdatablePackages1 = UpdatableNames(u.b.UpgradeInfo())
+	}()
 
 	u.UpdatableApps1 = []string{"abiword", "anjuta", "deepin-movie", "d-feet"}
-	u.UpdatablePackages1 = UpdatableNames(u.b.UpgradeInfo())
-	return &u
+
+	return u
 }
 
-func (u *Updater) ApplicationUpdateInfos1(lang string) []ApplicationUpdateInfo {
-	return []ApplicationUpdateInfo{
-		{"abiword", "Abiword", "abiword", "0.3", "0.55", ""},
-		{"anjuta", "anjuta", "anjuta", "1.3", "1.4", ""},
-		{"deepin-movie", "deepin movie", "deepin-movie", "2.3", "3.3", ""},
-		{"d-feet", "d-feet", "d-feet", "3.3", "5.5", ""},
-	}
+type AppInfo struct {
+	Id          string
+	Category    string
+	Icon        string
+	Name        string
+	LocaleNames map[string]string
+}
+type ApplicationUpdateInfo struct {
+	Id             string
+	Name           string
+	Icon           string
+	CurrentVersion string
+	LastVersion    string
 }
 
-// 设置用于下载软件的镜像源
-func (u *Updater) SetMirrorSource(id string) error {
-	//TODO: sync the value
-	if _, ok := u.mirrorSources[id]; !ok {
-		return fmt.Errorf("Can't find the mirror source %q", id)
+func DecodeJson(fpath string, data interface{}) error {
+	f, err := os.Open(fpath)
+	if err != nil {
+		return err
 	}
-	u.MirrorSource = id
-	dbus.NotifyChange(u, "MirrorSource")
-	return nil
+	defer f.Close()
+	d := json.NewDecoder(f)
+	return d.Decode(data)
+}
+func EncodeJson(fpath string, data interface{}) error {
+	f, err := os.Create(fpath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	d := json.NewEncoder(f)
+	return d.Encode(data)
+}
+
+func GetPackageIconInfo() map[string]string {
+	desktops := make(map[string]string)
+	icons := make(map[string]string)
+	DecodeJson(path.Join(VarLibDir, "desktop_package.json"), desktops)
+	DecodeJson(path.Join(VarLibDir, "desktop_icon.json"), icons)
+
+	r := make(map[string]string)
+	for desktop, pkg := range desktops {
+		icon, ok := icons[desktop]
+		if !ok {
+			continue
+		}
+		r[pkg] = icon
+	}
+	return r
+}
+
+func GetUpdatablePackageInfo(fpath string) (map[string]system.UpgradeInfo, error) {
+	d := make(map[string]system.UpgradeInfo)
+	err := DecodeJson(fpath, &d)
+	return d, err
+}
+
+func GetAppInfos(fpath string) (map[string]AppInfo, error) {
+	d := make(map[string]AppInfo)
+	err := DecodeJson(fpath, &d)
+	return d, err
+}
+
+func (u *Updater) updateUpdateInfo() error {
+	infos := u.b.UpgradeInfo()
+	r := make(map[string]system.UpgradeInfo)
+	for _, info := range infos {
+		r[info.Package] = info
+	}
+	return EncodeJson(path.Join(VarLibDir, "update_infos.json"), r)
+}
+
+func (u *Updater) ApplicationUpdateInfos1(lang string) ([]ApplicationUpdateInfo, error) {
+	appInfos, err := GetAppInfos(path.Join(VarLibDir, "application_infos.json"))
+	fmt.Println("XX", appInfos)
+	if err != nil {
+		return nil, err
+	}
+	updateInfos, err := GetUpdatablePackageInfo(path.Join(VarLibDir, "update_infos.json"))
+	if err != nil {
+		return nil, err
+	}
+
+	iconInfos := GetPackageIconInfo()
+
+	var r []ApplicationUpdateInfo
+	for pkgId, uInfo := range updateInfos {
+		appInfo, ok := appInfos[pkgId]
+		if !ok {
+			continue
+		}
+		info := ApplicationUpdateInfo{
+			Id:             pkgId,
+			Name:           appInfo.LocaleNames[lang],
+			Icon:           iconInfos[pkgId],
+			CurrentVersion: uInfo.CurrentVersion,
+			LastVersion:    uInfo.LastVersion,
+		}
+		if info.Name == "" {
+			info.Name = appInfo.Name
+		}
+		if info.Icon == "" {
+			info.Icon = pkgId
+		}
+		r = append(r, info)
+	}
+	return r, nil
 }
 
 func (u *Updater) SetAutoCheckUpdates(enable bool) error {
@@ -89,76 +158,6 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 		dbus.NotifyChange(u, "AutoCheckUpdates")
 	}
 	return nil
-}
-
-// ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
-// 其中Name会根据传递进来的lang进行本地化
-func (u Updater) ListMirrorSources(lang string) []MirrorSource {
-	// TODO: sort it
-	var r []MirrorSource
-	for _, ms := range u.mirrorSources {
-		localeMS := MirrorSource{
-			Id:   ms.Id,
-			Url:  ms.Url,
-			Name: ms.Name,
-		}
-		if v, ok := ms.localeNames[lang]; ok {
-			localeMS.Name = v
-		}
-
-		r = append(r, localeMS)
-	}
-	return r
-}
-
-// LoadMirrorSources return supported MirrorSource from remote server
-func LoadMirrorSources(server string) []MirrorSource {
-	rep, err := http.Get(server + "/mirrors")
-	if err != nil {
-		log.Warnf("LoadMirrorSources:%v", err)
-		return nil
-	}
-	defer rep.Body.Close()
-
-	d := json.NewDecoder(rep.Body)
-	var v struct {
-		StatusCode    int    `json:"status_code"`
-		StatusMessage string `json:"status_message"`
-		Data          []struct {
-			Id       string                       `json:"id"`
-			Name     string                       `json:"name"`
-			Url      string                       `json:"url"`
-			Location string                       `json:"location"`
-			Locale   map[string]map[string]string `json:"locale"`
-		} `json:"data"`
-	}
-	err = d.Decode(&v)
-	if err != nil {
-		log.Warnf("LoadMirrorSources: %v", err)
-		return nil
-	}
-
-	if v.StatusCode != 0 {
-		log.Warnf("LoadMirrorSources: featch(%q) error: %q",
-			server+"/mirrors", v.StatusMessage)
-		return nil
-	}
-
-	var r []MirrorSource
-	for _, raw := range v.Data {
-		s := MirrorSource{
-			Id:          raw.Id,
-			Name:        raw.Name,
-			Url:         raw.Url,
-			location:    raw.Location,
-			localeNames: make(map[string]string),
-		}
-		for k, v := range raw.Locale {
-			s.localeNames[k] = v["name"]
-		}
-		r = append(r, s)
-	}
-	return r
 }
 
 func UpdatableNames(infos []system.UpgradeInfo) []string {

@@ -29,7 +29,9 @@ func (*testWrap) TestParseSize(c *C.C) {
 }
 
 func (*testWrap) TestLoadSourceMirrors(c *C.C) {
-	c.Check(LoadMirrorSources("http://api.lastore.deepin.org"), C.Not(C.Equals), 0)
+	ms, err := LoadMirrorSources("http://api.lastore.deepin.org")
+	c.Check(err, C.Equals, nil)
+	c.Check(len(ms), C.Not(C.Equals), 0)
 }
 
 func (*testWrap) TestPackageDownloadSize(c *C.C) {

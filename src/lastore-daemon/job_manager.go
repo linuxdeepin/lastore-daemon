@@ -170,7 +170,10 @@ func (m *JobManager) dispatch() {
 		}
 	}
 	for _, job := range pendingDeleteJobs {
-		m.removeJob(job.Id, job.queueName)
+		err := m.removeJob(job.Id, job.queueName)
+		if err != nil {
+			log.Errorf("dispatch error:%v\n", err)
+		}
 		if job.next != nil {
 			job = job.next
 			m.addJob(job)
