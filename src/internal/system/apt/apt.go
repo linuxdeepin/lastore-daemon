@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 type CommandSet interface {
@@ -85,6 +86,7 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 	args = append(args, polices...)
 
 	cmd := exec.Command("apt-get", args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	output := system.CreateLogOutput(cmdType, packageId)
 	cmd.Stdout = output
 	cmd.Stderr = output
@@ -169,7 +171,12 @@ func (c *aptCommand) atExit() {
 func (c *aptCommand) Abort() error {
 	if c.Cancelable {
 		c.exitCode = ExitPause
-		return c.osCMD.Process.Kill()
+		var err error
+		pgid, err := syscall.Getpgid(c.osCMD.Process.Pid)
+		if err != nil {
+			return err
+		}
+		return syscall.Kill(-pgid, 2)
 	}
 	return system.NotSupportError
 }
