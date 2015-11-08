@@ -14,7 +14,7 @@ func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
-	jobChanged := false
+	jobChanged := len(list) != len(m.JobList)
 	systemOnChanging := false
 
 	for i, j2 := range list {
