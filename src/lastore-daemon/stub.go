@@ -81,3 +81,44 @@ func (u Updater) GetDBusInfo() dbus.DBusInfo {
 		Interface:  "com.deepin.lastore.Updater",
 	}
 }
+
+func (u *Updater) setUpdatablePackages(packages []string) {
+	changed := len(u.UpdatablePackages) != len(packages)
+	if !changed {
+		for i, pkg := range packages {
+			if u.UpdatablePackages[i] != pkg {
+				changed = true
+				break
+			}
+		}
+	}
+
+	if changed {
+		u.UpdatablePackages = packages
+		dbus.NotifyChange(u, "UpdatablePackages")
+	}
+}
+
+func (u *Updater) setUpdatableApps(infos []AppInfo) {
+	u.updatableAppInfos = infos
+
+	var apps []string
+	for _, info := range infos {
+		apps = append(apps, info.Id)
+	}
+
+	changed := len(u.UpdatableApps) != len(apps)
+	if !changed {
+		for i, app := range apps {
+			if u.UpdatableApps[i] != app {
+				changed = true
+				break
+			}
+		}
+	}
+
+	if changed {
+		u.UpdatableApps = apps
+		dbus.NotifyChange(u, "UpdatableApps")
+	}
+}

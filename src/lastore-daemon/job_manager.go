@@ -17,7 +17,7 @@ const (
 )
 
 // JobManager
-// 1. maintain DownloadQueue and SystemchangeQueue
+// 1. maintain DownloadQueue and SystemChangeQueue
 // 2. Create, Delete and Pause Jobs and schedule they.
 type JobManager struct {
 	queues map[string]*JobQueue

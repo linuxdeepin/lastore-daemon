@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
-	"os"
 	"path"
 	"pkg.deepin.io/lib/dbus"
 )
@@ -17,29 +15,35 @@ type Updater struct {
 	MirrorSource  string
 	mirrorSources []MirrorSource
 
-	upgradableInfos []system.UpgradeInfo
-
 	b system.System
 
-	//测试使用
-	UpdatableApps1     []string
-	UpdatablePackages1 []string
+	UpdatablePackages     []string
+	updatablePackageInfos []system.UpgradeInfo
+
+	UpdatableApps     []string
+	updatableAppInfos []AppInfo
 }
 
 func NewUpdater(b system.System) *Updater {
 	// TODO: Reload the cache
 	u := &Updater{
-		b: b,
+		b:            b,
+		MirrorSource: DefaultMirror.Id,
 	}
 
-	go func() {
-		u.updateMirrorSources()
-		u.UpdatablePackages1 = UpdatableNames(u.b.UpgradeInfo())
-	}()
-
-	u.UpdatableApps1 = []string{"abiword", "anjuta", "deepin-movie", "d-feet"}
+	go u._ReloadInfo()
 
 	return u
+}
+
+func (u *Updater) _ReloadInfo() error {
+	u.updateMirrorSources()
+
+	u.setUpdatablePackages(UpdatableNames(u.b.UpgradeInfo()))
+
+	u.updateUpdatableApps()
+
+	return nil
 }
 
 type AppInfo struct {
@@ -49,31 +53,13 @@ type AppInfo struct {
 	Name        string
 	LocaleNames map[string]string
 }
+
 type ApplicationUpdateInfo struct {
 	Id             string
 	Name           string
 	Icon           string
 	CurrentVersion string
 	LastVersion    string
-}
-
-func DecodeJson(fpath string, data interface{}) error {
-	f, err := os.Open(fpath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	d := json.NewDecoder(f)
-	return d.Decode(data)
-}
-func EncodeJson(fpath string, data interface{}) error {
-	f, err := os.Create(fpath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	d := json.NewEncoder(f)
-	return d.Encode(data)
 }
 
 func GetPackageIconInfo() map[string]string {
@@ -93,16 +79,33 @@ func GetPackageIconInfo() map[string]string {
 	return r
 }
 
+func (u *Updater) updateUpdatableApps() {
+	apps := GetAppInfos(VarLibDir)
+
+	var r []AppInfo
+	for _, pkg := range u.UpdatablePackages {
+		info, ok := apps[pkg]
+		if ok {
+			r = append(r, info)
+		}
+	}
+	u.setUpdatableApps(r)
+}
+
 func GetUpdatablePackageInfo(fpath string) (map[string]system.UpgradeInfo, error) {
 	d := make(map[string]system.UpgradeInfo)
 	err := DecodeJson(fpath, &d)
 	return d, err
 }
 
-func GetAppInfos(fpath string) (map[string]AppInfo, error) {
+func GetAppInfos(baseDir string) map[string]AppInfo {
+	fpath := path.Join(VarLibDir, "application_infos.json")
 	d := make(map[string]AppInfo)
 	err := DecodeJson(fpath, &d)
-	return d, err
+	if err != nil {
+		log.Warnf("GetAppInfos:%v\n", err)
+	}
+	return d
 }
 
 func (u *Updater) updateUpdateInfo() error {
@@ -115,44 +118,44 @@ func (u *Updater) updateUpdateInfo() error {
 }
 
 func (u *Updater) ApplicationUpdateInfos1(lang string) ([]ApplicationUpdateInfo, error) {
-	appInfos, err := GetAppInfos(path.Join(VarLibDir, "application_infos.json"))
-	fmt.Println("XX", appInfos)
-	if err != nil {
-		return nil, err
-	}
-	updateInfos, err := GetUpdatablePackageInfo(path.Join(VarLibDir, "update_infos.json"))
-	if err != nil {
-		return nil, err
+	if u.UpdatableApps == nil {
+		u.updateUpdatableApps()
 	}
 
 	iconInfos := GetPackageIconInfo()
 
 	var r []ApplicationUpdateInfo
-	for pkgId, uInfo := range updateInfos {
-		appInfo, ok := appInfos[pkgId]
-		if !ok {
-			continue
+	for _, appInfo := range u.updatableAppInfos {
+		var uInfo system.UpgradeInfo
+		for _, pkgInfo := range u.updatablePackageInfos {
+			if pkgInfo.Package == appInfo.Id {
+				uInfo = pkgInfo
+				break
+			}
 		}
-		info := ApplicationUpdateInfo{
-			Id:             pkgId,
+		if uInfo.Package == "" {
+			log.Warnf("Invalid UpdateInfo for %v  (%v)\n", appInfo, u.updatablePackageInfos)
+		}
+
+		updateInfo := ApplicationUpdateInfo{
+			Id:             appInfo.Id,
 			Name:           appInfo.LocaleNames[lang],
-			Icon:           iconInfos[pkgId],
+			Icon:           iconInfos[appInfo.Id],
 			CurrentVersion: uInfo.CurrentVersion,
 			LastVersion:    uInfo.LastVersion,
 		}
-		if info.Name == "" {
-			info.Name = appInfo.Name
+		if updateInfo.Name == "" {
+			updateInfo.Name = appInfo.Id
 		}
-		if info.Icon == "" {
-			info.Icon = pkgId
+		if updateInfo.Icon == "" {
+			updateInfo.Icon = appInfo.Id
 		}
-		r = append(r, info)
+		r = append(r, updateInfo)
 	}
 	return r, nil
 }
 
 func (u *Updater) SetAutoCheckUpdates(enable bool) error {
-	//TODO: sync the value
 	if u.AutoCheckUpdates != enable {
 		u.AutoCheckUpdates = enable
 		dbus.NotifyChange(u, "AutoCheckUpdates")
