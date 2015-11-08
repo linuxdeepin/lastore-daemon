@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=lastore-session-helper
+Exec=/usr/bin/lastore-session-helper
+TryExec=/usr/bin/lastore-daemon
+NoDisplay=true
+

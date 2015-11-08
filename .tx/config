@@ -1,0 +1,10 @@
+[main]
+host = https://www.transifex.com
+minimum_perc = 80
+mode = developer
+
+[deepin-store.lastore]
+file_filter = locale/<lang>.po
+source_file = locale/lastore-daemon.pot
+source_lang = en
+type = PO

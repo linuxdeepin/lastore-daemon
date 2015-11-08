@@ -1,6 +1,6 @@
 package main
 
-import lastore "./stub"
+import "dbus/com/deepin/lastore"
 import "testing"
 import C "gopkg.in/check.v1"
 import "pkg.deepin.io/lib/dbus"
