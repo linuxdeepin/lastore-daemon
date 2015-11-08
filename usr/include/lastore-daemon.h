@@ -251,9 +251,9 @@ void DBusObject::propertyChanged(const QDBusMessage& msg)
 	int getTypeId(const QString& s);
 
 
-	typedef QStringList  as;
-
 	typedef QList<QDBusObjectPath > ao;
+
+	typedef QStringList  as;
 
 	typedef dbus::types::BaseStruct<QString, QString, QString > r_sss_;
 
@@ -265,27 +265,6 @@ void DBusObject::propertyChanged(const QDBusMessage& msg)
 
 
 
-	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::as& v)
-	{
-		argument.beginArray(getTypeId("s"));
-for (int i=0; i < v.size(); ++i)
-    argument << v.at(i);
-argument.endArray();
-return argument;
-
-	}
-	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::as& v)
-	{
-		argument.beginArray();
-while (!argument.atEnd()) {
-    QString ele;
-    argument >> ele;
-    v.append(ele);
-}
-argument.endArray();
-return argument;
-
-	} 
 	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::ao& v)
 	{
 		argument.beginArray(getTypeId("o"));
@@ -300,6 +279,27 @@ return argument;
 		argument.beginArray();
 while (!argument.atEnd()) {
     QDBusObjectPath ele;
+    argument >> ele;
+    v.append(ele);
+}
+argument.endArray();
+return argument;
+
+	} 
+	inline QDBusArgument& operator<<(QDBusArgument &argument, const dbus::types::as& v)
+	{
+		argument.beginArray(getTypeId("s"));
+for (int i=0; i < v.size(); ++i)
+    argument << v.at(i);
+argument.endArray();
+return argument;
+
+	}
+	inline const QDBusArgument& operator>>(const QDBusArgument &argument, dbus::types::as& v)
+	{
+		argument.beginArray();
+while (!argument.atEnd()) {
+    QString ele;
     argument >> ele;
     v.append(ele);
 }
@@ -384,10 +384,10 @@ return argument;
 
 	inline int getTypeId(const QString& s) {
 	if (0) { 
-	}  else if (s == "as") {
-		return qDBusRegisterMetaType<dbus::types::as>();
-	} else if (s == "ao") {
+	}  else if (s == "ao") {
 		return qDBusRegisterMetaType<dbus::types::ao>();
+	} else if (s == "as") {
+		return qDBusRegisterMetaType<dbus::types::as>();
 	} else if (s == "(sss)") {
 		return qDBusRegisterMetaType<dbus::types::r_sss_>();
 	} else if (s == "a(sss)") {
@@ -402,6 +402,117 @@ return argument;
 	}
 	namespace objects {
 		
+namespace com {namespace deepin {namespace lastore {
+
+class Updater : public dbus::common::DBusObject
+{
+	Q_OBJECT
+	private:
+	static const char *defaultService() { return "com.deepin.lastore.Updater";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/com/deepin/lastore/Updater");}
+	public:
+        Updater(QString addr="session", QObject* parent=0)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "com.deepin.lastore.Updater", addr)
+        {
+        }
+	Updater(QString addr, QString service, QString path, QObject* parent=0)
+	:DBusObject(parent, service, path, "com.deepin.lastore.Updater", addr)
+	{
+	}
+	~Updater(){}
+
+	
+	Q_PROPERTY(dbus::common::R<bool > AutoCheckUpdates READ autoCheckUpdates NOTIFY autoCheckUpdatesChanged)
+	dbus::common::R<bool > autoCheckUpdates () {
+		QDBusPendingReply<> call = fetchProperty("AutoCheckUpdates");
+		return dbus::common::R<bool >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > MirrorSource READ mirrorSource NOTIFY mirrorSourceChanged)
+	dbus::common::R<QString > mirrorSource () {
+		QDBusPendingReply<> call = fetchProperty("MirrorSource");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<QString > OfficialSource READ officialSource NOTIFY officialSourceChanged)
+	dbus::common::R<QString > officialSource () {
+		QDBusPendingReply<> call = fetchProperty("OfficialSource");
+		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatableApps1 READ updatableApps1 NOTIFY updatableApps1Changed)
+	dbus::common::R<dbus::types::as > updatableApps1 () {
+		QDBusPendingReply<> call = fetchProperty("UpdatableApps1");
+		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
+	}
+	
+	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatablePackages1 READ updatablePackages1 NOTIFY updatablePackages1Changed)
+	dbus::common::R<dbus::types::as > updatablePackages1 () {
+		QDBusPendingReply<> call = fetchProperty("UpdatablePackages1");
+		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
+	}
+	
+
+
+	
+	
+	
+	dbus::common::R<dbus::types::ar_sssss_> ApplicationUpdateInfos1 (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ApplicationUpdateInfos1"), argumentList);
+		return dbus::common::R<dbus::types::ar_sssss_>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<dbus::types::ar_sss_> ListMirrorSources (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ListMirrorSources"), argumentList);
+		return dbus::common::R<dbus::types::ar_sss_>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> SetAutoCheckUpdates (bool arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetAutoCheckUpdates"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> SetMirrorSource (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetMirrorSource"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+
+	Q_SIGNALS:
+	
+
+	
+	void autoCheckUpdatesChanged (); 
+	void mirrorSourceChanged (); 
+	void officialSourceChanged (); 
+	void updatableApps1Changed (); 
+	void updatablePackages1Changed (); 
+
+};
+}}}
+
 namespace com {namespace deepin {namespace lastore {
 
 class Job : public dbus::common::DBusObject
@@ -521,7 +632,35 @@ class Manager : public dbus::common::DBusObject
 		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
 	}
 	
+	Q_PROPERTY(dbus::common::R<bool > SystemOnChanging READ systemOnChanging NOTIFY systemOnChangingChanged)
+	dbus::common::R<bool > systemOnChanging () {
+		QDBusPendingReply<> call = fetchProperty("SystemOnChanging");
+		return dbus::common::R<bool >(call, dbus::common::PropertyConverter);
+	}
+	
 
+
+	
+	
+	
+	dbus::common::R<void> PauseJob (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<void> StartJob (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("StartJob"), argumentList);
+                return dbus::common::R<void>(call);
+	}
+	
 
 	
 	
@@ -531,17 +670,6 @@ class Manager : public dbus::common::DBusObject
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("CleanJob"), argumentList);
                 return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> DistUpgrade () {
-		QList<QVariant> argumentList;
-		;
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DistUpgrade"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
 	}
 	
 
@@ -563,6 +691,39 @@ class Manager : public dbus::common::DBusObject
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("InstallPackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> UpdatePackage (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("UpdatePackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> RemovePackage (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackage"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
+	
+
+	
+	
+	
+	dbus::common::R<QDBusObjectPath> DistUpgrade () {
+		QList<QVariant> argumentList;
+		;
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("DistUpgrade"), argumentList);
 		return dbus::common::R<QDBusObjectPath>(call);
 	}
 	
@@ -625,55 +786,11 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<void> PauseJob (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PauseJob"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> RemovePackage (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("RemovePackage"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
-	}
-	
-
-	
-	
-	
 	dbus::common::R<void> SetRegion (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetRegion"), argumentList);
                 return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<void> StartJob (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("StartJob"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<QDBusObjectPath> UpdatePackage (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("UpdatePackage"), argumentList);
-		return dbus::common::R<QDBusObjectPath>(call);
 	}
 	
 
@@ -686,117 +803,7 @@ class Manager : public dbus::common::DBusObject
 	void jobListChanged (); 
 	void systemArchitecturesChanged (); 
 	void upgradableAppsChanged (); 
-
-};
-}}}
-
-namespace com {namespace deepin {namespace lastore {
-
-class Updater : public dbus::common::DBusObject
-{
-	Q_OBJECT
-	private:
-	static const char *defaultService() { return "com.deepin.lastore.Updater";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/com/deepin/lastore/Updater");}
-	public:
-        Updater(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "com.deepin.lastore.Updater", addr)
-        {
-        }
-	Updater(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "com.deepin.lastore.Updater", addr)
-	{
-	}
-	~Updater(){}
-
-	
-	Q_PROPERTY(dbus::common::R<bool > AutoCheckUpdates READ autoCheckUpdates NOTIFY autoCheckUpdatesChanged)
-	dbus::common::R<bool > autoCheckUpdates () {
-		QDBusPendingReply<> call = fetchProperty("AutoCheckUpdates");
-		return dbus::common::R<bool >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<QString > MirrorSource READ mirrorSource NOTIFY mirrorSourceChanged)
-	dbus::common::R<QString > mirrorSource () {
-		QDBusPendingReply<> call = fetchProperty("MirrorSource");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<QString > OfficialSource READ officialSource NOTIFY officialSourceChanged)
-	dbus::common::R<QString > officialSource () {
-		QDBusPendingReply<> call = fetchProperty("OfficialSource");
-		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatableApps1 READ updatableApps1 NOTIFY updatableApps1Changed)
-	dbus::common::R<dbus::types::as > updatableApps1 () {
-		QDBusPendingReply<> call = fetchProperty("UpdatableApps1");
-		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
-	}
-	
-	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatablePackages1 READ updatablePackages1 NOTIFY updatablePackages1Changed)
-	dbus::common::R<dbus::types::as > updatablePackages1 () {
-		QDBusPendingReply<> call = fetchProperty("UpdatablePackages1");
-		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
-	}
-	
-
-
-	
-	
-	
-	dbus::common::R<dbus::types::ar_sssss_> ApplicationUpdateInfos1 (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ApplicationUpdateInfos1"), argumentList);
-		return dbus::common::R<dbus::types::ar_sssss_>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<dbus::types::ar_sss_> ListMirrorSources (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ListMirrorSources"), argumentList);
-		return dbus::common::R<dbus::types::ar_sss_>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<void> SetAutoCheckUpdates (bool arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetAutoCheckUpdates"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<void> SetMirrorSource (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("SetMirrorSource"), argumentList);
-                return dbus::common::R<void>(call);
-	}
-	
-
-	
-
-	Q_SIGNALS:
-	
-
-	
-	void autoCheckUpdatesChanged (); 
-	void mirrorSourceChanged (); 
-	void officialSourceChanged (); 
-	void updatableApps1Changed (); 
-	void updatablePackages1Changed (); 
+	void systemOnChangingChanged (); 
 
 };
 }}}
@@ -804,8 +811,8 @@ class Updater : public dbus::common::DBusObject
 	}
 }
 
-Q_DECLARE_METATYPE(dbus::types::as);
 Q_DECLARE_METATYPE(dbus::types::ao);
+Q_DECLARE_METATYPE(dbus::types::as);
 Q_DECLARE_METATYPE(dbus::types::r_sss_);
 Q_DECLARE_METATYPE(dbus::types::ar_sss_);
 Q_DECLARE_METATYPE(dbus::types::r_sssss_);

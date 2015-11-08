@@ -340,5 +340,7 @@ func (m *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 		return
 	}
 
-	j.updateInfo(info)
+	if j._UpdateInfo(info) {
+		m.changed = true
+	}
 }

@@ -81,22 +81,28 @@ func (j Job) String() string {
 	return fmt.Sprintf("Job{Id:%q:%q,Type:%q(%v), %q(%v)}@%q", j.Id, j.PackageId, j.Type, j.Cancelable, j.Description, j.Progress, j.queueName)
 }
 
-func (j *Job) updateInfo(info system.JobProgressInfo) {
+// _UpdateInfo update Job information from info and return
+// whether the information changed.
+func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
+	var changed = false
 	if !TransitionJobState(j, info.Status) {
 		log.Printf("Can't transition job %q status from %q to %q\n", j.Id, j.Status, info.Status)
-		return
+		return changed
 	}
 	if info.Description != j.Description {
+		changed = true
 		j.Description = info.Description
 		dbus.NotifyChange(j, "Description")
 	}
 
 	if info.Progress != j.Progress && info.Progress != -1 {
+		changed = true
 		j.Progress = info.Progress
 		dbus.NotifyChange(j, "Progress")
 	}
 
 	if info.Cancelable != j.Cancelable {
+		changed = true
 		j.Cancelable = info.Cancelable
 		dbus.NotifyChange(j, "Cancelable")
 	}
@@ -105,5 +111,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) {
 
 	if j.Status == system.SucceedStatus {
 		TransitionJobState(j, system.EndStatus)
+		changed = true
 	}
+	return changed
 }

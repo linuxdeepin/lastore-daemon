@@ -27,6 +27,7 @@ type Manager struct {
 	JobList             *dbusPropertyManagerJobList
 	SystemArchitectures *dbusPropertyManagerSystemArchitectures
 	UpgradableApps      *dbusPropertyManagerUpgradableApps
+	SystemOnChanging    *dbusPropertyManagerSystemOnChanging
 }
 
 func (obj *Manager) _createSignalChan() <-chan *dbus.Signal {
@@ -52,18 +53,27 @@ func DestroyManager(obj *Manager) {
 	obj.JobList.Reset()
 	obj.SystemArchitectures.Reset()
 	obj.UpgradableApps.Reset()
+	obj.SystemOnChanging.Reset()
 }
 
-func (obj *Manager) CleanJob(arg0 string) (_err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.CleanJob", 0, arg0).Store()
+func (obj *Manager) PauseJob(arg0 string) (_err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.PauseJob", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
 	return
 }
 
-func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.DistUpgrade", 0).Store(&arg0)
+func (obj *Manager) StartJob(arg0 string) (_err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.StartJob", 0, arg0).Store()
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Manager) CleanJob(arg0 string) (_err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.CleanJob", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -80,6 +90,30 @@ func (obj *Manager) DownloadPackage(arg0 string) (arg1 dbus.ObjectPath, _err err
 
 func (obj *Manager) InstallPackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.InstallPackage", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Manager) UpdatePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.UpdatePackage", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Manager) RemovePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.RemovePackage", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.DistUpgrade", 0).Store(&arg0)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -126,40 +160,8 @@ func (obj *Manager) PackagesDownloadSize(arg0 []string) (arg1 int64, _err error)
 	return
 }
 
-func (obj *Manager) PauseJob(arg0 string) (_err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.PauseJob", 0, arg0).Store()
-	if _err != nil {
-		fmt.Println(_err)
-	}
-	return
-}
-
-func (obj *Manager) RemovePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.RemovePackage", 0, arg0).Store(&arg1)
-	if _err != nil {
-		fmt.Println(_err)
-	}
-	return
-}
-
 func (obj *Manager) SetRegion(arg0 string) (_err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.SetRegion", 0, arg0).Store()
-	if _err != nil {
-		fmt.Println(_err)
-	}
-	return
-}
-
-func (obj *Manager) StartJob(arg0 string) (_err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.StartJob", 0, arg0).Store()
-	if _err != nil {
-		fmt.Println(_err)
-	}
-	return
-}
-
-func (obj *Manager) UpdatePackage(arg0 string) (arg1 dbus.ObjectPath, _err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.UpdatePackage", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -244,6 +246,32 @@ func (this *dbusPropertyManagerUpgradableApps) GetType() reflect.Type {
 	return reflect.TypeOf((*[]string)(nil)).Elem()
 }
 
+type dbusPropertyManagerSystemOnChanging struct {
+	*property.BaseObserver
+	core *dbus.Object
+}
+
+func (this *dbusPropertyManagerSystemOnChanging) SetValue(notwritable interface{}) {
+	fmt.Println("com.deepin.lastore.Manager.SystemOnChanging is not writable")
+}
+
+func (this *dbusPropertyManagerSystemOnChanging) Get() bool {
+	return this.GetValue().(bool)
+}
+func (this *dbusPropertyManagerSystemOnChanging) GetValue() interface{} /*bool*/ {
+	var r dbus.Variant
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "SystemOnChanging").Store(&r)
+	if err == nil && r.Signature().String() == "b" {
+		return r.Value().(bool)
+	} else {
+		fmt.Println("dbusProperty:SystemOnChanging error:", err, "at com.deepin.lastore.Manager")
+		return *new(bool)
+	}
+}
+func (this *dbusPropertyManagerSystemOnChanging) GetType() reflect.Type {
+	return reflect.TypeOf((*bool)(nil)).Elem()
+}
+
 func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 	if !path.IsValid() {
 		return nil, errors.New("The path of '" + string(path) + "' is invalid.")
@@ -256,6 +284,7 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 	obj.JobList = &dbusPropertyManagerJobList{&property.BaseObserver{}, core}
 	obj.SystemArchitectures = &dbusPropertyManagerSystemArchitectures{&property.BaseObserver{}, core}
 	obj.UpgradableApps = &dbusPropertyManagerUpgradableApps{&property.BaseObserver{}, core}
+	obj.SystemOnChanging = &dbusPropertyManagerSystemOnChanging{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Manager',sender='"+destName+"',member='PropertiesChanged'")
@@ -282,6 +311,9 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 
 					} else if key == "UpgradableApps" {
 						obj.UpgradableApps.Notify()
+
+					} else if key == "SystemOnChanging" {
+						obj.SystemOnChanging.Notify()
 					}
 				}
 			} else if v.Name == "com.deepin.lastore.Manager.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
@@ -295,6 +327,9 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 
 					} else if key == "UpgradableApps" {
 						obj.UpgradableApps.Notify()
+
+					} else if key == "SystemOnChanging" {
+						obj.SystemOnChanging.Notify()
 					}
 				}
 			}
@@ -598,6 +633,7 @@ type Job struct {
 	Status      *dbusPropertyJobStatus
 	Progress    *dbusPropertyJobProgress
 	Description *dbusPropertyJobDescription
+	Cancelable  *dbusPropertyJobCancelable
 }
 
 func (obj *Job) _createSignalChan() <-chan *dbus.Signal {
@@ -626,6 +662,7 @@ func DestroyJob(obj *Job) {
 	obj.Status.Reset()
 	obj.Progress.Reset()
 	obj.Description.Reset()
+	obj.Cancelable.Reset()
 }
 
 type dbusPropertyJobId struct {
@@ -784,6 +821,32 @@ func (this *dbusPropertyJobDescription) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
 }
 
+type dbusPropertyJobCancelable struct {
+	*property.BaseObserver
+	core *dbus.Object
+}
+
+func (this *dbusPropertyJobCancelable) SetValue(notwritable interface{}) {
+	fmt.Println("com.deepin.lastore.Job.Cancelable is not writable")
+}
+
+func (this *dbusPropertyJobCancelable) Get() bool {
+	return this.GetValue().(bool)
+}
+func (this *dbusPropertyJobCancelable) GetValue() interface{} /*bool*/ {
+	var r dbus.Variant
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Cancelable").Store(&r)
+	if err == nil && r.Signature().String() == "b" {
+		return r.Value().(bool)
+	} else {
+		fmt.Println("dbusProperty:Cancelable error:", err, "at com.deepin.lastore.Job")
+		return *new(bool)
+	}
+}
+func (this *dbusPropertyJobCancelable) GetType() reflect.Type {
+	return reflect.TypeOf((*bool)(nil)).Elem()
+}
+
 func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	if !path.IsValid() {
 		return nil, errors.New("The path of '" + string(path) + "' is invalid.")
@@ -799,6 +862,7 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	obj.Status = &dbusPropertyJobStatus{&property.BaseObserver{}, core}
 	obj.Progress = &dbusPropertyJobProgress{&property.BaseObserver{}, core}
 	obj.Description = &dbusPropertyJobDescription{&property.BaseObserver{}, core}
+	obj.Cancelable = &dbusPropertyJobCancelable{&property.BaseObserver{}, core}
 
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
 	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Job',sender='"+destName+"',member='PropertiesChanged'")
@@ -834,6 +898,9 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 
 					} else if key == "Description" {
 						obj.Description.Notify()
+
+					} else if key == "Cancelable" {
+						obj.Cancelable.Notify()
 					}
 				}
 			} else if v.Name == "com.deepin.lastore.Job.PropertiesChanged" && len(v.Body) == 1 && reflect.TypeOf(v.Body[0]) == typeKeyValues {
@@ -856,6 +923,9 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 
 					} else if key == "Description" {
 						obj.Description.Notify()
+
+					} else if key == "Cancelable" {
+						obj.Cancelable.Notify()
 					}
 				}
 			}

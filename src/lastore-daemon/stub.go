@@ -14,20 +14,34 @@ func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
-	changed := len(m.JobList) != len(list)
-	if !changed {
-		for i, job := range list {
-			if m.JobList[i] != job {
-				changed = true
-				break
-			}
+	jobChanged := false
+	systemOnChanging := false
+
+	for i, j2 := range list {
+		if !j2.Cancelable {
+			systemOnChanging = true
+		}
+
+		if jobChanged || (i < len(m.JobList) && j2 == m.JobList[i]) {
+			continue
+		}
+		jobChanged = true
+
+		if jobChanged && systemOnChanging {
+			break
 		}
 	}
-	if changed {
+
+	if jobChanged {
 		m.JobList = list
 		dbus.NotifyChange(m, "JobList")
 
 		m.updatableApps()
+	}
+
+	if systemOnChanging != m.SystemOnChanging {
+		m.SystemOnChanging = systemOnChanging
+		dbus.NotifyChange(m, "SystemOnChanging")
 	}
 }
 

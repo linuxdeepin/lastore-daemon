@@ -14,6 +14,8 @@ type Manager struct {
 
 	UpgradableApps []string
 	updater        *Updater
+
+	SystemOnChanging bool
 }
 
 func NewManager(b system.System) *Manager {
