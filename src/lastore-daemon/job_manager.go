@@ -20,7 +20,7 @@ const (
 // 1. maintain DownloadQueue and SystemchangeQueue
 // 2. Create, Delete and Pause Jobs and schedule they.
 type JobManager struct {
-	queues map[string]*JobList
+	queues map[string]*JobQueue
 
 	system system.System
 
@@ -28,6 +28,31 @@ type JobManager struct {
 
 	notify  func()
 	changed bool
+}
+
+func NewJobManager(api system.System, notifyFn func()) *JobManager {
+	if api == nil || notifyFn == nil {
+		panic("NewJobManager with api=nil, notifyFn=nil")
+	}
+	m := &JobManager{
+		queues: make(map[string]*JobQueue),
+		notify: notifyFn,
+		system: api,
+	}
+	m.createJobList(DownloadQueue, DownloadQueueCap)
+	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
+	return m
+}
+
+func (m *JobManager) List() JobList {
+	var r JobList
+	for _, queue := range m.queues {
+		for _, job := range queue.Jobs {
+			r = append(r, job)
+		}
+	}
+	sort.Sort(r)
+	return r
 }
 
 // CreateJob create the job and try starting it
@@ -124,30 +149,6 @@ func (m *JobManager) find(jobId string) *Job {
 	return nil
 }
 
-func NewJobManager(api system.System, notifyFn func()) *JobManager {
-	if api == nil || notifyFn == nil {
-		panic("NewJobManager with api=nil, notifyFn=nil")
-	}
-	m := &JobManager{
-		queues: make(map[string]*JobList),
-		notify: notifyFn,
-		system: api,
-	}
-	m.createJobList(DownloadQueue, DownloadQueueCap)
-	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
-	return m
-}
-
-func (m *JobManager) List() []*Job {
-	var r []*Job
-	for _, queue := range m.queues {
-		for _, job := range queue.Jobs {
-			r = append(r, job)
-		}
-	}
-	return r
-}
-
 // Dispatch transition Job status in Job Queues
 // 1. Clean Jobs whose status is system.EndStatus
 // 2. Run all Pending Jobs.
@@ -194,7 +195,7 @@ func (m *JobManager) Dispatch() {
 }
 
 func (m *JobManager) createJobList(name string, cap int) {
-	list := NewJobList(name, cap)
+	list := NewJobQueue(name, cap)
 	m.queues[name] = list
 }
 
@@ -226,21 +227,33 @@ func (m *JobManager) removeJob(jobId string, queueName string) error {
 	return nil
 }
 
-type JobList struct {
+type JobList []*Job
+
+func (l JobList) Len() int {
+	return len(l)
+}
+func (l JobList) Less(i, j int) bool {
+	return l[i].CreateTime < l[j].CreateTime
+}
+func (l JobList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
+type JobQueue struct {
 	Name string
-	Jobs []*Job
+	Jobs JobList
 	Cap  int
 }
 
-func NewJobList(name string, cap int) *JobList {
-	return &JobList{
+func NewJobQueue(name string, cap int) *JobQueue {
+	return &JobQueue{
 		Name: name,
 		Cap:  cap,
 	}
 }
 
 // PendingJob get the workable ready Jobs
-func (l *JobList) PendingJobs() []*Job {
+func (l *JobQueue) PendingJobs() []*Job {
 	var numRunning int
 	var readyJobs []*Job
 	for _, job := range l.Jobs {
@@ -266,28 +279,18 @@ func (l *JobList) PendingJobs() []*Job {
 	return readyJobs[:n]
 }
 
-func (l JobList) Len() int {
-	return len(l.Jobs)
-}
-func (l JobList) Less(i, j int) bool {
-	return l.Jobs[i].CreateTime < l.Jobs[j].CreateTime
-}
-func (l *JobList) Swap(i, j int) {
-	l.Jobs[i], l.Jobs[j] = l.Jobs[j], l.Jobs[i]
-}
-
-func (l *JobList) Add(j *Job) error {
+func (l *JobQueue) Add(j *Job) error {
 	for _, job := range l.Jobs {
 		if job.PackageId == j.PackageId && job.Type == j.Type {
 			return fmt.Errorf("exists job %q:%q", job.Type, job.PackageId)
 		}
 	}
 	l.Jobs = append(l.Jobs, j)
-	sort.Sort(l)
+	sort.Sort(l.Jobs)
 	return nil
 }
 
-func (l *JobList) Remove(id string) error {
+func (l *JobQueue) Remove(id string) error {
 	index := -1
 	for i, job := range l.Jobs {
 		if job.Id == id {
@@ -303,13 +306,13 @@ func (l *JobList) Remove(id string) error {
 	DestroyJob(job)
 
 	l.Jobs = append(l.Jobs[0:index], l.Jobs[index+1:]...)
-	sort.Sort(l)
+	sort.Sort(l.Jobs)
 	return nil
 }
 
 // Raise raise the specify Job to head of JobList
 // return system.NotFoundError if can't find the specify Job
-func (l *JobList) Raise(jobId string) error {
+func (l *JobQueue) Raise(jobId string) error {
 	var p int = -1
 	for i, job := range l.Jobs {
 		if job.Id == jobId {
@@ -320,11 +323,11 @@ func (l *JobList) Raise(jobId string) error {
 	if p == -1 {
 		return system.NotFoundError
 	}
-	l.Swap(0, p)
+	l.Jobs.Swap(0, p)
 	return nil
 }
 
-func (l *JobList) Find(id string) *Job {
+func (l *JobQueue) Find(id string) *Job {
 	for _, job := range l.Jobs {
 		if job.Id == id {
 			return job
