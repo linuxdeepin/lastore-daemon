@@ -182,8 +182,7 @@ DBusObject::DBusObject(QObject* parent, QString service, QString path, const cha
 :QDBusAbstractInterface(service, path, interface, detectConnection(addr), parent)
 {
         if (!isValid()) {
-            qDebug() << "Warning: Failed Build DBusObject: " << lastError();
-	    return;
+            qDebug() << "The remote dbus object may not exists, try launch it. " << lastError();
         }
 	connection().connect(this->service(), this->path(), "org.freedesktop.DBus.Properties",  "PropertiesChanged",
 	    "sa{sv}as", this, SLOT(propertyChanged(QDBusMessage)));
