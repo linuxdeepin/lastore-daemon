@@ -13,6 +13,10 @@ import (
 	"syscall"
 )
 
+func init() {
+	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
+}
+
 type CommandSet interface {
 	AddCMD(cmd *aptCommand)
 	RemoveCMD(id string)
@@ -66,7 +70,6 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 		"APT::Status-Fd": "3",
 	}
 
-	polices := []string{"-y"}
 	var args []string
 	switch cmdType {
 	case system.InstallJobType:
@@ -83,7 +86,8 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 	for k, v := range options {
 		args = append(args, "-o", k+"="+v)
 	}
-	args = append(args, polices...)
+
+	args = append(args, "-y")
 
 	cmd := exec.Command("apt-get", args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
