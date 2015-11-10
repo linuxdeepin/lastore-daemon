@@ -35,7 +35,6 @@ build-deb:
 
 clean:
 	rm -rf bin
-	rm ../lastore-daemon_* -rf
 
 bin/lastore-tools:
 	gb build -o bin/lastore-tools tools
