@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
-	"log"
 	"pkg.deepin.io/lib/dbus"
 	"strconv"
 	"time"
@@ -86,7 +86,7 @@ func (j Job) String() string {
 func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	var changed = false
 	if !TransitionJobState(j, info.Status) {
-		log.Printf("Can't transition job %q status from %q to %q\n", j.Id, j.Status, info.Status)
+		log.Warnf("Can't transition job %q status from %q to %q\n", j.Id, j.Status, info.Status)
 		return changed
 	}
 	if info.Description != j.Description {
@@ -107,7 +107,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		dbus.NotifyChange(j, "Cancelable")
 	}
 
-	log.Printf("updateInfo %v <- %v\n", j, info)
+	log.Infof("updateInfo %v <- %v\n", j, info)
 
 	if j.Status == system.SucceedStatus {
 		TransitionJobState(j, system.EndStatus)

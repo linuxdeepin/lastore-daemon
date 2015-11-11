@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
-	"log"
 	"pkg.deepin.io/lib/dbus"
 )
 
@@ -68,6 +68,9 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		if from == system.RunningStatus {
 			return false
 		}
+	default:
+		log.Tracef("Unknown transition state: %q --> %q", from, to)
+		return false
 	}
 	return true
 }
@@ -80,7 +83,7 @@ func TransitionJobState(j *Job, to system.Status) bool {
 	if !ValidTransitionJobState(j.Status, to) {
 		return false
 	}
-	log.Printf("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
+	log.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 	j.Status = to
 	dbus.NotifyChange(j, "Status")
 	return true

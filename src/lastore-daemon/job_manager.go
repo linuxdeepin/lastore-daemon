@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -274,7 +274,7 @@ func (l *JobQueue) PendingJobs() []*Job {
 		n++
 	}
 	if n+1 < numPending {
-		log.Println("These jobs are waiting for running...", readyJobs[n+1:])
+		log.Info("These jobs are waiting for running...", readyJobs[n+1:])
 	}
 	return readyJobs[:n]
 }
@@ -339,7 +339,7 @@ func (l *JobQueue) Find(id string) *Job {
 func (m *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	j := m.find(info.JobId)
 	if j == nil {
-		log.Printf("Can't find Job %q when update info %v\n", info.JobId, info)
+		log.Warnf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
 
