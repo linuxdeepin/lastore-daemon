@@ -15,6 +15,17 @@ import (
 
 func init() {
 	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
+	updateIndex()
+}
+
+func updateIndex() {
+	cmd := exec.Command("apt-get", "update")
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("updateIndex failed:%v\n", err)
+	}
 }
 
 type CommandSet interface {
