@@ -52,27 +52,6 @@ func NewJob(packageId string, jobType string, queueName string) *Job {
 	return j
 }
 
-func NewDistUpgradeJob() *Job {
-	return NewJob("", system.DistUpgradeJobType, SystemChangeQueue)
-}
-func NewUpdateJob(packageId string) *Job {
-	return NewJob(packageId, system.UpdateJobType, SystemChangeQueue)
-}
-func NewRemoveJob(packageId string) *Job {
-	return NewJob(packageId, system.RemoveJobType, SystemChangeQueue)
-}
-func NewDownloadJob(packageId string) *Job {
-	return NewJob(packageId, system.DownloadJobType, DownloadQueue)
-}
-func NewInstallJob(packageId string) *Job {
-	installJob := NewJob(packageId, system.InstallJobType, SystemChangeQueue)
-
-	downloadJob := NewDownloadJob(packageId)
-	downloadJob.Id = installJob.Id
-	downloadJob.next = installJob
-	return downloadJob
-}
-
 func (j *Job) changeType(jobType string) {
 	j.Type = jobType
 }

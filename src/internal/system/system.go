@@ -17,11 +17,12 @@ const (
 )
 
 const (
-	DownloadJobType    = "download"
-	InstallJobType     = "install"
-	RemoveJobType      = "remove"
-	UpdateJobType      = "update"
-	DistUpgradeJobType = "dist_upgrade"
+	DownloadJobType     = "download"
+	InstallJobType      = "install"
+	RemoveJobType       = "remove"
+	UpdateJobType       = "update"
+	DistUpgradeJobType  = "dist_upgrade"
+	UpdateSourceJobType = "update_source"
 )
 
 type JobProgressInfo struct {
@@ -55,6 +56,7 @@ type System interface {
 	Remove(jobId string, packageId string) error
 
 	DistUpgrade(jobId string) error
+	UpdateSource(jobId string) error
 	UpgradeInfo() []UpgradeInfo
 
 	Abort(jobId string) error

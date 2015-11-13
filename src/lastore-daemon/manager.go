@@ -61,6 +61,10 @@ func (m *Manager) RemovePackage(packageId string) (*Job, error) {
 	return m.jobManager.CreateJob(system.RemoveJobType, packageId)
 }
 
+func (m *Manager) UpdateSource() (*Job, error) {
+	return m.jobManager.CreateJob(system.UpdateSourceJobType, "")
+}
+
 func (m *Manager) DistUpgrade() (*Job, error) {
 	var updateJobIds []string
 	for _, job := range m.JobList {

@@ -3,10 +3,10 @@ package apt
 import (
 	"bufio"
 	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,17 +15,6 @@ import (
 
 func init() {
 	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
-	updateIndex()
-}
-
-func updateIndex() {
-	cmd := exec.Command("apt-get", "update")
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("updateIndex failed:%v\n", err)
-	}
 }
 
 type CommandSet interface {
@@ -36,19 +25,19 @@ type CommandSet interface {
 
 func (p *APTSystem) AddCMD(cmd *aptCommand) {
 	if _, ok := p.cmdSet[cmd.OwnerId]; ok {
-		log.Printf("APTSystem AddCMD: exist cmd %q", cmd.OwnerId)
+		log.Warnf("APTSystem AddCMD: exist cmd %q\n", cmd.OwnerId)
 		return
 	}
-	log.Printf("APTSystem AddCMD: %v\n", cmd)
+	log.Infof("APTSystem AddCMD: %v\n", cmd)
 	p.cmdSet[cmd.OwnerId] = cmd
 }
 func (p *APTSystem) RemoveCMD(id string) {
 	c, ok := p.cmdSet[id]
 	if !ok {
-		log.Printf("APTSystem RemoveCMD with invalid Id=%q\n", id)
+		log.Warnf("APTSystem RemoveCMD with invalid Id=%q\n", id)
 		return
 	}
-	log.Printf("APTSystem RemoveCMD: %v (exitCode:%d)", c, c.exitCode)
+	log.Infof("APTSystem RemoveCMD: %v (exitCode:%d)\n", c, c.exitCode)
 	delete(p.cmdSet, id)
 }
 func (p *APTSystem) FindCMD(id string) *aptCommand {
@@ -92,6 +81,8 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 		args = append(args, "install", "-d", packageId)
 	case system.DistUpgradeJobType:
 		args = append(args, "dist-upgrade", "--force-yes")
+	case system.UpdateSourceJobType:
+		args = append(args, "update")
 	}
 
 	for k, v := range options {
@@ -120,7 +111,7 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 }
 
 func (c *aptCommand) Start() error {
-	log.Printf("AptCommand.Start:%v\n", c)
+	log.Infof("AptCommand.Start:%v\n", c)
 	rr, ww, err := os.Pipe()
 	defer ww.Close()
 	if err != nil {
@@ -144,7 +135,7 @@ func (c *aptCommand) Wait() (err error) {
 	if c.exitCode != ExitPause {
 		if err != nil {
 			c.exitCode = ExitFailure
-			log.Printf("aptCommand.Wait: %v\n", err)
+			log.Infof("aptCommand.Wait: %v\n", err)
 		} else {
 			c.exitCode = ExitSuccess
 		}
@@ -177,7 +168,7 @@ func (c *aptCommand) atExit() {
 	}
 	info, err := ParseProgressInfo(c.OwnerId, line)
 	if err != nil {
-		log.Printf("aptCommand.Wait.ParseProgressInfo (%q): %v", line, err)
+		log.Warnf("aptCommand.Wait.ParseProgressInfo (%q): %v\n", line, err)
 	}
 
 	c.indicator(info)
@@ -185,6 +176,7 @@ func (c *aptCommand) atExit() {
 
 func (c *aptCommand) Abort() error {
 	if c.Cancelable {
+		log.Tracef("Abort Command: %v\n", c)
 		c.exitCode = ExitPause
 		var err error
 		pgid, err := syscall.Getpgid(c.osCMD.Process.Pid)
@@ -205,7 +197,7 @@ func (c *aptCommand) updateProgress() {
 		}
 
 		info, _ := ParseProgressInfo(c.OwnerId, line)
-		log.Printf("aptCommand.updateProgress %v\n", info)
+		log.Infof("aptCommand.updateProgress %v\n", info)
 		c.Cancelable = info.Cancelable
 		c.indicator(info)
 	}
@@ -214,7 +206,7 @@ func (c *aptCommand) updateProgress() {
 func getSystemArchitectures() []system.Architecture {
 	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
 	if err != nil {
-		log.Fatalln("Can't detect system architectures:", err)
+		log.Error("Can't detect system architectures:", err)
 		os.Exit(1)
 	}
 	var r []system.Architecture

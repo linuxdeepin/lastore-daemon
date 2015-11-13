@@ -32,10 +32,11 @@ func StartSystemJob(sys system.System, j *Job) error {
 
 	case system.DistUpgradeJobType:
 		return sys.DistUpgrade(j.Id)
+	case system.UpdateSourceJobType:
+		return sys.UpdateSource(j.Id)
 
 	case system.UpdateJobType:
 		return sys.Install(j.Id, j.PackageId)
-
 	default:
 		return system.NotFoundError
 	}

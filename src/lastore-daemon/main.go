@@ -17,7 +17,7 @@ func getLogConfig() string {
 	fmtString := `
 <seelog type="sync">
 	<outputs formatid="all">
-		<filter levels="info,debug,warn,error">
+		<filter levels="info,debug,warn,error,trace">
 		  <file path="/var/log/lastore/last/daemon.log"/>
 		  <console />
 		</filter>

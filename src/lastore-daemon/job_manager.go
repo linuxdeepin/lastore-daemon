@@ -68,15 +68,21 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:
-		job = NewDownloadJob(packageId)
+		job = NewJob(packageId, system.DownloadJobType, DownloadQueue)
 	case system.InstallJobType:
-		job = NewInstallJob(packageId)
+		job = NewJob(packageId, system.DownloadJobType, DownloadQueue)
+		job.next = NewJob(packageId, system.InstallJobType, SystemChangeQueue)
+		job.Id = job.next.Id
 	case system.RemoveJobType:
-		job = NewRemoveJob(packageId)
+		job = NewJob(packageId, system.RemoveJobType, SystemChangeQueue)
+	case system.UpdateSourceJobType:
+		job = NewJob("", system.UpdateSourceJobType, SystemChangeQueue)
 	case system.DistUpgradeJobType:
-		job = NewDistUpgradeJob()
+		job = NewJob("", system.DistUpgradeJobType, SystemChangeQueue)
 	case system.UpdateJobType:
-		job = NewUpdateJob(packageId)
+		job = NewJob(packageId, system.UpdateJobType, SystemChangeQueue)
+	default:
+		return nil, system.NotSupportError
 	}
 	m.addJob(job)
 	return job, m.MarkStart(job.Id)
@@ -177,7 +183,10 @@ func (m *JobManager) dispatch() {
 		// 2. Try starting jobs with ReadyStatus
 		jobs := queue.PendingJobs()
 		for _, job := range jobs {
-			StartSystemJob(m.system, job)
+			err := StartSystemJob(m.system, job)
+			if err != nil {
+				log.Errorf("StartSystemJob failed %v :%v\n", job, err)
+			}
 		}
 	}
 
@@ -200,6 +209,10 @@ func (m *JobManager) createJobList(name string, cap int) {
 }
 
 func (m *JobManager) addJob(j *Job) error {
+	if j == nil {
+		log.Trace("adJob with nil")
+		return system.NotFoundError
+	}
 	queueName := j.queueName
 	queue, ok := m.queues[queueName]
 	if !ok {
@@ -233,6 +246,9 @@ func (l JobList) Len() int {
 	return len(l)
 }
 func (l JobList) Less(i, j int) bool {
+	if l[i].Type == system.UpdateSourceJobType {
+		return true
+	}
 	return l[i].CreateTime < l[j].CreateTime
 }
 func (l JobList) Swap(i, j int) {
@@ -276,7 +292,9 @@ func (l *JobQueue) PendingJobs() []*Job {
 	if n+1 < numPending {
 		log.Info("These jobs are waiting for running...", readyJobs[n+1:])
 	}
-	return readyJobs[:n]
+	r := JobList(readyJobs[:n])
+	sort.Sort(r)
+	return r
 }
 
 func (l *JobQueue) Add(j *Job) error {

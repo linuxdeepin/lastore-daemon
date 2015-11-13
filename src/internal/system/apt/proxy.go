@@ -84,8 +84,12 @@ func (p *APTSystem) Install(jobId string, packageId string) error {
 }
 
 func (p *APTSystem) DistUpgrade(jobId string) error {
-	const DistUpgradeJobId = "dist_upgrade"
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, "")
+	return c.Start()
+}
+
+func (p *APTSystem) UpdateSource(jobId string) error {
+	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, "")
 	return c.Start()
 }
 
