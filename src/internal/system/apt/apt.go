@@ -66,21 +66,16 @@ func (c aptCommand) String() string {
 }
 
 func createCommandLine(cmdType string, packageId string) *exec.Cmd {
-	var args []string = []string{"-y", "-f"}
+	var args []string = []string{"-y", "-f", "-c", "/var/lib/lastore/apt.conf"}
+
 	options := map[string]string{
 		"APT::Status-Fd": "3",
-		// "DPkg::Post-Invoke":                "true",
-		// "DPkg::Pre-Install-Pkgs":           "true",
-		// "APT::Update::Post-Invoke-Success": "true",
-		"Acquire::Languages":        "none",
-		"Debug::RunScripts":         "true",
-		"Debug::pkgProblemResolver": "true",
-		//		"Debug::pkgDPkgPM":          "true",
 	}
 
 	if cmdType == system.DownloadJobType {
 		options["Debug::NoLocking"] = "1"
 		options["Acquire::Retries"] = "1"
+		args = append(args, "-m")
 	}
 
 	for k, v := range options {
