@@ -63,11 +63,13 @@ func (j Job) String() string {
 // _UpdateInfo update Job information from info and return
 // whether the information changed.
 func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
-	var changed = false
-	if !TransitionJobState(j, info.Status) {
-		log.Warnf("Can't transition job %q status from %q to %q\n", j.Id, j.Status, info.Status)
-		return changed
+	if err := TransitionJobState(j, info.Status); err != nil {
+		log.Warnf("_UpdateInfo: %v\n", err)
+		return false
 	}
+
+	var changed = false
+
 	if info.Description != j.Description {
 		changed = true
 		j.Description = info.Description

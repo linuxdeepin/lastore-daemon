@@ -95,11 +95,11 @@ func (m *JobManager) MarkStart(jobId string) error {
 	if job == nil {
 		return system.NotFoundError
 	}
-	if !TransitionJobState(job, system.ReadyStatus) {
-		return fmt.Errorf("Can't transition job %q's status from %q to %q\n", job.Id, job.Status, system.ReadyStatus)
+	err := TransitionJobState(job, system.ReadyStatus)
+	if err != nil {
+		return err
 	}
 
-	var err error
 	for _, queue := range m.queues {
 		err = queue.Raise(jobId)
 		if err == nil {
@@ -120,10 +120,7 @@ func (m *JobManager) CleanJob(jobId string) error {
 	if ValidTransitionJobState(job.Status, system.EndStatus) {
 		job.next = nil
 	}
-	if !TransitionJobState(job, system.EndStatus) {
-		return fmt.Errorf("Can't transition the status of Job %q from %q to %q", jobId, job.Status, system.EndStatus)
-	}
-	return nil
+	return TransitionJobState(job, system.EndStatus)
 }
 
 // PauseJob try aborting the job and transition the status to PauseStatus
@@ -133,16 +130,16 @@ func (m *JobManager) PauseJob(jobId string) error {
 		return system.NotFoundError
 	}
 
+	if !ValidTransitionJobState(job.Status, system.PausedStatus) {
+		return system.NotSupportError
+	}
+
 	err := m.system.Abort(job.Id)
 	if err != nil {
 		return err
 	}
 
-	if !TransitionJobState(job, system.PausedStatus) {
-		return fmt.Errorf("Can't transition the status of Job %q from %q to %q", jobId, job.Status, system.EndStatus)
-	}
-
-	return nil
+	return TransitionJobState(job, system.PausedStatus)
 }
 
 func (m *JobManager) find(jobId string) *Job {

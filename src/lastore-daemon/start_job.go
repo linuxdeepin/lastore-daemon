@@ -15,9 +15,8 @@ func StartSystemJob(sys system.System, j *Job) error {
 		panic("StartSystemJob with nil")
 	}
 
-	if !TransitionJobState(j, system.RunningStatus) {
-		return fmt.Errorf("Can't transition state from %q to %q",
-			j.Status, system.RunningStatus)
+	if err := TransitionJobState(j, system.RunningStatus); err != nil {
+		return err
 	}
 
 	switch j.Type {
@@ -43,49 +42,48 @@ func StartSystemJob(sys system.System, j *Job) error {
 }
 
 func ValidTransitionJobState(from system.Status, to system.Status) bool {
-	switch to {
-	case system.ReadyStatus:
-		switch from {
-		case system.FailedStatus,
-			system.PausedStatus:
-		default:
-			return false
-		}
-	case system.RunningStatus:
-		switch from {
-		case system.FailedStatus,
+	validtion := map[system.Status][]system.Status{
+		system.ReadyStatus: []system.Status{
+			system.RunningStatus,
+			system.PausedStatus,
+		},
+		system.RunningStatus: []system.Status{
+			system.FailedStatus,
+			system.SucceedStatus,
+			system.PausedStatus,
+		},
+		system.FailedStatus: []system.Status{
 			system.ReadyStatus,
-			system.PausedStatus:
-		default:
-			return false
-		}
-	case system.FailedStatus,
-		system.SucceedStatus,
-		system.PausedStatus:
-		if from != system.RunningStatus {
-			return false
-		}
-	case system.EndStatus:
-		if from == system.RunningStatus {
-			return false
-		}
-	default:
-		log.Tracef("Unknown transition state: %q --> %q", from, to)
+			system.EndStatus,
+		},
+		system.SucceedStatus: []system.Status{
+			system.EndStatus,
+		},
+		system.PausedStatus: []system.Status{
+			system.ReadyStatus,
+		},
+	}
+
+	tos, ok := validtion[from]
+	if !ok {
 		return false
 	}
-	return true
+	for _, v := range tos {
+		if v == to {
+			return true
+		}
+	}
+	return false
 }
 
-func TransitionJobState(j *Job, to system.Status) bool {
-	if j.Status == to {
-		return true
-	}
-
+func TransitionJobState(j *Job, to system.Status) error {
 	if !ValidTransitionJobState(j.Status, to) {
-		return false
+		return fmt.Errorf("Can't transition the status of Job %v to %q", j, to)
 	}
 	log.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
+
 	j.Status = to
 	dbus.NotifyChange(j, "Status")
-	return true
+
+	return nil
 }
