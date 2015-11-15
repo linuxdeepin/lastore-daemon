@@ -16,6 +16,8 @@ type Manager struct {
 	updater        *Updater
 
 	SystemOnChanging bool
+
+	config *Config
 }
 
 func NewManager(b system.System) *Manager {
@@ -23,6 +25,7 @@ func NewManager(b system.System) *Manager {
 		b:                   b,
 		SystemArchitectures: b.SystemArchitectures(),
 		updater:             NewUpdater(b),
+		config:              NewConfig("/var/lib/lastore/config.json"),
 	}
 	m.jobManager = NewJobManager(b, m.updateJobList)
 
@@ -30,6 +33,9 @@ func NewManager(b system.System) *Manager {
 
 	go m.jobManager.Dispatch()
 
+	if m.config.AutoCheckUpdate {
+		m.UpdateSource()
+	}
 	m.updatableApps()
 	m.updateJobList()
 	return m
