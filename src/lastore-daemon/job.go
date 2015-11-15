@@ -57,18 +57,26 @@ func (j *Job) changeType(jobType string) {
 }
 
 func (j Job) String() string {
-	return fmt.Sprintf("Job{Id:%q:%q,Type:%q(%v), %q(%v)}@%q", j.Id, j.PackageId, j.Type, j.Cancelable, j.Description, j.Progress, j.queueName)
+	return fmt.Sprintf("Job{Id:%q:%q,Type:%q(%v,%v), %q(%.2f)}@%q",
+		j.Id, j.PackageId,
+		j.Type, j.Cancelable, j.Status,
+		j.Description, j.Progress, j.queueName,
+	)
 }
 
 // _UpdateInfo update Job information from info and return
 // whether the information changed.
 func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
-	if err := TransitionJobState(j, info.Status); err != nil {
-		log.Warnf("_UpdateInfo: %v\n", err)
-		return false
-	}
-
 	var changed = false
+
+	if info.Status != j.Status {
+		err := TransitionJobState(j, info.Status)
+		if err != nil {
+			log.Warnf("_UpdateInfo: %v\n", err)
+			return false
+		}
+		changed = true
+	}
 
 	if info.Description != j.Description {
 		changed = true
@@ -91,7 +99,10 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	log.Infof("updateInfo %v <- %v\n", j, info)
 
 	if j.Status == system.SucceedStatus {
-		TransitionJobState(j, system.EndStatus)
+		err := TransitionJobState(j, system.EndStatus)
+		if err != nil {
+			log.Warnf("_UpdateInfo: %v\n", err)
+		}
 		changed = true
 	}
 	return changed

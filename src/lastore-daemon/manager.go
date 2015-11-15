@@ -97,10 +97,16 @@ func (m *Manager) PackageExists(packageId string) bool {
 }
 
 func (m *Manager) PackageDownloadSize(packageId string) int64 {
+	if m.PackageExists(packageId) {
+		return 0
+	}
 	return int64(GuestPackageDownloadSize(packageId))
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) int64 {
+	if len(packages) == 1 && m.PackageExists(packages[0]) {
+		return 0
+	}
 	return int64(GuestPackageDownloadSize(packages...))
 }
 

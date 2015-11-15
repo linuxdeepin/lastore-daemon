@@ -24,12 +24,12 @@ type CommandSet interface {
 }
 
 func (p *APTSystem) AddCMD(cmd *aptCommand) {
-	if _, ok := p.cmdSet[cmd.OwnerId]; ok {
-		log.Warnf("APTSystem AddCMD: exist cmd %q\n", cmd.OwnerId)
+	if _, ok := p.cmdSet[cmd.JobId]; ok {
+		log.Warnf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
 		return
 	}
 	log.Infof("APTSystem AddCMD: %v\n", cmd)
-	p.cmdSet[cmd.OwnerId] = cmd
+	p.cmdSet[cmd.JobId] = cmd
 }
 func (p *APTSystem) RemoveCMD(id string) {
 	c, ok := p.cmdSet[id]
@@ -45,12 +45,12 @@ func (p *APTSystem) FindCMD(id string) *aptCommand {
 }
 
 type aptCommand struct {
-	OwnerId    string
+	JobId      string
 	Cancelable bool
 
 	cmdSet CommandSet
 
-	osCMD    *exec.Cmd
+	apt      *exec.Cmd
 	exitCode int
 
 	aptPipe *os.File
@@ -62,22 +62,37 @@ type aptCommand struct {
 
 func (c aptCommand) String() string {
 	return fmt.Sprintf("AptCommand{id:%q, Cancelable:%v, CMD:%q}",
-		c.OwnerId, c.Cancelable, strings.Join(c.osCMD.Args, " "))
+		c.JobId, c.Cancelable, strings.Join(c.apt.Args, " "))
 }
 
-func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, packageId string) *aptCommand {
+func createCommandLine(cmdType string, packageId string) *exec.Cmd {
+	var args []string = []string{"-y", "-f"}
 	options := map[string]string{
 		"APT::Status-Fd": "3",
+		// "DPkg::Post-Invoke":                "true",
+		// "DPkg::Pre-Install-Pkgs":           "true",
+		// "APT::Update::Post-Invoke-Success": "true",
+		"Acquire::Languages":        "none",
+		"Debug::RunScripts":         "true",
+		"Debug::pkgProblemResolver": "true",
+		//		"Debug::pkgDPkgPM":          "true",
 	}
 
-	var args []string
+	if cmdType == system.DownloadJobType {
+		options["Debug::NoLocking"] = "1"
+		options["Acquire::Retries"] = "1"
+	}
+
+	for k, v := range options {
+		args = append(args, "-o", k+"="+v)
+	}
+
 	switch cmdType {
 	case system.InstallJobType:
 		args = append(args, "install", packageId)
 	case system.RemoveJobType:
 		args = append(args, "remove", packageId)
 	case system.DownloadJobType:
-		options["Debug::NoLocking"] = "1"
 		args = append(args, "install", "-d", packageId)
 	case system.DistUpgradeJobType:
 		args = append(args, "dist-upgrade", "--force-yes")
@@ -85,23 +100,24 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 		args = append(args, "update")
 	}
 
-	for k, v := range options {
-		args = append(args, "-o", k+"="+v)
-	}
+	return exec.Command("apt-get", args...)
+}
 
-	args = append(args, "-y")
+func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, packageId string) *aptCommand {
+	cmd := createCommandLine(cmdType, packageId)
 
-	cmd := exec.Command("apt-get", args...)
+	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	output := system.CreateLogOutput(cmdType, packageId)
 	cmd.Stdout = output
 	cmd.Stderr = output
 
 	r := &aptCommand{
-		OwnerId:    jobId,
+		JobId:      jobId,
 		cmdSet:     cmdSet,
 		indicator:  fn,
-		osCMD:      cmd,
+		apt:        cmd,
 		output:     output,
 		Cancelable: true,
 	}
@@ -112,26 +128,34 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 
 func (c *aptCommand) Start() error {
 	log.Infof("AptCommand.Start:%v\n", c)
+
 	rr, ww, err := os.Pipe()
-	defer ww.Close()
 	if err != nil {
 		return fmt.Errorf("aptCommand.Start pipe : %v", err)
 	}
-	c.osCMD.ExtraFiles = append(c.osCMD.ExtraFiles, ww)
-	c.aptPipe = rr
 
-	err = c.osCMD.Start()
+	// It must be closed after c.osCMD.Start
+	defer ww.Close()
+
+	c.apt.ExtraFiles = append(c.apt.ExtraFiles, ww)
+
+	err = c.apt.Start()
 	if err != nil {
+		rr.Close()
 		return err
 	}
 
+	c.aptPipe = rr
+
 	go c.updateProgress()
+
 	go c.Wait()
+
 	return nil
 }
 
 func (c *aptCommand) Wait() (err error) {
-	err = c.osCMD.Wait()
+	err = c.apt.Wait()
 	if c.exitCode != ExitPause {
 		if err != nil {
 			c.exitCode = ExitFailure
@@ -155,7 +179,9 @@ func (c *aptCommand) atExit() {
 		c.output.Close()
 	}
 
-	c.cmdSet.RemoveCMD(c.OwnerId)
+	c.aptPipe.Close()
+
+	c.cmdSet.RemoveCMD(c.JobId)
 
 	var line string
 	switch c.exitCode {
@@ -166,7 +192,7 @@ func (c *aptCommand) atExit() {
 	case ExitPause:
 		line = "dstatus:" + system.PausedStatus + ":" + "paused"
 	}
-	info, err := ParseProgressInfo(c.OwnerId, line)
+	info, err := ParseProgressInfo(c.JobId, line)
 	if err != nil {
 		log.Warnf("aptCommand.Wait.ParseProgressInfo (%q): %v\n", line, err)
 	}
@@ -179,7 +205,7 @@ func (c *aptCommand) Abort() error {
 		log.Tracef("Abort Command: %v\n", c)
 		c.exitCode = ExitPause
 		var err error
-		pgid, err := syscall.Getpgid(c.osCMD.Process.Pid)
+		pgid, err := syscall.Getpgid(c.apt.Process.Pid)
 		if err != nil {
 			return err
 		}
@@ -196,8 +222,17 @@ func (c *aptCommand) updateProgress() {
 			return
 		}
 
-		info, _ := ParseProgressInfo(c.OwnerId, line)
-		log.Infof("aptCommand.updateProgress %v\n", info)
+		info, err := ParseProgressInfo(c.JobId, line)
+		if err != nil {
+			log.Errorf("aptCommand.updateProgress %v\n", info)
+			continue
+		}
+
+		if strings.Contains(line, "rename failed") {
+			// ignore rename failed
+			continue
+		}
+
 		c.Cancelable = info.Cancelable
 		c.indicator(info)
 	}
@@ -207,7 +242,7 @@ func getSystemArchitectures() []system.Architecture {
 	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
 	if err != nil {
 		log.Error("Can't detect system architectures:", err)
-		os.Exit(1)
+		return nil
 	}
 	var r []system.Architecture
 	for _, arch := range strings.Split(string(bs), "\n") {

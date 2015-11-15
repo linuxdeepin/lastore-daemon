@@ -95,18 +95,19 @@ func (m *JobManager) MarkStart(jobId string) error {
 	if job == nil {
 		return system.NotFoundError
 	}
-	err := TransitionJobState(job, system.ReadyStatus)
-	if err != nil {
-		return err
-	}
 
-	for _, queue := range m.queues {
-		err = queue.Raise(jobId)
-		if err == nil {
-			return nil
+	if job.Status != system.ReadyStatus {
+		err := TransitionJobState(job, system.ReadyStatus)
+		if err != nil {
+			return err
 		}
 	}
-	return err
+
+	queue, ok := m.queues[job.queueName]
+	if !ok {
+		return system.NotFoundError
+	}
+	return queue.Raise(jobId)
 }
 
 // CleanJob transition the Job status to EndStatus,

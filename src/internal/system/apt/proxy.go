@@ -36,7 +36,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 		return system.JobProgressInfo{
 			JobId:       id,
 			Progress:    v / 100.0,
-			Description: fs[3],
+			Description: strings.TrimSpace(fs[3]),
 			Status:      system.RunningStatus,
 			Cancelable:  fs[0] == "dlstatus",
 		}, nil
@@ -46,7 +46,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 			return system.JobProgressInfo{
 				JobId:       id,
 				Progress:    1.0,
-				Description: fs[2],
+				Description: strings.TrimSpace(fs[2]),
 				Status:      system.SucceedStatus,
 				Cancelable:  fs[0] == "dlstatus",
 			}, nil
@@ -54,7 +54,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 			return system.JobProgressInfo{
 				JobId:       id,
 				Progress:    -1,
-				Description: fs[2],
+				Description: strings.TrimSpace(fs[2]),
 				Status:      system.Status(fs[1]),
 				Cancelable:  fs[0] == "dlstatus",
 			}, nil

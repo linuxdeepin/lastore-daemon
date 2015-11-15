@@ -83,7 +83,8 @@ func TransitionJobState(j *Job, to system.Status) error {
 	log.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 
 	j.Status = to
-	dbus.NotifyChange(j, "Status")
-
+	if j.Status != system.EndStatus {
+		dbus.NotifyChange(j, "Status")
+	}
 	return nil
 }
