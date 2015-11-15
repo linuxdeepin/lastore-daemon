@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	var item = flag.String("item", "", "categories|applications|xcategories|desktop")
+	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install")
 	var fpath = flag.String("output", "", "the file to write")
 	var scanDirs = flag.String("dirs", "/usr/share/applications", "the scan directory when generate desktop index files")
 
@@ -26,6 +26,11 @@ func main() {
 			err = fmt.Errorf("which directory to save  desktop index files?")
 		}
 		err = GenerateDesktopIndexes(strings.Split(*scanDirs, ","), *fpath)
+	case "lastore-remove":
+		RemoveAll()
+	case "lastore-install":
+		InstallAll()
+
 	default:
 		flag.Usage()
 		return
