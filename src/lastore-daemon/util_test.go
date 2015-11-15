@@ -37,9 +37,9 @@ func (*testWrap) TestPackageDownloadSize(c *C.C) {
 	var packages = []string{"abiword", "0ad", "acl2"}
 	for _, p := range packages {
 		if s.CheckInstalled(p) {
-			c.Check(GuestPackageDownloadSize(p), C.Equals, float64(0))
+			c.Check(QueryPackageDownloadSize(p), C.Equals, float64(0))
 		} else {
-			c.Check(GuestPackageDownloadSize(p) >= 0, C.Equals, true)
+			c.Check(QueryPackageDownloadSize(p) >= 0, C.Equals, true)
 		}
 	}
 }

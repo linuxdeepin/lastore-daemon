@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-var __needle__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,]+ [kMGTPEZY]?B)? of archives")
+// see the apt code of command-line/apt-get.c:895
+var __ReDownloadSize__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,]+ [kMGTPEZY]?B)? of archives")
+
 var __unitTable__ = map[byte]float64{
 	'k': 1000,
 	'M': 1000 * 1000,
@@ -22,7 +24,7 @@ var __unitTable__ = map[byte]float64{
 }
 
 func parsePackageSize(line string) float64 {
-	ms := __needle__.FindSubmatch(([]byte)(line))
+	ms := __ReDownloadSize__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
 	case 3, 4:
 		l := strings.Replace(string(ms[1]), ",", "", -1)
@@ -39,9 +41,9 @@ func parsePackageSize(line string) float64 {
 	return -1
 }
 
-// GuestPackageDownloadSize parsing the total size of download archives when installing
+// QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
-func GuestPackageDownloadSize(packages ...string) float64 {
+func QueryPackageDownloadSize(packages ...string) float64 {
 	cmd := exec.Command("/usr/bin/apt-get", append([]string{"-d", "-o", "Debug::NoLocking=1", "--assume-no", "install"}, packages...)...)
 
 	lines, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
