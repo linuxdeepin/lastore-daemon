@@ -58,7 +58,7 @@ func (wrap *testWrap) TestDownload(c *C.C) {
 func (wrap *testWrap) TestCleanJob(c *C.C) {
 	job := GetJob(wrap.m.InstallPackage("not valid package name"))
 	//	c.Check(job.Status.Get(), C.Equals, "ready")
-	<-time.After(time.Second * 1)
+	<-time.After(time.Second * 3)
 	err := wrap.m.CleanJob(job.Id.Get())
 	c.Check(err, C.Equals, nil)
 }

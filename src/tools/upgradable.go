@@ -1,11 +1,14 @@
-package apt
+package main
 
 import (
 	"bytes"
+	log "github.com/cihub/seelog"
 	"internal/system"
+	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -50,10 +53,14 @@ func queryDpkgUpgradeInfoByAptList() []string {
 	if err != nil {
 		return nil
 	}
-	timer := time.AfterFunc(time.Second*3, func() {
-		cmd.Process.Kill()
+	err = cmd.Start()
+	if err != nil {
+		log.Errorf("LockDo: %v\n", err)
+	}
+	timer := time.AfterFunc(time.Second*10, func() {
+		cmd.Process.Signal(syscall.SIGINT)
 	})
-	cmd.Start()
+
 	buf := bytes.NewBuffer(nil)
 
 	buf.ReadFrom(r)
@@ -66,4 +73,29 @@ func queryDpkgUpgradeInfoByAptList() []string {
 	cmd.Wait()
 	timer.Stop()
 	return lines
+}
+
+func getSystemArchitectures() []system.Architecture {
+	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
+	if err != nil {
+		log.Error("Can't detect system architectures:", err)
+		return nil
+	}
+	var r []system.Architecture
+	for _, arch := range strings.Split(string(bs), "\n") {
+		i := strings.TrimSpace(arch)
+		if i == "" {
+			continue
+		}
+		r = append(r, system.Architecture(i))
+	}
+	return r
+}
+
+func GenerateUpdateInfos(fpath string) error {
+	data := mapUpgradeInfo(
+		queryDpkgUpgradeInfoByAptList(),
+		buildUpgradeInfoRegex(getSystemArchitectures()),
+		buildUpgradeInfo)
+	return writeData(fpath, data)
 }

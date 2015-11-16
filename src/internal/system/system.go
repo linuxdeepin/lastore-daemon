@@ -4,6 +4,8 @@ import (
 	"errors"
 )
 
+const VarLibDir = "/var/lib/lastore"
+
 type Status string
 
 const (

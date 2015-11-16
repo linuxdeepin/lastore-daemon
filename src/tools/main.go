@@ -3,11 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 )
 
 func main() {
-	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install")
+	os.Unsetenv("LC_ALL")
+	os.Unsetenv("LANGUAGE")
+	os.Unsetenv("LC_MESSAGES")
+	os.Unsetenv("LANG")
+
+	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install|update_infos")
 	var fpath = flag.String("output", "", "the file to write")
 	var scanDirs = flag.String("dirs", "/usr/share/applications", "the scan directory when generate desktop index files")
 
@@ -30,6 +36,9 @@ func main() {
 		RemoveAll()
 	case "lastore-install":
 		InstallAll()
+
+	case "update_infos":
+		GenerateUpdateInfos(*fpath)
 
 	default:
 		flag.Usage()

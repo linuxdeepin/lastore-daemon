@@ -99,14 +99,3 @@ func GenerateApplications(fpath string) error {
 	fmt.Println("XXX:", len(infos))
 	return writeData(fpath, infos)
 }
-
-func GenerateXCategories(fpath string) error {
-	var data = make(map[string]string)
-	for old, deepin := range xCategoryNameIdMap {
-		data[old] = deepin
-	}
-	for old, deepin := range extraXCategoryNameIdMap {
-		data[old] = deepin
-	}
-	return writeData(fpath, data)
-}

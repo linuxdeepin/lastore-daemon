@@ -1,15 +1,7 @@
-package apt
+package main
 
-import "testing"
 import "internal/system"
 import C "gopkg.in/check.v1"
-
-type testWrap struct{}
-
-func Test(t *testing.T) { C.TestingT(t) }
-func init() {
-	C.Suite(&testWrap{})
-}
 
 func (*testWrap) TestBuildUpgradeInfo(c *C.C) {
 	data := []struct {

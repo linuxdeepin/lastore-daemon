@@ -2,8 +2,10 @@ package apt
 
 import (
 	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -118,8 +120,11 @@ func (p *APTSystem) SystemArchitectures() []system.Architecture {
 }
 
 func (p *APTSystem) UpgradeInfo() []system.UpgradeInfo {
-	return mapUpgradeInfo(
-		queryDpkgUpgradeInfoByAptList(),
-		buildUpgradeInfoRegex(getSystemArchitectures()),
-		buildUpgradeInfo)
+	var r []system.UpgradeInfo
+	err := system.DecodeJson(path.Join(system.VarLibDir, "update_infos.json"),
+		&r)
+	if err != nil {
+		log.Warnf("Invalid update_infos: %v\n", err)
+	}
+	return r
 }
