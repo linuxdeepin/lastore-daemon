@@ -730,33 +730,11 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<QString> PackageCategory1 (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageCategory1"), argumentList);
-		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
 	dbus::common::R<QString> PackageDesktopPath (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
 		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDesktopPath"), argumentList);
 		return dbus::common::R<QString>(call);
-	}
-	
-
-	
-	
-	
-	dbus::common::R<qlonglong> PackageDownloadSize (QString arg0) {
-		QList<QVariant> argumentList;
-		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageDownloadSize"), argumentList);
-		return dbus::common::R<qlonglong>(call);
 	}
 	
 

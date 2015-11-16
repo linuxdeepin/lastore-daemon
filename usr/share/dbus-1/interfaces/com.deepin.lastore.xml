@@ -31,18 +31,9 @@
                <arg type="o" direction="out"></arg>
           </method>
 
-
-          <method name="PackageCategory1">
-               <arg type="s" direction="in"></arg>
-               <arg type="s" direction="out"></arg>
-          </method>
           <method name="PackageDesktopPath">
                <arg type="s" direction="in"></arg>
                <arg type="s" direction="out"></arg>
-          </method>
-          <method name="PackageDownloadSize">
-               <arg type="s" direction="in"></arg>
-               <arg type="x" direction="out"></arg>
           </method>
           <method name="PackageExists">
                <arg type="s" direction="in"></arg>

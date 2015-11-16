@@ -120,24 +120,8 @@ func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
 	return
 }
 
-func (obj *Manager) PackageCategory1(arg0 string) (arg1 string, _err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.PackageCategory1", 0, arg0).Store(&arg1)
-	if _err != nil {
-		fmt.Println(_err)
-	}
-	return
-}
-
 func (obj *Manager) PackageDesktopPath(arg0 string) (arg1 string, _err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.PackageDesktopPath", 0, arg0).Store(&arg1)
-	if _err != nil {
-		fmt.Println(_err)
-	}
-	return
-}
-
-func (obj *Manager) PackageDownloadSize(arg0 string) (arg1 int64, _err error) {
-	_err = obj.core.Call("com.deepin.lastore.Manager.PackageDownloadSize", 0, arg0).Store(&arg1)
 	if _err != nil {
 		fmt.Println(_err)
 	}

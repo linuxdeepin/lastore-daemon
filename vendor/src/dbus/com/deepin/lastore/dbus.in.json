@@ -1,7 +1,7 @@
 {
 	"Config": {
 		"OutputDir": ".",
-		"InputDir": "../../../../../usr/share/dbus-1/interfaces/",
+		"InputDir": "../../../../../../usr/share/dbus-1/interfaces/",
 		"BusType": "System",
 		"DestName": "com.deepin.lastore"
 	},
