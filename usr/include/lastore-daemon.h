@@ -439,15 +439,15 @@ class Updater : public dbus::common::DBusObject
 		return dbus::common::R<QString >(call, dbus::common::PropertyConverter);
 	}
 	
-	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatableApps1 READ updatableApps1 NOTIFY updatableApps1Changed)
-	dbus::common::R<dbus::types::as > updatableApps1 () {
-		QDBusPendingReply<> call = fetchProperty("UpdatableApps1");
+	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatableApps READ updatableApps NOTIFY updatableAppsChanged)
+	dbus::common::R<dbus::types::as > updatableApps () {
+		QDBusPendingReply<> call = fetchProperty("UpdatableApps");
 		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
 	}
 	
-	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatablePackages1 READ updatablePackages1 NOTIFY updatablePackages1Changed)
-	dbus::common::R<dbus::types::as > updatablePackages1 () {
-		QDBusPendingReply<> call = fetchProperty("UpdatablePackages1");
+	Q_PROPERTY(dbus::common::R<dbus::types::as > UpdatablePackages READ updatablePackages NOTIFY updatablePackagesChanged)
+	dbus::common::R<dbus::types::as > updatablePackages () {
+		QDBusPendingReply<> call = fetchProperty("UpdatablePackages");
 		return dbus::common::R<dbus::types::as >(call, dbus::common::PropertyConverter);
 	}
 	
@@ -456,10 +456,10 @@ class Updater : public dbus::common::DBusObject
 	
 	
 	
-	dbus::common::R<dbus::types::ar_sssss_> ApplicationUpdateInfos1 (QString arg0) {
+	dbus::common::R<dbus::types::ar_sssss_> ApplicationUpdateInfos (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);
-		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ApplicationUpdateInfos1"), argumentList);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("ApplicationUpdateInfos"), argumentList);
 		return dbus::common::R<dbus::types::ar_sssss_>(call);
 	}
 	
@@ -506,8 +506,8 @@ class Updater : public dbus::common::DBusObject
 	void autoCheckUpdatesChanged (); 
 	void mirrorSourceChanged (); 
 	void officialSourceChanged (); 
-	void updatableApps1Changed (); 
-	void updatablePackages1Changed (); 
+	void updatableAppsChanged (); 
+	void updatablePackagesChanged (); 
 
 };
 }}}

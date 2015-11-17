@@ -23,11 +23,8 @@ type ApplicationUpdateInfo struct {
 type Updater struct {
 	AutoCheckUpdates bool
 
-	MirrorSource   string
-	OfficialSource string
-	mirrorSources  map[string]MirrorSource
-
-	upgradableInfos []system.UpgradeInfo
+	MirrorSource  string
+	mirrorSources map[string]MirrorSource
 
 	b system.System
 
@@ -48,9 +45,8 @@ func NewUpdater(b system.System) *Updater {
 	// TODO: Reload the cache
 	ms := LoadMirrorSources("http://api.lastore.deepin.org")
 	u := Updater{
-		OfficialSource: "http://packages.linuxdeepin.com",
-		mirrorSources:  make(map[string]MirrorSource),
-		b:              b,
+		mirrorSources: make(map[string]MirrorSource),
+		b:             b,
 	}
 	for _, item := range ms {
 		u.mirrorSources[item.Id] = item

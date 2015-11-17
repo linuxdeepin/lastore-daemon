@@ -54,7 +54,7 @@
           <property name="SystemOnChanging" type="b" access="read"></property>
      </interface>
      <interface name="com.deepin.lastore.Updater">
-          <method name="ApplicationUpdateInfos1">
+          <method name="ApplicationUpdateInfos">
                <arg type="s" direction="in"></arg>
                <arg type="a(sssss)" direction="out"></arg>
           </method>
@@ -71,7 +71,7 @@
           <property name="AutoCheckUpdates" type="b" access="read"></property>
           <property name="MirrorSource" type="s" access="read"></property>
           <property name="OfficialSource" type="s" access="read"></property>
-          <property name="UpdatableApps1" type="as" access="read"></property>
-          <property name="UpdatablePackages1" type="as" access="read"></property>
+          <property name="UpdatableApps" type="as" access="read"></property>
+          <property name="UpdatablePackages" type="as" access="read"></property>
      </interface>
 </node>
