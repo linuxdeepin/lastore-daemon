@@ -13,7 +13,7 @@ func main() {
 	os.Unsetenv("LC_MESSAGES")
 	os.Unsetenv("LANG")
 
-	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install|update_infos")
+	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install|update_infos|mirrors")
 	var fpath = flag.String("output", "", "the file to write")
 	var scanDirs = flag.String("dirs", "/usr/share/applications", "the scan directory when generate desktop index files")
 
@@ -39,6 +39,9 @@ func main() {
 
 	case "update_infos":
 		GenerateUpdateInfos(*fpath)
+
+	case "mirrors":
+		err = GenerateMirrors(*fpath)
 
 	default:
 		flag.Usage()

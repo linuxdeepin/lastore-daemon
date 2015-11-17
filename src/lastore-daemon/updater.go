@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
-	"net/http"
+	"path"
 	"pkg.deepin.io/lib/dbus"
 )
 
@@ -23,8 +21,7 @@ type ApplicationUpdateInfo struct {
 type Updater struct {
 	AutoCheckUpdates bool
 
-	MirrorSource  string
-	mirrorSources map[string]MirrorSource
+	MirrorSource string
 
 	b system.System
 
@@ -32,24 +29,10 @@ type Updater struct {
 	UpdatablePackages []string
 }
 
-type MirrorSource struct {
-	Id   string
-	Name string
-	Url  string
-
-	location    string
-	localeNames map[string]string
-}
-
 func NewUpdater(b system.System) *Updater {
 	// TODO: Reload the cache
-	ms := LoadMirrorSources("http://api.lastore.deepin.org")
 	u := Updater{
-		mirrorSources: make(map[string]MirrorSource),
-		b:             b,
-	}
-	for _, item := range ms {
-		u.mirrorSources[item.Id] = item
+		b: b,
 	}
 
 	dm := system.NewDirMonitor(system.VarLibDir)
@@ -67,10 +50,6 @@ func NewUpdater(b system.System) *Updater {
 
 // 设置用于下载软件的镜像源
 func (u *Updater) SetMirrorSource(id string) error {
-	//TODO: sync the value
-	if _, ok := u.mirrorSources[id]; !ok {
-		return fmt.Errorf("Can't find the mirror source %q", id)
-	}
 	u.MirrorSource = id
 	dbus.NotifyChange(u, "MirrorSource")
 	return nil
@@ -85,72 +64,30 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 	return nil
 }
 
-// ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
-// 其中Name会根据传递进来的lang进行本地化
-func (u Updater) ListMirrorSources(lang string) []MirrorSource {
-	// TODO: sort it
-	var r []MirrorSource
-	for _, ms := range u.mirrorSources {
-		localeMS := MirrorSource{
-			Id:   ms.Id,
-			Url:  ms.Url,
-			Name: ms.Name,
-		}
-		if v, ok := ms.localeNames[lang]; ok {
-			localeMS.Name = v
-		}
-
-		r = append(r, localeMS)
-	}
-	return r
+type LocaleMirrorSource struct {
+	Id   string
+	Url  string
+	Name string
 }
 
-// LoadMirrorSources return supported MirrorSource from remote server
-func LoadMirrorSources(server string) []MirrorSource {
-	rep, err := http.Get(server + "/mirrors")
-	if err != nil {
-		log.Warnf("LoadMirrorSources:%v", err)
-		return nil
-	}
-	defer rep.Body.Close()
+// ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
+// 其中Name会根据传递进来的lang进行本地化
+func (u Updater) ListMirrorSources(lang string) []LocaleMirrorSource {
+	var raws []system.MirrorSource
+	system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
 
-	d := json.NewDecoder(rep.Body)
-	var v struct {
-		StatusCode    int    `json:"status_code"`
-		StatusMessage string `json:"status_message"`
-		Data          []struct {
-			Id       string                       `json:"id"`
-			Name     string                       `json:"name"`
-			Url      string                       `json:"url"`
-			Location string                       `json:"location"`
-			Locale   map[string]map[string]string `json:"locale"`
-		} `json:"data"`
-	}
-	err = d.Decode(&v)
-	if err != nil {
-		log.Warnf("LoadMirrorSources: %v", err)
-		return nil
-	}
-
-	if v.StatusCode != 0 {
-		log.Warnf("LoadMirrorSources: featch(%q) error: %q",
-			server+"/mirrors", v.StatusMessage)
-		return nil
-	}
-
-	var r []MirrorSource
-	for _, raw := range v.Data {
-		s := MirrorSource{
-			Id:          raw.Id,
-			Name:        raw.Name,
-			Url:         raw.Url,
-			location:    raw.Location,
-			localeNames: make(map[string]string),
+	var r []LocaleMirrorSource
+	for _, raw := range raws {
+		ms := LocaleMirrorSource{
+			Id:   raw.Id,
+			Url:  raw.Url,
+			Name: raw.Name,
 		}
-		for k, v := range raw.Locale {
-			s.localeNames[k] = v["name"]
+		if v, ok := raw.NameLocale[lang]; ok {
+			ms.Name = v
 		}
-		r = append(r, s)
+
+		r = append(r, ms)
 	}
 	return r
 }

@@ -5,6 +5,20 @@ import (
 	"os"
 )
 
+type MirrorSource struct {
+	Id   string
+	Name string
+	Url  string
+
+	NameLocale map[string]string
+}
+
+var DefaultMirror = MirrorSource{
+	Id:   "default",
+	Url:  "http://cdn.packages.linuxdeepin.com/packages-debian",
+	Name: "default",
+}
+
 func DecodeJson(fpath string, d interface{}) error {
 	f, err := os.Open(fpath)
 	if err != nil {
