@@ -6,6 +6,11 @@ build:
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-tools tools
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-session-helper lastore-session-helper
 
+gb:
+	gb build lastore-daemon
+	gb build tools
+	gb build lastore-session-helper
+
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
@@ -39,9 +44,9 @@ clean:
 bin/lastore-tools:
 	gb build -o bin/lastore-tools tools
 
-var/lib/lastore: var/lib/lastore/application.json var/lib/lastore/categories.json var/lib/lastore/xcategories.json
+var/lib/lastore: var/lib/lastore/applications.json var/lib/lastore/categories.json var/lib/lastore/xcategories.json
 
-var/lib/lastore/application.json: bin/lastore-tools
+var/lib/lastore/applications.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
 	./bin/lastore-tools -item applications -output $@
 

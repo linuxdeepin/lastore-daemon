@@ -10,11 +10,11 @@ import (
 )
 
 type ApplicationUpdateInfo struct {
-	Id              string
-	Name            string
-	Icon            string
-	CurrentVersion  string
-	AvaiableVersion string
+	Id             string
+	Name           string
+	Icon           string
+	CurrentVersion string
+	LastVersion    string
 
 	// There  hasn't support
 	changeLog string
@@ -31,9 +31,8 @@ type Updater struct {
 
 	b system.System
 
-	//测试使用
-	UpdatableApps1     []string
-	UpdatablePackages1 []string
+	UpdatableApps     []string
+	UpdatablePackages []string
 }
 
 type MirrorSource struct {
@@ -57,18 +56,17 @@ func NewUpdater(b system.System) *Updater {
 		u.mirrorSources[item.Id] = item
 	}
 
-	u.UpdatableApps1 = []string{"abiword", "anjuta", "deepin-movie", "d-feet"}
-	u.UpdatablePackages1 = UpdatableNames(u.b.UpgradeInfo())
-	return &u
-}
-
-func (u *Updater) ApplicationUpdateInfos1(lang string) []ApplicationUpdateInfo {
-	return []ApplicationUpdateInfo{
-		{"abiword", "Abiword", "abiword", "0.3", "0.55", ""},
-		{"anjuta", "anjuta", "anjuta", "1.3", "1.4", ""},
-		{"deepin-movie", "deepin movie", "deepin-movie", "2.3", "3.3", ""},
-		{"d-feet", "d-feet", "d-feet", "3.3", "5.5", ""},
+	dm := system.NewDirMonitor(system.VarLibDir)
+	dm.Add(func(fpath string, op uint32) {
+		u.loadUpdateInfos()
+	}, "update_infos.json", "package_icons.json", "applications.json")
+	err := dm.Start()
+	if err != nil {
+		log.Warnf("Can't create inotify on %s: %v\n", system.VarLibDir, err)
 	}
+
+	u.loadUpdateInfos()
+	return &u
 }
 
 // 设置用于下载软件的镜像源

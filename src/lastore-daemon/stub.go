@@ -62,6 +62,38 @@ func (m *Manager) updatableApps() {
 	}
 }
 
+func (u *Updater) setPropUpdatableApps(ids []string) {
+	changed := len(ids) != len(u.UpdatableApps)
+	if !changed {
+		for i, id := range ids {
+			if u.UpdatableApps[i] != id {
+				changed = true
+				break
+			}
+		}
+	}
+	if changed {
+		u.UpdatableApps = ids
+		dbus.NotifyChange(u, "UpdatableApps")
+	}
+}
+
+func (u *Updater) setPropUpdatablePackages(ids []string) {
+	changed := len(ids) != len(u.UpdatablePackages)
+	if !changed {
+		for i, id := range ids {
+			if u.UpdatablePackages[i] != id {
+				changed = true
+				break
+			}
+		}
+	}
+	if changed {
+		u.UpdatablePackages = ids
+		dbus.NotifyChange(u, "UpdatablePackages")
+	}
+}
+
 func DestroyJob(j *Job) {
 	dbus.UnInstallObject(j)
 }
