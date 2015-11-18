@@ -23,16 +23,17 @@ type Updater struct {
 
 	MirrorSource string
 
-	b system.System
+	b      system.System
+	config *Config
 
 	UpdatableApps     []string
 	UpdatablePackages []string
 }
 
-func NewUpdater(b system.System) *Updater {
-	// TODO: Reload the cache
+func NewUpdater(b system.System, config *Config) *Updater {
 	u := Updater{
-		b: b,
+		b:      b,
+		config: config,
 	}
 
 	dm := system.NewDirMonitor(system.VarLibDir)
@@ -50,17 +51,31 @@ func NewUpdater(b system.System) *Updater {
 
 // 设置用于下载软件的镜像源
 func (u *Updater) SetMirrorSource(id string) error {
-	u.MirrorSource = id
+	if u.MirrorSource == id {
+		return nil
+	}
+
+	err := u.config.SetMirrorSource(id)
+	if err != nil {
+		return err
+	}
+	u.MirrorSource = u.config.MirrorSource
 	dbus.NotifyChange(u, "MirrorSource")
 	return nil
 }
 
 func (u *Updater) SetAutoCheckUpdates(enable bool) error {
-	//TODO: sync the value
-	if u.AutoCheckUpdates != enable {
-		u.AutoCheckUpdates = enable
-		dbus.NotifyChange(u, "AutoCheckUpdates")
+	if u.AutoCheckUpdates == enable {
+		return nil
 	}
+
+	err := u.config.SetAutoCheckUpdates(enable)
+	if err != nil {
+		return err
+	}
+
+	u.AutoCheckUpdates = u.config.AutoCheckUpdates
+	dbus.NotifyChange(u, "AutoCheckUpdates")
 	return nil
 }
 

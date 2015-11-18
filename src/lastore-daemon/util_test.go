@@ -28,10 +28,6 @@ func (*testWrap) TestParseSize(c *C.C) {
 	}
 }
 
-func (*testWrap) TestLoadSourceMirrors(c *C.C) {
-	c.Check(LoadMirrorSources("http://api.lastore.deepin.org"), C.Not(C.Equals), 0)
-}
-
 func (*testWrap) TestPackageDownloadSize(c *C.C) {
 	s := apt.New()
 	var packages = []string{"abiword", "0ad", "acl2"}

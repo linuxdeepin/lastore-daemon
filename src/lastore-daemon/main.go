@@ -61,6 +61,11 @@ func main() {
 	setupLog()
 	defer log.Flush()
 
+	if !lib.UniqueOnSystem("com.deepin.lastore") {
+		log.Info("Can't obtain the com.deepin.lastore")
+		return
+	}
+
 	os.Unsetenv("LC_ALL")
 	os.Unsetenv("LANGUAGE")
 	os.Unsetenv("LC_MESSAGES")
@@ -69,29 +74,26 @@ func main() {
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
-	if !lib.UniqueOnSystem("com.deepin.lastore") {
-		log.Info("Can't obtain the com.deepin.lastore")
-		return
-	}
 
 	b := apt.New()
-	m := NewManager(b)
+	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 
-	err := dbus.InstallOnSystem(m)
+	manager := NewManager(b, config)
+	err := dbus.InstallOnSystem(manager)
 	if err != nil {
 		log.Error("Install manager on system bus :", err)
 		return
 	}
 	log.Info("Started service at system bus")
 
-	err = dbus.InstallOnSystem(m.updater)
+	updater := NewUpdater(b, config)
+	err = dbus.InstallOnSystem(updater)
 	if err != nil {
 		log.Error("Start failed:", err)
 		return
 	}
 
 	dbus.DealWithUnhandledMessage()
-
 	if err := dbus.Wait(); err != nil {
 		log.Warn("DBus Error:", err)
 	}

@@ -5,7 +5,8 @@ import (
 )
 
 type Manager struct {
-	b system.System
+	b      system.System
+	config *Config
 
 	JobList    []*Job
 	jobManager *JobManager
@@ -13,19 +14,15 @@ type Manager struct {
 	SystemArchitectures []system.Architecture
 
 	UpgradableApps []string
-	updater        *Updater
 
 	SystemOnChanging bool
-
-	config *Config
 }
 
-func NewManager(b system.System) *Manager {
+func NewManager(b system.System, c *Config) *Manager {
 	m := &Manager{
+		config:              c,
 		b:                   b,
 		SystemArchitectures: b.SystemArchitectures(),
-		updater:             NewUpdater(b),
-		config:              NewConfig("/var/lib/lastore/config.json"),
 	}
 	m.jobManager = NewJobManager(b, m.updateJobList)
 
@@ -33,9 +30,6 @@ func NewManager(b system.System) *Manager {
 
 	go m.jobManager.Dispatch()
 
-	if m.config.AutoCheckUpdate {
-		m.UpdateSource()
-	}
 	m.updatableApps()
 	m.updateJobList()
 	return m
@@ -88,11 +82,11 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 	return m.jobManager.CreateJob(system.DistUpgradeJobType, "")
 }
 
-func (m *Manager) PauseJob(jobId string) error {
-	return m.jobManager.PauseJob(jobId)
-}
 func (m *Manager) StartJob(jobId string) error {
 	return m.jobManager.MarkStart(jobId)
+}
+func (m *Manager) PauseJob(jobId string) error {
+	return m.jobManager.PauseJob(jobId)
 }
 func (m *Manager) CleanJob(jobId string) error {
 	return m.jobManager.CleanJob(jobId)
@@ -117,6 +111,6 @@ func (m *Manager) PackageDesktopPath(packageId string) string {
 	return QueryDesktopPath(QueryPackageSameNameDepends(packageId)...)
 }
 
-func GetPackageCategory(packageId string) string {
-	return "others"
+func (m *Manager) SetRegion(region string) error {
+	return m.config.SetAppstoreRegion(region)
 }
