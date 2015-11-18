@@ -44,6 +44,7 @@ func NewManager(b system.System, c *Config) *Manager {
 func (m *Manager) checkNeedUpdate() {
 	m.do.Lock()
 	if m.updated {
+		m.do.Unlock()
 		return
 	}
 	m.updated = true
@@ -150,7 +151,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) int64 {
 	defer m.do.Unlock()
 
 	if len(packages) == 1 && m.PackageExists(packages[0]) {
-		return 0
+		return SizeDownloaded
 	}
 	return int64(QueryPackageDownloadSize(packages...))
 }

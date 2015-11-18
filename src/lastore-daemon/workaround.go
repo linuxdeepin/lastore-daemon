@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -23,6 +24,9 @@ var __unitTable__ = map[byte]float64{
 	'Y': 1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000 * 1000,
 }
 
+const SizeDownloaded = 0
+const SizeUnknown = -1
+
 func parsePackageSize(line string) float64 {
 	ms := __ReDownloadSize__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
@@ -30,7 +34,7 @@ func parsePackageSize(line string) float64 {
 		l := strings.Replace(string(ms[1]), ",", "", -1)
 		size, err := strconv.ParseFloat(l, 64)
 		if err != nil {
-			return -1
+			return SizeUnknown
 		}
 		if len(ms[2]) == 0 {
 			return size
@@ -38,7 +42,7 @@ func parsePackageSize(line string) float64 {
 		unit := ms[2][0]
 		return size * __unitTable__[unit]
 	}
-	return -1
+	return SizeUnknown
 }
 
 // QueryPackageDownloadSize parsing the total size of download archives when installing
@@ -47,15 +51,22 @@ func QueryPackageDownloadSize(packages ...string) float64 {
 	cmd := exec.Command("/usr/bin/apt-get", append([]string{"-d", "-o", "Debug::NoLocking=1", "--assume-no", "install"}, packages...)...)
 
 	lines, err := filterExecOutput(cmd, time.Second*3, func(line string) bool {
-		return parsePackageSize(line) != -1
+		return parsePackageSize(line) != SizeUnknown
 	})
-	if err != nil && len(lines) > 0 {
-		return -1
+
+	if len(lines) != 0 {
+		return parsePackageSize(lines[0])
 	}
-	if len(lines) == 0 {
-		return 0
+
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			if status.ExitStatus() == 1 {
+				// --assume-no will cause apt-get exit with code 1 when successfully
+				return SizeDownloaded
+			}
+		}
 	}
-	return parsePackageSize(lines[0])
+	return SizeUnknown
 }
 
 func guestBasePackageName(pkgId string) string {
@@ -130,7 +141,7 @@ func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 		}
 	}
 
-	cmd.Wait()
+	err = cmd.Wait()
 	timer.Stop()
-	return lines, nil
+	return lines, err
 }
