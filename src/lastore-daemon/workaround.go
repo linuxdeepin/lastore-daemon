@@ -11,7 +11,7 @@ import (
 )
 
 // see the apt code of command-line/apt-get.c:895
-var __ReDownloadSize__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,]+ [kMGTPEZY]?B)? of archives")
+var __ReDownloadSize__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,.]+ [kMGTPEZY]?B)? of archives")
 
 var __unitTable__ = map[byte]float64{
 	'k': 1000,

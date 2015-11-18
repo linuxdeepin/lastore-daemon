@@ -20,6 +20,7 @@ func (*testWrap) TestParseSize(c *C.C) {
 		{`Need to get 0 B of archives.`, 0},
 		{`Need to get 0 B/3,792 kB of archives.`, 0},
 		{`Need to get 1,33 MB/3,792 kB of archives.`, 133 * 1000 * 1000},
+		{`Need to get 3,985 kB/26.2 MB of archives.`, 3985 * 1000},
 		{`Need to get 9,401 kB of archives.`, 9401 * 1000},
 		{`Need to get 13.7 MB of archives.`, 13.7 * 1000 * 1000},
 	}
