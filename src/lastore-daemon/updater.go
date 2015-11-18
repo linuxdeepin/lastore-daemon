@@ -5,6 +5,7 @@ import (
 	"internal/system"
 	"path"
 	"pkg.deepin.io/lib/dbus"
+	"time"
 )
 
 type ApplicationUpdateInfo struct {
@@ -31,7 +32,7 @@ type Updater struct {
 }
 
 func NewUpdater(b system.System, config *Config) *Updater {
-	u := Updater{
+	u := &Updater{
 		b:      b,
 		config: config,
 	}
@@ -46,7 +47,8 @@ func NewUpdater(b system.System, config *Config) *Updater {
 	}
 
 	u.loadUpdateInfos()
-	return &u
+
+	return u
 }
 
 // 设置用于下载软件的镜像源
@@ -113,4 +115,31 @@ func UpdatableNames(infos []system.UpgradeInfo) []string {
 		apps = append(apps, info.Package)
 	}
 	return apps
+}
+
+func (m *Manager) loopRemoveUpdate() {
+	for {
+		<-time.After(m.config.CheckInterval)
+		log.Info("Try update remote data...", m.config)
+		busy := false
+		for _, job := range m.JobList {
+			if job.Status == system.RunningStatus {
+				busy = true
+				break
+			}
+			if job.Type == system.UpdateSourceJobType {
+				if job.Status == system.FailedStatus {
+					err := m.StartJob(job.Id)
+					log.Infof("Restart failed UpdateSource Job:%v ... :%v\n", job, err)
+				}
+				busy = true
+				break
+			}
+		}
+		if m.config.AutoCheckUpdates && !busy {
+			//TODO: update applications/mirrors
+			job, err := m.UpdateSource()
+			log.Infof("It's not busy, so try update remote data... %v:%v\n", job, err)
+		}
+	}
 }

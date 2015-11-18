@@ -2,9 +2,11 @@ package main
 
 import (
 	"internal/system"
+	"sync"
 )
 
 type Manager struct {
+	do     sync.Mutex
 	b      system.System
 	config *Config
 
@@ -16,6 +18,8 @@ type Manager struct {
 	UpgradableApps []string
 
 	SystemOnChanging bool
+
+	updated bool
 }
 
 func NewManager(b system.System, c *Config) *Manager {
@@ -32,15 +36,35 @@ func NewManager(b system.System, c *Config) *Manager {
 
 	m.updatableApps()
 	m.updateJobList()
+
+	go m.loopRemoveUpdate()
 	return m
 }
 
+func (m *Manager) checkNeedUpdate() {
+	m.do.Lock()
+	if m.updated {
+		return
+	}
+	m.updated = true
+	m.do.Unlock()
+
+	m.UpdateSource()
+}
+
 func (m *Manager) UpdatePackage(packageId string) (*Job, error) {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
 	// TODO: Check whether the package can be updated
 	return m.jobManager.CreateJob(system.UpdateJobType, packageId)
 }
 
 func (m *Manager) InstallPackage(packageId string) (*Job, error) {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	if m.PackageExists(packageId) {
 		return nil, system.ResourceExitError
 	}
@@ -48,6 +72,10 @@ func (m *Manager) InstallPackage(packageId string) (*Job, error) {
 }
 
 func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	if m.PackageExists(packageId) {
 		return nil, system.ResourceExitError
 	}
@@ -55,6 +83,10 @@ func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
 }
 
 func (m *Manager) RemovePackage(packageId string) (*Job, error) {
+
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	if !m.PackageExists(packageId) {
 		return nil, system.NotFoundError
 	}
@@ -62,10 +94,17 @@ func (m *Manager) RemovePackage(packageId string) (*Job, error) {
 }
 
 func (m *Manager) UpdateSource() (*Job, error) {
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	return m.jobManager.CreateJob(system.UpdateSourceJobType, "")
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	var updateJobIds []string
 	for _, job := range m.JobList {
 		if job.Type == system.DistUpgradeJobType {
@@ -83,12 +122,21 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 }
 
 func (m *Manager) StartJob(jobId string) error {
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	return m.jobManager.MarkStart(jobId)
 }
 func (m *Manager) PauseJob(jobId string) error {
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	return m.jobManager.PauseJob(jobId)
 }
 func (m *Manager) CleanJob(jobId string) error {
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	return m.jobManager.CleanJob(jobId)
 }
 
@@ -97,6 +145,10 @@ func (m *Manager) PackageExists(packageId string) bool {
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) int64 {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	if len(packages) == 1 && m.PackageExists(packages[0]) {
 		return 0
 	}
@@ -104,6 +156,9 @@ func (m *Manager) PackagesDownloadSize(packages []string) int64 {
 }
 
 func (m *Manager) PackageDesktopPath(packageId string) string {
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	r := QueryDesktopPath(packageId)
 	if r != "" {
 		return r
@@ -112,5 +167,8 @@ func (m *Manager) PackageDesktopPath(packageId string) string {
 }
 
 func (m *Manager) SetRegion(region string) error {
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	return m.config.SetAppstoreRegion(region)
 }

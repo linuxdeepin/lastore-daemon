@@ -4,12 +4,15 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
+	"time"
 )
+
+const MinCheckInterval = time.Minute * 5
 
 type Config struct {
 	AutoCheckUpdates bool
 	MirrorSource     string
-	CheckInterval    int
+	CheckInterval    time.Duration
 	AppstoreRegion   string
 
 	fpath string
@@ -17,7 +20,7 @@ type Config struct {
 
 func NewConfig(fpath string) *Config {
 	r := Config{
-		CheckInterval:    60 * 10,
+		CheckInterval:    time.Minute * 180,
 		MirrorSource:     system.DefaultMirror.Id,
 		AutoCheckUpdates: true,
 		fpath:            fpath,
@@ -26,6 +29,13 @@ func NewConfig(fpath string) *Config {
 	err := system.DecodeJson(fpath, &r)
 	if err != nil {
 		log.Warnf("Can't load config file: %v\n", err)
+	}
+
+	if r.CheckInterval < MinCheckInterval {
+		r.CheckInterval = MinCheckInterval
+	}
+	if r.MirrorSource == "" {
+		r.MirrorSource = system.DefaultMirror.Id
 	}
 
 	return &r
