@@ -2,6 +2,7 @@ package main
 
 import (
 	"internal/system"
+	"pkg.deepin.io/lib/dbus"
 	"sync"
 )
 
@@ -36,6 +37,11 @@ func NewManager(b system.System, c *Config) *Manager {
 
 	m.updatableApps()
 	m.updateJobList()
+
+	// Force notify changed at the first time
+	dbus.NotifyChange(m, "SystemOnChanging")
+	dbus.NotifyChange(m, "JobList")
+	dbus.NotifyChange(m, "UpgradableApps")
 
 	go m.loopRemoveUpdate()
 	return m
