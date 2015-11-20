@@ -118,6 +118,10 @@ func (m *JobManager) CleanJob(jobId string) error {
 		return system.NotFoundError
 	}
 
+	if job.Status == system.RunningStatus && job.Cancelable {
+		m.PauseJob(jobId)
+	}
+
 	if ValidTransitionJobState(job.Status, system.EndStatus) {
 		job.next = nil
 	}

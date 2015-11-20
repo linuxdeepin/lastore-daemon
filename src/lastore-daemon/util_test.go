@@ -80,7 +80,7 @@ func (*testWrap) TestTranisition(c *C.C) {
 		{system.PausedStatus, system.FailedStatus, false},
 		{system.PausedStatus, system.SucceedStatus, false},
 		{system.PausedStatus, system.PausedStatus, false},
-		{system.PausedStatus, system.EndStatus, false},
+		{system.PausedStatus, system.EndStatus, true},
 
 		{system.EndStatus, system.ReadyStatus, false},
 		{system.EndStatus, system.RunningStatus, false},

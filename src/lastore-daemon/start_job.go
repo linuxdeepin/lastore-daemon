@@ -61,6 +61,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		},
 		system.PausedStatus: []system.Status{
 			system.ReadyStatus,
+			system.EndStatus,
 		},
 	}
 
