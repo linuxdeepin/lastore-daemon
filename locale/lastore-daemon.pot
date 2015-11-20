@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-08 16:45+0800\n"
+"POT-Creation-Date: 2015-11-20 17:06+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,10 +17,43 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lastore-session-helper/main.go:23
+#: ../src/lastore-session-helper/job.go:140
 msgid "Deepin Store"
 msgstr ""
 
-#: ../src/lastore-session-helper/main.go:24
-msgid "System is updating, please wait and do not unplug your machine."
+#: ../src/lastore-session-helper/job.go:141
+msgid "System is updating, please shut down or restart later."
+msgstr ""
+
+#: ../src/lastore-session-helper/job.go:171
+msgid "retry"
+msgstr ""
+
+#: ../src/lastore-session-helper/job.go:179
+msgid "cancel"
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:50
+msgid "%q installed successfully."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:52
+msgid "%q failed to install."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:60
+msgid "%q removed successfully."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:62
+msgid "%q failed to remove."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:69
+msgid "%q failed to download."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:75
+msgid ""
+"In order to prevent automatic shutdown, please plug in for normal update."
 msgstr ""

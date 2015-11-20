@@ -45,10 +45,19 @@ func (obj *Manager) _deleteSignalChan(ch <-chan *dbus.Signal) {
 }
 func DestroyManager(obj *Manager) {
 	obj.signalsLocker.Lock()
+	defer obj.signalsLocker.Unlock()
+	if obj.signals == nil {
+		return
+	}
 	for ch, _ := range obj.signals {
 		getBus().DetachSignal(ch)
 	}
-	obj.signalsLocker.Unlock()
+	obj.signals = nil
+
+	runtime.SetFinalizer(obj, nil)
+
+	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='org.freedesktop.DBus.Properties',sender='" + obj.DestName + "',member='PropertiesChanged'")
+	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='com.deepin.lastore.Manager',sender='" + obj.DestName + "',member='PropertiesChanged'")
 
 	obj.JobList.Reset()
 	obj.SystemArchitectures.Reset()
@@ -270,8 +279,8 @@ func NewManager(destName string, path dbus.ObjectPath) (*Manager, error) {
 	obj.UpgradableApps = &dbusPropertyManagerUpgradableApps{&property.BaseObserver{}, core}
 	obj.SystemOnChanging = &dbusPropertyManagerSystemOnChanging{&property.BaseObserver{}, core}
 
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Manager',sender='"+destName+"',member='PropertiesChanged'")
+	dbusAddMatch("type='signal',path='" + string(path) + "',interface='org.freedesktop.DBus.Properties',sender='" + destName + "',member='PropertiesChanged'")
+	dbusAddMatch("type='signal',path='" + string(path) + "',interface='com.deepin.lastore.Manager',sender='" + destName + "',member='PropertiesChanged'")
 	sigChan := obj._createSignalChan()
 	go func() {
 		typeString := reflect.TypeOf("")
@@ -354,10 +363,19 @@ func (obj *Updater) _deleteSignalChan(ch <-chan *dbus.Signal) {
 }
 func DestroyUpdater(obj *Updater) {
 	obj.signalsLocker.Lock()
+	defer obj.signalsLocker.Unlock()
+	if obj.signals == nil {
+		return
+	}
 	for ch, _ := range obj.signals {
 		getBus().DetachSignal(ch)
 	}
-	obj.signalsLocker.Unlock()
+	obj.signals = nil
+
+	runtime.SetFinalizer(obj, nil)
+
+	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='org.freedesktop.DBus.Properties',sender='" + obj.DestName + "',member='PropertiesChanged'")
+	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='com.deepin.lastore.Updater',sender='" + obj.DestName + "',member='PropertiesChanged'")
 
 	obj.AutoCheckUpdates.Reset()
 	obj.MirrorSource.Reset()
@@ -543,8 +561,8 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 	obj.UpdatableApps = &dbusPropertyUpdaterUpdatableApps{&property.BaseObserver{}, core}
 	obj.UpdatablePackages = &dbusPropertyUpdaterUpdatablePackages{&property.BaseObserver{}, core}
 
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Updater',sender='"+destName+"',member='PropertiesChanged'")
+	dbusAddMatch("type='signal',path='" + string(path) + "',interface='org.freedesktop.DBus.Properties',sender='" + destName + "',member='PropertiesChanged'")
+	dbusAddMatch("type='signal',path='" + string(path) + "',interface='com.deepin.lastore.Updater',sender='" + destName + "',member='PropertiesChanged'")
 	sigChan := obj._createSignalChan()
 	go func() {
 		typeString := reflect.TypeOf("")
@@ -635,10 +653,19 @@ func (obj *Job) _deleteSignalChan(ch <-chan *dbus.Signal) {
 }
 func DestroyJob(obj *Job) {
 	obj.signalsLocker.Lock()
+	defer obj.signalsLocker.Unlock()
+	if obj.signals == nil {
+		return
+	}
 	for ch, _ := range obj.signals {
 		getBus().DetachSignal(ch)
 	}
-	obj.signalsLocker.Unlock()
+	obj.signals = nil
+
+	runtime.SetFinalizer(obj, nil)
+
+	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='org.freedesktop.DBus.Properties',sender='" + obj.DestName + "',member='PropertiesChanged'")
+	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='com.deepin.lastore.Job',sender='" + obj.DestName + "',member='PropertiesChanged'")
 
 	obj.Id.Reset()
 	obj.PackageId.Reset()
@@ -848,8 +875,8 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	obj.Description = &dbusPropertyJobDescription{&property.BaseObserver{}, core}
 	obj.Cancelable = &dbusPropertyJobCancelable{&property.BaseObserver{}, core}
 
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='org.freedesktop.DBus.Properties',sender='"+destName+"',member='PropertiesChanged'")
-	getBus().BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',path='"+string(path)+"',interface='com.deepin.lastore.Job',sender='"+destName+"',member='PropertiesChanged'")
+	dbusAddMatch("type='signal',path='" + string(path) + "',interface='org.freedesktop.DBus.Properties',sender='" + destName + "',member='PropertiesChanged'")
+	dbusAddMatch("type='signal',path='" + string(path) + "',interface='com.deepin.lastore.Job',sender='" + destName + "',member='PropertiesChanged'")
 	sigChan := obj._createSignalChan()
 	go func() {
 		typeString := reflect.TypeOf("")
