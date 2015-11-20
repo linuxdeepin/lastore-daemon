@@ -1,5 +1,6 @@
 package main
 
+import "dbus/org/freedesktop/login1"
 import "dbus/com/deepin/lastore"
 import "pkg.deepin.io/lib/dbus"
 import "internal/system"
@@ -151,6 +152,7 @@ func (l *Lastore) updateSystemOnChaning(onChanging bool) {
 
 	if !onChanging && l.inhibitFd != -1 {
 		err := syscall.Close(int(l.inhibitFd))
+		log.Infof("Enable shutdown...")
 		if err != nil {
 			log.Infof("Enable shutdown...: fd:%d, err:%s\n", l.inhibitFd, err)
 		}
@@ -170,7 +172,30 @@ func (l *Lastore) online() {
 	l.OnLine = true
 }
 
-func (l *Lastore) createActions(jobId string) []Action {
+func (l *Lastore) createUpgradeActions() []Action {
+	return []Action{
+		Action{
+			Id:   "reboot",
+			Name: gettext.Tr("Reboot Now"),
+			Callback: func() {
+				m, err := login1.NewManager("org.freedesktop.login1", "/org/freedesktop/login1")
+				if err != nil {
+					log.Warnf("Can't create login1 proxy: %v\n", err)
+					return
+				}
+				defer login1.DestroyManager(m)
+				m.Reboot(true)
+
+			},
+		},
+		Action{
+			Id:   "default",
+			Name: gettext.Tr("Reboot Later"),
+		},
+	}
+}
+
+func (l *Lastore) createJobFailedActions(jobId string) []Action {
 	ac := []Action{
 		Action{
 			Id:   "retry",
@@ -204,25 +229,31 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
 	case system.DownloadJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyFailedDownload(pkgName, l.createActions(job.Id.Get()))
+			NotifyFailedDownload(pkgName, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
 		}
 
 	case system.InstallJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyInstall(pkgName, false, l.createActions(job.Id.Get()))
+			NotifyInstall(pkgName, false, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
 			NotifyInstall(pkgName, true, nil)
 		}
 	case system.RemoveJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyRemove(pkgName, false, l.createActions(job.Id.Get()))
+			NotifyRemove(pkgName, false, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
 			NotifyRemove(pkgName, true, nil)
 		}
-
+	case system.DistUpgradeJobType:
+		switch status {
+		case system.FailedStatus:
+			NotifyUpgrade(false, l.createJobFailedActions(job.Id.Get()))
+		case system.SucceedStatus:
+			NotifyUpgrade(true, l.createUpgradeActions())
+		}
 	default:
 		return
 	}

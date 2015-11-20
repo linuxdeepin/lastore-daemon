@@ -75,3 +75,14 @@ func NotifyLowPower() {
 	msg := gettext.Tr("In order to prevent automatic shutdown, please plug in for normal update.")
 	SendNotify(msg, nil)
 }
+
+func NotifyUpgrade(succeed bool, ac []Action) {
+	var msg string
+	if succeed {
+		msg = gettext.Tr("Upgraded successfully! Some functions require to restart computer before take effect, restart now?")
+	} else {
+		msg = gettext.Tr("Failed to Upgrade!")
+	}
+
+	SendNotify(msg, ac)
+}

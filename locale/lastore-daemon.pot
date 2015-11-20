@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-20 17:06+0800\n"
+"POT-Creation-Date: 2015-11-20 20:28+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,19 +18,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: ../src/lastore-session-helper/job.go:140
+#: ../src/lastore-session-helper/job.go:143
 msgid "Deepin Store"
 msgstr ""
 
 #: ../src/lastore-session-helper/job.go:141
+#: ../src/lastore-session-helper/job.go:144
 msgid "System is updating, please shut down or restart later."
 msgstr ""
 
 #: ../src/lastore-session-helper/job.go:171
+#: ../src/lastore-session-helper/job.go:202
 msgid "retry"
 msgstr ""
 
 #: ../src/lastore-session-helper/job.go:179
+msgid "Reboot Now"
+msgstr ""
+
+#: ../src/lastore-session-helper/job.go:179
+#: ../src/lastore-session-helper/job.go:210
 msgid "cancel"
+msgstr ""
+
+#: ../src/lastore-session-helper/job.go:193
+msgid "Reboot Later"
 msgstr ""
 
 #: ../src/lastore-session-helper/ntofiy.go:50
@@ -56,4 +68,14 @@ msgstr ""
 #: ../src/lastore-session-helper/ntofiy.go:75
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:82
+msgid ""
+"Upgraded successfully! Some functions require to restart computer before "
+"take effect, restart now?"
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:84
+msgid "Failed to Upgrade!"
 msgstr ""

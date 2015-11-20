@@ -69,6 +69,8 @@ func guestJobTypeFromPath(path dbus.ObjectPath) string {
 		return system.DownloadJobType
 	} else if strings.Contains(string(path), system.RemoveJobType) {
 		return system.RemoveJobType
+	} else if strings.Contains(string(path), system.DistUpgradeJobType) {
+		return system.DistUpgradeJobType
 	}
 	return ""
 }
