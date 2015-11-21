@@ -56,11 +56,20 @@ func NewJob(packageId string, jobType string, queueName string) *Job {
 		option:     make(map[string]string),
 		queueName:  queueName,
 	}
-	switch jobType {
-	case system.DownloadJobType:
-		j.effectSizes = QueryPackageDownloadSize(packageId)
-	}
+	j.setEffectSizes()
 	return j
+}
+
+func (j *Job) setEffectSizes() bool {
+	if j.effectSizes > 0 {
+		return true
+	}
+
+	switch j.Type {
+	case system.DownloadJobType:
+		j.effectSizes = QueryPackageDownloadSize(j.PackageId)
+	}
+	return j.effectSizes > 0
 }
 
 func (j *Job) changeType(jobType string) {
@@ -73,6 +82,14 @@ func (j Job) String() string {
 		j.Type, j.Cancelable, j.Status,
 		j.Description, j.Progress, j.queueName,
 	)
+}
+
+func SmoothCalc(oldSpeed, newSpeed float64, interval time.Duration) float64 {
+	ratio := float64(time.Second-interval) * 1.0 / float64(time.Second)
+	if ratio < 0 {
+		return newSpeed
+	}
+	return oldSpeed*(1-ratio) + newSpeed*ratio
 }
 
 // _UpdateInfo update Job information from info and return
@@ -98,11 +115,12 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if info.Progress != j.Progress && info.Progress != -1 {
 		changed = true
 
-		if j.effectSizes != 0 {
+		if j.setEffectSizes() {
 			completed := (info.Progress - j.Progress) * j.effectSizes
 			now := time.Now()
+
 			if s := now.Sub(j.updateProgressTime).Seconds(); s > 0 && completed > 0 {
-				j.Speed = completed / s
+				j.Speed = SmoothCalc(j.Speed, (completed / s), now.Sub(j.updateProgressTime))
 				dbus.NotifyChange(j, "Speed")
 			}
 			j.updateProgressTime = now
