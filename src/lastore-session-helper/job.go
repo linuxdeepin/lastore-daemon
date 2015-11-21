@@ -16,6 +16,7 @@ type Lastore struct {
 	inhibitFd        dbus.UnixFD
 	core             *lastore.Manager
 	notifiedBattery  bool
+	notifiedUpdates  bool
 }
 
 func NewLastore() *Lastore {
@@ -75,6 +76,15 @@ func (l *Lastore) monitorSignal() {
 					list, _ := jobList.Value().([]dbus.ObjectPath)
 					l.updateJobList(list)
 				}
+			case "com.deepin.lastore.Updater":
+				if variant, ok := props["UpdatableApps"]; ok {
+					apps, _ := variant.Value().([]string)
+					if !l.notifiedUpdates && len(apps) != 0 {
+						l.notifiedUpdates = true
+						NotifyNewUpdates(len(apps))
+					}
+				}
+
 			}
 		case "org.freedesktop.DBus.NameOwnerChanged":
 			switch name, _ := v.Body[0].(string); name {

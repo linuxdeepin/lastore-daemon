@@ -4,6 +4,7 @@ import log "github.com/cihub/seelog"
 import "pkg.deepin.io/lib/gettext"
 import "dbus/org/freedesktop/notifications"
 import "fmt"
+import "os/exec"
 
 type Action struct {
 	Id       string
@@ -85,4 +86,24 @@ func NotifyUpgrade(succeed bool, ac []Action) {
 	}
 
 	SendNotify(msg, ac)
+}
+
+func LaunchDCC(moduleName string) {
+	cmd := exec.Command("dde-control-center", moduleName)
+	cmd.Start()
+	go cmd.Wait()
+}
+
+func NotifyNewUpdates(n int) {
+	if n <= 0 {
+		return
+	}
+	msg := fmt.Sprintf(gettext.Tr("There has %d applications need to update"), n)
+	SendNotify(msg, []Action{Action{
+		Id:   "update",
+		Name: gettext.Tr("Update Now"),
+		Callback: func() {
+			LaunchDCC("system_info")
+		},
+	}})
 }
