@@ -55,14 +55,27 @@ func (m *JobManager) List() JobList {
 	return r
 }
 
+func (m *JobManager) guest(jobType string, packageId string) string {
+	for _, job := range m.List() {
+		if job.PackageId == packageId && job.Type == jobType {
+			return job.Id
+		}
+		if job.next == nil {
+			continue
+		}
+		if job.next.PackageId == packageId && job.next.Type == jobType {
+			// Don't return the job.next.
+			// It's not a workable Job before the Job finished.
+			return job.Id
+		}
+	}
+	return ""
+}
+
 // CreateJob create the job and try starting it
 func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
-	for _, job := range m.List() {
-		if job.PackageId == packageId {
-			if job.Type == jobType || (job.next != nil && job.next.Type == jobType) {
-				return nil, system.ResourceExitError
-			}
-		}
+	if job := m.find(m.guest(jobType, packageId)); job != nil {
+		return job, m.MarkStart(job.Id)
 	}
 
 	var job *Job
