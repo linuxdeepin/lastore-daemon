@@ -562,6 +562,12 @@ class Job : public dbus::common::DBusObject
 		return dbus::common::R<double >(call, dbus::common::PropertyConverter);
 	}
 	
+	Q_PROPERTY(dbus::common::R<double > Speed READ speed NOTIFY speedChanged)
+	dbus::common::R<double > speed () {
+		QDBusPendingReply<> call = fetchProperty("Speed");
+		return dbus::common::R<double >(call, dbus::common::PropertyConverter);
+	}
+	
 	Q_PROPERTY(dbus::common::R<QString > Description READ description NOTIFY descriptionChanged)
 	dbus::common::R<QString > description () {
 		QDBusPendingReply<> call = fetchProperty("Description");
@@ -587,6 +593,7 @@ class Job : public dbus::common::DBusObject
 	void typeChanged (); 
 	void statusChanged (); 
 	void progressChanged (); 
+	void speedChanged (); 
 	void descriptionChanged (); 
 	void cancelableChanged (); 
 

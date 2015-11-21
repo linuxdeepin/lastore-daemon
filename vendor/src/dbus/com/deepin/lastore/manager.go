@@ -634,6 +634,7 @@ type Job struct {
 	Type        *dbusPropertyJobType
 	Status      *dbusPropertyJobStatus
 	Progress    *dbusPropertyJobProgress
+	Speed       *dbusPropertyJobSpeed
 	Description *dbusPropertyJobDescription
 	Cancelable  *dbusPropertyJobCancelable
 }
@@ -672,6 +673,7 @@ func DestroyJob(obj *Job) {
 	obj.Type.Reset()
 	obj.Status.Reset()
 	obj.Progress.Reset()
+	obj.Speed.Reset()
 	obj.Description.Reset()
 	obj.Cancelable.Reset()
 }
@@ -806,6 +808,32 @@ func (this *dbusPropertyJobProgress) GetType() reflect.Type {
 	return reflect.TypeOf((*float64)(nil)).Elem()
 }
 
+type dbusPropertyJobSpeed struct {
+	*property.BaseObserver
+	core *dbus.Object
+}
+
+func (this *dbusPropertyJobSpeed) SetValue(notwritable interface{}) {
+	fmt.Println("com.deepin.lastore.Job.Speed is not writable")
+}
+
+func (this *dbusPropertyJobSpeed) Get() float64 {
+	return this.GetValue().(float64)
+}
+func (this *dbusPropertyJobSpeed) GetValue() interface{} /*float64*/ {
+	var r dbus.Variant
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Speed").Store(&r)
+	if err == nil && r.Signature().String() == "d" {
+		return r.Value().(float64)
+	} else {
+		fmt.Println("dbusProperty:Speed error:", err, "at com.deepin.lastore.Job")
+		return *new(float64)
+	}
+}
+func (this *dbusPropertyJobSpeed) GetType() reflect.Type {
+	return reflect.TypeOf((*float64)(nil)).Elem()
+}
+
 type dbusPropertyJobDescription struct {
 	*property.BaseObserver
 	core *dbus.Object
@@ -872,6 +900,7 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 	obj.Type = &dbusPropertyJobType{&property.BaseObserver{}, core}
 	obj.Status = &dbusPropertyJobStatus{&property.BaseObserver{}, core}
 	obj.Progress = &dbusPropertyJobProgress{&property.BaseObserver{}, core}
+	obj.Speed = &dbusPropertyJobSpeed{&property.BaseObserver{}, core}
 	obj.Description = &dbusPropertyJobDescription{&property.BaseObserver{}, core}
 	obj.Cancelable = &dbusPropertyJobCancelable{&property.BaseObserver{}, core}
 
@@ -907,6 +936,9 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 					} else if key == "Progress" {
 						obj.Progress.Notify()
 
+					} else if key == "Speed" {
+						obj.Speed.Notify()
+
 					} else if key == "Description" {
 						obj.Description.Notify()
 
@@ -931,6 +963,9 @@ func NewJob(destName string, path dbus.ObjectPath) (*Job, error) {
 
 					} else if key == "Progress" {
 						obj.Progress.Notify()
+
+					} else if key == "Speed" {
+						obj.Speed.Notify()
 
 					} else if key == "Description" {
 						obj.Description.Notify()

@@ -32,6 +32,13 @@ type Job struct {
 	Progress    float64
 	Description string
 
+	// completed bytes per second
+	Speed float64
+	//  effect bytes
+	effectSizes float64
+	// updateInfo timestamp
+	updateProgressTime time.Time
+
 	Cancelable bool
 
 	queueName string
@@ -48,6 +55,10 @@ func NewJob(packageId string, jobType string, queueName string) *Job {
 		Cancelable: true,
 		option:     make(map[string]string),
 		queueName:  queueName,
+	}
+	switch jobType {
+	case system.DownloadJobType:
+		j.effectSizes = QueryPackageDownloadSize(packageId)
 	}
 	return j
 }
@@ -86,6 +97,17 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 
 	if info.Progress != j.Progress && info.Progress != -1 {
 		changed = true
+
+		if j.effectSizes != 0 {
+			completed := (info.Progress - j.Progress) * j.effectSizes
+			now := time.Now()
+			if s := now.Sub(j.updateProgressTime).Seconds(); s > 0 && completed > 0 {
+				j.Speed = completed / s
+				dbus.NotifyChange(j, "Speed")
+			}
+			j.updateProgressTime = now
+		}
+
 		j.Progress = info.Progress
 		dbus.NotifyChange(j, "Progress")
 	}

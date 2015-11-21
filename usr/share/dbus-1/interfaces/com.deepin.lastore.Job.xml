@@ -7,6 +7,7 @@
 	<property name="Type" type="s" access="read"></property>
 	<property name="Status" type="s" access="read"></property>
 	<property name="Progress" type="d" access="read"></property>
+	<property name="Speed" type="d" access="read"></property>
 	<property name="Description" type="s" access="read"></property>
 	<property name="Cancelable" type="b" access="read"></property>
     </interface>
