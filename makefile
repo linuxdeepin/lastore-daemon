@@ -5,6 +5,7 @@ build:
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-daemon lastore-daemon
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-tools lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-session-helper lastore-session-helper
+	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-smartmirror-detector lastore-smartmirror-detector
 
 gb:
 	gb build lastore-daemon
