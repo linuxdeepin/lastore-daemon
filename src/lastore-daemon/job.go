@@ -52,7 +52,7 @@ func NewJob(packageId string, jobType string, queueName string) *Job {
 		PackageId:  packageId,
 		Status:     system.ReadyStatus,
 		Progress:   .0,
-		Cancelable: true,
+		Cancelable: false,
 		option:     make(map[string]string),
 		queueName:  queueName,
 	}

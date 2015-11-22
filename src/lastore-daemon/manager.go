@@ -31,8 +31,6 @@ func NewManager(b system.System, c *Config) *Manager {
 	}
 	m.jobManager = NewJobManager(b, m.updateJobList)
 
-	b.AttachIndicator(m.jobManager.handleJobProgressInfo)
-
 	go m.jobManager.Dispatch()
 
 	m.updatableApps()

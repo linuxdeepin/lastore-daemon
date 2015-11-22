@@ -41,6 +41,8 @@ func NewJobManager(api system.System, notifyFn func()) *JobManager {
 	}
 	m.createJobList(DownloadQueue, DownloadQueueCap)
 	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
+
+	api.AttachIndicator(m.handleJobProgressInfo)
 	return m
 }
 
