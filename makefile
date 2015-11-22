@@ -11,6 +11,7 @@ gb:
 	gb build lastore-daemon
 	gb build lastore-tools
 	gb build lastore-session-helper
+	gb build lastore-smartmirror-detector
 
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/

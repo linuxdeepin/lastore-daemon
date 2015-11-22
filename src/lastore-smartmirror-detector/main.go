@@ -82,12 +82,12 @@ func SmartMirrorDetector(official, mirror string) Hit {
 }
 
 func main() {
-	if len(os.Args) != 4 {
+	if len(os.Args) != 3 {
 		os.Exit(-1)
 	}
 	hit := SmartMirrorDetector(
-		os.Args[1]+"/"+os.Args[3],
-		os.Args[2]+"/"+os.Args[3],
+		os.Args[1],
+		os.Args[2],
 	)
 	os.Exit(int(hit))
 }
