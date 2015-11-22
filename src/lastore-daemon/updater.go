@@ -33,8 +33,10 @@ type Updater struct {
 
 func NewUpdater(b system.System, config *Config) *Updater {
 	u := &Updater{
-		b:      b,
-		config: config,
+		b:                b,
+		config:           config,
+		AutoCheckUpdates: config.AutoCheckUpdates,
+		MirrorSource:     config.MirrorSource,
 	}
 
 	dm := system.NewDirMonitor(system.VarLibDir)
@@ -117,29 +119,48 @@ func UpdatableNames(infos []system.UpgradeInfo) []string {
 	return apps
 }
 
-func (m *Manager) loopRemoveUpdate() {
-	for {
-		<-time.After(m.config.CheckInterval)
-		log.Info("Try update remote data...", m.config)
-		busy := false
-		for _, job := range m.JobList {
-			if job.Status == system.RunningStatus {
-				busy = true
-				break
-			}
-			if job.Type == system.UpdateSourceJobType {
-				if job.Status == system.FailedStatus {
-					err := m.StartJob(job.Id)
-					log.Infof("Restart failed UpdateSource Job:%v ... :%v\n", job, err)
-				}
-				busy = true
-				break
-			}
+func (m *Manager) loopUpdate() {
+	remaining := m.config.CheckInterval - time.Now().Sub(m.config.LastCheckTime)
+	if remaining > 0 {
+		log.Infof("Next Update time will be in %v\n", time.Now().Add(remaining).Local().String())
+		time.AfterFunc(remaining, m.loopUpdate)
+		return
+	}
+
+	busy := false
+	for _, job := range m.JobList {
+		if job.Status == system.RunningStatus {
+			busy = true
+			break
 		}
-		if m.config.AutoCheckUpdates && !busy {
-			//TODO: update applications/mirrors
-			job, err := m.UpdateSource()
-			log.Infof("It's not busy, so try update remote data... %v:%v\n", job, err)
+		if job.Type == system.UpdateSourceJobType {
+			if job.Status == system.FailedStatus {
+				err := m.StartJob(job.Id)
+				log.Infof("Restart failed UpdateSource Job:%v ... :%v\n", job, err)
+			}
+			busy = true
+			break
 		}
 	}
+	if busy {
+		log.Infof("Next Update time will be in %v\n", time.Now().Add(remaining).Local().String())
+		time.AfterFunc(time.Second*30, m.loopUpdate)
+		return
+	}
+
+	m.doUpdate()
+	log.Infof("Next Update time will be in %v\n", time.Now().Add(m.config.CheckInterval))
+	time.AfterFunc(m.config.CheckInterval, m.loopUpdate)
+}
+
+func (m *Manager) doUpdate() {
+	m.config.UpdateLastCheckTime()
+
+	log.Info("Try update remote data...", m.config)
+	if m.config.AutoCheckUpdates {
+		//TODO: update applications/mirrors
+		job, err := m.UpdateSource()
+		log.Infof("It's not busy, so try update remote data... %v:%v\n", job, err)
+	}
+
 }

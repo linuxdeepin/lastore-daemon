@@ -7,13 +7,14 @@ import (
 	"time"
 )
 
-const MinCheckInterval = time.Minute * 5
+const MinCheckInterval = time.Minute
 
 type Config struct {
 	AutoCheckUpdates bool
 	MirrorSource     string
 	CheckInterval    time.Duration
 	AppstoreRegion   string
+	LastCheckTime    time.Time
 
 	fpath string
 }
@@ -39,6 +40,11 @@ func NewConfig(fpath string) *Config {
 	}
 
 	return &r
+}
+
+func (c *Config) UpdateLastCheckTime() error {
+	c.LastCheckTime = time.Now()
+	return c.save()
 }
 
 func (c *Config) SetAutoCheckUpdates(enable bool) error {

@@ -41,7 +41,7 @@ func NewManager(b system.System, c *Config) *Manager {
 	dbus.NotifyChange(m, "JobList")
 	dbus.NotifyChange(m, "UpgradableApps")
 
-	go m.loopRemoveUpdate()
+	m.loopUpdate()
 	return m
 }
 
