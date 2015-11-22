@@ -15,6 +15,7 @@ import (
 
 func init() {
 	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
+	exec.Command("/var/lib/lastore/build_safecache.sh").Run()
 }
 
 type CommandSet interface {
@@ -66,7 +67,7 @@ func (c aptCommand) String() string {
 }
 
 func createCommandLine(cmdType string, packageId string) *exec.Cmd {
-	var args []string = []string{"-y", "-c", "/var/lib/lastore/apt.conf"}
+	var args []string = []string{"-y"}
 
 	options := map[string]string{
 		"APT::Status-Fd": "3",
@@ -84,12 +85,16 @@ func createCommandLine(cmdType string, packageId string) *exec.Cmd {
 
 	switch cmdType {
 	case system.InstallJobType:
+		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "install", packageId)
 	case system.RemoveJobType:
+		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "remove", packageId)
 	case system.DownloadJobType:
+		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "install", "-d", packageId)
 	case system.DistUpgradeJobType:
+		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "dist-upgrade", "--force-yes")
 	case system.UpdateSourceJobType:
 		args = append(args, "update")
