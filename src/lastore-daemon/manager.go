@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"internal/system"
+	"net/http"
 	"pkg.deepin.io/lib/dbus"
 	"sync"
 )
@@ -65,6 +67,19 @@ func (m *Manager) UpdatePackage(packageId string) (*Job, error) {
 	return m.jobManager.CreateJob(system.UpdateJobType, packageId)
 }
 
+func Touch(arch, packageId, region string) {
+	url := fmt.Sprintf("http://download.lastore.deepin.org/get/%s/%s?&f=%s",
+		arch,
+		packageId,
+		region,
+	)
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	resp.Body.Close()
+}
+
 func (m *Manager) InstallPackage(packageId string) (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
@@ -73,6 +88,7 @@ func (m *Manager) InstallPackage(packageId string) (*Job, error) {
 	if m.PackageExists(packageId) {
 		return nil, system.ResourceExitError
 	}
+	Touch(string(m.SystemArchitectures[0]), packageId, m.config.AppstoreRegion)
 	return m.jobManager.CreateJob(system.InstallJobType, packageId)
 }
 
