@@ -5,6 +5,7 @@ import (
 	"internal/system"
 	"net/http"
 	"pkg.deepin.io/lib/dbus"
+	"strings"
 	"sync"
 )
 
@@ -122,6 +123,10 @@ func (m *Manager) UpdateSource() (*Job, error) {
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
+	if len(m.UpgradableApps) == 0 {
+		return nil, system.ResourceExitError
+	}
+
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -135,11 +140,12 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 			updateJobIds = append(updateJobIds, job.Id)
 		}
 	}
+
 	for _, jobId := range updateJobIds {
 		m.CleanJob(jobId)
 	}
 
-	return m.jobManager.CreateJob(system.DistUpgradeJobType, "")
+	return m.jobManager.CreateJob(system.DistUpgradeJobType, strings.Join(m.UpgradableApps, ","))
 }
 
 func (m *Manager) StartJob(jobId string) error {

@@ -93,7 +93,7 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 	case system.UpdateSourceJobType:
 		job = NewJob("", system.UpdateSourceJobType, SystemChangeQueue)
 	case system.DistUpgradeJobType:
-		job = NewJob("", system.DistUpgradeJobType, SystemChangeQueue)
+		job = NewJob(packageId, system.DistUpgradeJobType, SystemChangeQueue)
 	case system.UpdateJobType:
 		job = NewJob(packageId, system.UpdateJobType, SystemChangeQueue)
 	default:
