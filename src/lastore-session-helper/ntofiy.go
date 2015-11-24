@@ -80,7 +80,7 @@ func NotifyLowPower() {
 func NotifyUpgrade(succeed bool, ac []Action) {
 	var msg string
 	if succeed {
-		msg = gettext.Tr("Updated successfully! Some functions require to restart computer before take effect, restart now?")
+		msg = gettext.Tr("Updated successfully! Some functions will take effect after rebooting?")
 	} else {
 		msg = gettext.Tr("Failed to update.")
 	}
