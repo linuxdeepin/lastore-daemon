@@ -1,0 +1,85 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# 
+# Translators:
+# Анатолий Валерианович <ffox909@mail.ru>, 2015
+msgid ""
+msgstr ""
+"Project-Id-Version: Deepin Store\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-11-24 10:08+0800\n"
+"PO-Revision-Date: 2015-11-24 02:17+0000\n"
+"Last-Translator: Анатолий Валерианович <ffox909@mail.ru>\n"
+"Language-Team: Russian (http://www.transifex.com/linuxdeepin/deepin-store/language/ru/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
+
+#: ../src/lastore-session-helper/job.go:153
+msgid "Deepin Store"
+msgstr "Deepin Store"
+
+#: ../src/lastore-session-helper/job.go:154
+msgid "System is updating, please shut down or reboot later."
+msgstr "Система обновлена, выключите или перезагрузите компьютер."
+
+#: ../src/lastore-session-helper/job.go:189
+msgid "Reboot Now"
+msgstr "Перезагрузить сейчас"
+
+#: ../src/lastore-session-helper/job.go:203
+msgid "Reboot Later"
+msgstr "Презагрузить позже"
+
+#: ../src/lastore-session-helper/job.go:212
+msgid "Retry"
+msgstr "Повторить"
+
+#: ../src/lastore-session-helper/job.go:220
+msgid "Cancel"
+msgstr "Отмена"
+
+#: ../src/lastore-session-helper/ntofiy.go:51
+msgid "%q installed successfully."
+msgstr "%q успешно установлен."
+
+#: ../src/lastore-session-helper/ntofiy.go:53
+msgid "%q failed to install."
+msgstr "%q установить не удалось."
+
+#: ../src/lastore-session-helper/ntofiy.go:61
+msgid "%q removed successfully."
+msgstr "%q успешно удалён."
+
+#: ../src/lastore-session-helper/ntofiy.go:63
+msgid "%q failed to remove."
+msgstr "%q удалить не удалось."
+
+#: ../src/lastore-session-helper/ntofiy.go:70
+msgid "%q failed to download."
+msgstr "%q загрузить не удалось."
+
+#: ../src/lastore-session-helper/ntofiy.go:76
+msgid ""
+"In order to prevent automatic shutdown, please plug in for normal update."
+msgstr "Чтобы избежать автоматического отключения, включите это для нормального обновления."
+
+#: ../src/lastore-session-helper/ntofiy.go:83
+msgid "Updated successfully! Some functions will take effect after rebooting?"
+msgstr "Успешно обновлено! Некоторые функции вступят в силу после перезагрузки."
+
+#: ../src/lastore-session-helper/ntofiy.go:85
+msgid "Failed to update."
+msgstr "Обновление не удалось."
+
+#: ../src/lastore-session-helper/ntofiy.go:101
+#, c-format
+msgid "%d application(s) need to be updated."
+msgstr "%d приложение(я) должны быть обновлены."
+
+#: ../src/lastore-session-helper/ntofiy.go:104
+msgid "Update Now"
+msgstr "Обновить сейчас"

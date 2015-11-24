@@ -20,14 +20,13 @@ install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/
 	cp -rf var/lib/lastore/* ${DESTDIR}${PREFIX}/var/lib/lastore/
 
-	mkdir -p ${DESTDIR}${PREFIX}/usr/share/locale/
-	-cp -rf locale/mo/* ${DESTDIR}${PREFIX}/usr/share/locale/
-
 update_pot:
 	deepin-update-pot locale/locale_config.ini
 
 gen_mo:
 	deepin-generate-mo locale/locale_config.ini
+	mkdir -p ${DESTDIR}${PREFIX}/usr/share/locale/
+	cp -rf locale/mo/* ${DESTDIR}${PREFIX}/usr/share/locale/
 
 gen-xml:
 	qdbus --system com.deepin.lastore /com/deepin/lastore org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/com.deepin.lastore.xml
