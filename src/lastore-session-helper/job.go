@@ -16,8 +16,9 @@ type Lastore struct {
 	OnLine           bool
 	inhibitFd        dbus.UnixFD
 	core             *lastore.Manager
+	updater          *lastore.Updater
 	notifiedBattery  bool
-	notifiedUpdates  bool
+	updatableApps    []string
 }
 
 func NewLastore() *Lastore {
@@ -33,8 +34,15 @@ func NewLastore() *Lastore {
 	}
 	l.core = core
 
+	updater, err := lastore.NewUpdater("com.deepin.lastore", "/com/deepin/lastore")
+	if err != nil {
+		log.Warnf("NewLastore: %v\n", err)
+	}
+	l.updater = updater
+
 	l.updateSystemOnChaning(core.SystemOnChanging.Get())
 	l.updateJobList(core.JobList.Get())
+	l.updateUpdatableApps(updater.UpdatableApps.Get())
 	l.online()
 
 	go l.monitorSignal()
@@ -81,10 +89,7 @@ func (l *Lastore) monitorSignal() {
 			case "com.deepin.lastore.Updater":
 				if variant, ok := props["UpdatableApps"]; ok {
 					apps, _ := variant.Value().([]string)
-					if !l.notifiedUpdates && len(apps) != 0 {
-						l.notifiedUpdates = true
-						NotifyNewUpdates(len(apps))
-					}
+					l.updateUpdatableApps(apps)
 				}
 
 			}
@@ -103,6 +108,27 @@ func (l *Lastore) monitorSignal() {
 		}
 
 	}
+}
+
+// updateUpdatableApps compare apps with record values
+// 1. if find new app in apps notify it.
+// 2. update record values
+func (l *Lastore) updateUpdatableApps(apps []string) {
+	for _, new := range apps {
+		foundNew := false
+		for _, old := range l.updatableApps {
+			if new == old {
+				foundNew = true
+				break
+			}
+		}
+		if !foundNew {
+			NotifyNewUpdates(len(apps))
+			break
+		}
+	}
+	l.updatableApps = apps
+	return
 }
 
 // updateJobList clean invalid cached Job status
