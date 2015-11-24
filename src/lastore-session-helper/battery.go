@@ -10,6 +10,8 @@ func (l *Lastore) MonitorBattery() {
 	}
 
 	m.BatteryPercentage.ConnectChanged(func() {
+		percentage := m.BatteryPercentage.Get()
+		log.Infof("Current battery percentage:%v (notified:%v)\n", percentage, l.notifiedBattery)
 		if l.notifiedBattery {
 			return
 		}
