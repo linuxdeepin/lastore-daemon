@@ -7,6 +7,7 @@ import "internal/system"
 import "pkg.deepin.io/lib/gettext"
 import "syscall"
 import log "github.com/cihub/seelog"
+import "strings"
 
 type Lastore struct {
 	JobStatus        map[dbus.ObjectPath]system.Status
@@ -268,4 +269,26 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
 	default:
 		return
 	}
+}
+
+// guestJobTypeFromPath guest the JobType from object path
+// We can't get the JobType when the DBusObject destroyed.
+func guestJobTypeFromPath(path dbus.ObjectPath) string {
+	job, _ := lastore.NewJob("com.deepin.lastore", path)
+	defer lastore.DestroyJob(job)
+	t := job.Type.Get()
+	if t != "" {
+		return t
+	}
+
+	if strings.Contains(string(path), system.InstallJobType) {
+		return system.InstallJobType
+	} else if strings.Contains(string(path), system.DownloadJobType) {
+		return system.DownloadJobType
+	} else if strings.Contains(string(path), system.RemoveJobType) {
+		return system.RemoveJobType
+	} else if strings.Contains(string(path), system.DistUpgradeJobType) {
+		return system.DistUpgradeJobType
+	}
+	return ""
 }

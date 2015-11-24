@@ -60,21 +60,6 @@ func PackageName(id string, lang string) string {
 	return id
 }
 
-// guestJobTypeFromPath guest the JobType from object path
-// We can't get the JobType when the DBusObject destroyed.
-func guestJobTypeFromPath(path dbus.ObjectPath) string {
-	if strings.Contains(string(path), system.InstallJobType) {
-		return system.InstallJobType
-	} else if strings.Contains(string(path), system.DownloadJobType) {
-		return system.DownloadJobType
-	} else if strings.Contains(string(path), system.RemoveJobType) {
-		return system.RemoveJobType
-	} else if strings.Contains(string(path), system.DistUpgradeJobType) {
-		return system.DistUpgradeJobType
-	}
-	return ""
-}
-
 func Inhibitor(what, who, why string) (dbus.UnixFD, error) {
 	m, err := login1.NewManager("org.freedesktop.login1", "/org/freedesktop/login1")
 	if err != nil {
