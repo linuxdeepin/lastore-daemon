@@ -8,26 +8,30 @@ import (
 	"net/http"
 )
 
-const appstoreURI = "http://appstore.api.deepin.test"
-const lastoreURI = "http://repository.api.deepin.test"
+const appstoreURI = "http://api.appstore.deepin.org"
+const lastoreURI = "http://api.lastore.deepin.test"
 
-func decodeData(url string, data interface{}) error {
+func decodeData(wrap bool, url string, data interface{}) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Infof("can't get %q \n", url)
 		return nil
 	}
 	defer resp.Body.Close()
-
 	d := json.NewDecoder(resp.Body)
-	var wrap struct {
-		StatusCode    int         `json:"status_code"`
-		StatusMessage string      `json:"status_message"`
-		Data          interface{} `json:"data"`
-	}
-	wrap.Data = data
 
-	err = d.Decode(&wrap)
+	if wrap {
+		var wrap struct {
+			StatusCode    int         `json:"status_code"`
+			StatusMessage string      `json:"status_message"`
+			Data          interface{} `json:"data"`
+		}
+		wrap.Data = data
+		err = d.Decode(&wrap)
+	} else {
+		err = d.Decode(&data)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -46,7 +50,7 @@ func GenerateCategory(fpath string) error {
 	url := appstoreURI + "/" + "categories"
 
 	var d interface{}
-	err := decodeData(url, &d)
+	err := decodeData(true, url, &d)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
@@ -58,44 +62,22 @@ type AppInfo struct {
 	Id         string            `json:"id"`
 	Category   string            `json:"category"`
 	Name       string            `json:"name"`
-	NameLocale map[string]string `json:"name_locale"`
+	LocaleName map[string]string `json:"locale_name"`
 }
 
 func GenerateApplications(fpath string) error {
-	appsUrl := appstoreURI + "/applications"
-	var apps []struct {
-		Id       string `json:"id"`
-		Category string `json:"category"`
+	apps := make(map[string]AppInfo)
+	err := decodeData(false, "http://api.appstore.deepin.org/info/all", &apps)
+	apps["deepin-appstore"] = AppInfo{
+		Id:       "deepin-appstore",
+		Category: "system",
+		Name:     "deepin store",
+		LocaleName: map[string]string{
+			"zh_CN": "深度商店",
+		},
 	}
-
-	err := decodeData(appsUrl, &apps)
 	if err != nil {
 		return err
 	}
-
-	var infos = make(map[string]AppInfo)
-
-	for _, app := range apps {
-		metaUrl := lastoreURI + "/metadata/" + app.Id
-		var v struct {
-			Name    string
-			Locales map[string]map[string]string
-		}
-		decodeData(metaUrl, &v)
-		info := AppInfo{
-			Id:         app.Id,
-			Category:   app.Category,
-			Name:       v.Name,
-			NameLocale: make(map[string]string),
-		}
-		for lang, data := range v.Locales {
-			if name, ok := data["name"]; ok {
-				info.NameLocale[lang] = name
-			}
-		}
-		infos[info.Id] = info
-	}
-
-	fmt.Println("XXX:", len(infos))
-	return writeData(fpath, infos)
+	return writeData(fpath, apps)
 }
