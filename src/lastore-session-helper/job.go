@@ -65,6 +65,7 @@ func (l *Lastore) monitorSignal() {
 				status, ok := props["Status"]
 				if ok {
 					svalue, _ := status.Value().(string)
+					log.Infof("Job %s status change to %s\n", v.Path, svalue)
 					l.updateJob(v.Path, system.Status(svalue))
 				}
 			case "com.deepin.lastore.Manager":
@@ -128,14 +129,10 @@ func (l *Lastore) updateJobList(list []dbus.ObjectPath) {
 
 // updateJob update job status
 func (l *Lastore) updateJob(path dbus.ObjectPath, status system.Status) {
-	switch status {
-	case system.ReadyStatus,
-		system.RunningStatus,
-		system.FailedStatus,
-		system.SucceedStatus,
-		system.PausedStatus,
-		system.EndStatus:
-	default:
+	job, _ := lastore.NewJob("com.deepin.lastore", path)
+	defer lastore.DestroyJob(job)
+	t := job.Type.Get()
+	if strings.Contains(string(path), "install") && t == system.DownloadJobType {
 		return
 	}
 
@@ -274,13 +271,6 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
 // guestJobTypeFromPath guest the JobType from object path
 // We can't get the JobType when the DBusObject destroyed.
 func guestJobTypeFromPath(path dbus.ObjectPath) string {
-	job, _ := lastore.NewJob("com.deepin.lastore", path)
-	defer lastore.DestroyJob(job)
-	t := job.Type.Get()
-	if t != "" {
-		return t
-	}
-
 	if strings.Contains(string(path), system.InstallJobType) {
 		return system.InstallJobType
 	} else if strings.Contains(string(path), system.DownloadJobType) {
