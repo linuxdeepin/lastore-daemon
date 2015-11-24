@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-20 20:28+0800\n"
+"POT-Creation-Date: 2015-11-24 09:22+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,65 +17,70 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lastore-session-helper/job.go:140
-#: ../src/lastore-session-helper/job.go:143
+#: ../src/lastore-session-helper/job.go:153
 msgid "Deepin Store"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:141
-#: ../src/lastore-session-helper/job.go:144
-msgid "System is updating, please shut down or restart later."
+#: ../src/lastore-session-helper/job.go:154
+msgid "System is updating, please shut down or reboot later."
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:171
-#: ../src/lastore-session-helper/job.go:202
-msgid "retry"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:179
+#: ../src/lastore-session-helper/job.go:189
 msgid "Reboot Now"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:179
-#: ../src/lastore-session-helper/job.go:210
-msgid "cancel"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:193
+#: ../src/lastore-session-helper/job.go:203
 msgid "Reboot Later"
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:50
+#: ../src/lastore-session-helper/job.go:212
+msgid "Retry"
+msgstr ""
+
+#: ../src/lastore-session-helper/job.go:220
+msgid "Cancel"
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:52
+#: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:60
+#: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:62
+#: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:69
+#: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:75
+#: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:82
+#: ../src/lastore-session-helper/ntofiy.go:83
 msgid ""
-"Upgraded successfully! Some functions require to restart computer before "
-"take effect, restart now?"
+"Updated successfully! Some functions require to restart computer before take "
+"effect, restart now?"
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:84
-msgid "Failed to Upgrade!"
+#: ../src/lastore-session-helper/ntofiy.go:85
+msgid "Failed to update."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:101
+#, c-format
+msgid "%d application(s) need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:104
+msgid "Update Now"
 msgstr ""

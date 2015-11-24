@@ -151,7 +151,7 @@ func (l *Lastore) updateSystemOnChaning(onChanging bool) {
 	log.Infof("SystemOnChaning to %v\n", onChanging)
 	if onChanging && l.inhibitFd == -1 {
 		fd, err := Inhibitor("shutdown", gettext.Tr("Deepin Store"),
-			gettext.Tr("System is updating, please shut down or restart later."))
+			gettext.Tr("System is updating, please shut down or reboot later."))
 		log.Infof("Prevent shutdown...: fd:%v\n", fd)
 		if err != nil {
 			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
@@ -209,7 +209,7 @@ func (l *Lastore) createJobFailedActions(jobId string) []Action {
 	ac := []Action{
 		Action{
 			Id:   "retry",
-			Name: gettext.Tr("retry"),
+			Name: gettext.Tr("Retry"),
 			Callback: func() {
 				err := l.core.StartJob(jobId)
 				log.Infof("StartJob %q : %v\n", jobId, err)
@@ -217,7 +217,7 @@ func (l *Lastore) createJobFailedActions(jobId string) []Action {
 		},
 		Action{
 			Id:   "cancel",
-			Name: gettext.Tr("cancel"),
+			Name: gettext.Tr("Cancel"),
 			Callback: func() {
 				err := l.core.CleanJob(jobId)
 				log.Infof("CleanJob %q : %v\n", jobId, err)

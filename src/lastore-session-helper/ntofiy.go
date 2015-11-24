@@ -80,9 +80,9 @@ func NotifyLowPower() {
 func NotifyUpgrade(succeed bool, ac []Action) {
 	var msg string
 	if succeed {
-		msg = gettext.Tr("Upgraded successfully! Some functions require to restart computer before take effect, restart now?")
+		msg = gettext.Tr("Updated successfully! Some functions require to restart computer before take effect, restart now?")
 	} else {
-		msg = gettext.Tr("Failed to Upgrade!")
+		msg = gettext.Tr("Failed to update.")
 	}
 
 	SendNotify(msg, ac)
@@ -98,7 +98,7 @@ func NotifyNewUpdates(n int) {
 	if n <= 0 {
 		return
 	}
-	msg := fmt.Sprintf(gettext.Tr("There has %d applications need to update"), n)
+	msg := fmt.Sprintf(gettext.Tr("%d application(s) need to be updated."), n)
 	SendNotify(msg, []Action{Action{
 		Id:   "update",
 		Name: gettext.Tr("Update Now"),
