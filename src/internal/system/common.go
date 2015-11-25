@@ -15,7 +15,7 @@ type MirrorSource struct {
 
 var DefaultMirror = MirrorSource{
 	Id:   "default",
-	Url:  "http://cdn.packages.linuxdeepin.com/packages-debian",
+	Url:  "http://cdn.packages.deepin.com/deepin",
 	Name: "default",
 }
 

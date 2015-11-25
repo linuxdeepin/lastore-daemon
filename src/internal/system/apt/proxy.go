@@ -58,7 +58,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 				Progress:    -1,
 				Description: strings.TrimSpace(fs[2]),
 				Status:      system.Status(fs[1]),
-				Cancelable:  fs[0] == "dlstatus",
+				Cancelable:  true,
 			}, nil
 		}
 	}
