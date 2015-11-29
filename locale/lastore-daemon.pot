@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-24 10:08+0800\n"
+"POT-Creation-Date: 2015-11-29 16:48+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,27 +17,27 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lastore-session-helper/job.go:153
+#: ../src/lastore-session-helper/job.go:177
 msgid "Deepin Store"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:154
+#: ../src/lastore-session-helper/job.go:178
 msgid "System is updating, please shut down or reboot later."
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:189
+#: ../src/lastore-session-helper/job.go:213
 msgid "Reboot Now"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:203
+#: ../src/lastore-session-helper/job.go:227
 msgid "Reboot Later"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:212
+#: ../src/lastore-session-helper/job.go:236
 msgid "Retry"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:220
+#: ../src/lastore-session-helper/job.go:244
 msgid "Cancel"
 msgstr ""
 
@@ -66,19 +66,24 @@ msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:83
-msgid "Updated successfully! Some functions will take effect after rebooting?"
+#: ../src/lastore-session-helper/ntofiy.go:85
+msgid "Some functions will take effect after rebooting."
 msgstr ""
 
 #: ../src/lastore-session-helper/ntofiy.go:85
+#: ../src/lastore-session-helper/ntofiy.go:87
+msgid "Updated successfully!"
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:101
+#: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d application(s) need to be updated."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:104
+#: ../src/lastore-session-helper/ntofiy.go:109
 msgid "Update Now"
 msgstr ""

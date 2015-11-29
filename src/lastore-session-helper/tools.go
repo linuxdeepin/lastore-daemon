@@ -68,3 +68,8 @@ func Inhibitor(what, who, why string) (dbus.UnixFD, error) {
 	defer login1.DestroyManager(m)
 	return m.Inhibit(what, who, why, "block")
 }
+
+func FileExist(fpath string) bool {
+	_, err := os.Stat(fpath)
+	return err == nil || os.IsExist(err)
+}

@@ -286,8 +286,7 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
 		case system.FailedStatus:
 			NotifyUpgrade(false, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
-			//TODO: we need detect whether need notify reboot
-			//NotifyUpgrade(true, l.createUpgradeActions())
+			NotifyUpgrade(true, l.createUpgradeActions())
 		}
 	default:
 		return

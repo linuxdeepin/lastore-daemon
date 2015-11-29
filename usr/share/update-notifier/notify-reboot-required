@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ "$0" = "/etc/kernel/postinst.d/update-notifier" ]; then
+    DPKG_MAINTSCRIPT_PACKAGE=linux-base
+fi
+
+# Wake the applet up
+echo "*** System restart required ***" > /var/run/reboot-required
+echo "$DPKG_MAINTSCRIPT_PACKAGE" >> /var/run/reboot-required.pkgs
