@@ -14,6 +14,9 @@ const (
 	DownloadQueueCap     = 3
 	SystemChangeQueue    = "system change"
 	SystemChangeQueueCap = 1
+
+	// LockQueue is special. All other queue must wait for LockQueue be emptied.
+	LockQueue = "lock"
 )
 
 // JobManager
@@ -41,6 +44,7 @@ func NewJobManager(api system.System, notifyFn func()) *JobManager {
 	}
 	m.createJobList(DownloadQueue, DownloadQueueCap)
 	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
+	m.createJobList(LockQueue, 1)
 
 	api.AttachIndicator(m.handleJobProgressInfo)
 	return m
@@ -91,9 +95,9 @@ func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
 	case system.RemoveJobType:
 		job = NewJob(packageId, system.RemoveJobType, SystemChangeQueue)
 	case system.UpdateSourceJobType:
-		job = NewJob("", system.UpdateSourceJobType, SystemChangeQueue)
+		job = NewJob("", system.UpdateSourceJobType, LockQueue)
 	case system.DistUpgradeJobType:
-		job = NewJob(packageId, system.DistUpgradeJobType, SystemChangeQueue)
+		job = NewJob(packageId, system.DistUpgradeJobType, LockQueue)
 	case system.UpdateJobType:
 		job = NewJob(packageId, system.UpdateJobType, SystemChangeQueue)
 	default:
@@ -196,7 +200,13 @@ func (m *JobManager) dispatch() {
 			m.MarkStart(job.Id)
 		}
 	}
-	for _, queue := range m.queues {
+
+	for name, queue := range m.queues {
+		// wait for LockQueue be emptied
+		if name != LockQueue && len(m.queues[LockQueue].Jobs) != 0 {
+			continue
+		}
+
 		// 2. Try starting jobs with ReadyStatus
 		jobs := queue.PendingJobs()
 		for _, job := range jobs {
