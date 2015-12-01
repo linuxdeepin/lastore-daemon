@@ -17,7 +17,7 @@ func buildUpgradeInfoRegex(archs []system.Architecture) *regexp.Regexp {
 	for _, arch := range archs {
 		archAlphabet = archAlphabet + string(arch)
 	}
-	s := `^(.*)\/unknown\s+(.*)\s+([` + archAlphabet + `]+)\s+\[upgradable from:\s+(.*)\s?\]$`
+	s := `^(.*)\/.*\s+(.*)\s+([` + archAlphabet + `]+)\s+\[upgradable from:\s+(.*)\s?\]$`
 	return regexp.MustCompile(s)
 }
 
