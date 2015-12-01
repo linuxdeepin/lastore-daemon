@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-24 10:08+0800\n"
-"PO-Revision-Date: 2015-11-24 02:09+0000\n"
+"POT-Creation-Date: 2015-12-02 10:58+0800\n"
+"PO-Revision-Date: 2015-12-02 03:01+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Polish (http://www.transifex.com/linuxdeepin/deepin-store/language/pl/)\n"
 "MIME-Version: 1.0\n"
@@ -18,27 +18,27 @@ msgstr ""
 "Language: pl\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: ../src/lastore-session-helper/job.go:153
+#: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
 msgstr "Sklep Deepin"
 
-#: ../src/lastore-session-helper/job.go:154
+#: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr ""
+msgstr "System jest aktualizowany. Prosimy o jego późniejsze wyłączenie lub ponowne uruchomienie."
 
-#: ../src/lastore-session-helper/job.go:189
+#: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
 msgstr "Uruchom ponownie teraz"
 
-#: ../src/lastore-session-helper/job.go:203
+#: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
 msgstr "Uruchom ponownie później"
 
-#: ../src/lastore-session-helper/job.go:212
+#: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
 msgstr "Ponów"
 
-#: ../src/lastore-session-helper/job.go:220
+#: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
 msgstr "Anuluj"
 
@@ -67,19 +67,33 @@ msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "Aby zapobiec automatycznemu wyłączeniu komputera prosimy o przełączenie się na normalną aktualizację."
 
-#: ../src/lastore-session-helper/ntofiy.go:83
-msgid "Updated successfully! Some functions will take effect after rebooting?"
-msgstr ""
+#: ../src/lastore-session-helper/ntofiy.go:85
+msgid "Some functions will take effect after rebooting."
+msgstr "Niektóre funkcje zadziałają dopiero po ponownym uruchomieniu komputera."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
+#: ../src/lastore-session-helper/ntofiy.go:87
+msgid "Updated successfully!"
+msgstr "Pomyślnie zaktualizowano!"
+
+#: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
 msgstr "Błąd aktualizacji."
 
-#: ../src/lastore-session-helper/ntofiy.go:101
+#: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
-msgid "%d application(s) need to be updated."
+msgid "%d software need to be updated."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:104
+#: ../src/lastore-session-helper/ntofiy.go:108
+msgid "Some patches need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:110
+#, c-format
+msgid "Some patches and %d software need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
 msgstr "Aktualizuj teraz"

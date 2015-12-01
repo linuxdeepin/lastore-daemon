@@ -8,9 +8,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-24 10:08+0800\n"
-"PO-Revision-Date: 2015-11-24 02:17+0000\n"
-"Last-Translator: Анатолий Валерианович <ffox909@mail.ru>\n"
+"POT-Creation-Date: 2015-12-02 10:58+0800\n"
+"PO-Revision-Date: 2015-12-02 03:01+0000\n"
+"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Russian (http://www.transifex.com/linuxdeepin/deepin-store/language/ru/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -18,27 +18,27 @@ msgstr ""
 "Language: ru\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
 
-#: ../src/lastore-session-helper/job.go:153
+#: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
 msgstr "Deepin Store"
 
-#: ../src/lastore-session-helper/job.go:154
+#: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
 msgstr "Система обновлена, выключите или перезагрузите компьютер."
 
-#: ../src/lastore-session-helper/job.go:189
+#: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
 msgstr "Перезагрузить сейчас"
 
-#: ../src/lastore-session-helper/job.go:203
+#: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
 msgstr "Презагрузить позже"
 
-#: ../src/lastore-session-helper/job.go:212
+#: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
 msgstr "Повторить"
 
-#: ../src/lastore-session-helper/job.go:220
+#: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
 msgstr "Отмена"
 
@@ -67,19 +67,33 @@ msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "Чтобы избежать автоматического отключения, включите это для нормального обновления."
 
-#: ../src/lastore-session-helper/ntofiy.go:83
-msgid "Updated successfully! Some functions will take effect after rebooting?"
-msgstr "Успешно обновлено! Некоторые функции вступят в силу после перезагрузки."
+#: ../src/lastore-session-helper/ntofiy.go:85
+msgid "Some functions will take effect after rebooting."
+msgstr "Некоторые функции вступят в силу после перезагрузки."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
+#: ../src/lastore-session-helper/ntofiy.go:87
+msgid "Updated successfully!"
+msgstr "Успешно обновлено!"
+
+#: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
 msgstr "Обновление не удалось."
 
-#: ../src/lastore-session-helper/ntofiy.go:101
+#: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
-msgid "%d application(s) need to be updated."
-msgstr "%d приложение(я) должны быть обновлены."
+msgid "%d software need to be updated."
+msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:104
+#: ../src/lastore-session-helper/ntofiy.go:108
+msgid "Some patches need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:110
+#, c-format
+msgid "Some patches and %d software need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
 msgstr "Обновить сейчас"
