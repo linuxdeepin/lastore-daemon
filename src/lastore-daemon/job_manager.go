@@ -187,7 +187,8 @@ func (m *JobManager) dispatch() {
 	for _, queue := range m.queues {
 		// 1. Clean Jobs with EndStatus
 		for _, job := range queue.Jobs {
-			if job.Status == system.EndStatus {
+			switch {
+			case job.Status == system.EndStatus:
 				pendingDeleteJobs = append(pendingDeleteJobs, job)
 			}
 		}
@@ -202,14 +203,18 @@ func (m *JobManager) dispatch() {
 	}
 
 	for name, queue := range m.queues {
-		// wait for LockQueue be emptied
-		if name != LockQueue && len(m.queues[LockQueue].Jobs) != 0 {
+		// wait for LockQueue be idled
+		if name != LockQueue && len(m.queues[LockQueue].RunningJobs()) != 0 {
 			continue
 		}
 
 		// 2. Try starting jobs with ReadyStatus
 		jobs := queue.PendingJobs()
 		for _, job := range jobs {
+			if job.Status == system.FailedStatus {
+				m.MarkStart(job.Id)
+				log.Infof("Retry failed Job %v\n", job)
+			}
 			err := StartSystemJob(m.system, job)
 			if err != nil {
 				log.Errorf("StartSystemJob failed %v :%v\n", job, err)
@@ -295,12 +300,17 @@ func NewJobQueue(name string, cap int) *JobQueue {
 	}
 }
 
-// PendingJob get the workable ready Jobs
-func (l *JobQueue) PendingJobs() []*Job {
+// PendingJob get the workable ready Jobs and recoverable failed Jobs
+func (l *JobQueue) PendingJobs() JobList {
 	var numRunning int
 	var readyJobs []*Job
 	for _, job := range l.Jobs {
 		switch job.Status {
+		case system.FailedStatus:
+			if job.retry > 0 {
+				job.retry--
+				readyJobs = append(readyJobs, job)
+			}
 		case system.RunningStatus:
 			numRunning = numRunning + 1
 		case system.ReadyStatus:
@@ -321,6 +331,17 @@ func (l *JobQueue) PendingJobs() []*Job {
 	}
 	r := JobList(readyJobs[:n])
 	sort.Sort(r)
+	return r
+}
+
+func (l *JobQueue) RunningJobs() JobList {
+	var r JobList
+	for _, job := range l.Jobs {
+		switch job.Status {
+		case system.RunningStatus:
+			r = append(r, job)
+		}
+	}
 	return r
 }
 

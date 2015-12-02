@@ -42,6 +42,7 @@ type Job struct {
 	Cancelable bool
 
 	queueName string
+	retry     int
 }
 
 func NewJob(packageId string, jobType string, queueName string) *Job {
@@ -55,6 +56,7 @@ func NewJob(packageId string, jobType string, queueName string) *Job {
 		Cancelable: false,
 		option:     make(map[string]string),
 		queueName:  queueName,
+		retry:      3,
 	}
 	j.setEffectSizes()
 	return j
