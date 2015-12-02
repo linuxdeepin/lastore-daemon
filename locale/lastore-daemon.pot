@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-29 16:48+0800\n"
+"POT-Creation-Date: 2015-12-02 10:58+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,27 +17,27 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lastore-session-helper/job.go:177
+#: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:178
+#: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:213
+#: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:227
+#: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:236
+#: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:244
+#: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
 msgstr ""
 
@@ -81,9 +81,18 @@ msgstr ""
 
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
-msgid "%d application(s) need to be updated."
+msgid "%d software need to be updated."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:109
+#: ../src/lastore-session-helper/ntofiy.go:108
+msgid "Some patches need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:110
+#, c-format
+msgid "Some patches and %d software need to be updated."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
 msgstr ""

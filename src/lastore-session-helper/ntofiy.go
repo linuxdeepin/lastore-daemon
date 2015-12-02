@@ -99,11 +99,19 @@ func LaunchDCC(moduleName string) {
 	go cmd.Wait()
 }
 
-func NotifyNewUpdates(n int) {
-	if n <= 0 {
+func NotifyNewUpdates(nApps int, hasLibs bool) {
+	var msg string
+	switch {
+	case nApps > 0 && !hasLibs:
+		msg = fmt.Sprintf(gettext.Tr("%d software need to be updated."), nApps)
+	case nApps == 0 && hasLibs:
+		msg = fmt.Sprintf(gettext.Tr("Some patches need to be updated."))
+	case nApps > 0 && hasLibs:
+		msg = fmt.Sprintf(gettext.Tr("Some patches and %d software need to be updated."), nApps)
+	default:
 		return
 	}
-	msg := fmt.Sprintf(gettext.Tr("%d application(s) need to be updated."), n)
+
 	SendNotify(msg, []Action{Action{
 		Id:   "update",
 		Name: gettext.Tr("Update Now"),

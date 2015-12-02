@@ -19,6 +19,7 @@ type Lastore struct {
 	updater          *lastore.Updater
 	notifiedBattery  bool
 	updatableApps    []string
+	hasLibChanged    bool
 }
 
 func NewLastore() *Lastore {
@@ -42,7 +43,7 @@ func NewLastore() *Lastore {
 
 	l.updateSystemOnChaning(core.SystemOnChanging.Get())
 	l.updateJobList(core.JobList.Get())
-	l.updateUpdatableApps(updater.UpdatableApps.Get())
+	l.updateUpdatableApps()
 	l.online()
 
 	go l.monitorSignal()
@@ -87,11 +88,11 @@ func (l *Lastore) monitorSignal() {
 					l.updateJobList(list)
 				}
 			case "com.deepin.lastore.Updater":
-				if variant, ok := props["UpdatableApps"]; ok {
-					apps, _ := variant.Value().([]string)
-					l.updateUpdatableApps(apps)
+				_, ok := props["UpdatableApps"]
+				_, ok2 := props["UpatablePackages"]
+				if ok || ok2 {
+					l.updateUpdatableApps()
 				}
-
 			}
 		case "org.freedesktop.DBus.NameOwnerChanged":
 			switch name, _ := v.Body[0].(string); name {
@@ -113,7 +114,19 @@ func (l *Lastore) monitorSignal() {
 // updateUpdatableApps compare apps with record values
 // 1. if find new app in apps notify it.
 // 2. update record values
-func (l *Lastore) updateUpdatableApps(apps []string) {
+func (l *Lastore) updateUpdatableApps() {
+	apps := l.updater.UpdatableApps.Get()
+	hasLibChanged := len(l.updater.UpdatablePackages.Get()) != len(apps)
+
+	defer func() {
+		l.updatableApps = apps
+		l.hasLibChanged = hasLibChanged
+	}()
+
+	if hasLibChanged != l.hasLibChanged {
+		NotifyNewUpdates(len(apps), hasLibChanged)
+		return
+	}
 	for _, new := range apps {
 		foundNew := false
 		for _, old := range l.updatableApps {
@@ -123,11 +136,10 @@ func (l *Lastore) updateUpdatableApps(apps []string) {
 			}
 		}
 		if !foundNew {
-			NotifyNewUpdates(len(apps))
-			break
+			NotifyNewUpdates(len(apps), hasLibChanged)
+			return
 		}
 	}
-	l.updatableApps = apps
 	return
 }
 
