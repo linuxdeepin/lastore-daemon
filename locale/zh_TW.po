@@ -3,97 +3,88 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Massimo Antonio Carofano <real.massimo@hotmail.it>, 2015
+# freddy4212 <freddy4212@gmail.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-02 03:01+0000\n"
+"POT-Creation-Date: 2015-11-29 16:48+0800\n"
+"PO-Revision-Date: 2015-11-29 11:09+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
-"Language-Team: Italian (http://www.transifex.com/linuxdeepin/deepin-store/language/it/)\n"
+"Language-Team: Chinese (Taiwan) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_TW/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: it\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: zh_TW\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-session-helper/job.go:189
+#: ../src/lastore-session-helper/job.go:177
 msgid "Deepin Store"
-msgstr "Deepin Store"
+msgstr "Deepin 商店"
 
-#: ../src/lastore-session-helper/job.go:190
+#: ../src/lastore-session-helper/job.go:178
 msgid "System is updating, please shut down or reboot later."
-msgstr "Sistema in aggiornamento, non spegnere o riavviare il PC."
+msgstr "系統正在更新，請先不要關機或重新啟動。"
 
-#: ../src/lastore-session-helper/job.go:225
+#: ../src/lastore-session-helper/job.go:213
 msgid "Reboot Now"
-msgstr "Riavvia ora"
+msgstr "立刻重新啟動"
 
-#: ../src/lastore-session-helper/job.go:239
+#: ../src/lastore-session-helper/job.go:227
 msgid "Reboot Later"
-msgstr "Riavvia più tardi"
+msgstr "稍後重新啟動"
 
-#: ../src/lastore-session-helper/job.go:248
+#: ../src/lastore-session-helper/job.go:236
 msgid "Retry"
-msgstr "Riprova"
+msgstr "重試"
 
-#: ../src/lastore-session-helper/job.go:256
+#: ../src/lastore-session-helper/job.go:244
 msgid "Cancel"
-msgstr "Cancella"
+msgstr "取消"
 
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
-msgstr "installazione %q completata."
+msgstr "%q  安裝成功。"
 
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr "installazione %q fallita."
+msgstr "%q 無法安裝。"
 
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
-msgstr "%q rimossa con successo."
+msgstr "%q 移除成功。"
 
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "rimozione %q fallita."
+msgstr "%q 無法移除。"
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "download %q fallito."
+msgstr "%q 無法下載。"
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "Per evitare spegnimenti imprevisti, collega il PC alla corrente per aggiornare."
+msgstr "為防止自動關機，更新中請接上電源。"
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr "Alcune funzioni saranno abilitate dopo il riavvio."
+msgstr ""
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "Aggiornamento riuscito!"
+msgstr ""
 
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
-msgstr "Aggiornamento fallito."
+msgstr "無法更新"
 
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
-msgid "%d software need to be updated."
-msgstr ""
+msgid "%d application(s) need to be updated."
+msgstr "%d 個應用程式需要被更新。"
 
-#: ../src/lastore-session-helper/ntofiy.go:108
-msgid "Some patches need to be updated."
-msgstr ""
-
-#: ../src/lastore-session-helper/ntofiy.go:110
-#, c-format
-msgid "Some patches and %d software need to be updated."
-msgstr ""
-
-#: ../src/lastore-session-helper/ntofiy.go:117
+#: ../src/lastore-session-helper/ntofiy.go:109
 msgid "Update Now"
-msgstr "Aggiorna ora"
+msgstr "立刻更新"
