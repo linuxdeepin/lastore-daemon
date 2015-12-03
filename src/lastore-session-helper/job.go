@@ -5,6 +5,7 @@ import "dbus/com/deepin/lastore"
 import "pkg.deepin.io/lib/dbus"
 import "internal/system"
 import "pkg.deepin.io/lib/gettext"
+import "dbus/com/deepin/daemon/power"
 import "syscall"
 import log "github.com/cihub/seelog"
 import "strings"
@@ -15,11 +16,14 @@ type Lastore struct {
 	Lang             string
 	OnLine           bool
 	inhibitFd        dbus.UnixFD
-	core             *lastore.Manager
-	updater          *lastore.Updater
-	notifiedBattery  bool
-	updatableApps    []string
-	hasLibChanged    bool
+
+	upower  *power.Power
+	core    *lastore.Manager
+	updater *lastore.Updater
+
+	notifiedBattery bool
+	updatableApps   []string
+	hasLibChanged   bool
 }
 
 func NewLastore() *Lastore {
@@ -29,6 +33,12 @@ func NewLastore() *Lastore {
 		inhibitFd:        -1,
 		Lang:             QueryLang(),
 	}
+	upower, err := power.NewPower("com.deepin.daemon.Power", "/com/deepin/daemon/Power")
+	if err != nil {
+		log.Warnf("Failed MonitorBattery: %v\n", err)
+	}
+	l.upower = upower
+
 	core, err := lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
 	if err != nil {
 		log.Warnf("NewLastore: %v\n", err)
@@ -45,6 +55,8 @@ func NewLastore() *Lastore {
 	l.updateJobList(core.JobList.Get())
 	l.updateUpdatableApps()
 	l.online()
+
+	l.MonitorBatteryPersent()
 
 	go l.monitorSignal()
 	return l
@@ -183,6 +195,10 @@ func (l *Lastore) updateJob(path dbus.ObjectPath, status system.Status) {
 }
 
 func (l *Lastore) updateSystemOnChaning(onChanging bool) {
+	if onChanging {
+		l.checkBattery()
+	}
+
 	l.SystemOnChanging = onChanging
 	log.Infof("SystemOnChaning to %v\n", onChanging)
 	if onChanging && l.inhibitFd == -1 {
@@ -264,6 +280,8 @@ func (l *Lastore) createJobFailedActions(jobId string) []Action {
 }
 
 func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
+	l.checkBattery()
+
 	job, err := lastore.NewJob("com.deepin.lastore", path)
 	if err != nil {
 		return

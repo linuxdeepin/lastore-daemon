@@ -12,8 +12,7 @@ func main() {
 	gettext.InitI18n()
 	gettext.Textdomain("lastore-daemon")
 
-	l := NewLastore()
-	l.MonitorBattery()
+	NewLastore()
 	if err := dbus.Wait(); err != nil {
 	}
 }
