@@ -114,20 +114,20 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		dbus.NotifyChange(j, "Description")
 	}
 
+	// The Progress may not changed when we calculate speed.
+	if j.setEffectSizes() {
+		completed := (info.Progress - j.Progress) * j.effectSizes
+		now := time.Now()
+
+		if s := now.Sub(j.updateProgressTime).Seconds(); s > 0 && completed >= 0 {
+			j.Speed = SmoothCalc(j.Speed, (completed / s), now.Sub(j.updateProgressTime))
+			dbus.NotifyChange(j, "Speed")
+		}
+		j.updateProgressTime = now
+	}
+
 	if info.Progress != j.Progress && info.Progress != -1 {
 		changed = true
-
-		if j.setEffectSizes() {
-			completed := (info.Progress - j.Progress) * j.effectSizes
-			now := time.Now()
-
-			if s := now.Sub(j.updateProgressTime).Seconds(); s > 0 && completed > 0 {
-				j.Speed = SmoothCalc(j.Speed, (completed / s), now.Sub(j.updateProgressTime))
-				dbus.NotifyChange(j, "Speed")
-			}
-			j.updateProgressTime = now
-		}
-
 		j.Progress = info.Progress
 		dbus.NotifyChange(j, "Progress")
 	}
