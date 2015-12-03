@@ -4,7 +4,6 @@ import (
 	"bytes"
 	log "github.com/cihub/seelog"
 	"internal/system"
-	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -76,18 +75,24 @@ func queryDpkgUpgradeInfoByAptList() []string {
 }
 
 func getSystemArchitectures() []system.Architecture {
-	bs, err := ioutil.ReadFile("/var/lib/dpkg/arch")
+	foreignArchs, err := exec.Command("dpkg", "--print-foreign-architectures").Output()
 	if err != nil {
-		log.Error("Can't detect system architectures:", err)
-		return nil
+		log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
 	}
+
+	arch, err := exec.Command("dpkg", "--print-architecture").Output()
+	if err != nil {
+		log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
+	}
+
 	var r []system.Architecture
-	for _, arch := range strings.Split(string(bs), "\n") {
-		i := strings.TrimSpace(arch)
-		if i == "" {
-			continue
+	if v := system.Architecture(strings.TrimSpace(string(arch))); v != "" {
+		r = append(r, v)
+	}
+	for _, a := range strings.Split(strings.TrimSpace(string(foreignArchs)), "\n") {
+		if v := system.Architecture(a); v != "" {
+			r = append(r, v)
 		}
-		r = append(r, system.Architecture(i))
 	}
 	return r
 }
