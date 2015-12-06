@@ -11,7 +11,7 @@ The result will be
 package main
 
 import (
-	"net/http"
+	"fmt"
 	"os"
 	"time"
 )
@@ -24,21 +24,16 @@ const (
 	NotFoundHit     = 3
 )
 
-// CheckURL check whether the remote url is valid
-func CheckURL(url string) bool {
-	resp, err := http.Get(url)
-	if err != nil {
-		return false
-	}
-	resp.Body.Close()
-
-	switch resp.StatusCode / 100 {
-	case 4, 5:
-		return false
-	case 2, 1, 3:
-		return true
+func (h Hit) String() string {
+	switch h {
+	case OfficialHit:
+		return "Official Hit"
+	case MirrorHit:
+		return "Mirror Hit"
+	case NotFoundHit:
+		return "Not Found Any"
 	default:
-		return false
+		return "Unknown Hit"
 	}
 }
 
@@ -52,9 +47,11 @@ func GetResultNow(ch chan Hit, defaultHit Hit, timeout time.Duration) Hit {
 }
 
 func SmartMirrorDetector(official, mirror string) Hit {
+	checker := MakeChecker(official, mirror)
+
 	officialResult, mirrorResult := make(chan Hit), make(chan Hit)
 	go func() {
-		if CheckURL(official) {
+		if checker.CheckOfficial() {
 			officialResult <- OfficialHit
 		} else {
 			officialResult <- NotFoundHit
@@ -62,7 +59,7 @@ func SmartMirrorDetector(official, mirror string) Hit {
 	}()
 
 	go func() {
-		if CheckURL(mirror) {
+		if checker.CheckMirror() {
 			mirrorResult <- MirrorHit
 		} else {
 			mirrorResult <- NotFoundHit
@@ -83,11 +80,13 @@ func SmartMirrorDetector(official, mirror string) Hit {
 
 func main() {
 	if len(os.Args) != 3 {
+		fmt.Printf("Usage %s OfficialURL MirrorURL\n", os.Args[0])
 		os.Exit(-1)
 	}
 	hit := SmartMirrorDetector(
 		os.Args[1],
 		os.Args[2],
 	)
+	fmt.Println(hit)
 	os.Exit(int(hit))
 }
