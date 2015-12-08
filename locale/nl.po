@@ -8,9 +8,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-29 16:48+0800\n"
-"PO-Revision-Date: 2015-11-29 11:09+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"POT-Creation-Date: 2015-12-02 10:58+0800\n"
+"PO-Revision-Date: 2015-12-02 11:56+0000\n"
+"Last-Translator: Heimen Stoffels <vistausss@outlook.com>\n"
 "Language-Team: Dutch (http://www.transifex.com/linuxdeepin/deepin-store/language/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -18,27 +18,27 @@ msgstr ""
 "Language: nl\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-session-helper/job.go:177
+#: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
 msgstr "Deepin Winkel"
 
-#: ../src/lastore-session-helper/job.go:178
+#: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
 msgstr "Het systeem wordt bijgewerkt; sluit hierna of herstart."
 
-#: ../src/lastore-session-helper/job.go:213
+#: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
 msgstr "Nu herstarten"
 
-#: ../src/lastore-session-helper/job.go:227
+#: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
 msgstr "Later herstarten"
 
-#: ../src/lastore-session-helper/job.go:236
+#: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
 msgstr "Opnieuw proberen"
 
-#: ../src/lastore-session-helper/job.go:244
+#: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
 msgstr "Annuleren"
 
@@ -69,12 +69,12 @@ msgstr "Om te voorkomen dat de computer automatisch wordt afgesloten, moet u dez
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr ""
+msgstr "Sommige functies zullen worden geactiveerd na een herstart."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr ""
+msgstr "Het bijwerken is succesvol voltooid!"
 
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
@@ -82,9 +82,18 @@ msgstr "Het bijwerken is mislukt."
 
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
-msgid "%d application(s) need to be updated."
-msgstr "%d applicatie(s) moet worden bijgewerkt."
+msgid "%d software need to be updated."
+msgstr "%d software moet worden bijgewerkt."
 
-#: ../src/lastore-session-helper/ntofiy.go:109
+#: ../src/lastore-session-helper/ntofiy.go:108
+msgid "Some patches need to be updated."
+msgstr "Enkele patches moeten worden bijgewerkt."
+
+#: ../src/lastore-session-helper/ntofiy.go:110
+#, c-format
+msgid "Some patches and %d software need to be updated."
+msgstr "Enkele patches en %d software moeten worden bijgwerkt."
+
+#: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
 msgstr "Nu bijwerken"

@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"net/http"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -144,4 +146,19 @@ func filterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 	err = cmd.Wait()
 	timer.Stop()
 	return lines, err
+}
+
+func Touch(arch, region string, packages ...string) {
+	for _, pkg := range packages {
+		url := fmt.Sprintf("http://download.lastore.deepin.org/get/%s/%s?&f=%s",
+			arch,
+			pkg,
+			region,
+		)
+		resp, err := http.Get(url)
+		if err != nil {
+			return
+		}
+		resp.Body.Close()
+	}
 }

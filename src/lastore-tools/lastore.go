@@ -40,7 +40,7 @@ func RemoveAll() []string {
 	ids := getApps()
 	var r []string
 	for _, id := range ids {
-		p, err := m.RemovePackage(id)
+		p, err := m.RemovePackage("Robot..."+id, id)
 		if err != nil {
 			log.Errorf("RemovePackage %q %v\n", id, err)
 		}
@@ -55,7 +55,7 @@ func InstallAll() []string {
 
 	var r []string
 	for _, id := range ids {
-		p, err := m.InstallPackage(id)
+		p, err := m.InstallPackage("Roboot..."+id, id)
 		if err != nil {
 			log.Errorf("InstallPackage %q %v\n", id, err)
 		}

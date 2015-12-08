@@ -5,6 +5,7 @@ import (
 	log "github.com/cihub/seelog"
 	"internal/system"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -61,15 +62,16 @@ func (m *JobManager) List() JobList {
 	return r
 }
 
-func (m *JobManager) guest(jobType string, packageId string) string {
+func (m *JobManager) guest(jobType string, packages []string) string {
+	pList := strings.Join(packages, "")
 	for _, job := range m.List() {
-		if job.PackageId == packageId && job.Type == jobType {
+		if job.Type == jobType && strings.Join(job.Packages, "") == pList {
 			return job.Id
 		}
 		if job.next == nil {
 			continue
 		}
-		if job.next.PackageId == packageId && job.next.Type == jobType {
+		if job.next.Type == jobType && strings.Join(job.next.Packages, "") == pList {
 			// Don't return the job.next.
 			// It's not a workable Job before the Job finished.
 			return job.Id
@@ -79,27 +81,27 @@ func (m *JobManager) guest(jobType string, packageId string) string {
 }
 
 // CreateJob create the job and try starting it
-func (m *JobManager) CreateJob(jobType string, packageId string) (*Job, error) {
-	if job := m.find(m.guest(jobType, packageId)); job != nil {
+func (m *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
+	if job := m.find(m.guest(jobType, packages)); job != nil {
 		return job, m.MarkStart(job.Id)
 	}
 
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:
-		job = NewJob(packageId, system.DownloadJobType, DownloadQueue)
+		job = NewJob(jobName, packages, system.DownloadJobType, DownloadQueue)
 	case system.InstallJobType:
-		job = NewJob(packageId, system.DownloadJobType, DownloadQueue)
-		job.next = NewJob(packageId, system.InstallJobType, SystemChangeQueue)
+		job = NewJob(jobName, packages, system.DownloadJobType, DownloadQueue)
+		job.next = NewJob(jobName, packages, system.InstallJobType, SystemChangeQueue)
 		job.Id = job.next.Id
 	case system.RemoveJobType:
-		job = NewJob(packageId, system.RemoveJobType, SystemChangeQueue)
+		job = NewJob(jobName, packages, system.RemoveJobType, SystemChangeQueue)
 	case system.UpdateSourceJobType:
-		job = NewJob("", system.UpdateSourceJobType, LockQueue)
+		job = NewJob(jobName, nil, system.UpdateSourceJobType, LockQueue)
 	case system.DistUpgradeJobType:
-		job = NewJob(packageId, system.DistUpgradeJobType, LockQueue)
+		job = NewJob(jobName, packages, system.DistUpgradeJobType, LockQueue)
 	case system.UpdateJobType:
-		job = NewJob(packageId, system.UpdateJobType, SystemChangeQueue)
+		job = NewJob(jobName, packages, system.UpdateJobType, SystemChangeQueue)
 	default:
 		return nil, system.NotSupportError
 	}
@@ -347,8 +349,8 @@ func (l *JobQueue) RunningJobs() JobList {
 
 func (l *JobQueue) Add(j *Job) error {
 	for _, job := range l.Jobs {
-		if job.PackageId == j.PackageId && job.Type == j.Type {
-			return fmt.Errorf("exists job %q:%q", job.Type, job.PackageId)
+		if job.Type == j.Type && strings.Join(job.Packages, "") == strings.Join(j.Packages, "") {
+			return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)
 		}
 	}
 	l.Jobs = append(l.Jobs, j)

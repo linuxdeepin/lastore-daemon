@@ -21,13 +21,13 @@ func StartSystemJob(sys system.System, j *Job) error {
 
 	switch j.Type {
 	case system.DownloadJobType:
-		return sys.Download(j.Id, j.PackageId)
+		return sys.Download(j.Id, j.Packages)
 
 	case system.InstallJobType:
-		return sys.Install(j.Id, j.PackageId)
+		return sys.Install(j.Id, j.Packages)
 
 	case system.RemoveJobType:
-		return sys.Remove(j.Id, j.PackageId)
+		return sys.Remove(j.Id, j.Packages)
 
 	case system.DistUpgradeJobType:
 		return sys.DistUpgrade(j.Id)
@@ -35,7 +35,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.UpdateSource(j.Id)
 
 	case system.UpdateJobType:
-		return sys.Install(j.Id, j.PackageId)
+		return sys.Install(j.Id, j.Packages)
 	default:
 		return system.NotFoundError
 	}

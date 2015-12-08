@@ -22,7 +22,8 @@ type Job struct {
 	option map[string]string
 
 	Id         string
-	PackageId  string
+	Name       string
+	Packages   []string
 	CreateTime int64
 
 	Type string
@@ -45,12 +46,13 @@ type Job struct {
 	retry     int
 }
 
-func NewJob(packageId string, jobType string, queueName string) *Job {
+func NewJob(jobName string, packages []string, jobType string, queueName string) *Job {
 	j := &Job{
 		Id:         genJobId() + jobType,
+		Name:       jobName,
 		CreateTime: time.Now().UnixNano(),
 		Type:       jobType,
-		PackageId:  packageId,
+		Packages:   packages,
 		Status:     system.ReadyStatus,
 		Progress:   .0,
 		Cancelable: false,
@@ -69,7 +71,7 @@ func (j *Job) setEffectSizes() bool {
 
 	switch j.Type {
 	case system.DownloadJobType:
-		j.effectSizes = QueryPackageDownloadSize(j.PackageId)
+		j.effectSizes = QueryPackageDownloadSize(j.Packages...)
 	}
 	return j.effectSizes > 0
 }
@@ -80,7 +82,7 @@ func (j *Job) changeType(jobType string) {
 
 func (j Job) String() string {
 	return fmt.Sprintf("Job{Id:%q:%q,Type:%q(%v,%v), %q(%.2f)}@%q",
-		j.Id, j.PackageId,
+		j.Id, j.Packages,
 		j.Type, j.Cancelable, j.Status,
 		j.Description, j.Progress, j.queueName,
 	)

@@ -65,7 +65,7 @@ func (c aptCommand) String() string {
 		c.JobId, c.Cancelable, strings.Join(c.apt.Args, " "))
 }
 
-func createCommandLine(cmdType string, packageId string) *exec.Cmd {
+func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 	var args []string = []string{"-y"}
 
 	options := map[string]string{
@@ -85,13 +85,16 @@ func createCommandLine(cmdType string, packageId string) *exec.Cmd {
 	switch cmdType {
 	case system.InstallJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "-f", "install", packageId)
+		args = append(args, "-f", "install")
+		args = append(args, packages...)
 	case system.RemoveJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "-f", "remove", packageId)
+		args = append(args, "-f", "remove")
+		args = append(args, packages...)
 	case system.DownloadJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "install", "-d", packageId)
+		args = append(args, "install", "-d")
+		args = append(args, packages...)
 	case system.DistUpgradeJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "dist-upgrade", "--force-yes")
@@ -102,13 +105,13 @@ func createCommandLine(cmdType string, packageId string) *exec.Cmd {
 	return exec.Command("apt-get", args...)
 }
 
-func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, packageId string) *aptCommand {
-	cmd := createCommandLine(cmdType, packageId)
+func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, packages []string) *aptCommand {
+	cmd := createCommandLine(cmdType, packages)
 
 	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	output := system.CreateLogOutput(cmdType, packageId)
+	output := system.CreateLogOutput(cmdType, strings.Join(packages, ","))
 	cmd.Stdout = output
 	cmd.Stderr = output
 

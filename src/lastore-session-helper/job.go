@@ -287,29 +287,32 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
 		return
 	}
 	defer lastore.DestroyJob(job)
-	pkgName := PackageName(job.PackageId.Get(), l.Lang)
+	jobName := job.Name.Get()
+	if jobName == "" {
+		jobName = PackageName(job.Packages.Get(), l.Lang)
+	}
 
 	switch guestJobTypeFromPath(path) {
 	case system.DownloadJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyFailedDownload(pkgName, l.createJobFailedActions(job.Id.Get()))
+			NotifyFailedDownload(jobName, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
 		}
 
 	case system.InstallJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyInstall(pkgName, false, l.createJobFailedActions(job.Id.Get()))
+			NotifyInstall(jobName, false, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
-			NotifyInstall(pkgName, true, nil)
+			NotifyInstall(jobName, true, nil)
 		}
 	case system.RemoveJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyRemove(pkgName, false, l.createJobFailedActions(job.Id.Get()))
+			NotifyRemove(jobName, false, l.createJobFailedActions(job.Id.Get()))
 		case system.SucceedStatus:
-			NotifyRemove(pkgName, true, nil)
+			NotifyRemove(jobName, true, nil)
 		}
 	case system.DistUpgradeJobType:
 		switch status {

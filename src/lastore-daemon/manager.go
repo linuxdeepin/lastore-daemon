@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"internal/system"
-	"net/http"
 	"pkg.deepin.io/lib/dbus"
 	"strings"
 	"sync"
@@ -60,66 +58,66 @@ func (m *Manager) checkNeedUpdate() {
 	m.UpdateSource()
 }
 
-func (m *Manager) UpdatePackage(packageId string) (*Job, error) {
+func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
 	// TODO: Check whether the package can be updated
-	return m.jobManager.CreateJob(system.UpdateJobType, packageId)
+	return m.jobManager.CreateJob(jobName, system.UpdateJobType, strings.Fields(packages))
 }
 
-func Touch(arch, packageId, region string) {
-	url := fmt.Sprintf("http://download.lastore.deepin.org/get/%s/%s?&f=%s",
-		arch,
-		packageId,
-		region,
-	)
-	resp, err := http.Get(url)
-	if err != nil {
-		return
-	}
-	resp.Body.Close()
-}
-
-func (m *Manager) InstallPackage(packageId string) (*Job, error) {
+func (m *Manager) InstallPackage(jobName string, packages string) (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	if m.PackageExists(packageId) {
+	pList := strings.Fields(packages)
+
+	installedN := 0
+	for _, pkg := range pList {
+		if m.PackageExists(pkg) {
+			installedN++
+		}
+	}
+	if installedN == len(pList) {
 		return nil, system.ResourceExitError
 	}
-	Touch(string(m.SystemArchitectures[0]), packageId, m.config.AppstoreRegion)
-	return m.jobManager.CreateJob(system.InstallJobType, packageId)
+
+	Touch(string(m.SystemArchitectures[0]), m.config.AppstoreRegion, pList...)
+	return m.jobManager.CreateJob(jobName, system.InstallJobType, pList)
 }
 
-func (m *Manager) DownloadPackage(packageId string) (*Job, error) {
+func (m *Manager) DownloadPackage(jobName string, packages string) (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	if m.PackageExists(packageId) {
+	pList := strings.Fields(packages)
+
+	installedN := 0
+	for _, pkg := range pList {
+		if m.PackageExists(pkg) {
+			installedN++
+		}
+	}
+	if installedN == len(pList) {
 		return nil, system.ResourceExitError
 	}
-	return m.jobManager.CreateJob(system.DownloadJobType, packageId)
+	return m.jobManager.CreateJob(jobName, system.DownloadJobType, pList)
 }
 
-func (m *Manager) RemovePackage(packageId string) (*Job, error) {
-
+func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	if !m.PackageExists(packageId) {
-		return nil, system.NotFoundError
-	}
-	return m.jobManager.CreateJob(system.RemoveJobType, packageId)
+	return m.jobManager.CreateJob(jobName, system.RemoveJobType, strings.Fields(packages))
 }
 
 func (m *Manager) UpdateSource() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return m.jobManager.CreateJob(system.UpdateSourceJobType, "")
+	return m.jobManager.CreateJob("", system.UpdateSourceJobType, nil)
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
@@ -145,7 +143,7 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 		m.CleanJob(jobId)
 	}
 
-	return m.jobManager.CreateJob(system.DistUpgradeJobType, strings.Join(m.UpgradableApps, ","))
+	return m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
 }
 
 func (m *Manager) StartJob(jobId string) error {

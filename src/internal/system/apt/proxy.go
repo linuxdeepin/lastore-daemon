@@ -70,28 +70,28 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 	p.indicator = f
 }
 
-func (p *APTSystem) Download(jobId string, packageId string) error {
-	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packageId)
+func (p *APTSystem) Download(jobId string, packages []string) error {
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packages)
 	return c.Start()
 }
 
-func (p *APTSystem) Remove(jobId string, packageId string) error {
-	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packageId)
+func (p *APTSystem) Remove(jobId string, packages []string) error {
+	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
 	return c.Start()
 }
 
-func (p *APTSystem) Install(jobId string, packageId string) error {
-	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packageId)
+func (p *APTSystem) Install(jobId string, packages []string) error {
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
 	return c.Start()
 }
 
 func (p *APTSystem) DistUpgrade(jobId string) error {
-	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, "")
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
 	return c.Start()
 }
 
 func (p *APTSystem) UpdateSource(jobId string) error {
-	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, "")
+	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
 	return c.Start()
 }
 

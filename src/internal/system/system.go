@@ -53,9 +53,9 @@ type Indicator func(JobProgressInfo)
 
 type System interface {
 	CheckInstalled(packageId string) bool
-	Download(jobId string, packageId string) error
-	Install(jobId string, packageId string) error
-	Remove(jobId string, packageId string) error
+	Download(jobId string, packages []string) error
+	Install(jobId string, packages []string) error
+	Remove(jobId string, packages []string) error
 
 	DistUpgrade(jobId string) error
 	UpdateSource(jobId string) error

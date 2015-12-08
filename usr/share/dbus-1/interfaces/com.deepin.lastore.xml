@@ -1,36 +1,24 @@
 <node>
      <interface name="com.deepin.lastore.Manager">
-	  <method name="PauseJob">
+          <method name="PauseJob">
                <arg type="s" direction="in"></arg>
           </method>
-	  <method name="StartJob">
+          <method name="CleanJob">
                <arg type="s" direction="in"></arg>
           </method>
-	  <method name="CleanJob">
-               <arg type="s" direction="in"></arg>
+          <method name="DistUpgrade">
+               <arg type="o" direction="out"></arg>
           </method>
-
-
-	  <method name="DownloadPackage">
+          <method name="DownloadPackage">
+               <arg type="s" direction="in"></arg>
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
           <method name="InstallPackage">
                <arg type="s" direction="in"></arg>
-               <arg type="o" direction="out"></arg>
-          </method>
-	    <method name="UpdatePackage">
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
-	  <method name="RemovePackage">
-               <arg type="s" direction="in"></arg>
-               <arg type="o" direction="out"></arg>
-          </method>
-	  <method name="DistUpgrade">
-               <arg type="o" direction="out"></arg>
-          </method>
-
           <method name="PackageDesktopPath">
                <arg type="s" direction="in"></arg>
                <arg type="s" direction="out"></arg>
@@ -43,16 +31,31 @@
                <arg type="as" direction="in"></arg>
                <arg type="x" direction="out"></arg>
           </method>
+          <method name="RemovePackage">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
           <method name="SetRegion">
                <arg type="s" direction="in"></arg>
           </method>
-
-
+          <method name="StartJob">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="UpdatePackage">
+               <arg type="s" direction="in"></arg>
+               <arg type="s" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="UpdateSource">
+               <arg type="o" direction="out"></arg>
+          </method>
           <property name="JobList" type="ao" access="read"></property>
           <property name="SystemArchitectures" type="as" access="read"></property>
           <property name="UpgradableApps" type="as" access="read"></property>
           <property name="SystemOnChanging" type="b" access="read"></property>
      </interface>
+
      <interface name="com.deepin.lastore.Updater">
           <method name="ApplicationUpdateInfos">
                <arg type="s" direction="in"></arg>
@@ -70,7 +73,6 @@
           </method>
           <property name="AutoCheckUpdates" type="b" access="read"></property>
           <property name="MirrorSource" type="s" access="read"></property>
-          <property name="OfficialSource" type="s" access="read"></property>
           <property name="UpdatableApps" type="as" access="read"></property>
           <property name="UpdatablePackages" type="as" access="read"></property>
      </interface>

@@ -40,7 +40,7 @@ func QueryLangs() []string {
 	return []string{""}
 }
 
-func PackageName(id string, lang string) string {
+func PackageName(pkgs []string, lang string) string {
 	names := make(map[string]struct {
 		Id         string            `json:"id"`
 		Name       string            `json:"name"`
@@ -49,15 +49,19 @@ func PackageName(id string, lang string) string {
 
 	system.DecodeJson(path.Join(system.VarLibDir, "applications.json"), &names)
 
-	info, ok := names[id]
-	if !ok {
-		return id
+	var r []string
+	for _, id := range pkgs {
+		info, ok := names[id]
+		if !ok {
+			r = append(r, id)
+			continue
+		}
+		name := info.NameLocale[lang]
+		if name == "" {
+			r = append(r, info.Name)
+		}
 	}
-	name := info.NameLocale[lang]
-	if name == "" {
-		return info.Name
-	}
-	return id
+	return strings.Join(r, " ")
 }
 
 func Inhibitor(what, who, why string) (dbus.UnixFD, error) {

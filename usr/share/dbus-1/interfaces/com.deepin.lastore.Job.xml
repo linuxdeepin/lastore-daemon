@@ -3,7 +3,8 @@
 	<annotation name="org.deepin.DBus.configuration.DefaultServiceName" value="com.deepin.lastore"/>
 	<annotation name="org.deepin.DBus.configuration.DefaultObjectPath" value="/com/deepin/lastore/Job"/>
 	<property name="Id" type="s" access="read"></property>
-	<property name="PackageId" type="s" access="read"></property>
+        <property name="Name" type="s" access="read"></property>
+	<property name="Packages" type="as" access="read"></property>
 	<property name="Type" type="s" access="read"></property>
 	<property name="Status" type="s" access="read"></property>
 	<property name="Progress" type="d" access="read"></property>
