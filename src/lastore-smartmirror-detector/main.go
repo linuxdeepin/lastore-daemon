@@ -87,6 +87,5 @@ func main() {
 		os.Args[1],
 		os.Args[2],
 	)
-	fmt.Println(hit)
 	os.Exit(int(hit))
 }
