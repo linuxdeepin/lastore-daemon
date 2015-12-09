@@ -54,6 +54,7 @@ func LoadMirrorSources(server string) ([]system.MirrorSource, error) {
 			Id:         raw.Id,
 			Name:       raw.Name,
 			Url:        raw.Url,
+			Weight:     raw.Weight,
 			NameLocale: make(map[string]string),
 		}
 		for k, v := range raw.Locale {

@@ -11,12 +11,16 @@ type MirrorSource struct {
 	Url  string
 
 	NameLocale map[string]string
+	Weight     int
 }
 
 var DefaultMirror = MirrorSource{
 	Id:   "default",
 	Url:  "http://cdn.packages.deepin.com/deepin",
-	Name: "default",
+	Name: "Official Mirror",
+	NameLocale: map[string]string{
+		"zh_CN": "官方源",
+	},
 }
 
 func DecodeJson(fpath string, d interface{}) error {

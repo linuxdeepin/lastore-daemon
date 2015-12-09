@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
+	"io/ioutil"
+	"os/exec"
 	"path"
 	"pkg.deepin.io/lib/dbus"
 	"time"
@@ -53,10 +56,29 @@ func NewUpdater(b system.System, config *Config) *Updater {
 	return u
 }
 
+func SetAPTSmartMirror(url string) error {
+	return ioutil.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
+		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
+		0644)
+}
+
 // 设置用于下载软件的镜像源
 func (u *Updater) SetMirrorSource(id string) error {
 	if u.MirrorSource == id {
 		return nil
+	}
+	for _, m := range u.ListMirrorSources("") {
+		if m.Id != id {
+			continue
+		}
+
+		if m.Url == "" {
+			return system.NotFoundError
+		}
+		if err := SetAPTSmartMirror(m.Url); err != nil {
+			log.Warnf("SetMirrorSource(%q) failed:%v\n", id, err)
+			return err
+		}
 	}
 
 	err := u.config.SetMirrorSource(id)
@@ -95,18 +117,28 @@ func (u Updater) ListMirrorSources(lang string) []LocaleMirrorSource {
 	var raws []system.MirrorSource
 	system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
 
-	var r []LocaleMirrorSource
-	for _, raw := range raws {
+	makeLocaleMirror := func(lang string, m system.MirrorSource) LocaleMirrorSource {
 		ms := LocaleMirrorSource{
-			Id:   raw.Id,
-			Url:  raw.Url,
-			Name: raw.Name,
+			Id:   m.Id,
+			Url:  m.Url,
+			Name: m.Name,
 		}
-		if v, ok := raw.NameLocale[lang]; ok {
+		if v, ok := m.NameLocale[lang]; ok {
 			ms.Name = v
 		}
+		return ms
+	}
 
-		r = append(r, ms)
+	var r []LocaleMirrorSource
+	for _, raw := range raws {
+		if raw.Weight < 0 {
+			continue
+		}
+		r = append(r, makeLocaleMirror(lang, raw))
+	}
+
+	if len(r) == 0 {
+		return []LocaleMirrorSource{makeLocaleMirror(lang, system.DefaultMirror)}
 	}
 	return r
 }
@@ -158,9 +190,26 @@ func (m *Manager) doUpdate() {
 
 	log.Info("Try update remote data...", m.config)
 	if m.config.AutoCheckUpdates {
-		//TODO: update applications/mirrors
+		go updateDeepinStoreInfos()
+
 		job, err := m.UpdateSource()
 		log.Infof("It's not busy, so try update remote data... %v:%v\n", job, err)
 	}
+}
 
+func updateDeepinStoreInfos() {
+	err := exec.Command("lastore-tools", "-item", "applications", "-output", "/var/lib/lastore/applications.json").Run()
+	if err != nil {
+		log.Errorf("updateDeepinStoreInfos[applications]: %v\n", err)
+	}
+
+	err = exec.Command("lastore-tools", "-item", "categories", "-output", "/var/lib/lastore/categories.json").Run()
+	if err != nil {
+		log.Errorf("updateDeepinStoreInfos[categories]: %v\n", err)
+	}
+
+	exec.Command("lastore-tools", "-item", "mirrors", "-output", "/var/lib/lastore/mirrors.json").Run()
+	if err != nil {
+		log.Errorf("updateDeepinStoreInfos[mirrors]: %v\n", err)
+	}
 }
