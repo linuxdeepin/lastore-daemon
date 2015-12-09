@@ -5,13 +5,13 @@ build:
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-daemon lastore-daemon
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-tools lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-session-helper lastore-session-helper
-	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-smartmirror-detector lastore-smartmirror-detector
+	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-smartmirror lastore-smartmirror
 
 gb:
 	gb build lastore-daemon
 	gb build lastore-tools
 	gb build lastore-session-helper
-	gb build lastore-smartmirror-detector
+	gb build lastore-smartmirror
 
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
