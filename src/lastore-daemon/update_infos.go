@@ -10,7 +10,7 @@ type ApplicationInfo struct {
 	Category   string            `json:"category"`
 	Icon       string            `json:"icon"`
 	Name       string            `json:"name"`
-	NameLocale map[string]string `json:"name_locale"`
+	LocaleName map[string]string `json:"locale_name"`
 }
 
 func (u *Updater) loadUpdateInfos() {
@@ -46,7 +46,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) []ApplicationUpdateInfo {
 
 		info := ApplicationUpdateInfo{
 			Id:             id,
-			Name:           aInfo.NameLocale[lang],
+			Name:           aInfo.LocaleName[lang],
 			Icon:           iInfos[id],
 			CurrentVersion: uInfo.CurrentVersion,
 			LastVersion:    uInfo.LastVersion,

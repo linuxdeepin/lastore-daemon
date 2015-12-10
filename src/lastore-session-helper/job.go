@@ -34,6 +34,7 @@ func NewLastore() *Lastore {
 		inhibitFd:        -1,
 		Lang:             QueryLang(),
 	}
+	log.Debugf("CurrentLang: %q\n", l.Lang)
 	upower, err := power.NewPower("com.deepin.daemon.Power", "/com/deepin/daemon/Power")
 	if err != nil {
 		log.Warnf("Failed MonitorBattery: %v\n", err)
