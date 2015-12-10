@@ -4,7 +4,6 @@ import log "github.com/cihub/seelog"
 import "pkg.deepin.io/lib/gettext"
 import "dbus/org/freedesktop/notifications"
 import "fmt"
-import "os/exec"
 
 type Action struct {
 	Id       string
@@ -99,12 +98,6 @@ func NotifyUpgrade(succeed bool, ac []Action) {
 
 }
 
-func LaunchDCC(moduleName string) {
-	cmd := exec.Command("dde-control-center", moduleName)
-	cmd.Start()
-	go cmd.Wait()
-}
-
 func NotifyNewUpdates(nApps int, hasLibs bool) {
 	var msg string
 	switch {
@@ -123,7 +116,7 @@ func NotifyNewUpdates(nApps int, hasLibs bool) {
 			Id:   "update",
 			Name: gettext.Tr("Update Now"),
 			Callback: func() {
-				LaunchDCC("system_info")
+				LaunchDCCAndUpgrade()
 			},
 		}})
 }

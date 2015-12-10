@@ -9,6 +9,7 @@ import "dbus/com/deepin/daemon/power"
 import "syscall"
 import log "github.com/cihub/seelog"
 import "strings"
+import "os/exec"
 
 type Lastore struct {
 	JobStatus        map[dbus.ObjectPath]system.Status
@@ -339,4 +340,18 @@ func guestJobTypeFromPath(path dbus.ObjectPath) string {
 		return system.DistUpgradeJobType
 	}
 	return ""
+}
+
+func LaunchDCCAndUpgrade() {
+	cmd := exec.Command("dde-control-center", "system_info")
+	cmd.Start()
+	go cmd.Wait()
+
+	core, err := lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
+	if err != nil {
+		log.Warnf("NewLastore: %v\n", err)
+		return
+	}
+	core.DistUpgrade()
+	lastore.DestroyManager(core)
 }
