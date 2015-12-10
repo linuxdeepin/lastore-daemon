@@ -182,7 +182,7 @@ func (l *Lastore) updateJob(path dbus.ObjectPath, status system.Status) {
 	job, _ := lastore.NewJob("com.deepin.lastore", path)
 	defer lastore.DestroyJob(job)
 	t := job.Type.Get()
-	if strings.Contains(string(path), "install") && t == system.DownloadJobType {
+	if strings.Contains(string(path), "install") && t == system.DownloadJobType && status == system.SucceedStatus {
 		return
 	}
 

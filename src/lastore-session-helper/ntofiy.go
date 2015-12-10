@@ -12,7 +12,7 @@ type Action struct {
 	Callback func()
 }
 
-func SendNotify(msg string, actions []Action) {
+func SendNotify(icon string, msg string, actions []Action) {
 	log.Infof("Notify: %q, %v\n", msg, actions)
 	n, err := notifications.NewNotifier("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
 
@@ -21,7 +21,10 @@ func SendNotify(msg string, actions []Action) {
 		as = append(as, action.Id, action.Name)
 	}
 
-	id, err := n.Notify("appstore", 0, "deepin-appstore", "", msg, as, nil, -1)
+	if icon == "" {
+		icon = "deepin-appstore"
+	}
+	id, err := n.Notify("appstore", 0, icon, "", msg, as, nil, -1)
 	if err != nil {
 		log.Warnf("Notify failed: %q: %v\n", msg, err)
 		return
@@ -49,10 +52,12 @@ func NotifyInstall(pkgId string, succeed bool, ac []Action) {
 	var msg string
 	if succeed {
 		msg = fmt.Sprintf(gettext.Tr("%q installed successfully."), pkgId)
+		SendNotify("package_install_succeed", msg, ac)
 	} else {
 		msg = fmt.Sprintf(gettext.Tr("%q failed to install."), pkgId)
+		SendNotify("package_install_failed", msg, ac)
 	}
-	SendNotify(msg, ac)
+
 }
 
 func NotifyRemove(pkgId string, succeed bool, ac []Action) {
@@ -62,19 +67,19 @@ func NotifyRemove(pkgId string, succeed bool, ac []Action) {
 	} else {
 		msg = fmt.Sprintf(gettext.Tr("%q failed to remove."), pkgId)
 	}
-	SendNotify(msg, ac)
+	SendNotify("deepin-store", msg, ac)
 }
 
 // NotifyDownload send desktop notify for download job
 func NotifyFailedDownload(pkgName string, ac []Action) {
 	msg := fmt.Sprintf(gettext.Tr("%q failed to download."), pkgName)
-	SendNotify(msg, ac)
+	SendNotify("package_download_failed", msg, ac)
 }
 
 //NotifyLowPower send notify for low power
 func NotifyLowPower() {
 	msg := gettext.Tr("In order to prevent automatic shutdown, please plug in for normal update.")
-	SendNotify(msg, nil)
+	SendNotify("notification-battery_low", msg, nil)
 }
 
 func NotifyUpgrade(succeed bool, ac []Action) {
@@ -86,11 +91,12 @@ func NotifyUpgrade(succeed bool, ac []Action) {
 		} else {
 			msg = gettext.Tr("Updated successfully!")
 		}
+		SendNotify("package_install_succeed", msg, ac)
 	} else {
 		msg = gettext.Tr("Failed to update.")
+		SendNotify("package_update_failed", msg, ac)
 	}
 
-	SendNotify(msg, ac)
 }
 
 func LaunchDCC(moduleName string) {
@@ -112,11 +118,12 @@ func NotifyNewUpdates(nApps int, hasLibs bool) {
 		return
 	}
 
-	SendNotify(msg, []Action{Action{
-		Id:   "update",
-		Name: gettext.Tr("Update Now"),
-		Callback: func() {
-			LaunchDCC("system_info")
-		},
-	}})
+	SendNotify("system_updated",
+		msg, []Action{Action{
+			Id:   "update",
+			Name: gettext.Tr("Update Now"),
+			Callback: func() {
+				LaunchDCC("system_info")
+			},
+		}})
 }
