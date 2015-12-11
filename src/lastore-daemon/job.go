@@ -34,7 +34,7 @@ type Job struct {
 	Description string
 
 	// completed bytes per second
-	Speed float64
+	Speed int64
 	//  effect bytes
 	effectSizes float64
 	// updateInfo timestamp
@@ -88,12 +88,12 @@ func (j Job) String() string {
 	)
 }
 
-func SmoothCalc(oldSpeed, newSpeed float64, interval time.Duration) float64 {
+func SmoothCalc(oldSpeed, newSpeed int64, interval time.Duration) int64 {
 	ratio := float64(time.Second-interval) * 1.0 / float64(time.Second)
 	if ratio < 0 {
-		return newSpeed
+		return int64(newSpeed)
 	}
-	return oldSpeed*(1-ratio) + newSpeed*ratio
+	return int64(float64(oldSpeed)*(1-ratio) + float64(newSpeed)*ratio)
 }
 
 // _UpdateInfo update Job information from info and return
@@ -122,7 +122,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		now := time.Now()
 
 		if s := now.Sub(j.updateProgressTime).Seconds(); s > 0 && completed >= 0 {
-			j.Speed = SmoothCalc(j.Speed, (completed / s), now.Sub(j.updateProgressTime))
+			j.Speed = SmoothCalc(j.Speed, int64(completed/s), now.Sub(j.updateProgressTime))
 			dbus.NotifyChange(j, "Speed")
 		}
 		j.updateProgressTime = now

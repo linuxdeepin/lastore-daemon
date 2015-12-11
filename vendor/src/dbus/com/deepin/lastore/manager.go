@@ -818,21 +818,21 @@ func (this *dbusPropertyJobSpeed) SetValue(notwritable interface{}) {
 	fmt.Println("com.deepin.lastore.Job.Speed is not writable")
 }
 
-func (this *dbusPropertyJobSpeed) Get() float64 {
-	return this.GetValue().(float64)
+func (this *dbusPropertyJobSpeed) Get() int64 {
+	return this.GetValue().(int64)
 }
-func (this *dbusPropertyJobSpeed) GetValue() interface{} /*float64*/ {
+func (this *dbusPropertyJobSpeed) GetValue() interface{} /*int64*/ {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Speed").Store(&r)
-	if err == nil && r.Signature().String() == "d" {
-		return r.Value().(float64)
+	if err == nil && r.Signature().String() == "x" {
+		return r.Value().(int64)
 	} else {
 		fmt.Println("dbusProperty:Speed error:", err, "at com.deepin.lastore.Job")
-		return *new(float64)
+		return *new(int64)
 	}
 }
 func (this *dbusPropertyJobSpeed) GetType() reflect.Type {
-	return reflect.TypeOf((*float64)(nil)).Elem()
+	return reflect.TypeOf((*int64)(nil)).Elem()
 }
 
 type dbusPropertyJobDescription struct {
