@@ -102,8 +102,16 @@ func (p *APTSystem) Abort(jobId string) error {
 	return system.NotFoundError
 }
 
-func (p *APTSystem) CheckInstalled(pid string) bool {
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", pid).CombinedOutput()
+func (p *APTSystem) CheckInstallable(pkgId string) bool {
+	out, err := exec.Command("/usr/bin/apt-cache", "show", pkgId).CombinedOutput()
+	if err != nil {
+		log.Debugf("CheckInstabllable(%q) failed: %q %v\n", pkgId, string(out), err)
+		return false
+	}
+	return true
+}
+func (p *APTSystem) CheckInstalled(pkgId string) bool {
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", pkgId).CombinedOutput()
 	if err != nil {
 		return false
 	}

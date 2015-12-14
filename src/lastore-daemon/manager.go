@@ -165,8 +165,12 @@ func (m *Manager) CleanJob(jobId string) error {
 	return m.jobManager.CleanJob(jobId)
 }
 
-func (m *Manager) PackageExists(packageId string) bool {
-	return m.b.CheckInstalled(packageId)
+func (m *Manager) PackageInstallable(pkgId string) bool {
+	return m.b.CheckInstallable(pkgId)
+}
+
+func (m *Manager) PackageExists(pkgId string) bool {
+	return m.b.CheckInstalled(pkgId)
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) int64 {
@@ -180,15 +184,15 @@ func (m *Manager) PackagesDownloadSize(packages []string) int64 {
 	return int64(QueryPackageDownloadSize(packages...))
 }
 
-func (m *Manager) PackageDesktopPath(packageId string) string {
+func (m *Manager) PackageDesktopPath(pkgId string) string {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	r := QueryDesktopPath(packageId)
+	r := QueryDesktopPath(pkgId)
 	if r != "" {
 		return r
 	}
-	return QueryDesktopPath(QueryPackageSameNameDepends(packageId)...)
+	return QueryDesktopPath(QueryPackageSameNameDepends(pkgId)...)
 }
 
 func (m *Manager) SetRegion(region string) error {

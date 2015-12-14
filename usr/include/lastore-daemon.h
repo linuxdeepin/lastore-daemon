@@ -611,6 +611,17 @@ class Manager : public dbus::common::DBusObject
 	
 	
 	
+	dbus::common::R<bool> PackageInstallable (QString arg0) {
+		QList<QVariant> argumentList;
+		argumentList << QVariant::fromValue(arg0);
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PackageInstallable"), argumentList);
+		return dbus::common::R<bool>(call);
+	}
+	
+
+	
+	
+	
 	dbus::common::R<bool> PackageExists (QString arg0) {
 		QList<QVariant> argumentList;
 		argumentList << QVariant::fromValue(arg0);

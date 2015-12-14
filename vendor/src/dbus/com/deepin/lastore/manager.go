@@ -113,6 +113,14 @@ func (obj *Manager) PackageDesktopPath(arg0 string) (arg1 string, _err error) {
 	return
 }
 
+func (obj *Manager) PackageInstallable(arg0 string) (arg1 bool, _err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.PackageInstallable", 0, arg0).Store(&arg1)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
 func (obj *Manager) PackageExists(arg0 string) (arg1 bool, _err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.PackageExists", 0, arg0).Store(&arg1)
 	if _err != nil {

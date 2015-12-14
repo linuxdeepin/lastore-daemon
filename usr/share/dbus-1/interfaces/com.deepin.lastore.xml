@@ -23,6 +23,10 @@
                <arg type="s" direction="in"></arg>
                <arg type="s" direction="out"></arg>
           </method>
+          <method name="PackageInstallable">
+               <arg type="s" direction="in"></arg>
+               <arg type="b" direction="out"></arg>
+          </method>
           <method name="PackageExists">
                <arg type="s" direction="in"></arg>
                <arg type="b" direction="out"></arg>
