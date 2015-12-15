@@ -116,7 +116,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	}
 
 	// The Progress may not changed when we calculate speed.
-	if j.setEffectSizes() {
+	if info.Status == system.RunningStatus && j.setEffectSizes() {
 		completed := (info.Progress - j.Progress) * j.effectSizes
 		now := time.Now()
 
@@ -129,7 +129,13 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 
 	if info.Progress != j.Progress && info.Progress != -1 {
 		changed = true
-		j.Progress = info.Progress
+
+		if info.Status == system.SucceedStatus {
+			j.Progress = 1.0
+		} else {
+			j.Progress = info.Progress
+		}
+
 		dbus.NotifyChange(j, "Progress")
 	}
 

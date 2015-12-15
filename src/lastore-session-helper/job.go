@@ -11,8 +11,16 @@ import log "github.com/cihub/seelog"
 import "strings"
 import "os/exec"
 
+type CacheJobInfo struct {
+	Id       string
+	Status   system.Status
+	Name     string
+	Progress float64
+	Type     string
+}
+
 type Lastore struct {
-	JobStatus        map[dbus.ObjectPath]system.Status
+	JobStatus        map[dbus.ObjectPath]CacheJobInfo
 	SystemOnChanging bool
 	Lang             string
 	OnLine           bool
@@ -29,7 +37,7 @@ type Lastore struct {
 
 func NewLastore() *Lastore {
 	l := &Lastore{
-		JobStatus:        make(map[dbus.ObjectPath]system.Status),
+		JobStatus:        make(map[dbus.ObjectPath]CacheJobInfo),
 		SystemOnChanging: true,
 		inhibitFd:        -1,
 		Lang:             QueryLang(),
@@ -85,6 +93,7 @@ func (l *Lastore) monitorSignal() {
 			props, _ := v.Body[1].(map[string]dbus.Variant)
 			switch ifc, _ := v.Body[0].(string); ifc {
 			case "com.deepin.lastore.Job":
+				l.updateCacheJobInfo(v.Path)
 				status, ok := props["Status"]
 				if ok {
 					svalue, _ := status.Value().(string)
@@ -179,19 +188,41 @@ func (l *Lastore) updateJobList(list []dbus.ObjectPath) {
 	log.Infof("UpdateJobList: %v - %v\n", list, invalids)
 }
 
+func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath) CacheJobInfo {
+	job, err := lastore.NewJob("com.deepin.lastore", path)
+
+	if err != nil || job.Id.Get() == "" {
+		return l.JobStatus[path]
+	}
+	name := job.Name.Get()
+	if name == "" {
+		name = PackageName(job.Packages.Get(), l.Lang)
+	}
+
+	l.JobStatus[path] = CacheJobInfo{
+		Status:   system.Status(job.Status.Get()),
+		Name:     name,
+		Progress: job.Progress.Get(),
+		Type:     job.Type.Get(),
+	}
+	return l.JobStatus[path]
+}
+
 // updateJob update job status
 func (l *Lastore) updateJob(path dbus.ObjectPath, status system.Status) {
-	job, _ := lastore.NewJob("com.deepin.lastore", path)
-	defer lastore.DestroyJob(job)
-	t := job.Type.Get()
-	if strings.Contains(string(path), "install") && t == system.DownloadJobType && status == system.SucceedStatus {
+	info := l.JobStatus[path]
+	if strings.Contains(string(path), "install") && info.Type == system.DownloadJobType && status != system.FailedStatus {
 		return
 	}
 
-	if l.JobStatus[path] == status {
+	if status == system.SucceedStatus && info.Progress != 1 {
+		log.Debugf("Filter Invalid SucceedStatus.... %v\n", info)
 		return
 	}
-	l.JobStatus[path] = status
+
+	if info.Status == status {
+		return
+	}
 
 	l.notifyJob(path, status)
 }
@@ -227,7 +258,7 @@ func (l *Lastore) updateSystemOnChaning(onChanging bool) {
 func (l *Lastore) offline() {
 	log.Info("Lastore.Daemon Offline\n")
 	l.OnLine = false
-	l.JobStatus = make(map[dbus.ObjectPath]system.Status)
+	l.JobStatus = make(map[dbus.ObjectPath]CacheJobInfo)
 	l.updateSystemOnChaning(false)
 }
 
@@ -284,42 +315,33 @@ func (l *Lastore) createJobFailedActions(jobId string) []Action {
 func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
 	l.checkBattery()
 
-	job, err := lastore.NewJob("com.deepin.lastore", path)
-	if err != nil {
-		return
-	}
-	defer lastore.DestroyJob(job)
-	jobName := job.Name.Get()
-	if jobName == "" {
-		jobName = PackageName(job.Packages.Get(), l.Lang)
-	}
-
+	info := l.JobStatus[path]
 	switch guestJobTypeFromPath(path) {
 	case system.DownloadJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyFailedDownload(jobName, l.createJobFailedActions(job.Id.Get()))
+			NotifyFailedDownload(info.Name, l.createJobFailedActions(info.Id))
 		case system.SucceedStatus:
 		}
 
 	case system.InstallJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyInstall(jobName, false, l.createJobFailedActions(job.Id.Get()))
+			NotifyInstall(info.Name, false, l.createJobFailedActions(info.Id))
 		case system.SucceedStatus:
-			NotifyInstall(jobName, true, nil)
+			NotifyInstall(info.Name, true, nil)
 		}
 	case system.RemoveJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyRemove(jobName, false, l.createJobFailedActions(job.Id.Get()))
+			NotifyRemove(info.Name, false, l.createJobFailedActions(info.Id))
 		case system.SucceedStatus:
-			NotifyRemove(jobName, true, nil)
+			NotifyRemove(info.Name, true, nil)
 		}
 	case system.DistUpgradeJobType:
 		switch status {
 		case system.FailedStatus:
-			NotifyUpgrade(false, l.createJobFailedActions(job.Id.Get()))
+			NotifyUpgrade(false, l.createJobFailedActions(info.Id))
 		case system.SucceedStatus:
 			NotifyUpgrade(true, l.createUpgradeActions())
 		}

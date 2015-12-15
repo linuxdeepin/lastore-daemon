@@ -416,4 +416,5 @@ func (m *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	if j._UpdateInfo(info) {
 		m.changed = true
 	}
+	m.dispatch()
 }

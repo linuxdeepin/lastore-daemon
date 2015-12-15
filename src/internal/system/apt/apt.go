@@ -230,11 +230,6 @@ func (c *aptCommand) updateProgress() {
 			continue
 		}
 
-		if strings.Contains(line, "rename failed") {
-			// ignore rename failed
-			continue
-		}
-
 		c.Cancelable = info.Cancelable
 		c.indicator(info)
 	}

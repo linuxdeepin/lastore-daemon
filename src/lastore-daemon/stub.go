@@ -2,6 +2,7 @@ package main
 
 import (
 	"pkg.deepin.io/lib/dbus"
+	"time"
 )
 
 func (m *Manager) GetDBusInfo() dbus.DBusInfo {
@@ -96,6 +97,7 @@ func (u *Updater) setPropUpdatablePackages(ids []string) {
 
 func DestroyJob(j *Job) {
 	j.notifyAll()
+	<-time.After(time.Millisecond * 10)
 	dbus.UnInstallObject(j)
 }
 
