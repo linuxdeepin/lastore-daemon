@@ -60,7 +60,6 @@ func NewJob(jobName string, packages []string, jobType string, queueName string)
 		queueName:  queueName,
 		retry:      3,
 	}
-	j.setEffectSizes()
 	return j
 }
 

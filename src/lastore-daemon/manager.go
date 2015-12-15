@@ -83,7 +83,7 @@ func (m *Manager) InstallPackage(jobName string, packages string) (*Job, error) 
 		return nil, system.ResourceExitError
 	}
 
-	Touch(string(m.SystemArchitectures[0]), m.config.AppstoreRegion, pList...)
+	go Touch(string(m.SystemArchitectures[0]), m.config.AppstoreRegion, pList...)
 	return m.jobManager.CreateJob(jobName, system.InstallJobType, pList)
 }
 
