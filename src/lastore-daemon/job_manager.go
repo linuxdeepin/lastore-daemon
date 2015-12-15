@@ -201,6 +201,7 @@ func (m *JobManager) dispatch() {
 			job = job.next
 			m.addJob(job)
 			m.MarkStart(job.Id)
+			job.notifyAll()
 		}
 	}
 
@@ -348,6 +349,7 @@ func (l *JobQueue) RunningJobs() JobList {
 }
 
 func (l *JobQueue) Add(j *Job) error {
+
 	for _, job := range l.Jobs {
 		if job.Type == j.Type && strings.Join(job.Packages, "") == strings.Join(j.Packages, "") {
 			return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)

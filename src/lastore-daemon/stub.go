@@ -95,6 +95,7 @@ func (u *Updater) setPropUpdatablePackages(ids []string) {
 }
 
 func DestroyJob(j *Job) {
+	j.notifyAll()
 	dbus.UnInstallObject(j)
 }
 
@@ -112,4 +113,15 @@ func (u Updater) GetDBusInfo() dbus.DBusInfo {
 		ObjectPath: "/com/deepin/lastore",
 		Interface:  "com.deepin.lastore.Updater",
 	}
+}
+
+func (j *Job) notifyAll() {
+	dbus.NotifyChange(j, "Id")
+	dbus.NotifyChange(j, "Name")
+	dbus.NotifyChange(j, "Packages")
+	dbus.NotifyChange(j, "Type")
+	dbus.NotifyChange(j, "Status")
+	dbus.NotifyChange(j, "Progress")
+	dbus.NotifyChange(j, "Speed")
+	dbus.NotifyChange(j, "Cancelable")
 }
