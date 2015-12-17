@@ -84,7 +84,6 @@ func NotifyLowPower() {
 func NotifyUpgrade(succeed bool, ac []Action) {
 	var msg string
 	if succeed {
-		// TODO: we need check this for any system change actions
 		if FileExist("/var/run/reboot-required.pkgs") {
 			msg = gettext.Tr("Updated successfully!") + " " + gettext.Tr("Some functions will take effect after rebooting.")
 		} else {

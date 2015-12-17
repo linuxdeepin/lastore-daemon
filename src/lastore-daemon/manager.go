@@ -1,6 +1,7 @@
 package main
 
 import (
+	log "github.com/cihub/seelog"
 	"internal/system"
 	"pkg.deepin.io/lib/dbus"
 	"strings"
@@ -62,8 +63,12 @@ func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
-	// TODO: Check whether the package can be updated
-	return m.jobManager.CreateJob(jobName, system.UpdateJobType, strings.Fields(packages))
+
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, strings.Fields(packages))
+	if err != nil {
+		log.Warnf("UpdatePackage %q error: %v\n", packages, err)
+	}
+	return job, err
 }
 
 func (m *Manager) InstallPackage(jobName string, packages string) (*Job, error) {
@@ -84,7 +89,11 @@ func (m *Manager) InstallPackage(jobName string, packages string) (*Job, error) 
 	}
 
 	go Touch(string(m.SystemArchitectures[0]), m.config.AppstoreRegion, pList...)
-	return m.jobManager.CreateJob(jobName, system.InstallJobType, pList)
+	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList)
+	if err != nil {
+		log.Warnf("InstallPackage %q error: %v\n", packages, err)
+	}
+	return job, err
 }
 
 func (m *Manager) DownloadPackage(jobName string, packages string) (*Job, error) {
@@ -103,21 +112,33 @@ func (m *Manager) DownloadPackage(jobName string, packages string) (*Job, error)
 	if installedN == len(pList) {
 		return nil, system.ResourceExitError
 	}
-	return m.jobManager.CreateJob(jobName, system.DownloadJobType, pList)
+	job, err := m.jobManager.CreateJob(jobName, system.DownloadJobType, pList)
+	if err != nil {
+		log.Warnf("DownloadPackage %q error: %v\n", packages, err)
+	}
+	return job, err
 }
 
 func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return m.jobManager.CreateJob(jobName, system.RemoveJobType, strings.Fields(packages))
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, strings.Fields(packages))
+	if err != nil {
+		log.Warnf("RemovePackage %q error: %v\n", packages, err)
+	}
+	return job, err
 }
 
 func (m *Manager) UpdateSource() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return m.jobManager.CreateJob("", system.UpdateSourceJobType, nil)
+	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil)
+	if err != nil {
+		log.Warnf("UpdateSource error: %v\n", err)
+	}
+	return job, err
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
@@ -143,26 +164,42 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 		m.CleanJob(jobId)
 	}
 
-	return m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
+	if err != nil {
+		log.Warnf("DistUpgrade error: %v\n", err)
+	}
+	return job, err
 }
 
 func (m *Manager) StartJob(jobId string) error {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return m.jobManager.MarkStart(jobId)
+	err := m.jobManager.MarkStart(jobId)
+	if err != nil {
+		log.Warnf("StartJob %q error: %v\n", jobId, err)
+	}
+	return err
 }
 func (m *Manager) PauseJob(jobId string) error {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return m.jobManager.PauseJob(jobId)
+	err := m.jobManager.PauseJob(jobId)
+	if err != nil {
+		log.Warnf("PauseJob %q error: %v\n", jobId, err)
+	}
+	return err
 }
 func (m *Manager) CleanJob(jobId string) error {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return m.jobManager.CleanJob(jobId)
+	err := m.jobManager.CleanJob(jobId)
+	if err != nil {
+		log.Warnf("CleanJob %q error: %v\n", jobId, err)
+	}
+	return err
 }
 
 func (m *Manager) PackageInstallable(pkgId string) bool {

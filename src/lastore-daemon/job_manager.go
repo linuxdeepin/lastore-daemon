@@ -51,9 +51,9 @@ func NewJobManager(api system.System, notifyFn func()) *JobManager {
 	return m
 }
 
-func (m *JobManager) List() JobList {
+func (jm *JobManager) List() JobList {
 	var r JobList
-	for _, queue := range m.queues {
+	for _, queue := range jm.queues {
 		for _, job := range queue.Jobs {
 			r = append(r, job)
 		}
@@ -81,9 +81,9 @@ func (m *JobManager) guest(jobType string, packages []string) string {
 }
 
 // CreateJob create the job and try starting it
-func (m *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
-	if job := m.find(m.guest(jobType, packages)); job != nil {
-		return job, m.MarkStart(job.Id)
+func (jm *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
+	if job := jm.find(jm.guest(jobType, packages)); job != nil {
+		return job, jm.MarkStart(job.Id)
 	}
 
 	var job *Job
@@ -105,14 +105,14 @@ func (m *JobManager) CreateJob(jobName string, jobType string, packages []string
 	default:
 		return nil, system.NotSupportError
 	}
-	m.addJob(job)
-	return job, m.MarkStart(job.Id)
+	jm.addJob(job)
+	return job, jm.MarkStart(job.Id)
 }
 
 // MarkStart transition the Job status to ReadyStatus
 // and move the it to the head of queue.
-func (m *JobManager) MarkStart(jobId string) error {
-	job := m.find(jobId)
+func (jm *JobManager) MarkStart(jobId string) error {
+	job := jm.find(jobId)
 	if job == nil {
 		return system.NotFoundError
 	}
@@ -124,7 +124,7 @@ func (m *JobManager) MarkStart(jobId string) error {
 		}
 	}
 
-	queue, ok := m.queues[job.queueName]
+	queue, ok := jm.queues[job.queueName]
 	if !ok {
 		return system.NotFoundError
 	}
@@ -133,14 +133,17 @@ func (m *JobManager) MarkStart(jobId string) error {
 
 // CleanJob transition the Job status to EndStatus,
 // so the job will be auto clean in next dispatch run.
-func (m *JobManager) CleanJob(jobId string) error {
-	job := m.find(jobId)
+func (jm *JobManager) CleanJob(jobId string) error {
+	job := jm.find(jobId)
 	if job == nil {
 		return system.NotFoundError
 	}
 
-	if job.Status == system.RunningStatus && job.Cancelable {
-		m.PauseJob(jobId)
+	if job.Cancelable {
+		err := jm.PauseJob(jobId)
+		if err != nil {
+			return err
+		}
 	}
 
 	if ValidTransitionJobState(job.Status, system.EndStatus) {
@@ -150,26 +153,27 @@ func (m *JobManager) CleanJob(jobId string) error {
 }
 
 // PauseJob try aborting the job and transition the status to PauseStatus
-func (m *JobManager) PauseJob(jobId string) error {
-	job := m.find(jobId)
+func (jm *JobManager) PauseJob(jobId string) error {
+	job := jm.find(jobId)
 	if job == nil {
 		return system.NotFoundError
 	}
-
-	if !ValidTransitionJobState(job.Status, system.PausedStatus) {
-		return system.NotSupportError
-	}
-
-	err := m.system.Abort(job.Id)
-	if err != nil {
-		return err
+	switch job.Status {
+	case system.PausedStatus:
+		log.Warnf("Try pausing a pasued Job %v\n", job)
+		return nil
+	case system.RunningStatus:
+		err := jm.system.Abort(job.Id)
+		if err != nil {
+			return err
+		}
 	}
 
 	return TransitionJobState(job, system.PausedStatus)
 }
 
-func (m *JobManager) find(jobId string) *Job {
-	for _, queue := range m.queues {
+func (jm *JobManager) find(jobId string) *Job {
+	for _, queue := range jm.queues {
 		job := queue.Find(jobId)
 		if job != nil {
 			return job
@@ -181,12 +185,12 @@ func (m *JobManager) find(jobId string) *Job {
 // Dispatch transition Job status in Job Queues
 // 1. Clean Jobs whose status is system.EndStatus
 // 2. Run all Pending Jobs.
-func (m *JobManager) dispatch() {
-	m.dispatchLock.Lock()
-	defer m.dispatchLock.Unlock()
+func (jm *JobManager) dispatch() {
+	jm.dispatchLock.Lock()
+	defer jm.dispatchLock.Unlock()
 
 	var pendingDeleteJobs []*Job
-	for _, queue := range m.queues {
+	for _, queue := range jm.queues {
 		// 1. Clean Jobs with EndStatus
 		for _, job := range queue.Jobs {
 			switch {
@@ -196,60 +200,62 @@ func (m *JobManager) dispatch() {
 		}
 	}
 	for _, job := range pendingDeleteJobs {
-		m.removeJob(job.Id, job.queueName)
+		jm.changed = true
+		jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
 			job = job.next
-			m.addJob(job)
-			m.MarkStart(job.Id)
+			jm.addJob(job)
+			jm.MarkStart(job.Id)
 			job.notifyAll()
 		}
 	}
 
-	for name, queue := range m.queues {
+	for name, queue := range jm.queues {
 		// wait for LockQueue be idled
-		if name != LockQueue && len(m.queues[LockQueue].RunningJobs()) != 0 {
+		if name != LockQueue && len(jm.queues[LockQueue].RunningJobs()) != 0 {
 			continue
 		}
 
 		// 2. Try starting jobs with ReadyStatus
 		jobs := queue.PendingJobs()
 		for _, job := range jobs {
+			jm.changed = true
 			if job.Status == system.FailedStatus {
-				m.MarkStart(job.Id)
+				jm.MarkStart(job.Id)
 				log.Infof("Retry failed Job %v\n", job)
 			}
-			err := StartSystemJob(m.system, job)
+			err := StartSystemJob(jm.system, job)
 			if err != nil {
 				log.Errorf("StartSystemJob failed %v :%v\n", job, err)
 			}
 		}
 	}
 
-	if m.changed && m.notify != nil {
-		m.changed = false
-		m.notify()
+	if jm.changed && jm.notify != nil {
+		jm.changed = false
+		jm.notify()
 	}
 }
 
-func (m *JobManager) Dispatch() {
+func (jm *JobManager) Dispatch() {
 	for {
 		<-time.After(time.Millisecond * 500)
-		m.dispatch()
+		jm.dispatch()
 	}
 }
 
-func (m *JobManager) createJobList(name string, cap int) {
+func (jm *JobManager) createJobList(name string, cap int) {
 	list := NewJobQueue(name, cap)
-	m.queues[name] = list
+	jm.queues[name] = list
 }
 
-func (m *JobManager) addJob(j *Job) error {
+func (jm *JobManager) addJob(j *Job) error {
 	if j == nil {
 		log.Trace("adJob with nil")
 		return system.NotFoundError
 	}
 	queueName := j.queueName
-	queue, ok := m.queues[queueName]
+	queue, ok := jm.queues[queueName]
 	if !ok {
 		return system.NotFoundError
 	}
@@ -258,11 +264,11 @@ func (m *JobManager) addJob(j *Job) error {
 	if err != nil {
 		return err
 	}
-	m.changed = true
+	jm.changed = true
 	return nil
 }
-func (m *JobManager) removeJob(jobId string, queueName string) error {
-	queue, ok := m.queues[queueName]
+func (jm *JobManager) removeJob(jobId string, queueName string) error {
+	queue, ok := jm.queues[queueName]
 	if !ok {
 		return system.NotFoundError
 	}
@@ -271,7 +277,7 @@ func (m *JobManager) removeJob(jobId string, queueName string) error {
 	if err != nil {
 		return err
 	}
-	m.changed = true
+	jm.changed = true
 	return nil
 }
 
@@ -330,7 +336,7 @@ func (l *JobQueue) PendingJobs() JobList {
 		n++
 	}
 	if n+1 < numPending {
-		log.Info("These jobs are waiting for running...", readyJobs[n+1:])
+		log.Trace("These jobs are waiting for running...", readyJobs[n+1:])
 	}
 	r := JobList(readyJobs[:n])
 	sort.Sort(r)
@@ -349,7 +355,6 @@ func (l *JobQueue) RunningJobs() JobList {
 }
 
 func (l *JobQueue) Add(j *Job) error {
-
 	for _, job := range l.Jobs {
 		if job.Type == j.Type && strings.Join(job.Packages, "") == strings.Join(j.Packages, "") {
 			return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)
@@ -406,15 +411,15 @@ func (l *JobQueue) Find(id string) *Job {
 	return nil
 }
 
-func (m *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
-	j := m.find(info.JobId)
+func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
+	j := jm.find(info.JobId)
 	if j == nil {
 		log.Warnf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
 
 	if j._UpdateInfo(info) {
-		m.changed = true
+		jm.changed = true
 	}
-	m.dispatch()
+	jm.dispatch()
 }

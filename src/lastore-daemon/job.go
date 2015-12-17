@@ -55,7 +55,7 @@ func NewJob(jobName string, packages []string, jobType string, queueName string)
 		Packages:   packages,
 		Status:     system.ReadyStatus,
 		Progress:   .0,
-		Cancelable: false,
+		Cancelable: true,
 		option:     make(map[string]string),
 		queueName:  queueName,
 		retry:      3,
@@ -145,7 +145,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		dbus.NotifyChange(j, "Cancelable")
 	}
 
-	log.Infof("updateInfo %v <- %v\n", j, info)
+	log.Tracef("updateInfo %v <- %v\n", j, info)
 
 	if j.Status == system.SucceedStatus {
 		err := TransitionJobState(j, system.EndStatus)
