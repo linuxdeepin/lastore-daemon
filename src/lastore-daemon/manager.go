@@ -142,18 +142,21 @@ func (m *Manager) UpdateSource() (*Job, error) {
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
-	if len(m.UpgradableApps) == 0 {
-		return nil, system.ResourceExitError
-	}
-
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
 
+	m.updateJobList()
+	if len(m.UpgradableApps) == 0 {
+		return nil, system.NotFoundError
+	}
+
 	var updateJobIds []string
-	for _, job := range m.JobList {
+	for _, job := range m.jobManager.List() {
 		if job.Type == system.DistUpgradeJobType {
-			return nil, system.ResourceExitError
+			err := m.StartJob(job.Id)
+			log.Warnf("Using exist DistUpgradeJob %v --> %v\n", job, err)
+			return job, err
 		}
 		if job.Type == system.UpdateJobType && job.Status != system.RunningStatus {
 			updateJobIds = append(updateJobIds, job.Id)

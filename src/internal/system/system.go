@@ -58,7 +58,6 @@ type System interface {
 	Install(jobId string, packages []string) error
 	Remove(jobId string, packages []string) error
 
-	DistUpgrade(jobId string) error
 	UpdateSource(jobId string) error
 	UpgradeInfo() []UpgradeInfo
 

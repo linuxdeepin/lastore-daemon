@@ -105,6 +105,7 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 	default:
 		return nil, system.NotSupportError
 	}
+	log.Infof("CreateJob with %q %q %q\n", jobName, jobType, packages)
 	jm.addJob(job)
 	return job, jm.MarkStart(job.Id)
 }

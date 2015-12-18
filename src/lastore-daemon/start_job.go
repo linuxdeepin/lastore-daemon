@@ -23,14 +23,12 @@ func StartSystemJob(sys system.System, j *Job) error {
 	case system.DownloadJobType:
 		return sys.Download(j.Id, j.Packages)
 
-	case system.InstallJobType:
+	case system.InstallJobType, system.DistUpgradeJobType:
 		return sys.Install(j.Id, j.Packages)
 
 	case system.RemoveJobType:
 		return sys.Remove(j.Id, j.Packages)
 
-	case system.DistUpgradeJobType:
-		return sys.DistUpgrade(j.Id)
 	case system.UpdateSourceJobType:
 		return sys.UpdateSource(j.Id)
 

@@ -95,9 +95,6 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "install", "-d")
 		args = append(args, packages...)
-	case system.DistUpgradeJobType:
-		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "-f", "dist-upgrade", "--force-yes")
 	case system.UpdateSourceJobType:
 		args = append(args, "update")
 	}
@@ -226,7 +223,7 @@ func (c *aptCommand) updateProgress() {
 
 		info, err := ParseProgressInfo(c.JobId, line)
 		if err != nil {
-			log.Errorf("aptCommand.updateProgress %v\n", info)
+			log.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
 			continue
 		}
 
