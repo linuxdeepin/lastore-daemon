@@ -18,5 +18,5 @@ do
 done
 
 # update list files
-cp -vu ${source}/* $target
-cp -vu /var/cache/apt/pkgcache.bin /var/lib/lastore/safecache/
+cp -v ${source}/* $target
+cp -v /var/cache/apt/pkgcache.bin /var/lib/lastore/safecache/
