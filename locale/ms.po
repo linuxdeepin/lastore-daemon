@@ -3,97 +3,97 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# szd_liufei <liufei@linuxdeepin.com>, 2015
+# abuyop <abuyop@gmail.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-21 01:00+0000\n"
-"Last-Translator: szd_liufei <liufei@linuxdeepin.com>\n"
-"Language-Team: Chinese (China) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_CN/)\n"
+"PO-Revision-Date: 2015-12-21 11:51+0000\n"
+"Last-Translator: abuyop <abuyop@gmail.com>\n"
+"Language-Team: Malay (http://www.transifex.com/linuxdeepin/deepin-store/language/ms/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: zh_CN\n"
+"Language: ms\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
-msgstr "深度商店"
+msgstr "Kedai Deepin"
 
 #: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr "系统正在更新，请稍后关机或重启。"
+msgstr "Sistem dikemaskinikan, sila matikan atau but semula kemudian."
 
 #: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
-msgstr "立即重启"
+msgstr "But Semula Sekarang"
 
 #: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
-msgstr "稍后重启"
+msgstr "But Semula Kemudian"
 
 #: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
-msgstr "重试 "
+msgstr "Cuba lagi"
 
 #: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
-msgstr "取消"
+msgstr "Batal"
 
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
-msgstr "%q 安装成功。"
+msgstr "%q berjaya dipasangkan."
 
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr "%q 安装失败。"
+msgstr "%q gagal dipasangkan."
 
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
-msgstr "卸载 %q 成功。"
+msgstr "%q berjaya dibuang."
 
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "卸载 %q 失败。"
+msgstr "%q gagal dibuang."
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "%q 下载失败。"
+msgstr "%q gagal dimuat turunkan."
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "为防止自动关机，请连接电源以保证安全更新。"
+msgstr "Untuk menghindari komputer dimatikan secara automatik, sila palamkan untuk kemaskini biasa."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr "部分功能需重启后才能生效，是否重启？"
+msgstr "Beberapa fungsi akan berkesan selepas membut semula."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "更新成功！"
+msgstr "Berjaya dikemaskinikan!"
 
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
-msgstr "更新失败。"
+msgstr "Gagal dikemaskinikan."
 
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "您有%d个软件需要更新。"
+msgstr "%d perisian perlu dikemaskinikan."
 
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr "您有系统补丁需要更新。"
+msgstr "Beberapa tampalan perlu dikemaskinikan."
 
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "您有系统补丁和%d个软件需要更新。"
+msgstr "Beberapa tampalan dan %d perisian perlu dikemaskinikan."
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
-msgstr "立即更新"
+msgstr "Kemaskini Sekarang"
