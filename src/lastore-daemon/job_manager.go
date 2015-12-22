@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
+	"pkg.deepin.io/lib/dbus"
 	"sort"
 	"strings"
 	"sync"
@@ -204,9 +205,13 @@ func (jm *JobManager) dispatch() {
 		jm.changed = true
 		jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
+			log.Debugf("Job(%q).next is %v\n", job.Id, job.next)
 			job = job.next
+
 			jm.addJob(job)
+
 			jm.MarkStart(job.Id)
+
 			job.notifyAll()
 		}
 	}
@@ -265,6 +270,7 @@ func (jm *JobManager) addJob(j *Job) error {
 	if err != nil {
 		return err
 	}
+
 	jm.changed = true
 	return nil
 }
@@ -363,6 +369,7 @@ func (l *JobQueue) Add(j *Job) error {
 	}
 	l.Jobs = append(l.Jobs, j)
 	sort.Sort(l.Jobs)
+	dbus.InstallOnSystem(j)
 	return nil
 }
 
