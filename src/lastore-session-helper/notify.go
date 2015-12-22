@@ -66,7 +66,7 @@ func NotifyRemove(pkgId string, succeed bool, ac []Action) {
 	} else {
 		msg = fmt.Sprintf(gettext.Tr("%q failed to remove."), pkgId)
 	}
-	SendNotify("deepin-store", msg, ac)
+	SendNotify("deepin-appstore", msg, ac)
 }
 
 // NotifyDownload send desktop notify for download job
