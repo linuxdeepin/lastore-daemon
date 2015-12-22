@@ -153,6 +153,14 @@ func (obj *Manager) SetRegion(arg0 string) (_err error) {
 	return
 }
 
+func (obj *Manager) RecordLocaleInfo(arg0 string) (_err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.RecordLocaleInfo", 0, arg0).Store()
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
 func (obj *Manager) StartJob(arg0 string) (_err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.StartJob", 0, arg0).Store()
 	if _err != nil {
@@ -187,17 +195,16 @@ func (this *dbusPropertyManagerJobList) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyManagerJobList) Get() []dbus.ObjectPath {
-	return this.GetValue().([]dbus.ObjectPath)
+	v, _ := this.GetValue()
+	return v.([]dbus.ObjectPath)
 }
-func (this *dbusPropertyManagerJobList) GetValue() interface{} /*[]dbus.ObjectPath*/ {
+func (this *dbusPropertyManagerJobList) GetValue() (interface{} /*[]dbus.ObjectPath*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "JobList").Store(&r)
 	if err == nil && r.Signature().String() == "ao" {
-		return r.Value().([]dbus.ObjectPath)
-	} else {
-		fmt.Println("dbusProperty:JobList error:", err, "at com.deepin.lastore.Manager")
-		return *new([]dbus.ObjectPath)
+		return r.Value().([]dbus.ObjectPath), nil
 	}
+	return *new([]dbus.ObjectPath), err
 }
 func (this *dbusPropertyManagerJobList) GetType() reflect.Type {
 	return reflect.TypeOf((*[]dbus.ObjectPath)(nil)).Elem()
@@ -213,17 +220,16 @@ func (this *dbusPropertyManagerSystemArchitectures) SetValue(notwritable interfa
 }
 
 func (this *dbusPropertyManagerSystemArchitectures) Get() []string {
-	return this.GetValue().([]string)
+	v, _ := this.GetValue()
+	return v.([]string)
 }
-func (this *dbusPropertyManagerSystemArchitectures) GetValue() interface{} /*[]string*/ {
+func (this *dbusPropertyManagerSystemArchitectures) GetValue() (interface{} /*[]string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "SystemArchitectures").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string)
-	} else {
-		fmt.Println("dbusProperty:SystemArchitectures error:", err, "at com.deepin.lastore.Manager")
-		return *new([]string)
+		return r.Value().([]string), nil
 	}
+	return *new([]string), err
 }
 func (this *dbusPropertyManagerSystemArchitectures) GetType() reflect.Type {
 	return reflect.TypeOf((*[]string)(nil)).Elem()
@@ -239,17 +245,16 @@ func (this *dbusPropertyManagerUpgradableApps) SetValue(notwritable interface{})
 }
 
 func (this *dbusPropertyManagerUpgradableApps) Get() []string {
-	return this.GetValue().([]string)
+	v, _ := this.GetValue()
+	return v.([]string)
 }
-func (this *dbusPropertyManagerUpgradableApps) GetValue() interface{} /*[]string*/ {
+func (this *dbusPropertyManagerUpgradableApps) GetValue() (interface{} /*[]string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "UpgradableApps").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string)
-	} else {
-		fmt.Println("dbusProperty:UpgradableApps error:", err, "at com.deepin.lastore.Manager")
-		return *new([]string)
+		return r.Value().([]string), nil
 	}
+	return *new([]string), err
 }
 func (this *dbusPropertyManagerUpgradableApps) GetType() reflect.Type {
 	return reflect.TypeOf((*[]string)(nil)).Elem()
@@ -265,17 +270,16 @@ func (this *dbusPropertyManagerSystemOnChanging) SetValue(notwritable interface{
 }
 
 func (this *dbusPropertyManagerSystemOnChanging) Get() bool {
-	return this.GetValue().(bool)
+	v, _ := this.GetValue()
+	return v.(bool)
 }
-func (this *dbusPropertyManagerSystemOnChanging) GetValue() interface{} /*bool*/ {
+func (this *dbusPropertyManagerSystemOnChanging) GetValue() (interface{} /*bool*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "SystemOnChanging").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
-		return r.Value().(bool)
-	} else {
-		fmt.Println("dbusProperty:SystemOnChanging error:", err, "at com.deepin.lastore.Manager")
-		return *new(bool)
+		return r.Value().(bool), nil
 	}
+	return *new(bool), err
 }
 func (this *dbusPropertyManagerSystemOnChanging) GetType() reflect.Type {
 	return reflect.TypeOf((*bool)(nil)).Elem()
@@ -440,17 +444,16 @@ func (this *dbusPropertyUpdaterAutoCheckUpdates) SetValue(notwritable interface{
 }
 
 func (this *dbusPropertyUpdaterAutoCheckUpdates) Get() bool {
-	return this.GetValue().(bool)
+	v, _ := this.GetValue()
+	return v.(bool)
 }
-func (this *dbusPropertyUpdaterAutoCheckUpdates) GetValue() interface{} /*bool*/ {
+func (this *dbusPropertyUpdaterAutoCheckUpdates) GetValue() (interface{} /*bool*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "AutoCheckUpdates").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
-		return r.Value().(bool)
-	} else {
-		fmt.Println("dbusProperty:AutoCheckUpdates error:", err, "at com.deepin.lastore.Updater")
-		return *new(bool)
+		return r.Value().(bool), nil
 	}
+	return *new(bool), err
 }
 func (this *dbusPropertyUpdaterAutoCheckUpdates) GetType() reflect.Type {
 	return reflect.TypeOf((*bool)(nil)).Elem()
@@ -466,17 +469,16 @@ func (this *dbusPropertyUpdaterMirrorSource) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyUpdaterMirrorSource) Get() string {
-	return this.GetValue().(string)
+	v, _ := this.GetValue()
+	return v.(string)
 }
-func (this *dbusPropertyUpdaterMirrorSource) GetValue() interface{} /*string*/ {
+func (this *dbusPropertyUpdaterMirrorSource) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "MirrorSource").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:MirrorSource error:", err, "at com.deepin.lastore.Updater")
-		return *new(string)
+		return r.Value().(string), nil
 	}
+	return *new(string), err
 }
 func (this *dbusPropertyUpdaterMirrorSource) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
@@ -492,17 +494,16 @@ func (this *dbusPropertyUpdaterUpdatableApps) SetValue(notwritable interface{}) 
 }
 
 func (this *dbusPropertyUpdaterUpdatableApps) Get() []string {
-	return this.GetValue().([]string)
+	v, _ := this.GetValue()
+	return v.([]string)
 }
-func (this *dbusPropertyUpdaterUpdatableApps) GetValue() interface{} /*[]string*/ {
+func (this *dbusPropertyUpdaterUpdatableApps) GetValue() (interface{} /*[]string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "UpdatableApps").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string)
-	} else {
-		fmt.Println("dbusProperty:UpdatableApps error:", err, "at com.deepin.lastore.Updater")
-		return *new([]string)
+		return r.Value().([]string), nil
 	}
+	return *new([]string), err
 }
 func (this *dbusPropertyUpdaterUpdatableApps) GetType() reflect.Type {
 	return reflect.TypeOf((*[]string)(nil)).Elem()
@@ -518,17 +519,16 @@ func (this *dbusPropertyUpdaterUpdatablePackages) SetValue(notwritable interface
 }
 
 func (this *dbusPropertyUpdaterUpdatablePackages) Get() []string {
-	return this.GetValue().([]string)
+	v, _ := this.GetValue()
+	return v.([]string)
 }
-func (this *dbusPropertyUpdaterUpdatablePackages) GetValue() interface{} /*[]string*/ {
+func (this *dbusPropertyUpdaterUpdatablePackages) GetValue() (interface{} /*[]string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "UpdatablePackages").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string)
-	} else {
-		fmt.Println("dbusProperty:UpdatablePackages error:", err, "at com.deepin.lastore.Updater")
-		return *new([]string)
+		return r.Value().([]string), nil
 	}
+	return *new([]string), err
 }
 func (this *dbusPropertyUpdaterUpdatablePackages) GetType() reflect.Type {
 	return reflect.TypeOf((*[]string)(nil)).Elem()
@@ -671,17 +671,16 @@ func (this *dbusPropertyJobId) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobId) Get() string {
-	return this.GetValue().(string)
+	v, _ := this.GetValue()
+	return v.(string)
 }
-func (this *dbusPropertyJobId) GetValue() interface{} /*string*/ {
+func (this *dbusPropertyJobId) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Id").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:Id error:", err, "at com.deepin.lastore.Job")
-		return *new(string)
+		return r.Value().(string), nil
 	}
+	return *new(string), err
 }
 func (this *dbusPropertyJobId) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
@@ -697,17 +696,16 @@ func (this *dbusPropertyJobName) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobName) Get() string {
-	return this.GetValue().(string)
+	v, _ := this.GetValue()
+	return v.(string)
 }
-func (this *dbusPropertyJobName) GetValue() interface{} /*string*/ {
+func (this *dbusPropertyJobName) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Name").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:Name error:", err, "at com.deepin.lastore.Job")
-		return *new(string)
+		return r.Value().(string), nil
 	}
+	return *new(string), err
 }
 func (this *dbusPropertyJobName) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
@@ -723,17 +721,16 @@ func (this *dbusPropertyJobPackages) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobPackages) Get() []string {
-	return this.GetValue().([]string)
+	v, _ := this.GetValue()
+	return v.([]string)
 }
-func (this *dbusPropertyJobPackages) GetValue() interface{} /*[]string*/ {
+func (this *dbusPropertyJobPackages) GetValue() (interface{} /*[]string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Packages").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string)
-	} else {
-		fmt.Println("dbusProperty:Packages error:", err, "at com.deepin.lastore.Job")
-		return *new([]string)
+		return r.Value().([]string), nil
 	}
+	return *new([]string), err
 }
 func (this *dbusPropertyJobPackages) GetType() reflect.Type {
 	return reflect.TypeOf((*[]string)(nil)).Elem()
@@ -749,17 +746,16 @@ func (this *dbusPropertyJobType) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobType) Get() string {
-	return this.GetValue().(string)
+	v, _ := this.GetValue()
+	return v.(string)
 }
-func (this *dbusPropertyJobType) GetValue() interface{} /*string*/ {
+func (this *dbusPropertyJobType) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Type").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:Type error:", err, "at com.deepin.lastore.Job")
-		return *new(string)
+		return r.Value().(string), nil
 	}
+	return *new(string), err
 }
 func (this *dbusPropertyJobType) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
@@ -775,17 +771,16 @@ func (this *dbusPropertyJobStatus) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobStatus) Get() string {
-	return this.GetValue().(string)
+	v, _ := this.GetValue()
+	return v.(string)
 }
-func (this *dbusPropertyJobStatus) GetValue() interface{} /*string*/ {
+func (this *dbusPropertyJobStatus) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Status").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:Status error:", err, "at com.deepin.lastore.Job")
-		return *new(string)
+		return r.Value().(string), nil
 	}
+	return *new(string), err
 }
 func (this *dbusPropertyJobStatus) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
@@ -801,17 +796,16 @@ func (this *dbusPropertyJobProgress) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobProgress) Get() float64 {
-	return this.GetValue().(float64)
+	v, _ := this.GetValue()
+	return v.(float64)
 }
-func (this *dbusPropertyJobProgress) GetValue() interface{} /*float64*/ {
+func (this *dbusPropertyJobProgress) GetValue() (interface{} /*float64*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Progress").Store(&r)
 	if err == nil && r.Signature().String() == "d" {
-		return r.Value().(float64)
-	} else {
-		fmt.Println("dbusProperty:Progress error:", err, "at com.deepin.lastore.Job")
-		return *new(float64)
+		return r.Value().(float64), nil
 	}
+	return *new(float64), err
 }
 func (this *dbusPropertyJobProgress) GetType() reflect.Type {
 	return reflect.TypeOf((*float64)(nil)).Elem()
@@ -827,17 +821,16 @@ func (this *dbusPropertyJobSpeed) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobSpeed) Get() int64 {
-	return this.GetValue().(int64)
+	v, _ := this.GetValue()
+	return v.(int64)
 }
-func (this *dbusPropertyJobSpeed) GetValue() interface{} /*int64*/ {
+func (this *dbusPropertyJobSpeed) GetValue() (interface{} /*int64*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Speed").Store(&r)
 	if err == nil && r.Signature().String() == "x" {
-		return r.Value().(int64)
-	} else {
-		fmt.Println("dbusProperty:Speed error:", err, "at com.deepin.lastore.Job")
-		return *new(int64)
+		return r.Value().(int64), nil
 	}
+	return *new(int64), err
 }
 func (this *dbusPropertyJobSpeed) GetType() reflect.Type {
 	return reflect.TypeOf((*int64)(nil)).Elem()
@@ -853,17 +846,16 @@ func (this *dbusPropertyJobDescription) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobDescription) Get() string {
-	return this.GetValue().(string)
+	v, _ := this.GetValue()
+	return v.(string)
 }
-func (this *dbusPropertyJobDescription) GetValue() interface{} /*string*/ {
+func (this *dbusPropertyJobDescription) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Description").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string)
-	} else {
-		fmt.Println("dbusProperty:Description error:", err, "at com.deepin.lastore.Job")
-		return *new(string)
+		return r.Value().(string), nil
 	}
+	return *new(string), err
 }
 func (this *dbusPropertyJobDescription) GetType() reflect.Type {
 	return reflect.TypeOf((*string)(nil)).Elem()
@@ -879,17 +871,16 @@ func (this *dbusPropertyJobCancelable) SetValue(notwritable interface{}) {
 }
 
 func (this *dbusPropertyJobCancelable) Get() bool {
-	return this.GetValue().(bool)
+	v, _ := this.GetValue()
+	return v.(bool)
 }
-func (this *dbusPropertyJobCancelable) GetValue() interface{} /*bool*/ {
+func (this *dbusPropertyJobCancelable) GetValue() (interface{} /*bool*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Cancelable").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
-		return r.Value().(bool)
-	} else {
-		fmt.Println("dbusProperty:Cancelable error:", err, "at com.deepin.lastore.Job")
-		return *new(bool)
+		return r.Value().(bool), nil
 	}
+	return *new(bool), err
 }
 func (this *dbusPropertyJobCancelable) GetType() reflect.Type {
 	return reflect.TypeOf((*bool)(nil)).Elem()

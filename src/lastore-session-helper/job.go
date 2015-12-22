@@ -10,6 +10,7 @@ import "syscall"
 import log "github.com/cihub/seelog"
 import "strings"
 import "os/exec"
+import "os"
 
 type CacheJobInfo struct {
 	Id       string
@@ -42,6 +43,7 @@ func NewLastore() *Lastore {
 		inhibitFd:        -1,
 		Lang:             QueryLang(),
 	}
+
 	log.Debugf("CurrentLang: %q\n", l.Lang)
 	upower, err := power.NewPower("com.deepin.daemon.Power", "/com/deepin/daemon/Power")
 	if err != nil {
@@ -53,6 +55,8 @@ func NewLastore() *Lastore {
 	if err != nil {
 		log.Warnf("NewLastore: %v\n", err)
 	}
+	core.RecordLocaleInfo(os.Getenv("LANG"))
+
 	l.core = core
 
 	updater, err := lastore.NewUpdater("com.deepin.lastore", "/com/deepin/lastore")
@@ -196,7 +200,12 @@ func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath) CacheJobInfo {
 	}
 	name := job.Name.Get()
 	if name == "" {
-		name = PackageName(job.Packages.Get(), l.Lang)
+		pkgs := job.Packages.Get()
+		if len(pkgs) == 0 {
+			name = "unknown"
+		} else {
+			name = PackageName(pkgs[0], l.Lang)
+		}
 	}
 
 	l.JobStatus[path] = CacheJobInfo{

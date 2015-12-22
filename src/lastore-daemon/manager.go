@@ -23,6 +23,9 @@ type Manager struct {
 	SystemOnChanging bool
 
 	updated bool
+
+	//TODO: remove this. It should be record in com.deepin.Accounts
+	cachedLocale map[uint64]string
 }
 
 func NewManager(b system.System, c *Config) *Manager {
@@ -30,6 +33,7 @@ func NewManager(b system.System, c *Config) *Manager {
 		config:              c,
 		b:                   b,
 		SystemArchitectures: b.SystemArchitectures(),
+		cachedLocale:        make(map[uint64]string),
 	}
 	m.jobManager = NewJobManager(b, m.updateJobList)
 
@@ -71,7 +75,22 @@ func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) InstallPackage(jobName string, packages string) (*Job, error) {
+func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
+	locale, ok := m.cachedLocale[uint64(msg.GetSenderUID())]
+	if !ok {
+		log.Warnf("Can't find lang information from :%v %v\n", msg)
+		return m.installPackage(jobName, packages)
+	}
+
+	localePkgs := QueryEnhancedLocalePackages(m.b.CheckInstallable, locale, strings.Fields(packages)...)
+	if len(localePkgs) != 0 {
+		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
+	}
+	pkgs := strings.Join(append(strings.Fields(packages), localePkgs...), " ")
+	return m.installPackage(jobName, pkgs)
+}
+
+func (m *Manager) installPackage(jobName string, packages string) (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()

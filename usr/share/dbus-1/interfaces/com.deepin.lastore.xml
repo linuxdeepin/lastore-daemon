@@ -43,6 +43,9 @@
           <method name="SetRegion">
                <arg type="s" direction="in"></arg>
           </method>
+	  <method name="RecordLocaleInfo">
+               <arg type="s" direction="in"></arg>
+          </method>
           <method name="StartJob">
                <arg type="s" direction="in"></arg>
           </method>
