@@ -72,8 +72,8 @@ func QueryPackageDownloadSize(packages ...string) float64 {
 }
 
 func guestBasePackageName(pkgId string) string {
-	for _, sep := range []byte{'-', ':', '_'} {
-		index := strings.LastIndexByte(pkgId, sep)
+	for _, sep := range []string{"-", ":", "_"} {
+		index := strings.LastIndex(pkgId, sep)
 		if index != -1 {
 			return pkgId[:index]
 		}

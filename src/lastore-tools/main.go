@@ -3,14 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
+	"pkg.deepin.io/lib/utils"
 )
 
 func main() {
-	os.Unsetenv("LC_ALL")
-	os.Unsetenv("LANGUAGE")
-	os.Unsetenv("LC_MESSAGES")
-	os.Unsetenv("LANG")
+	utils.UnsetEnv("LC_ALL")
+	utils.UnsetEnv("LANGUAGE")
+	utils.UnsetEnv("LC_MESSAGES")
+	utils.UnsetEnv("LANG")
 
 	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install|update_infos|mirrors")
 	var fpath = flag.String("output", "", "the file to write")
