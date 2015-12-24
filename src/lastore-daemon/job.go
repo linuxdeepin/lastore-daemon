@@ -91,6 +91,10 @@ func (j Job) String() string {
 }
 
 func SmoothCalc(oldSpeed, newSpeed int64, interval time.Duration) int64 {
+	if oldSpeed == 0 || interval > time.Second {
+		return int64(newSpeed)
+	}
+
 	ratio := float64(time.Second-interval) * 1.0 / float64(time.Second)
 	if ratio < 0 {
 		return int64(newSpeed)
@@ -120,12 +124,19 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 
 	// The Progress may not changed when we calculate speed.
 	if info.Status == system.RunningStatus && j.setEffectSizes() {
-		completed := (info.Progress - j.Progress) * j.effectSizes
 		now := time.Now()
 
-		if s := now.Sub(j.updateProgressTime).Seconds(); s > 0 && completed >= 0 {
-			j.Speed = SmoothCalc(j.Speed, int64(completed/s), now.Sub(j.updateProgressTime))
-			dbus.NotifyChange(j, "Speed")
+		// We need wait there has recorded once updateProgressTime and Progress,
+		// otherwise the speed will be too quickly.
+		if !j.updateProgressTime.IsZero() && j.Progress != 0 {
+			// see the apt.go, we scale download progress value range in [0,0.5)
+			completed := (info.Progress - j.Progress) * j.effectSizes * 2
+			interval := now.Sub(j.updateProgressTime)
+
+			if interval > 0 && completed > 0 {
+				j.Speed = SmoothCalc(j.Speed, int64(completed/interval.Seconds()), interval)
+				dbus.NotifyChange(j, "Speed")
+			}
 		}
 		j.updateProgressTime = now
 	}
