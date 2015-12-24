@@ -10,10 +10,10 @@ type Status string
 
 const (
 	ReadyStatus   Status = "ready"
-	RunningStatus        = "running"
-	FailedStatus         = "failed"
-	SucceedStatus        = "succeed"
-	PausedStatus         = "paused"
+	RunningStatus Status = "running"
+	FailedStatus  Status = "failed"
+	SucceedStatus Status = "succeed"
+	PausedStatus  Status = "paused"
 
 	EndStatus = "end"
 )

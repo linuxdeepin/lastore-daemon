@@ -115,29 +115,6 @@ func (m *Manager) installPackage(jobName string, packages string) (*Job, error) 
 	return job, err
 }
 
-func (m *Manager) DownloadPackage(jobName string, packages string) (*Job, error) {
-	m.checkNeedUpdate()
-	m.do.Lock()
-	defer m.do.Unlock()
-
-	pList := strings.Fields(packages)
-
-	installedN := 0
-	for _, pkg := range pList {
-		if m.PackageExists(pkg) {
-			installedN++
-		}
-	}
-	if installedN == len(pList) {
-		return nil, system.ResourceExitError
-	}
-	job, err := m.jobManager.CreateJob(jobName, system.DownloadJobType, pList)
-	if err != nil {
-		log.Warnf("DownloadPackage %q error: %v\n", packages, err)
-	}
-	return job, err
-}
-
 func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()

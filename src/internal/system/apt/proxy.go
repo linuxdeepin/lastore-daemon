@@ -22,48 +22,59 @@ func New() system.System {
 	return p
 }
 
+func parseProgressField(v string) (float64, error) {
+	progress, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return -1, fmt.Errorf("unknown progress value: %q", v)
+	}
+	return progress, nil
+
+}
 func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	fs := strings.SplitN(line, ":", 4)
-	switch fs[0] {
-	case "dlstatus", "pmstatus", "dist_upgrade":
-		v, err := strconv.ParseFloat(fs[2], 64)
-		if err != nil {
-			return system.JobProgressInfo{JobId: id},
-				fmt.Errorf("W: unknow progress value: %q", line)
-		}
-		if v == -1 {
-			return system.JobProgressInfo{JobId: id},
-				fmt.Errorf("W: failed: %q", line)
-		}
-		return system.JobProgressInfo{
-			JobId:       id,
-			Progress:    v / 100.0,
-			Description: strings.TrimSpace(fs[3]),
-			Status:      system.RunningStatus,
-			Cancelable:  fs[0] == "dlstatus",
-		}, nil
-	case "dstatus":
-		switch fs[1] {
-		case system.SucceedStatus:
-			return system.JobProgressInfo{
-				JobId:       id,
-				Progress:    1.0,
-				Description: strings.TrimSpace(fs[2]),
-				Status:      system.SucceedStatus,
-				Cancelable:  fs[0] == "dlstatus",
-			}, nil
-		case system.FailedStatus, system.PausedStatus:
-			return system.JobProgressInfo{
-				JobId:       id,
-				Progress:    -1,
-				Description: strings.TrimSpace(fs[2]),
-				Status:      system.Status(fs[1]),
-				Cancelable:  true,
-			}, nil
-		}
+	if len(fs) != 4 {
+		return system.JobProgressInfo{JobId: id}, fmt.Errorf("Invlaid Progress line:%q", line)
 	}
-	return system.JobProgressInfo{JobId: id},
-		fmt.Errorf("W: unknow status:%q", line)
+
+	progress, err := parseProgressField(fs[2])
+	if err != nil {
+		return system.JobProgressInfo{JobId: id}, err
+	}
+	description := strings.TrimSpace(fs[3])
+
+	var status system.Status
+	var cancelable = true
+
+	infoType := fs[0]
+
+	switch infoType {
+	case "dummy":
+		status = system.Status(fs[1])
+	case "dlstatus":
+		progress = progress / 100.0 * 0.5
+		status = system.RunningStatus
+	case "pmstatus":
+		progress = 0.5 + progress/100.0*0.5
+		status = system.RunningStatus
+		cancelable = false
+	case "pmerror":
+		progress = -1
+		status = system.FailedStatus
+
+	default:
+		//	case "pmconffile", "media-change":
+		return system.JobProgressInfo{JobId: id},
+			fmt.Errorf("W: unknow status:%q", line)
+
+	}
+
+	return system.JobProgressInfo{
+		JobId:       id,
+		Progress:    progress,
+		Description: description,
+		Status:      status,
+		Cancelable:  cancelable,
+	}, nil
 }
 
 func (p *APTSystem) AttachIndicator(f system.Indicator) {

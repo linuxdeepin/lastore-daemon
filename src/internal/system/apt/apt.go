@@ -183,13 +183,15 @@ func (c *aptCommand) atExit() {
 	c.cmdSet.RemoveCMD(c.JobId)
 
 	var line string
+	var fmtStr = "dummy:%s:%f:%s"
+
 	switch c.exitCode {
 	case ExitSuccess:
-		line = "dstatus:" + system.SucceedStatus + ":" + "succeed"
+		line = fmt.Sprintf(fmtStr, system.SucceedStatus, 1.0, c.JobId)
 	case ExitFailure:
-		line = "dstatus:" + system.FailedStatus + ":" + "failed"
+		line = fmt.Sprintf(fmtStr, system.FailedStatus, -1.0, c.JobId)
 	case ExitPause:
-		line = "dstatus:" + system.PausedStatus + ":" + "paused"
+		line = fmt.Sprintf(fmtStr, system.PausedStatus, -1.0, c.JobId)
 	}
 	info, err := ParseProgressInfo(c.JobId, line)
 	if err != nil {

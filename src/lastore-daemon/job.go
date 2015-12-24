@@ -60,6 +60,9 @@ func NewJob(jobName string, packages []string, jobType string, queueName string)
 		queueName:  queueName,
 		retry:      3,
 	}
+	if jobType == system.InstallJobType {
+		j.Progress = 0.5
+	}
 	return j
 }
 
