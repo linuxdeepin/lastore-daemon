@@ -97,13 +97,7 @@ func (l *Lastore) monitorSignal() {
 			props, _ := v.Body[1].(map[string]dbus.Variant)
 			switch ifc, _ := v.Body[0].(string); ifc {
 			case "com.deepin.lastore.Job":
-				l.updateCacheJobInfo(v.Path)
-				status, ok := props["Status"]
-				if ok {
-					svalue, _ := status.Value().(string)
-					log.Infof("Job %s status change to %s\n", v.Path, svalue)
-					l.updateJob(v.Path, system.Status(svalue))
-				}
+				l.updateCacheJobInfo(v.Path, props)
 			case "com.deepin.lastore.Manager":
 				if onChaning, ok := props["SystemOnChanging"]; ok {
 					chaning, _ := onChaning.Value().(bool)
@@ -192,48 +186,69 @@ func (l *Lastore) updateJobList(list []dbus.ObjectPath) {
 	log.Infof("UpdateJobList: %v - %v\n", list, invalids)
 }
 
-func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath) CacheJobInfo {
-	job, err := lastore.NewJob("com.deepin.lastore", path)
-
-	if err != nil || job.Id.Get() == "" {
-		return l.JobStatus[path]
+func TryFetchProperty(getter func() (interface{}, error), propName string, props map[string]dbus.Variant) (interface{}, bool) {
+	if v, ok := props[propName]; ok {
+		return v.Value(), true
 	}
-	name := job.Name.Get()
-	if name == "" {
-		pkgs := job.Packages.Get()
-		if len(pkgs) == 0 {
-			name = "unknown"
-		} else {
-			name = PackageName(pkgs[0], l.Lang)
+	if getter == nil {
+		return nil, false
+	}
+	v, err := getter()
+	if err != nil {
+		return nil, false
+	}
+	return v, true
+}
+
+func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath, props map[string]dbus.Variant) CacheJobInfo {
+	info := l.JobStatus[path]
+	oldStatus := info.Status
+
+	job, _ := lastore.NewJob("com.deepin.lastore", path)
+
+	if v, ok := TryFetchProperty(job.Id.GetValue, "Id", props); ok {
+		if rv, _ := v.(string); rv != "" {
+			info.Id = rv
 		}
 	}
 
-	l.JobStatus[path] = CacheJobInfo{
-		Status:   system.Status(job.Status.Get()),
-		Name:     name,
-		Progress: job.Progress.Get(),
-		Type:     job.Type.Get(),
+	if v, ok := TryFetchProperty(job.Status.GetValue, "Status", props); ok {
+		if rv, _ := v.(string); rv != "" {
+			info.Status = system.Status(rv)
+		}
+	}
+	if v, ok := TryFetchProperty(job.Name.GetValue, "Name", props); ok {
+		name, _ := v.(string)
+		if name == "" {
+			if pv, ok := TryFetchProperty(job.Packages.GetValue, "Packages", props); ok {
+				pkgs, _ := pv.([]string)
+				if len(pkgs) == 0 {
+					name = "unknown"
+				} else {
+					name = PackageName(pkgs[0], l.Lang)
+				}
+			}
+		}
+		if name != "" {
+			info.Name = name
+		}
+	}
+	if v, ok := TryFetchProperty(job.Progress.GetValue, "Progress", props); ok {
+		rv, _ := v.(float64)
+		info.Progress = rv
+	}
+	if v, ok := TryFetchProperty(job.Type.GetValue, "Type", props); ok {
+		if rv, _ := v.(string); rv != "" {
+			info.Type = rv
+		}
+	}
+
+	l.JobStatus[path] = info
+	log.Debugf("updateCacheJobInfo: %v\n", l.JobStatus[path])
+	if oldStatus != info.Status {
+		l.notifyJob(path)
 	}
 	return l.JobStatus[path]
-}
-
-// updateJob update job status
-func (l *Lastore) updateJob(path dbus.ObjectPath, status system.Status) {
-	info := l.JobStatus[path]
-	if strings.Contains(string(path), "install") && info.Type == system.DownloadJobType && status != system.FailedStatus {
-		return
-	}
-
-	if status == system.SucceedStatus && info.Progress != 1 {
-		log.Debugf("Filter Invalid SucceedStatus.... %v\n", info)
-		return
-	}
-
-	if info.Status == status {
-		return
-	}
-
-	l.notifyJob(path, status)
 }
 
 func (l *Lastore) updateSystemOnChaning(onChanging bool) {
@@ -321,24 +336,21 @@ func (l *Lastore) createJobFailedActions(jobId string) []Action {
 	return ac
 }
 
-func (l *Lastore) notifyJob(path dbus.ObjectPath, status system.Status) {
+func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 	l.checkBattery()
 
 	info := l.JobStatus[path]
+	status := info.Status
+	log.Debugf("notifyJob: %q %q --> %v\n", path, status, info)
 	switch guestJobTypeFromPath(path) {
-	case system.DownloadJobType:
-		switch status {
-		case system.FailedStatus:
-			NotifyFailedDownload(info.Name, l.createJobFailedActions(info.Id))
-		case system.SucceedStatus:
-		}
-
 	case system.InstallJobType:
 		switch status {
 		case system.FailedStatus:
 			NotifyInstall(info.Name, false, l.createJobFailedActions(info.Id))
 		case system.SucceedStatus:
-			NotifyInstall(info.Name, true, nil)
+			if info.Progress == 1 {
+				NotifyInstall(info.Name, true, nil)
+			}
 		}
 	case system.RemoveJobType:
 		switch status {

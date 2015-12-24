@@ -107,19 +107,15 @@ func SmoothCalc(oldSpeed, newSpeed int64, interval time.Duration) int64 {
 func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	var changed = false
 
-	if info.Status != j.Status {
-		err := TransitionJobState(j, info.Status)
-		if err != nil {
-			log.Warnf("_UpdateInfo: %v\n", err)
-			return false
-		}
-		changed = true
-	}
-
 	if info.Description != j.Description {
 		changed = true
 		j.Description = info.Description
 		dbus.NotifyChange(j, "Description")
+	}
+	if info.Cancelable != j.Cancelable {
+		changed = true
+		j.Cancelable = info.Cancelable
+		dbus.NotifyChange(j, "Cancelable")
 	}
 
 	// The Progress may not changed when we calculate speed.
@@ -141,30 +137,20 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		j.updateProgressTime = now
 	}
 
-	if info.Progress != j.Progress && info.Progress != -1 {
+	if info.Progress > j.Progress {
 		changed = true
 
-		if info.Status == system.SucceedStatus {
-			j.Progress = 1.0
-		} else {
-			j.Progress = info.Progress
-		}
-
+		j.Progress = info.Progress
 		dbus.NotifyChange(j, "Progress")
-	}
-
-	if info.Cancelable != j.Cancelable {
-		changed = true
-		j.Cancelable = info.Cancelable
-		dbus.NotifyChange(j, "Cancelable")
 	}
 
 	log.Tracef("updateInfo %v <- %v\n", j, info)
 
-	if j.Status == system.SucceedStatus {
-		err := TransitionJobState(j, system.EndStatus)
+	if info.Status != j.Status {
+		err := TransitionJobState(j, info.Status)
 		if err != nil {
 			log.Warnf("_UpdateInfo: %v\n", err)
+			return false
 		}
 		changed = true
 	}
