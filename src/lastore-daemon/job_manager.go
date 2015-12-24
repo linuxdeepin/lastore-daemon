@@ -141,7 +141,7 @@ func (jm *JobManager) CleanJob(jobId string) error {
 		return system.NotFoundError
 	}
 
-	if job.Cancelable {
+	if job.Cancelable && job.Status == system.RunningStatus {
 		err := jm.PauseJob(jobId)
 		if err != nil {
 			return err
