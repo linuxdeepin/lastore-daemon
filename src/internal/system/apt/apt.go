@@ -96,6 +96,7 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		args = append(args, "install", "-d")
 		args = append(args, packages...)
 	case system.UpdateSourceJobType:
+		args = append(args, "-o", "Dir::Etc::sourceparts=/var/lib/lastore/source.d")
 		args = append(args, "update")
 	}
 
