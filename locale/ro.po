@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-21 11:08+0000\n"
+"PO-Revision-Date: 2015-12-25 02:16+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Romanian (http://www.transifex.com/linuxdeepin/deepin-store/language/ro/)\n"
 "MIME-Version: 1.0\n"
@@ -59,7 +59,7 @@ msgstr "ștergerea %q a eșuat."
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr ""
+msgstr "Descărcarea aplicaţiei %q a eşuat."
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""

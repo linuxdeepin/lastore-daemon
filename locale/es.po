@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-02 03:01+0000\n"
+"PO-Revision-Date: 2015-12-22 21:29+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/linuxdeepin/deepin-store/language/es/)\n"
 "MIME-Version: 1.0\n"
@@ -83,16 +83,16 @@ msgstr "Error al actualizar."
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr ""
+msgstr "%d software debe ser actualizado."
 
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr ""
+msgstr "Algunos parches tienen que ser actualizados."
 
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr ""
+msgstr "Algunos parches y software %d deben ser actualizados."
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"

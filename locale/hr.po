@@ -3,99 +3,97 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# FFXP <ffxpstudio@gmail.com>, 2015
-# lexross <its4moi@gmail.com>, 2015
-# Jeremy Shields <jeremy.shields1@gmail.com>, 2015
+# e2f_hr_c2 <e2fhorse@outlook.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-24 09:17+0000\n"
-"Last-Translator: FFXP <ffxpstudio@gmail.com>\n"
-"Language-Team: French (http://www.transifex.com/linuxdeepin/deepin-store/language/fr/)\n"
+"PO-Revision-Date: 2015-12-24 11:11+0000\n"
+"Last-Translator: e2f_hr_c2 <e2fhorse@outlook.com>\n"
+"Language-Team: Croatian (http://www.transifex.com/linuxdeepin/deepin-store/language/hr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Language: hr\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
 
 #: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
-msgstr "Logithèque Deepin"
+msgstr "Deepin centar softvera"
 
 #: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr "Le système se met à jour, s.v.p. arrêter ou redémarrer plus tard."
+msgstr "Sustav se ažurira, zatvorite ili ponovno pokrenite kasnije"
 
 #: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
-msgstr "Redémarrer "
+msgstr "Ponovno podigni sustav sada "
 
 #: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
-msgstr "Redémarrer plus tard"
+msgstr "Ponovno podigni sustav kasnije"
 
 #: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
-msgstr "Réessayer"
+msgstr "Pokušaj ponovno"
 
 #: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
-msgstr "Annuler"
+msgstr "Prekini"
 
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
-msgstr "%q Installation terminée."
+msgstr "%q je uspješno instaliran."
 
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr "%q installation échouée."
+msgstr "%q nije uspješno instaliran."
 
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
-msgstr "%q désinstallation terminée."
+msgstr "%q uspješno uklonjen."
 
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "%q désinstallation échouée."
+msgstr "%q nije uspješno uklonjen."
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "%q téléchargement échoué."
+msgstr "%q nije uspješno preuzet."
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "Afin d'éviter l'arrêt automatique, veuillez branchez votre appareil pendant l'actualisation."
+msgstr "Da bi se spriječilo automatsko isključivanje, uključite za normalno ažuriranje."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr "Certaines modifications prendront effet après redémarrage."
+msgstr "Neke će se funkcije pokrenuti nakon ponovnog pokretanja."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "Mise à jour réussie !"
+msgstr "Uspješno ažurirano!"
 
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
-msgstr "Mise à jour échouée."
+msgstr "Neuspješno ažurirano."
 
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "%d logiciel(s) doivent être mis à jour."
+msgstr "Potrebno je ažurirati softver %d."
 
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr "Des patchs doivent être mis à jour."
+msgstr "Potrebno je ažurirati neke zakrpe."
 
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "Des patchs et %d logiciel(s) doivent être mis à jour."
+msgstr "Potrebno je ažurirati neke zakrpe i softver %d."
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
-msgstr "Mettre à jour maintenant"
+msgstr "Ažuriraj sada"

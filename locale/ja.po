@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-21 13:24+0000\n"
+"PO-Revision-Date: 2015-12-23 06:20+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Japanese (http://www.transifex.com/linuxdeepin/deepin-store/language/ja/)\n"
 "MIME-Version: 1.0\n"
@@ -43,11 +43,11 @@ msgstr "キャンセル"
 
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
-msgstr ""
+msgstr "%q  正しくインストールされました。"
 
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr ""
+msgstr "%q インストールに失敗。"
 
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
@@ -59,7 +59,7 @@ msgstr "%q の削除を失敗しました。"
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr ""
+msgstr "%qはダウンロードに失敗しました。"
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
