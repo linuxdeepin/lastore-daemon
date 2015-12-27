@@ -87,6 +87,9 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "install")
 		args = append(args, packages...)
+	case system.DistUpgradeJobType:
+		args = append(args, "-c", "/var/lib/lastore/apt.conf")
+		args = append(args, "--force-yes", "dist-upgrade")
 	case system.RemoveJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "remove")

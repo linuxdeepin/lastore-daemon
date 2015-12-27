@@ -96,6 +96,11 @@ func (p *APTSystem) Install(jobId string, packages []string) error {
 	return c.Start()
 }
 
+func (p *APTSystem) DistUpgrade(jobId string) error {
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
+	return c.Start()
+}
+
 func (p *APTSystem) UpdateSource(jobId string) error {
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
 	return c.Start()

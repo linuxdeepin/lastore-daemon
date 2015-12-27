@@ -56,6 +56,7 @@ type System interface {
 	CheckInstalled(packageId string) bool
 	Download(jobId string, packages []string) error
 	Install(jobId string, packages []string) error
+	DistUpgrade(jobId string) error
 	Remove(jobId string, packages []string) error
 
 	UpdateSource(jobId string) error
