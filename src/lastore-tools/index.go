@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	log "github.com/cihub/seelog"
 	"io/ioutil"
@@ -18,40 +19,71 @@ type DesktopInfo struct {
 	Exec     string
 }
 
-// GenerateDesktopIndexes 生成 desktop 相关的查询表
-// 1. desktop --> icon
-// 2. desktop --> exec
-// 3. desktop --> package
-func GenerateDesktopIndexes(scanDirectories []string, outputDir string) error {
-	os.MkdirAll(outputDir, 0755)
-	packageIndex, installTimeIndex := loadPackageInfos()
+func BuildDesktopDirectories() []string {
+	var scanDirectories map[string]struct{} = map[string]struct{}{
+		"/usr/share/applications":             struct{}{},
+		"/usr/share/applications/kde4":        struct{}{},
+		"/usr/local/share/applications":       struct{}{},
+		"/usr/local/share/applications/kde4":  struct{}{},
+		"/usr/share/deepin/applications":      struct{}{},
+		"/usr/share/deepin/applications/kde4": struct{}{},
+	}
+	xdg_data_home := os.Getenv("$XDG_DATA_HOME")
+	if xdg_data_home == "" {
+		xdg_data_home = os.ExpandEnv("$HOME/.local/share")
+	}
+	scanDirectories[path.Join(xdg_data_home, "applications")] = struct{}{}
+	for _, dir := range strings.Split(os.Getenv("$XDG_DATA_DIR"), ":") {
+		scanDirectories[path.Join(dir, "applications")] = struct{}{}
+	}
+	var r []string
+	for dir := range scanDirectories {
+		r = append(r, dir)
+	}
+	return r
+}
 
-	var desktopPaths []string
-	for _, dir := range scanDirectories {
+func GetDesktopFiles(dirs []string) []string {
+	var r []string
+	for _, dir := range dirs {
 		fs, err := ioutil.ReadDir(dir)
 		if err != nil {
-			log.Warnf("GenerateDesktopIndexes :%v\n", err)
 			continue
 		}
 		for _, finfo := range fs {
 			name := finfo.Name()
 			if strings.HasSuffix(name, ".desktop") {
-				desktopPaths = append(desktopPaths, path.Join(dir, finfo.Name()))
+				r = append(r, path.Join(dir, finfo.Name()))
 			}
 		}
 	}
+	return r
+}
 
-	var dinfos []DesktopInfo
-	for _, dPath := range desktopPaths {
+// GenerateDesktopIndexes 生成 desktop 相关的查询表
+// 1. desktop --> icon
+// 2. desktop --> exec
+// 3. desktop --> package
+func GenerateDesktopIndexes(baseDir string) error {
+	os.MkdirAll(baseDir, 0755)
+
+	packageIndex, installTimeIndex := ParsePackageInfos()
+	writeData(path.Join(baseDir, "pacakge_installedTime.json"), installTimeIndex)
+
+	packageIndex = mergeDesktopIndex(packageIndex, path.Join(baseDir, "desktop_package.json"))
+
+	var execInfo, iconInfo = make(map[string]string), make(map[string]string)
+	for _, dPath := range GetDesktopFiles(BuildDesktopDirectories()) {
 		info := ParseDesktopInfo(packageIndex, dPath)
-		if info != nil {
-			dinfos = append(dinfos, *info)
+		if info == nil {
+			continue
 		}
+		execInfo[info.Package] = info.Exec
+		iconInfo[info.Package] = info.Icon
 	}
-	writeDesktopExecIndex(dinfos, path.Join(outputDir, "package_exec.json"))
-	writeDesktopIconIndex(dinfos, path.Join(outputDir, "package_icon.json"))
-	writeDesktopPackage(dinfos, path.Join(outputDir, "desktop_package.json"))
-	writeData(path.Join(outputDir, "package_installedTime.json"), installTimeIndex)
+
+	mergeDesktopIndex(execInfo, path.Join(baseDir, "package_exec.json"))
+	mergeDesktopIndex(iconInfo, path.Join(baseDir, "package_icon.json"))
 
 	return nil
 }
@@ -88,11 +120,14 @@ func ParseDesktopInfo(packagesIndex map[string]string, dPath string) *DesktopInf
 		}
 	}
 
+	pkg := packagesIndex[path.Base(dPath)]
+	if pkg == "" {
+		pkg = path.Base(dPath)
+	}
 	info := DesktopInfo{
-		FilePath: dPath,
-		Package:  packagesIndex[path.Base(dPath)],
-		Icon:     icon,
-		Exec:     exec,
+		Package: pkg,
+		Icon:    icon,
+		Exec:    exec,
 	}
 
 	return &info
@@ -133,13 +168,16 @@ func getPackageName(name string) string {
 	return name
 }
 
-func loadPackageInfos() (map[string]string, map[string]int64) {
+// ParsePackageInfos parsing the desktop files belong packages
+// and the installing time of packages by parsing
+// /var/lib/dpkg/info/$PKGNAME.list
+func ParsePackageInfos() (map[string]string, map[string]int64) {
 	var r = make(map[string]string)
 	var t = make(map[string]int64)
 
 	fs, err := ioutil.ReadDir("/var/lib/dpkg/info")
 	if err != nil {
-		log.Warnf("loadPackageInfos :%v\n", err)
+		log.Warnf("ParsePackageInfos :%v\n", err)
 		return r, t
 	}
 
@@ -161,26 +199,19 @@ func loadPackageInfos() (map[string]string, map[string]int64) {
 	return r, t
 }
 
-func writeDesktopExecIndex(infos []DesktopInfo, fpath string) {
-	r := make(map[string]string)
-	for _, info := range infos {
-		r[info.Package] = info.Exec
-	}
-	writeData(fpath, r)
-}
+func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string {
+	var old = make(map[string]string)
+	if content, err := ioutil.ReadFile(fpath); err == nil {
+		if err := json.Unmarshal(content, &old); err != nil {
+			log.Warnf("mergeDesktopIndex:%q %v\n", fpath, err)
+		}
 
-func writeDesktopIconIndex(infos []DesktopInfo, fpath string) {
-	r := make(map[string]string)
-	for _, info := range infos {
-		r[info.Package] = info.Icon
 	}
-	writeData(fpath, r)
-}
-
-func writeDesktopPackage(infos []DesktopInfo, fpath string) {
-	r := make(map[string]string)
-	for _, info := range infos {
-		r[path.Base(info.FilePath)] = info.Package
+	for key, value := range infos {
+		if key != "" && value != "" {
+			old[key] = value
+		}
 	}
-	writeData(fpath, r)
+	writeData(fpath, old)
+	return old
 }
