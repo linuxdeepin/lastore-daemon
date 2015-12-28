@@ -2,6 +2,8 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
+	"path"
 	"sort"
 	"strings"
 )
@@ -40,6 +42,7 @@ func (fs DesktopFiles) score(i int) int {
 	fpath := fs[i]
 	content := string(bs)
 
+	// Begin desktop content feature detect
 	if !strings.Contains(content, "Exec=") {
 		score = score - 10
 	}
@@ -67,10 +70,29 @@ func (fs DesktopFiles) score(i int) int {
 	if strings.Contains(content, "NoDisplay=true") {
 		score = score - 100
 	}
+	// End desktop content feature detect
 
-	if strings.Contains(fpath, "/usr/share/applications") {
-		score = score + 10
+	// Begin XDG Scan
+	// Check wheter the desktop file in xdg directories.
+	var dirs map[string]struct{} = map[string]struct{}{
+		"/usr/share/applications":             struct{}{},
+		"/usr/share/applications/kde4":        struct{}{},
+		"/usr/local/share/applications":       struct{}{},
+		"/usr/local/share/applications/kde4":  struct{}{},
+		"/usr/share/deepin/applications":      struct{}{},
+		"/usr/share/deepin/applications/kde4": struct{}{},
 	}
+	for _, dir := range strings.Split(os.Getenv("$XDG_DATA_DIR"), ":") {
+		dirs[path.Join(dir, "applications")] = struct{}{}
+	}
+	for dir := range dirs {
+		if strings.Contains(fpath, dir) {
+			score = score + 10
+		}
+	}
+	// End XDG Scan
+
+	// Begin black list
 	if strings.Contains(fpath, "/xsessions/") {
 		score = score - 10
 	}
@@ -86,6 +108,7 @@ func (fs DesktopFiles) score(i int) int {
 	if strings.Contains(fs[i], "xgreeters") {
 		score = score - 5
 	}
+	// End black list
 
 	return score
 }

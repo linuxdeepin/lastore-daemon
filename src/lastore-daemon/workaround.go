@@ -98,6 +98,15 @@ func QueryPackageSameNameDepends(pkgId string) []string {
 	var r []string
 	for _, name := range strings.Fields(string(out)) {
 		if strings.Contains(name, baseName) {
+			// TODO: Batch query the exist. And Merge this code into apt.go
+			out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", name).CombinedOutput()
+			if err != nil {
+				continue
+			}
+			if !strings.Contains(string(out), "install ok installed") {
+				continue
+			}
+
 			r = append(r, name)
 			r = append(r, QueryPackageSameNameDepends(name)...)
 		}

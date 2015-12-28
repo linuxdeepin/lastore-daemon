@@ -224,10 +224,6 @@ func (m *Manager) PackageDesktopPath(pkgId string) string {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	r := QueryDesktopPath(pkgId)
-	if r != "" {
-		return r
-	}
 	return QueryDesktopPath(QueryPackageSameNameDepends(pkgId)...)
 }
 
