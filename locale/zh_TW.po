@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-25 03:07+0000\n"
+"PO-Revision-Date: 2015-12-26 04:49+0000\n"
 "Last-Translator: freddy4212 <freddy4212@gmail.com>\n"
 "Language-Team: Chinese (Taiwan) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_TW/)\n"
 "MIME-Version: 1.0\n"
@@ -24,7 +24,7 @@ msgstr "Deepin 商店"
 
 #: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr "系統正在更新，請先不要關機或重新啟動。"
+msgstr "系統正在更新，請不要關機或重新啟動。"
 
 #: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
@@ -69,7 +69,7 @@ msgstr "為防止自動關機，更新中請接上電源。"
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr "一些功能重新啟動後才能生效。"
+msgstr "一些功能重新啟動後方能生效。"
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87

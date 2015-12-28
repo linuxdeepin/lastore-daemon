@@ -8,3 +8,9 @@ file_filter = locale/<lang>.po
 source_file = locale/lastore-daemon.pot
 source_lang = en
 type = PO
+
+[deepin-store.categories]
+file_filter = locale_categories/<lang>.po
+source_file = locale_categories/categories.pot
+source_lang = en
+type = PO

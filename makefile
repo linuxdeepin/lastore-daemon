@@ -28,6 +28,9 @@ gen_mo:
 	mkdir -p ${DESTDIR}${PREFIX}/usr/share/locale/
 	cp -rf locale/mo/* ${DESTDIR}${PREFIX}/usr/share/locale/
 
+	deepin-generate-mo locale_categories/locale_config.ini
+	cp -rf locale_categories/mo/* ${DESTDIR}${PREFIX}/usr/share/locale/
+
 gen-xml:
 	qdbus --system com.deepin.lastore /com/deepin/lastore org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/com.deepin.lastore.xml
 	qdbus --system com.deepin.lastore /com/deepin/lastore/Job1 org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/com.deepin.lastore.Job.xml
