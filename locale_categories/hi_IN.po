@@ -18,7 +18,7 @@ msgstr ""
 "Language: hi_IN\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Internet "
+msgid "Internet"
 msgstr "इंटरनेट"
 
 msgid "Office"

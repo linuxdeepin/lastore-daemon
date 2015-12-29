@@ -18,8 +18,8 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Internet "
-msgstr "Internet "
+msgid "Internet"
+msgstr "Internet"
 
 msgid "Office"
 msgstr "Ufficio"

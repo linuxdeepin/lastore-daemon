@@ -17,7 +17,7 @@ msgstr ""
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-msgid "Internet "
+msgid "Internet"
 msgstr "インターネット"
 
 msgid "Office"

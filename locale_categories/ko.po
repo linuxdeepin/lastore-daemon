@@ -17,14 +17,14 @@ msgstr ""
 "Language: ko\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-msgid "Internet "
+msgid "Internet"
 msgstr "인터넷"
 
 msgid "Office"
-msgstr "사무실 "
+msgstr "사무실"
 
 msgid "Development"
-msgstr "개발 "
+msgstr "개발"
 
 msgid "Reading"
 msgstr "읽는 중"
@@ -48,4 +48,4 @@ msgid "Chat"
 msgstr "채팅"
 
 msgid "Others"
-msgstr "기타 "
+msgstr "기타"

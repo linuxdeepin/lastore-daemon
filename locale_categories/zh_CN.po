@@ -18,7 +18,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-msgid "Internet "
+msgid "Internet"
 msgstr "网络应用"
 
 msgid "Office"
@@ -28,7 +28,7 @@ msgid "Development"
 msgstr "编程开发"
 
 msgid "Reading"
-msgstr " 翻译阅读 "
+msgstr "翻译阅读"
 
 msgid "Graphics"
 msgstr "图形图像"
@@ -37,10 +37,10 @@ msgid "Game"
 msgstr "游戏娱乐"
 
 msgid "Music"
-msgstr " 音乐软件"
+msgstr "音乐软件"
 
 msgid "System"
-msgstr "系统工具 "
+msgstr "系统工具"
 
 msgid "Video"
 msgstr "视频软件"

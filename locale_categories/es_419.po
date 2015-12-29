@@ -18,8 +18,8 @@ msgstr ""
 "Language: es_419\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Internet "
-msgstr "Internet "
+msgid "Internet"
+msgstr "Internet"
 
 msgid "Office"
 msgstr "Oficina"
@@ -31,7 +31,7 @@ msgid "Reading"
 msgstr "Lectura"
 
 msgid "Graphics"
-msgstr "Gráficos "
+msgstr "Gráficos"
 
 msgid "Game"
 msgstr "Juego"

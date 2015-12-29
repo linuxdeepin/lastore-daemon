@@ -17,7 +17,7 @@ msgstr ""
 "Language: tr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-msgid "Internet "
+msgid "Internet"
 msgstr "İnternet"
 
 msgid "Office"
