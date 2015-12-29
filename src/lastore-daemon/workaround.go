@@ -95,7 +95,7 @@ func QueryPackageSameNameDepends(pkgId string) []string {
 
 	baseName := guestBasePackageName(pkgId)
 
-	var r []string
+	var r = []string{pkgId}
 	for _, name := range strings.Fields(string(out)) {
 		if strings.Contains(name, baseName) {
 			// TODO: Batch query the exist. And Merge this code into apt.go
