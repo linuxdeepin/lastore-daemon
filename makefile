@@ -1,11 +1,18 @@
+ifndef USE_GCCGO
+	GOBUILD = go build
+else
+	LDFLAGS = $(shell pkg-config --libs cairo-gobject cairo gdk-pixbuf-xlib-2.0 glib-2.0  pangocairo pango gtk+-3.0)
+	GOBUILD = go build -compiler gccgo -gccgoflags "${LDFLAGS}"
+endif
+
 all:  build
 
 
 build: 
-	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-daemon lastore-daemon
-	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-tools lastore-tools
-	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-session-helper lastore-session-helper
-	GOPATH=`pwd`:`pwd`/vendor go build -o bin/lastore-smartmirror lastore-smartmirror
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-tools lastore-tools
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror
 
 gb:
 	gb build lastore-daemon
