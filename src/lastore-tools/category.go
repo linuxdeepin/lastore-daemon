@@ -2,20 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	log "github.com/cihub/seelog"
 	"io/ioutil"
 	"net/http"
 )
 
 const appstoreURI = "http://api.appstore.deepin.org"
-const lastoreURI = "http://api.lastore.deepin.test"
 
 func decodeData(wrap bool, url string, data interface{}) error {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Infof("can't get %q \n", url)
-		return nil
+		return log.Warnf("can't get %q \n", url)
 	}
 	defer resp.Body.Close()
 	d := json.NewDecoder(resp.Body)
@@ -52,10 +49,9 @@ func GenerateCategory(fpath string) error {
 	var d interface{}
 	err := decodeData(true, url, &d)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		return log.Warnf("GenerateCategory failed %v\n", err)
 	}
 	return writeData(fpath, d)
-
 }
 
 type AppInfo struct {
@@ -77,7 +73,7 @@ func GenerateApplications(fpath string) error {
 		},
 	}
 	if err != nil {
-		return err
+		return log.Warnf("GenerateApplication failed %v\n", err)
 	}
 	return writeData(fpath, apps)
 }
