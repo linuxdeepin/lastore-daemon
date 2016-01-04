@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-26 04:49+0000\n"
+"PO-Revision-Date: 2015-12-28 18:19+0000\n"
 "Last-Translator: freddy4212 <freddy4212@gmail.com>\n"
 "Language-Team: Chinese (Taiwan) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_TW/)\n"
 "MIME-Version: 1.0\n"
@@ -74,7 +74,7 @@ msgstr "一些功能重新啟動後方能生效。"
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "成功更新！"
+msgstr "成功更新 !"
 
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
@@ -83,11 +83,11 @@ msgstr "無法更新。"
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "%d 個軟體需要被更新。"
+msgstr "%d 個軟體需要更新。"
 
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr "一些修補程式需要被更新。"
+msgstr "一些修補程式需要更新。"
 
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format

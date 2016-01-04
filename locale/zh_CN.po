@@ -4,6 +4,7 @@
 # 
 # Translators:
 # szd_liufei <liufei@linuxdeepin.com>, 2015
+# szd_liufei <liufei@linuxdeepin.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"

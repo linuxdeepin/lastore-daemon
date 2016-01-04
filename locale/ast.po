@@ -3,97 +3,97 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Carl Andersen <carl@freeos.dk>, 2015
+# Ḷḷumex03 <tornes@opmbx.org>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-11 17:21+0000\n"
-"Last-Translator: Carl Andersen <carl@freeos.dk>\n"
-"Language-Team: Danish (http://www.transifex.com/linuxdeepin/deepin-store/language/da/)\n"
+"PO-Revision-Date: 2015-12-31 16:01+0000\n"
+"Last-Translator: Ḷḷumex03 <tornes@opmbx.org>\n"
+"Language-Team: Asturian (http://www.transifex.com/linuxdeepin/deepin-store/language/ast/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: da\n"
+"Language: ast\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../src/lastore-session-helper/job.go:189
 msgid "Deepin Store"
-msgstr "Deepin Pakkehåndtering"
+msgstr "Deepin Store"
 
 #: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr "Systemet opdaterer, venligst  luk ned eller genstart senere."
+msgstr "Ta anovándose'l sistema, por favor apaga o reanicia sero."
 
 #: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
-msgstr "Genstart nu"
+msgstr "Reaniciar agora"
 
 #: ../src/lastore-session-helper/job.go:239
 msgid "Reboot Later"
-msgstr "Genstart senere"
+msgstr "Reaniciar sero"
 
 #: ../src/lastore-session-helper/job.go:248
 msgid "Retry"
-msgstr "Prøv igen"
+msgstr "Reintentar"
 
 #: ../src/lastore-session-helper/job.go:256
 msgid "Cancel"
-msgstr "Annuller"
+msgstr "Encaboxar"
 
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
-msgstr "%q installeret vellykket."
+msgstr "%q instalóse con ésitu."
 
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr "%q fejlede i at installere"
+msgstr "%q falló al instalase."
 
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
-msgstr "%q fjernet med succes."
+msgstr "%q desanicióse con ésitu."
 
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "%q mislykkedes at fjerne."
+msgstr "%q falló al desaniciase."
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "%q mislykkedes at downloade."
+msgstr "%q falló al baxase."
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "In order to prevent automatic shutdown, please plug in for normal update."
+msgstr "Pa evitar l'apagáu automáticu, por favor coneuta'l cargador pa un anovamientu normal."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr "Visse funktioner vil træde i kraft efter genstart."
+msgstr "Delles funciones fadrán efeuru dempués del reaniciu."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "Opdateret med succes!"
+msgstr "¡Anovóse con ésitu!"
 
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
-msgstr "Fejlede i at installere opdateringer"
+msgstr "Fallu al anovar."
 
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "%d software skal opdateres."
+msgstr "%d aplicaciones necesiten anovase."
 
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr "Nogle patches skal opdateres."
+msgstr "Dellos parches necesiten anovase."
 
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "Nogle patches og %d-software skal opdateres."
+msgstr "Necesiten anovase dellos parches y %d programes."
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
-msgstr "Opdater nu"
+msgstr "Anovar agora"
