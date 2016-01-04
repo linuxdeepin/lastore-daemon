@@ -9,6 +9,7 @@ import (
 	"path"
 	"pkg.deepin.io/lib"
 	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/utils"
 )
 
 func main() {
@@ -24,10 +25,10 @@ func main() {
 		return
 	}
 
-	os.Unsetenv("LC_ALL")
-	os.Unsetenv("LANGUAGE")
-	os.Unsetenv("LC_MESSAGES")
-	os.Unsetenv("LANG")
+	utils.UnsetEnv("LC_ALL")
+	utils.UnsetEnv("LANGUAGE")
+	utils.UnsetEnv("LC_MESSAGES")
+	utils.UnsetEnv("LANG")
 
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
