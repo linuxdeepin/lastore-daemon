@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-25 19:57+0000\n"
+"PO-Revision-Date: 2015-12-30 18:10+0000\n"
 "Last-Translator: Xurxo Guerra Perez <xguerrap@gmail.com>\n"
 "Language-Team: Galician (Spain) (http://www.transifex.com/linuxdeepin/deepin-store/language/gl_ES/)\n"
 "MIME-Version: 1.0\n"
@@ -65,7 +65,7 @@ msgstr "%q non se puido descargar."
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr ""
+msgstr "Para previr o apagado automático, por favor conecta á corrente o computador."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."

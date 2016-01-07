@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# Translators:
 # Heimen Stoffels <vistausss@outlook.com>, 2015
 # Lars Acou <lars.acou@gmail.com>, 2015
 msgid ""
@@ -10,7 +11,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
-"PO-Revision-Date: 2015-11-20 12:06+0000\n"
+"PO-Revision-Date: 2015-12-29 10:53+0000\n"
 "Last-Translator: Heimen Stoffels <vistausss@outlook.com>\n"
 "Language-Team: Dutch (http://www.transifex.com/linuxdeepin/deepin-store/language/nl/)\n"
 "MIME-Version: 1.0\n"

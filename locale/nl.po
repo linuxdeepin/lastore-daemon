@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-02 11:56+0000\n"
+"PO-Revision-Date: 2015-12-18 12:15+0000\n"
 "Last-Translator: Heimen Stoffels <vistausss@outlook.com>\n"
 "Language-Team: Dutch (http://www.transifex.com/linuxdeepin/deepin-store/language/nl/)\n"
 "MIME-Version: 1.0\n"
@@ -24,7 +24,7 @@ msgstr "Deepin Winkel"
 
 #: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr "Het systeem wordt bijgewerkt; sluit hierna of herstart."
+msgstr "Het systeem wordt bijgewerkt; sluit hierna af of herstart."
 
 #: ../src/lastore-session-helper/job.go:225
 msgid "Reboot Now"
@@ -48,7 +48,7 @@ msgstr "%q is succesvol geïnstalleerd."
 
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr "Het is niet gelukt om %q te installeren."
+msgstr "Het installeren van %q is mislukt."
 
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
@@ -56,11 +56,11 @@ msgstr "%q is succesvol verwijderd."
 
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "Het is niet gelukt om %q te verwijderen."
+msgstr "Het verwijderen van %q is mislukt."
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "Het is niet gelukt om %q te downloaden."
+msgstr "Het downloaden van %q is mislukt."
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
@@ -83,7 +83,7 @@ msgstr "Het bijwerken is mislukt."
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "%d software moet worden bijgewerkt."
+msgstr "%d software-items moet(en) worden bijgewerkt."
 
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
@@ -92,7 +92,7 @@ msgstr "Enkele patches moeten worden bijgewerkt."
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "Enkele patches en %d software moeten worden bijgwerkt."
+msgstr "Enkele patches en %d software-items moeten worden bijgewerkt."
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"

@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# Translators:
 # freddy4212 <freddy4212@gmail.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
-"PO-Revision-Date: 2015-12-23 18:05+0000\n"
+"PO-Revision-Date: 2015-12-29 18:54+0000\n"
 "Last-Translator: freddy4212 <freddy4212@gmail.com>\n"
 "Language-Team: Chinese (Taiwan) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_TW/)\n"
 "MIME-Version: 1.0\n"
@@ -19,7 +20,7 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "Internet"
-msgstr "網路服務"
+msgstr "網際網路"
 
 msgid "Office"
 msgstr "文書作業"
@@ -49,4 +50,4 @@ msgid "Chat"
 msgstr "聊天閒話"
 
 msgid "Others"
-msgstr "其他軟體"
+msgstr "其他程式"

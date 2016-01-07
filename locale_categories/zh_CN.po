@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# szd_liufei <liufei@linuxdeepin.com>, 2015
+# Translators:
+# szd_liufei <liufei@linuxdeepin.com>, 2015-2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
-"PO-Revision-Date: 2015-10-26 01:36+0000\n"
+"PO-Revision-Date: 2016-01-07 01:35+0000\n"
 "Last-Translator: szd_liufei <liufei@linuxdeepin.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_CN/)\n"
 "MIME-Version: 1.0\n"
@@ -22,13 +23,13 @@ msgid "Internet"
 msgstr "网络应用"
 
 msgid "Office"
-msgstr "办公软件"
+msgstr "办公学习"
 
 msgid "Development"
 msgstr "编程开发"
 
 msgid "Reading"
-msgstr "翻译阅读"
+msgstr "阅读翻译"
 
 msgid "Graphics"
 msgstr "图形图像"
@@ -37,16 +38,16 @@ msgid "Game"
 msgstr "游戏娱乐"
 
 msgid "Music"
-msgstr "音乐软件"
+msgstr "音乐欣赏"
 
 msgid "System"
-msgstr "系统工具"
+msgstr "系统管理"
 
 msgid "Video"
-msgstr "视频软件"
+msgstr "视频播放"
 
 msgid "Chat"
-msgstr "聊天软件"
+msgstr "社交沟通"
 
 msgid "Others"
-msgstr "其他软件"
+msgstr "其他应用"
