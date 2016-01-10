@@ -1,0 +1,101 @@
+#+TITLE: Hacking guide for Lastore Daemon
+
+* Project layout
+
+** Coding layout
+Lastore Daemon developed by golang, pkg.deepin.io/lib/dbus and
+the command line apt tools (not libapt).
+
+The golang project layout is ruled under [[https://getgb.io/][gb]].
+
+It has four group packages
+
+- src/internal/system
+
+  This is the Interface package. It defined the interface lastore
+  programs can use. And define the minimal interface need be implement
+  by system package manager backend.
+
+- src/internal/system/apt
+
+  The system package manager backend.
+  Currently only apt backend is implemented.
+  This package shouldn't be used directly by lastore main programs.
+
+- src/lastore-main-programs
+
+  The main programs of this project.
+
+- vendor/
+
+  The vendor codes.
+
+** Others
+  The directories of etc, usr and var are store static files, like
+- dbus configuration files
+- autostart desktop files
+- systemd service files
+- apt conf files
+- lastore-daemon.h the Qt dbus export header
+- var/lib/lastore the meta data of lastore
+- locales and locale_categories store the po file pulled from transifex
+
+
+* Module Design
+
+Main structs
+- Manager
+- Updater
+- Job
+- System
+- Apt
+
+* List of TODO (It's the good way for contributing)
+
+** Using systemd session service to launch lastore-session-helper
+The traditional xdg autostart is not suitable for running service.
+
+** Remove cachedLocale field of Manager in manager.go
+We should only get user language info from com.deepin.Accounts services.
+But there has two prerequisite
+1. com.deepin.Accounts need implement user language support. Currently
+   lastore-daemon actually use the org.freedesktop.Accounts
+2. DDE or other component need setup the user language information.
+
+** Write help tools to verify the way we implement desktop file finding
+write tools to analyze the score of desktop in debs
+which has two or more desktop files.
+So we can know whether it is a reliable way to detect right desktop file.
+
+** Split the workaround.go into apt.go or elsewhere.
+Only the internal/system/apt package can known about dpkg/apt.
+We need hide the package manager system under internal/system package.
+
+** DO better permission manager.
+See also https://cr.deepin.io/#/c/9797/
+
+** Auto recover broken system state.
+In dpkg system, it may be failed in pending status when we abort some
+important operations. At this status it often can be fixed by run
+#+begin_src sh
+dpkg --configure -a
+#+end_src
+
+And we can find a quick way to detect this bad status for fixing it.
+
+** Rewrite download logical
+Currently it using apt-get -o Debug::NoLocking to download package.
+
+This change need more design.
+The basic idea is write a download manager
+
+* List of Workaround
+** Parallel download packages
+We use the apt-get -o Debug::NoLocking to download package.
+It's simple and workable. But when parallel download packagesq
+which has some partial same dependencies, then it may be failed
+when apt try moving the completed packages from /var/cache/apt/archives/partial
+to /var/cache/apt/archives.  Because this completed packages has been
+moved by the first packages.
+
+Workaround by simply retry three times before change notify the failed job status.

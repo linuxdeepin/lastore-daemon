@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// TODO: write  tools to analyze the score of desktop in debs
+// TODO: write tools to analyze the score of desktop in debs
 // which has two or more desktop files.
 // So we can know whether it is a reliable way to detect right desktop file.
 
