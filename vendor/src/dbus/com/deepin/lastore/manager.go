@@ -194,7 +194,9 @@ func (this *dbusPropertyManagerJobList) GetValue() (interface{} /*[]dbus.ObjectP
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "JobList").Store(&r)
 	if err == nil && r.Signature().String() == "ao" {
-		return r.Value().([]dbus.ObjectPath), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().([]dbus.ObjectPath)
+		return v, nil
 	}
 	return *new([]dbus.ObjectPath), err
 }
@@ -219,7 +221,9 @@ func (this *dbusPropertyManagerSystemArchitectures) GetValue() (interface{} /*[]
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "SystemArchitectures").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().([]string)
+		return v, nil
 	}
 	return *new([]string), err
 }
@@ -244,7 +248,9 @@ func (this *dbusPropertyManagerUpgradableApps) GetValue() (interface{} /*[]strin
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "UpgradableApps").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().([]string)
+		return v, nil
 	}
 	return *new([]string), err
 }
@@ -269,7 +275,9 @@ func (this *dbusPropertyManagerSystemOnChanging) GetValue() (interface{} /*bool*
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Manager", "SystemOnChanging").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
-		return r.Value().(bool), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(bool)
+		return v, nil
 	}
 	return *new(bool), err
 }
@@ -443,7 +451,9 @@ func (this *dbusPropertyUpdaterAutoCheckUpdates) GetValue() (interface{} /*bool*
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "AutoCheckUpdates").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
-		return r.Value().(bool), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(bool)
+		return v, nil
 	}
 	return *new(bool), err
 }
@@ -468,7 +478,9 @@ func (this *dbusPropertyUpdaterMirrorSource) GetValue() (interface{} /*string*/,
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "MirrorSource").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(string)
+		return v, nil
 	}
 	return *new(string), err
 }
@@ -493,7 +505,9 @@ func (this *dbusPropertyUpdaterUpdatableApps) GetValue() (interface{} /*[]string
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "UpdatableApps").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().([]string)
+		return v, nil
 	}
 	return *new([]string), err
 }
@@ -518,7 +532,9 @@ func (this *dbusPropertyUpdaterUpdatablePackages) GetValue() (interface{} /*[]st
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "UpdatablePackages").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().([]string)
+		return v, nil
 	}
 	return *new([]string), err
 }
@@ -670,7 +686,9 @@ func (this *dbusPropertyJobId) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Id").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(string)
+		return v, nil
 	}
 	return *new(string), err
 }
@@ -695,7 +713,9 @@ func (this *dbusPropertyJobName) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Name").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(string)
+		return v, nil
 	}
 	return *new(string), err
 }
@@ -720,7 +740,9 @@ func (this *dbusPropertyJobPackages) GetValue() (interface{} /*[]string*/, error
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Packages").Store(&r)
 	if err == nil && r.Signature().String() == "as" {
-		return r.Value().([]string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().([]string)
+		return v, nil
 	}
 	return *new([]string), err
 }
@@ -745,7 +767,9 @@ func (this *dbusPropertyJobType) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Type").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(string)
+		return v, nil
 	}
 	return *new(string), err
 }
@@ -770,7 +794,9 @@ func (this *dbusPropertyJobStatus) GetValue() (interface{} /*string*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Status").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(string)
+		return v, nil
 	}
 	return *new(string), err
 }
@@ -795,7 +821,9 @@ func (this *dbusPropertyJobProgress) GetValue() (interface{} /*float64*/, error)
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Progress").Store(&r)
 	if err == nil && r.Signature().String() == "d" {
-		return r.Value().(float64), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(float64)
+		return v, nil
 	}
 	return *new(float64), err
 }
@@ -820,7 +848,9 @@ func (this *dbusPropertyJobSpeed) GetValue() (interface{} /*int64*/, error) {
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Speed").Store(&r)
 	if err == nil && r.Signature().String() == "x" {
-		return r.Value().(int64), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(int64)
+		return v, nil
 	}
 	return *new(int64), err
 }
@@ -845,7 +875,9 @@ func (this *dbusPropertyJobDescription) GetValue() (interface{} /*string*/, erro
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Description").Store(&r)
 	if err == nil && r.Signature().String() == "s" {
-		return r.Value().(string), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(string)
+		return v, nil
 	}
 	return *new(string), err
 }
@@ -870,7 +902,9 @@ func (this *dbusPropertyJobCancelable) GetValue() (interface{} /*bool*/, error) 
 	var r dbus.Variant
 	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Cancelable").Store(&r)
 	if err == nil && r.Signature().String() == "b" {
-		return r.Value().(bool), nil
+		//gccgo has bug in Sunway which caused panic if v == nil. So we need ignore the "error".
+		v, _ := r.Value().(bool)
+		return v, nil
 	}
 	return *new(bool), err
 }
