@@ -1,4 +1,4 @@
-#+TITLE: Hacking guide for Lastore Daemon
+#+TITLE: CONTRIBUTING guide for Lastore Daemon
 
 * Project layout
 
