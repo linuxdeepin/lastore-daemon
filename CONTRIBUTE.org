@@ -99,3 +99,6 @@ to /var/cache/apt/archives.  Because this completed packages has been
 moved by the first packages.
 
 Workaround by simply retry three times before change notify the failed job status.
+
+* Others
+- [[./deepin_repository.org][How Deepin improve debian repository ?]] (zh-cn only now)

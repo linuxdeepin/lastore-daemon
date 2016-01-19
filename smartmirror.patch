@@ -1,0 +1,111 @@
+diff --git a/apt-pkg/acquire-worker.cc b/apt-pkg/acquire-worker.cc
+index c2ee8cd..54a0fd4 100644
+--- a/apt-pkg/acquire-worker.cc
++++ b/apt-pkg/acquire-worker.cc
+@@ -38,6 +38,7 @@
+ 
+ #include <apti18n.h>
+ 									/*}}}*/
++#include "smartmirrors.h"
+ 
+ using namespace std;
+ 
+@@ -613,6 +614,7 @@ bool pkgAcquire::Worker::QueueItem(pkgAcquire::Queue::QItem *Item)
+    if (OutFd == -1)
+       return false;
+ 
++   Item->URI = SmartMirrors::GuestURI(Item->URI);
+    string Message = "600 URI Acquire\n";
+    Message.reserve(300);
+    Message += "URI: " + Item->URI;
+diff --git a/apt-pkg/smartmirrors.cc b/apt-pkg/smartmirrors.cc
+new file mode 100644
+index 0000000..a485c3d
+--- /dev/null
++++ b/apt-pkg/smartmirrors.cc
+@@ -0,0 +1,71 @@
++// -*- mode: cpp; mode: fold -*-
++// Description								/*{{{*/
++/* ######################################################################
++
++   Smart Mirrors - Get Archive File by Smart Mirrors Server.
++
++   ##################################################################### */
++/*}}}*/
++// Include Files							/*{{{*/
++
++
++#include <apt-pkg/acquire-item.h>
++#include <apt-pkg/configuration.h>
++#include <apt-pkg/aptconfiguration.h>
++
++#include <tr1/memory>
++#include "smartmirrors.h"
++
++using namespace std;
++
++namespace SmartMirrors {
++        static string
++        normalizeURI(const string& uri)
++        {
++                if (uri.length() >=1 && uri.at(uri.length()-1) == '/') {
++                        return uri.substr(0, uri.length()-1);
++                }
++                return uri;
++        }
++
++        const std::string
++        GuestURI(const std::string& uri)
++        {
++                if(uri.substr(0, strlen("http")) != "http") {
++                        return uri;
++                }
++                static bool debug = _config->FindB("Acquire::SmartMirrors::Debug");
++                static bool enabled =  _config->FindB("Acquire::SmartMirrors::Enable");
++                if (!enabled) {
++                        if (debug) {
++                                std::clog << "SmartMirrors is disabled." << std::endl;
++                        }
++                        return uri;
++                }
++                static string official = normalizeURI(_config->Find("Acquire::SmartMirrors::MainSource"));
++                static string mirror = normalizeURI(_config->Find("Acquire::SmartMirrors::MirrorSource"));
++
++                static string detector = _config->Find("Acquire::SmartMirrors::GuestURI");
++                static bool exists = FileExists(detector);
++                if (!exists) {
++                        return uri;
++                }
++
++                string cmd = detector + " " + uri + " " + official + " " + mirror;
++                std::tr1::shared_ptr<FILE> out(popen(cmd.c_str(), "r"), pclose);
++                if (!out) {
++                        return uri;
++                }
++
++                char buffer[1024] = {0};
++                std::string result = "";
++                while (!feof(out.get())) {
++                        if (fgets(buffer, 1024, out.get()) != NULL)
++                                result += buffer;
++                }
++                if (debug && result != uri) {
++                        printf("Using '%s' instead of '%s'\n", result.c_str(), uri.c_str());
++                }
++                return result;
++        }
++}
+diff --git a/apt-pkg/smartmirrors.h b/apt-pkg/smartmirrors.h
+new file mode 100644
+index 0000000..e2fe5fd
+--- /dev/null
++++ b/apt-pkg/smartmirrors.h
+@@ -0,0 +1,8 @@
++#include <config.h>
++
++#include <apt-pkg/cacheiterators.h>
++#include <apt-pkg/indexfile.h>
++
++namespace SmartMirrors {
++  const std::string GuestURI(const std::string& uri);
++};
