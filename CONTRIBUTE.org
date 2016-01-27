@@ -67,7 +67,7 @@ write tools to analyze the score of desktop in debs
 which has two or more desktop files.
 So we can know whether it is a reliable way to detect right desktop file.
 
-** Split the workaround.go into apt.go or elsewhere.
+** DONE Split the workaround.go into apt.go or elsewhere.
 Only the internal/system/apt package can known about dpkg/apt.
 We need hide the package manager system under internal/system package.
 

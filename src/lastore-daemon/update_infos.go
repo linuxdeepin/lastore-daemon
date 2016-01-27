@@ -1,6 +1,7 @@
 package main
 
 import (
+	log "github.com/cihub/seelog"
 	"internal/system"
 	"path"
 )
@@ -14,7 +15,12 @@ type ApplicationInfo struct {
 }
 
 func (u *Updater) loadUpdateInfos() {
-	u.setPropUpdatablePackages(UpdatableNames(u.b.UpgradeInfo()))
+	info, err := system.SystemUpgradeInfo()
+	if err != nil {
+		log.Errorf("loadUpdateInfos:%v\n", err)
+		return
+	}
+	u.setPropUpdatablePackages(UpdatableNames(info))
 
 	var apps []string
 	appInfos := applicationInfos()
@@ -26,14 +32,17 @@ func (u *Updater) loadUpdateInfos() {
 	u.setPropUpdatableApps(apps)
 }
 
-func (u *Updater) ApplicationUpdateInfos(lang string) []ApplicationUpdateInfo {
+func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, error) {
 	if len(u.UpdatableApps) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	iInfos := packageIconInfos()
 	aInfos := applicationInfos()
-	uInfos := u.b.UpgradeInfo()
+	uInfos, err := system.SystemUpgradeInfo()
+	if err != nil {
+		return nil, err
+	}
 
 	var r []ApplicationUpdateInfo
 	for _, uInfo := range uInfos {
@@ -59,7 +68,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) []ApplicationUpdateInfo {
 		}
 		r = append(r, info)
 	}
-	return r
+	return r, nil
 }
 
 func applicationInfos() map[string]ApplicationInfo {

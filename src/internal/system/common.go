@@ -2,7 +2,9 @@ package system
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"path"
 )
 
 type MirrorSource struct {
@@ -41,4 +43,14 @@ func EncodeJson(fpath string, d interface{}) error {
 	defer f.Close()
 
 	return json.NewEncoder(f).Encode(d)
+}
+
+func SystemUpgradeInfo() ([]UpgradeInfo, error) {
+	var r []UpgradeInfo
+	err := DecodeJson(path.Join(VarLibDir, "update_infos.json"),
+		&r)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
+	}
+	return r, nil
 }

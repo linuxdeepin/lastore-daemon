@@ -31,7 +31,7 @@ func GetResultNow(ch chan string, defaultValue string, timeout time.Duration) st
 	return defaultValue
 }
 
-func (c *Checker) Result() string {
+func (c Checker) Result() string {
 	officialResult, mirrorResult := make(chan string), make(chan string)
 	go func() {
 		v := c.CheckOfficial()
@@ -55,7 +55,7 @@ func (c *Checker) Result() string {
 	}
 }
 
-func (c *Checker) makeRequest(method string, url string) (*http.Request, error) {
+func (c Checker) makeRequest(method string, url string) (*http.Request, error) {
 	r, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (c *Checker) makeRequest(method string, url string) (*http.Request, error) 
 	return r, nil
 }
 
-func (c *Checker) CheckOfficial() string {
+func (c Checker) CheckOfficial() string {
 	r, err := c.makeRequest("HEAD", c.official)
 	if err != nil {
 		return ""
@@ -94,7 +94,7 @@ func (c *Checker) CheckOfficial() string {
 }
 
 // CheckURL check whether the remote url is valid
-func (c *Checker) CheckMirror() string {
+func (c Checker) CheckMirror() string {
 	r, err := c.makeRequest("GET", c.mirror)
 	if err != nil {
 		return ""

@@ -29,12 +29,19 @@ type Manager struct {
 }
 
 func NewManager(b system.System, c *Config) *Manager {
+	archs, err := system.SystemArchitectures()
+	if err != nil {
+		log.Errorf("Can't detect system supported architectures %v\n", err)
+		return nil
+	}
+
 	m := &Manager{
 		config:              c,
 		b:                   b,
-		SystemArchitectures: b.SystemArchitectures(),
+		SystemArchitectures: archs,
 		cachedLocale:        make(map[uint64]string),
 	}
+
 	m.jobManager = NewJobManager(b, m.updateJobList)
 
 	go m.jobManager.Dispatch()
@@ -82,7 +89,7 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 		return m.installPackage(jobName, packages)
 	}
 
-	localePkgs := QueryEnhancedLocalePackages(m.b.CheckInstallable, locale, strings.Fields(packages)...)
+	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, locale, strings.Fields(packages)...)
 	if len(localePkgs) != 0 {
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
@@ -202,11 +209,11 @@ func (m *Manager) CleanJob(jobId string) error {
 }
 
 func (m *Manager) PackageInstallable(pkgId string) bool {
-	return m.b.CheckInstallable(pkgId)
+	return system.QueryPackageInstallable(pkgId)
 }
 
 func (m *Manager) PackageExists(pkgId string) bool {
-	return m.b.CheckInstalled(pkgId)
+	return system.QueryPackageInstalled(pkgId)
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) int64 {
@@ -215,16 +222,16 @@ func (m *Manager) PackagesDownloadSize(packages []string) int64 {
 	defer m.do.Unlock()
 
 	if len(packages) == 1 && m.PackageExists(packages[0]) {
-		return SizeDownloaded
+		return system.SizeDownloaded
 	}
-	return int64(QueryPackageDownloadSize(packages...))
+	return int64(system.QueryPackageDownloadSize(packages...))
 }
 
 func (m *Manager) PackageDesktopPath(pkgId string) string {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	return QueryDesktopPath(QueryPackageSameNameDepends(pkgId)...)
+	return QueryDesktopFilePath(pkgId)
 }
 
 func (m *Manager) SetRegion(region string) error {

@@ -52,17 +52,15 @@ var ResourceExitError = errors.New("resource exists")
 type Indicator func(JobProgressInfo)
 
 type System interface {
-	CheckInstallable(pkgId string) bool
-	CheckInstalled(packageId string) bool
 	Download(jobId string, packages []string) error
 	Install(jobId string, packages []string) error
-	DistUpgrade(jobId string) error
 	Remove(jobId string, packages []string) error
 
+	DistUpgrade(jobId string) error
+
 	UpdateSource(jobId string) error
-	UpgradeInfo() []UpgradeInfo
 
 	Abort(jobId string) error
+
 	AttachIndicator(Indicator)
-	SystemArchitectures() []Architecture
 }

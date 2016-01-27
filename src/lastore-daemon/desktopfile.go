@@ -1,6 +1,7 @@
 package main
 
 import (
+	"internal/system"
 	"io/ioutil"
 	"os"
 	"path"
@@ -111,4 +112,36 @@ func (fs DesktopFiles) score(i int) int {
 	// End black list
 
 	return score
+}
+
+// QueryDesktopFilePath return the most possible right
+// desktop file in the pkgId.
+// It will parsing pkgId plus all dependencies of it.
+func QueryDesktopFilePath(pkgId string) string {
+	var r []string
+	for _, f := range system.ListPackageFile(queryRelateDependencies(pkgId)...) {
+		if strings.HasSuffix(f, ".desktop") {
+			r = append(r, f)
+		}
+	}
+	return DesktopFiles(r).BestOne()
+}
+
+// QueryPackageSameNameDepends try find the packages which possible
+// contain the right desktop file.
+// e.g.
+//    stardict-gtk --> stardict-common
+//    stardict-gnome --> stardict-common
+//    evince --> evince-common
+//    evince-gtk --> evince, evince-common  Note: (recursion guest)
+func queryRelateDependencies(pkgId string) []string {
+	var r = []string{pkgId}
+	for _, p := range system.QueryPackageDependencies(pkgId) {
+		if !system.QueryPackageInstalled(p) {
+			continue
+		}
+		r = append(r, p)
+		r = append(r, queryRelateDependencies(p)...)
+	}
+	return r
 }

@@ -237,26 +237,3 @@ func (c *aptCommand) updateProgress() {
 		c.indicator(info)
 	}
 }
-
-func getSystemArchitectures() []system.Architecture {
-	foreignArchs, err := exec.Command("dpkg", "--print-foreign-architectures").Output()
-	if err != nil {
-		log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
-	}
-
-	arch, err := exec.Command("dpkg", "--print-architecture").Output()
-	if err != nil {
-		log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
-	}
-
-	var r []system.Architecture
-	if v := system.Architecture(strings.TrimSpace(string(arch))); v != "" {
-		r = append(r, v)
-	}
-	for _, a := range strings.Split(strings.TrimSpace(string(foreignArchs)), "\n") {
-		if v := system.Architecture(a); v != "" {
-			r = append(r, v)
-		}
-	}
-	return r
-}

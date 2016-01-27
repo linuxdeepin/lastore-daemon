@@ -2,10 +2,7 @@ package apt
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
-	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 )
@@ -111,39 +108,4 @@ func (p *APTSystem) Abort(jobId string) error {
 		return c.Abort()
 	}
 	return system.NotFoundError
-}
-
-func (p *APTSystem) CheckInstallable(pkgId string) bool {
-	out, err := exec.Command("/usr/bin/apt-cache", "show", pkgId).CombinedOutput()
-	if err != nil {
-		log.Debugf("CheckInstabllable(%q) failed: %q %v\n", pkgId, string(out), err)
-		return false
-	}
-	return true
-}
-func (p *APTSystem) CheckInstalled(pkgId string) bool {
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", pkgId).CombinedOutput()
-	if err != nil {
-		return false
-	}
-	if strings.Contains(string(out), "ok not-installed") {
-		return false
-	} else if strings.Contains(string(out), "install ok installed") {
-		return true
-	}
-	return false
-}
-
-func (p *APTSystem) SystemArchitectures() []system.Architecture {
-	return getSystemArchitectures()
-}
-
-func (p *APTSystem) UpgradeInfo() []system.UpgradeInfo {
-	var r []system.UpgradeInfo
-	err := system.DecodeJson(path.Join(system.VarLibDir, "update_infos.json"),
-		&r)
-	if err != nil {
-		log.Warnf("Invalid update_infos: %v\n", err)
-	}
-	return r
 }
