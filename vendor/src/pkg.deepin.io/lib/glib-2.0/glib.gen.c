@@ -1,5 +1,7 @@
 #include "glib.gen.h"
 
+extern void _GLib_go_callback_cleanup(void*);
+
 static void _c_callback_cleanup(void *userdata)
 {
 	_GLib_go_callback_cleanup(userdata);

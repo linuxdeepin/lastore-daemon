@@ -1,11 +1,14 @@
 ifndef USE_GCCGO
 	GOBUILD = go build
 else
-	LDFLAGS = $(shell pkg-config --libs cairo-gobject cairo gdk-pixbuf-xlib-2.0 glib-2.0  pangocairo pango gtk+-3.0)
+	LDFLAGS = $(shell pkg-config --libs glib-2.0)
 	GOBUILD = go build -compiler gccgo -gccgoflags "${LDFLAGS}"
 endif
 
 all:  build
+
+gb-bin:
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o vendor/gb github.com/constabulary/gb/cmd/gb
 
 
 build: 
@@ -14,11 +17,14 @@ build:
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror
 
-gb:
-	gb build lastore-daemon
-	gb build lastore-tools
-	gb build lastore-session-helper
-	gb build lastore-smartmirror
+test: gb-bin
+	./vendor/gb test
+
+gb: gb-bin
+	./vendor/gb build lastore-daemon
+	./vendor/gb build lastore-tools
+	./vendor/gb build lastore-session-helper
+	./vendor/gb build lastore-smartmirror
 
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/

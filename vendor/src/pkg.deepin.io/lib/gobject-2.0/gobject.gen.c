@@ -1,5 +1,7 @@
 #include "gobject.gen.h"
 
+extern void _GObject_go_callback_cleanup(void*);
+
 static void _c_callback_cleanup(void *userdata)
 {
 	_GObject_go_callback_cleanup(userdata);

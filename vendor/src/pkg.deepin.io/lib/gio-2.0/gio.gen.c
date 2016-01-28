@@ -1,5 +1,6 @@
 #include "gio.gen.h"
 
+extern void _Gio_go_callback_cleanup(void*);
 static void _c_callback_cleanup(void *userdata)
 {
 	_Gio_go_callback_cleanup(userdata);

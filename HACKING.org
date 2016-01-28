@@ -83,6 +83,11 @@ dpkg --configure -a
 
 And we can find a quick way to detect this bad status for fixing it.
 
+** Build test environment
+lastore-daemon heavy dependent local package manager status.
+So we have to build a clean root system by tools like debootstrap with
+chroot or docker.
+
 ** Rewrite download logical
 Currently it using apt-get -o Debug::NoLocking to download package.
 
