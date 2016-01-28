@@ -115,7 +115,7 @@ We encourage you to report issues and contribute changes
 
 * [Contribution guide for users](http://wiki.deepin.org/index.php?title=Contribution_Guidelines_for_Users)
 * [Contribution guide for developers](http://wiki.deepin.org/index.php?title=Contribution_Guidelines_for_Developers).
-* [How contributing this project](CONTRIBUTE.org)
+* [How contributing this project](HACKING.org)
 
 ## License
 
