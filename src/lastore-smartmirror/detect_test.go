@@ -47,7 +47,7 @@ func (*testWrap) TestDetect(c *C.C) {
 	}
 
 	for _, item := range data {
-		r := MakeChecker(item.Official, item.Mirror).Result()
+		r := MakeChoice(item.Official, item.Mirror)
 
 		var expect string
 		if item.IsOfficial {
