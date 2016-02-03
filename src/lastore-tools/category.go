@@ -51,7 +51,7 @@ func writeData(fpath string, data interface{}) error {
 	return ioutil.WriteFile(fpath, content, 0644)
 }
 
-func GenerateCategory(fpath string) error {
+func GenerateCategory(repo, fpath string) error {
 	url := appstoreURI + "/" + "categories"
 
 	var d interface{}
@@ -69,7 +69,7 @@ type AppInfo struct {
 	LocaleName map[string]string `json:"locale_name"`
 }
 
-func GenerateApplications(fpath string) error {
+func GenerateApplications(repo, fpath string) error {
 	apps := make(map[string]AppInfo)
 	err := decodeData(false, "http://api.appstore.deepin.org/info/all", &apps)
 	apps["deepin-appstore"] = AppInfo{

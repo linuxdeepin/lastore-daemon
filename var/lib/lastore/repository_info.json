@@ -1,0 +1,24 @@
+[
+    {
+	"name": "desktop",
+	"url": "http://packages.deepin.com/deepin",
+	"mirror": "http://cdn.packages.deepin.com/deepin"
+    },
+    {
+	"name": "server",
+	"url": "http://packages.deepin.com/deepin-server",
+	"mirror": "http://cdn.packages.deepin.com/deepin-server"
+    },
+    {
+	"name": "sunway",
+	"url": "http://packages.deepin.com/sw"
+    },
+    {
+	"name": "armhf",
+	"url": "http://packages.deepin.com/armhf"
+    },
+    {
+	"name": "loongson",
+	"url": "http://packages.deepin.com/loongson"
+    }
+]

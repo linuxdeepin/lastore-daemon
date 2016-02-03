@@ -23,6 +23,7 @@ type Config struct {
 	CheckInterval    time.Duration
 	AppstoreRegion   string
 	LastCheckTime    time.Time
+	Repository       string
 
 	fpath string
 }
@@ -30,7 +31,6 @@ type Config struct {
 func NewConfig(fpath string) *Config {
 	r := Config{
 		CheckInterval:    time.Minute * 180,
-		MirrorSource:     system.DefaultMirror.Id,
 		AutoCheckUpdates: true,
 		fpath:            fpath,
 	}
@@ -43,8 +43,10 @@ func NewConfig(fpath string) *Config {
 	if r.CheckInterval < MinCheckInterval {
 		r.CheckInterval = MinCheckInterval
 	}
-	if r.MirrorSource == "" {
-		r.MirrorSource = system.DefaultMirror.Id
+	if r.Repository == "" || r.MirrorSource == "" {
+		info := system.DetectDefaultRepoInfo(system.RepoInfos)
+		r.Repository = info.Name
+		r.MirrorSource = "default" //info.Mirror
 	}
 
 	return &r

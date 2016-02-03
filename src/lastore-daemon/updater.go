@@ -145,9 +145,6 @@ func (u Updater) ListMirrorSources(lang string) []LocaleMirrorSource {
 		r = append(r, makeLocaleMirror(lang, raw))
 	}
 
-	if len(r) == 0 {
-		return []LocaleMirrorSource{makeLocaleMirror(lang, system.DefaultMirror)}
-	}
 	return r
 }
 
@@ -198,25 +195,25 @@ func (m *Manager) doUpdate() {
 
 	log.Info("Try update remote data...", m.config)
 	if m.config.AutoCheckUpdates {
-		go updateDeepinStoreInfos()
+		go updateDeepinStoreInfos(m.config.Repository)
 
 		job, err := m.UpdateSource()
 		log.Infof("It's not busy, so try update remote data... %v:%v\n", job, err)
 	}
 }
 
-func updateDeepinStoreInfos() {
-	err := exec.Command("lastore-tools", "-item", "applications", "-output", "/var/lib/lastore/applications.json").Run()
+func updateDeepinStoreInfos(repository string) {
+	err := exec.Command("lastore-tools", "-repo", repository, "-item", "applications", "-output", "/var/lib/lastore/applications.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[applications]: %v\n", err)
 	}
 
-	err = exec.Command("lastore-tools", "-item", "categories", "-output", "/var/lib/lastore/categories.json").Run()
+	err = exec.Command("lastore-tools", "-repo", repository, "-item", "categories", "-output", "/var/lib/lastore/categories.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[categories]: %v\n", err)
 	}
 
-	exec.Command("lastore-tools", "-item", "mirrors", "-output", "/var/lib/lastore/mirrors.json").Run()
+	exec.Command("lastore-tools", "-repo", repository, "-item", "mirrors", "-output", "/var/lib/lastore/mirrors.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[mirrors]: %v\n", err)
 	}

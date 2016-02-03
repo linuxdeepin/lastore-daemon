@@ -22,15 +22,16 @@ func main() {
 
 	var item = flag.String("item", "", "categories|applications|xcategories|desktop|lastore-remove|lastore-install|update_infos|mirrors")
 	var fpath = flag.String("output", "", "the file to write")
+	var repo = flag.String("repo", "desktop", "the repository type")
 
 	flag.Parse()
 	var err error
 
 	switch *item {
 	case "categories":
-		err = GenerateCategory(*fpath)
+		err = GenerateCategory(*repo, *fpath)
 	case "applications":
-		err = GenerateApplications(*fpath)
+		err = GenerateApplications(*repo, *fpath)
 	case "xcategories":
 		err = GenerateXCategories(*fpath)
 	case "desktop":
@@ -47,7 +48,7 @@ func main() {
 		GenerateUpdateInfos(*fpath)
 
 	case "mirrors":
-		err = GenerateMirrors(*fpath)
+		err = GenerateMirrors(*repo, *fpath)
 
 	default:
 		flag.Usage()

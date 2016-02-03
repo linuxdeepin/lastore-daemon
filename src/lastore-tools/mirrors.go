@@ -15,10 +15,8 @@ import (
 	"net/http"
 )
 
-var ServerAPI = "http://api.lastore.deepin.org"
-
-func GenerateMirrors(fpath string) error {
-	ms, err := LoadMirrorSources(ServerAPI)
+func GenerateMirrors(repository string, fpath string) error {
+	ms, err := LoadMirrorSources(fmt.Sprintf("http://api.lastore.deepin.org/mirrors?repository=%s", repository))
 	if err != nil {
 		return err
 	}
@@ -26,8 +24,8 @@ func GenerateMirrors(fpath string) error {
 }
 
 // LoadMirrorSources return supported MirrorSource from remote server
-func LoadMirrorSources(server string) ([]system.MirrorSource, error) {
-	rep, err := http.Get(server + "/mirrors")
+func LoadMirrorSources(url string) ([]system.MirrorSource, error) {
+	rep, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +51,7 @@ func LoadMirrorSources(server string) ([]system.MirrorSource, error) {
 
 	if v.StatusCode != 0 {
 		return nil, fmt.Errorf("LoadMirrorSources: featch(%q) error: %q",
-			server+"/mirrors", v.StatusMessage)
+			url, v.StatusMessage)
 	}
 
 	var r []system.MirrorSource
@@ -69,6 +67,9 @@ func LoadMirrorSources(server string) ([]system.MirrorSource, error) {
 			s.NameLocale[k] = v["name"]
 		}
 		r = append(r, s)
+	}
+	if len(r) == 0 {
+		return nil, system.NotFoundError
 	}
 	return r, nil
 }

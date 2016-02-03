@@ -16,21 +16,20 @@ import (
 )
 
 type MirrorSource struct {
-	Id   string
-	Name string
-	Url  string
+	Id   string `json:"id"`
+	Name string `json:"name"`
+	Url  string `json:"url"`
 
-	NameLocale map[string]string
-	Weight     int
+	NameLocale map[string]string `json:"name_locale"`
+	Weight     int               `json:"weight"`
 }
 
-var DefaultMirror = MirrorSource{
-	Id:   "default",
-	Url:  "http://cdn.packages.deepin.com/deepin",
-	Name: "Official Mirror",
-	NameLocale: map[string]string{
-		"zh_CN": "官方源",
-	},
+var RepoInfos []RepositoryInfo
+
+type RepositoryInfo struct {
+	Name   string `json:"name"`
+	Url    string `json:"url"`
+	Mirror string `json:"mirror"`
 }
 
 func DecodeJson(fpath string, d interface{}) error {

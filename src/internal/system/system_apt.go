@@ -13,9 +13,12 @@ lastore-daemon
 package system
 
 import (
+	"bufio"
 	"fmt"
 	"internal/utils"
+	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -123,6 +126,46 @@ func SystemArchitectures() ([]Architecture, error) {
 		}
 	}
 	return r, nil
+}
+
+var defaultRepoInfo = RepositoryInfo{
+	Name:   "desktop",
+	Url:    "http://packages.deepin.com/deepin",
+	Mirror: "http://cdn.packages.deepin.com/deepin",
+}
+
+func init() {
+	err := DecodeJson(path.Join(VarLibDir, "repository_info.json"), &RepoInfos)
+	if err != nil {
+		RepoInfos = []RepositoryInfo{defaultRepoInfo}
+	}
+}
+
+func DetectDefaultRepoInfo(rInfos []RepositoryInfo) RepositoryInfo {
+	f, err := os.Open("/etc/apt/sources.list")
+	if err != nil {
+		return defaultRepoInfo
+	}
+	defer f.Close()
+
+	r := bufio.NewReader(f)
+	for {
+		bs, _, err := r.ReadLine()
+		if err != nil {
+			break
+		}
+		line := strings.TrimLeft(string(bs), " ")
+		if strings.IndexByte(line, '#') == 0 {
+			continue
+		}
+
+		for _, repo := range rInfos {
+			if strings.Contains(line, " "+repo.Url+" ") {
+				return repo
+			}
+		}
+	}
+	return defaultRepoInfo
 }
 
 func guestBasePackageName(pkgId string) string {
