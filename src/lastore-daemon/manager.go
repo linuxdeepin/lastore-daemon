@@ -224,15 +224,20 @@ func (m *Manager) PackageExists(pkgId string) bool {
 	return system.QueryPackageInstalled(pkgId)
 }
 
-func (m *Manager) PackagesDownloadSize(packages []string) int64 {
+func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
 
 	if len(packages) == 1 && m.PackageExists(packages[0]) {
-		return system.SizeDownloaded
+		return system.SizeDownloaded, nil
 	}
-	return int64(system.QueryPackageDownloadSize(packages...))
+
+	s, err := system.QueryPackageDownloadSize(packages...)
+	if err != nil {
+		log.Warnf("PackagesDownloadSize(%q) %v\n", strings.Join(packages, " "), err)
+	}
+	return int64(s), err
 }
 
 func (m *Manager) PackageDesktopPath(pkgId string) string {

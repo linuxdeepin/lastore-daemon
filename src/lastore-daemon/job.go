@@ -81,7 +81,7 @@ func (j *Job) setEffectSizes() bool {
 
 	switch j.Type {
 	case system.DownloadJobType:
-		j.effectSizes = system.QueryPackageDownloadSize(j.Packages...)
+		j.effectSizes, _ = system.QueryPackageDownloadSize(j.Packages...)
 	}
 	return j.effectSizes > 0
 }

@@ -25,9 +25,13 @@ func (*testWrap) TestPackageDownloadSize(c *C.C) {
 	var packages = []string{"abiword", "0ad", "acl2"}
 	for _, p := range packages {
 		if QueryPackageInstalled(p) {
-			c.Check(QueryPackageDownloadSize(p), C.Equals, float64(0))
+			s, err := QueryPackageDownloadSize(p)
+			c.Check(err, C.Equals, nil)
+			c.Check(s, C.Equals, float64(0))
 		} else {
-			c.Check(QueryPackageDownloadSize(p) >= 0, C.Equals, true)
+			s, err := QueryPackageDownloadSize(p)
+			c.Check(err, C.Equals, nil)
+			c.Check(s >= 0, C.Equals, true)
 		}
 	}
 }
@@ -45,6 +49,8 @@ func (*testWrap) TestParseSize(c *C.C) {
 		{`Need to get 13.7 MB of archives.`, 13.7 * 1000 * 1000},
 	}
 	for _, d := range data {
-		c.Check(parsePackageSize(d.Line), C.Equals, d.Size)
+		s, err := parsePackageSize(d.Line)
+		c.Check(err, C.Equals, nil)
+		c.Check(s, C.Equals, d.Size)
 	}
 }

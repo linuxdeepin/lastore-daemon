@@ -58,11 +58,12 @@ func QueryPackageDependencies(pkgId string) []string {
 
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
-func QueryPackageDownloadSize(packages ...string) float64 {
+func QueryPackageDownloadSize(packages ...string) (float64, error) {
 	cmd := exec.Command("/usr/bin/apt-get", append([]string{"-d", "-o", "Debug::NoLocking=1", "--print-uris", "--assume-no", "install"}, packages...)...)
 
 	lines, err := utils.FilterExecOutput(cmd, time.Second*3, func(line string) bool {
-		return parsePackageSize(line) != SizeUnknown
+		_, _err := parsePackageSize(line)
+		return _err == nil
 	})
 
 	if len(lines) != 0 {
@@ -73,11 +74,11 @@ func QueryPackageDownloadSize(packages ...string) float64 {
 		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 			if status.ExitStatus() == 1 {
 				// --assume-no will cause apt-get exit with code 1 when successfully
-				return SizeDownloaded
+				return SizeDownloaded, nil
 			}
 		}
 	}
-	return SizeUnknown
+	return SizeUnknown, err
 }
 
 // QueryPackageInstalled query whether the pkgId installed
@@ -195,20 +196,20 @@ var __unitTable__ = map[byte]float64{
 const SizeDownloaded = 0
 const SizeUnknown = -1
 
-func parsePackageSize(line string) float64 {
+func parsePackageSize(line string) (float64, error) {
 	ms := __ReDownloadSize__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
 	case 3, 4:
 		l := strings.Replace(string(ms[1]), ",", "", -1)
 		size, err := strconv.ParseFloat(l, 64)
 		if err != nil {
-			return SizeUnknown
+			return SizeUnknown, fmt.Errorf("%q invalid : %v err")
 		}
 		if len(ms[2]) == 0 {
-			return size
+			return size, nil
 		}
 		unit := ms[2][0]
-		return size * __unitTable__[unit]
+		return size * __unitTable__[unit], nil
 	}
-	return SizeUnknown
+	return SizeUnknown, fmt.Errorf("%q invalid", line)
 }

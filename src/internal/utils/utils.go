@@ -10,6 +10,7 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -20,17 +21,20 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 	if err != nil {
 		return nil, err
 	}
+	errBuf := new(bytes.Buffer)
+	cmd.Stderr = errBuf
 	timer := time.AfterFunc(timeout, func() {
 		cmd.Process.Kill()
 	})
 	cmd.Start()
-	buf := bytes.NewBuffer(nil)
 
+	buf := bytes.NewBuffer(nil)
 	buf.ReadFrom(r)
 
 	var lines []string
 	var line string
 	for ; err == nil; line, err = buf.ReadString('\n') {
+		errBuf.WriteString(line)
 		line = strings.TrimSpace(line)
 		if filter(line) {
 			lines = append(lines, line)
@@ -39,5 +43,9 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 
 	err = cmd.Wait()
 	timer.Stop()
-	return lines, err
+	if err != nil {
+		return nil, fmt.Errorf("Run cmd %v --> %q(stderr) --> %v\n",
+			cmd.Args, errBuf.String(), err)
+	}
+	return lines, nil
 }
