@@ -50,7 +50,21 @@ Main structs
 - System
 - Apt
 
-* List of TODO (It's the good way for contributing)
+* TODOs (It's the good way for contributing)
+** Dynamically distribute mirror servers
+We have implement the smart mirrors. So why we still using
+old way to choosing mirror server by user ?
+
+Just detect all mirror servers per download.
+By this, we got.
+1. choosing best server to download by real time detecting.
+2. ensure consistency between mirror and official server.
+3. Server is always workable.
+
+** update notification delay
+We have to reduce the official pressure when it just push
+update.
+We can notify the update after the mirrors has been synchronized.
 
 ** Using systemd session service to launch lastore-session-helper
 The traditional xdg autostart is not suitable for running service.
@@ -67,12 +81,10 @@ write tools to analyze the score of desktop in debs
 which has two or more desktop files.
 So we can know whether it is a reliable way to detect right desktop file.
 
-** DONE Split the workaround.go into apt.go or elsewhere.
-Only the internal/system/apt package can known about dpkg/apt.
-We need hide the package manager system under internal/system package.
 
 ** DO better permission manager.
 See also https://cr.deepin.io/#/c/9797/
+
 
 ** Auto recover broken system state.
 In dpkg system, it may be failed in pending status when we abort some
@@ -80,7 +92,6 @@ important operations. At this status it often can be fixed by run
 #+begin_src sh
 dpkg --configure -a
 #+end_src
-
 And we can find a quick way to detect this bad status for fixing it.
 
 ** Build test environment
@@ -93,6 +104,10 @@ Currently it using apt-get -o Debug::NoLocking to download package.
 
 This change need more design.
 The basic idea is write a download manager
+
+** DONE Split the workaround.go into apt.go or elsewhere.
+Only the internal/system/apt package can known about dpkg/apt.
+We need hide the package manager system under internal/system package.
 
 * List of Workaround
 ** Parallel download packages
