@@ -94,6 +94,7 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 	case system.InstallJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "install")
+		args = append(args, "--")
 		args = append(args, packages...)
 	case system.DistUpgradeJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
@@ -101,10 +102,12 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 	case system.RemoveJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "-f", "remove")
+		args = append(args, "--")
 		args = append(args, packages...)
 	case system.DownloadJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "install", "-d")
+		args = append(args, "--")
 		args = append(args, packages...)
 	case system.UpdateSourceJobType:
 		args = append(args, "-o", "Dir::Etc::sourceparts=/var/lib/lastore/source.d")

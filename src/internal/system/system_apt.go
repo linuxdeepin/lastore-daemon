@@ -29,7 +29,7 @@ import (
 // ListPackageFile list files path contained in the packages
 func ListPackageFile(packages ...string) []string {
 	desktopFiles, err := utils.FilterExecOutput(
-		exec.Command("dpkg", append([]string{"-L"}, packages...)...),
+		exec.Command("dpkg", append([]string{"-L", "--"}, packages...)...),
 		time.Second*2,
 		func(string) bool { return true },
 	)
@@ -41,7 +41,7 @@ func ListPackageFile(packages ...string) []string {
 
 // QueryPackageDependencies return the directly dependencies
 func QueryPackageDependencies(pkgId string) []string {
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Depends}", pkgId).CombinedOutput()
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Depends}", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return nil
 	}
@@ -59,7 +59,8 @@ func QueryPackageDependencies(pkgId string) []string {
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
 func QueryPackageDownloadSize(packages ...string) (float64, error) {
-	cmd := exec.Command("/usr/bin/apt-get", append([]string{"-d", "-o", "Debug::NoLocking=1", "--print-uris", "--assume-no", "install"}, packages...)...)
+	cmd := exec.Command("/usr/bin/apt-get",
+		append([]string{"-d", "-o", "Debug::NoLocking=1", "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
 	lines, err := utils.FilterExecOutput(cmd, time.Second*3, func(line string) bool {
 		_, _err := parsePackageSize(line)
@@ -83,7 +84,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 
 // QueryPackageInstalled query whether the pkgId installed
 func QueryPackageInstalled(pkgId string) bool {
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", pkgId).CombinedOutput()
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return false
 	}
@@ -98,7 +99,7 @@ func QueryPackageInstalled(pkgId string) bool {
 
 // QueryPackageInstallable query whether the pkgId can be installed
 func QueryPackageInstallable(pkgId string) bool {
-	_, err := exec.Command("/usr/bin/apt-cache", "show", pkgId).CombinedOutput()
+	_, err := exec.Command("/usr/bin/apt-cache", "show", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return false
 	}
