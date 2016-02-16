@@ -43,7 +43,7 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 
 	err = cmd.Wait()
 	timer.Stop()
-	if err != nil {
+	if err != nil && len(lines) == 0 {
 		return nil, fmt.Errorf("Run cmd %v --> %q(stderr) --> %v\n",
 			cmd.Args, errBuf.String(), err)
 	}

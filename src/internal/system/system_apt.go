@@ -22,7 +22,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -69,15 +68,6 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 
 	if len(lines) != 0 {
 		return parsePackageSize(lines[0])
-	}
-
-	if exiterr, ok := err.(*exec.ExitError); ok {
-		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-			if status.ExitStatus() == 1 {
-				// --assume-no will cause apt-get exit with code 1 when successfully
-				return SizeDownloaded, nil
-			}
-		}
 	}
 	return SizeUnknown, err
 }

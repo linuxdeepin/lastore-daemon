@@ -25,18 +25,18 @@ func (*testWrap) TestDetect(c *C.C) {
 		IsOfficial bool
 	}{
 		{
-			"http://packages.linuxdeepin.com/favicon.ico",
+			"http://packages.deepin.com/favicon.ico",
 			"http://notavaliddoamian.com/abc",
 			true,
 		},
 		{
-			"http://packages.linuxdeepin.com/favicon.ico",
-			"http://cdn.packages.linuxdeepin.com/packages-debian/dists/unstable/Release",
+			"http://packages.deepin.com/favicon.ico",
+			"http://cdn.packages.deepin.com/packages-debian/dists/unstable/Release",
 			false,
 		},
 		{
 			"http://notexit.com/abc",
-			"http://cdn.packages.linuxdeepin.com/packages-debian/dists/unstable/Release",
+			"http://cdn.packages.deepin.com/packages-debian/dists/unstable/Release",
 			false,
 		},
 		{
