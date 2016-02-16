@@ -42,11 +42,8 @@ type Job struct {
 	Description string
 
 	// completed bytes per second
-	Speed int64
-	//  effect bytes
-	effectSizes float64
-	// updateInfo timestamp
-	updateProgressTime time.Time
+	Speed      int64
+	speedMeter SpeedMeter
 
 	Cancelable bool
 
@@ -68,22 +65,24 @@ func NewJob(jobName string, packages []string, jobType string, queueName string)
 		queueName:  queueName,
 		retry:      3,
 	}
-	if jobType == system.InstallJobType {
+
+	switch jobType {
+	case system.InstallJobType:
 		j.Progress = 0.5
+	case system.DownloadJobType:
+		go j.initDownloadSize()
 	}
+
 	return j
 }
 
-func (j *Job) setEffectSizes() bool {
-	if j.effectSizes > 0 {
-		return true
+func (j *Job) initDownloadSize() {
+	s, err := system.QueryPackageDownloadSize(j.Packages...)
+	if err != nil {
+		log.Warnf("initDownloadSize failed: %v", err)
+		go j.initDownloadSize()
 	}
-
-	switch j.Type {
-	case system.DownloadJobType:
-		j.effectSizes, _ = system.QueryPackageDownloadSize(j.Packages...)
-	}
-	return j.effectSizes > 0
+	j.speedMeter.SetDownloadSize(int64(s))
 }
 
 func (j *Job) changeType(jobType string) {
@@ -96,18 +95,6 @@ func (j Job) String() string {
 		j.Type, j.Cancelable, j.Status,
 		j.Description, j.Progress, j.queueName,
 	)
-}
-
-func SmoothCalc(oldSpeed, newSpeed int64, interval time.Duration) int64 {
-	if oldSpeed == 0 || interval > time.Second {
-		return int64(newSpeed)
-	}
-
-	ratio := float64(time.Second-interval) * 1.0 / float64(time.Second)
-	if ratio < 0 {
-		return int64(newSpeed)
-	}
-	return int64(float64(oldSpeed)*(1-ratio) + float64(newSpeed)*ratio)
 }
 
 // _UpdateInfo update Job information from info and return
@@ -125,34 +112,22 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		j.Cancelable = info.Cancelable
 		dbus.NotifyChange(j, "Cancelable")
 	}
-
-	// The Progress may not changed when we calculate speed.
-	if info.Status == system.RunningStatus && j.setEffectSizes() {
-		now := time.Now()
-
-		// We need wait there has recorded once updateProgressTime and Progress,
-		// otherwise the speed will be too quickly.
-		if !j.updateProgressTime.IsZero() && j.Progress != 0 {
-			// see the apt.go, we scale download progress value range in [0,0.5)
-			completed := (info.Progress - j.Progress) * j.effectSizes * 2
-			interval := now.Sub(j.updateProgressTime)
-
-			if interval > 0 && completed > 0 {
-				j.Speed = SmoothCalc(j.Speed, int64(completed/interval.Seconds()), interval)
-				dbus.NotifyChange(j, "Speed")
-			}
-		}
-		j.updateProgressTime = now
-	}
+	log.Tracef("updateInfo %v <- %v\n", j, info)
 
 	if info.Progress > j.Progress {
 		changed = true
-
 		j.Progress = info.Progress
 		dbus.NotifyChange(j, "Progress")
 	}
 
-	log.Tracef("updateInfo %v <- %v\n", j, info)
+	// see the apt.go, we scale download progress value range in [0,0.5
+	speed := j.speedMeter.Speed(info.Progress * 2)
+
+	if speed != j.Speed {
+		changed = true
+		j.Speed = speed
+		dbus.NotifyChange(j, "Speed")
+	}
 
 	if info.Status != j.Status {
 		err := TransitionJobState(j, info.Status)

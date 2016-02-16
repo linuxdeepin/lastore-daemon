@@ -61,7 +61,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 	cmd := exec.Command("/usr/bin/apt-get",
 		append([]string{"-d", "-o", "Debug::NoLocking=1", "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
-	lines, err := utils.FilterExecOutput(cmd, time.Second*3, func(line string) bool {
+	lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
 		_, _err := parsePackageSize(line)
 		return _err == nil
 	})
