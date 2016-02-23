@@ -80,7 +80,7 @@ func (j *Job) initDownloadSize() {
 	s, err := system.QueryPackageDownloadSize(j.Packages...)
 	if err != nil {
 		log.Warnf("initDownloadSize failed: %v", err)
-		go j.initDownloadSize()
+		return
 	}
 	j.speedMeter.SetDownloadSize(int64(s))
 }
