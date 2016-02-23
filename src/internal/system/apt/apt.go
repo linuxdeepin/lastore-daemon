@@ -10,10 +10,10 @@ package apt
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -65,7 +65,7 @@ type aptCommand struct {
 
 	indicator system.Indicator
 
-	output io.WriteCloser
+	logger bytes.Buffer
 }
 
 func (c aptCommand) String() string {
@@ -122,26 +122,22 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 
 	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	output := system.CreateLogOutput(cmdType, strings.Join(packages, ","))
-	cmd.Stdout = output
-	cmd.Stderr = output
-
 	r := &aptCommand{
 		JobId:      jobId,
 		cmdSet:     cmdSet,
 		indicator:  fn,
 		apt:        cmd,
-		output:     output,
 		Cancelable: true,
 	}
+	cmd.Stdout = &r.logger
+	cmd.Stderr = &r.logger
 
 	cmdSet.AddCMD(r)
 	return r
 }
 
 func (c *aptCommand) Start() error {
-	log.Infof("AptCommand.Start:%v\n", c)
+	c.logger.WriteString(fmt.Sprintf("Begin AptCommand:%v\n", c))
 
 	rr, ww, err := os.Pipe()
 	if err != nil {
@@ -189,11 +185,10 @@ const (
 )
 
 func (c *aptCommand) atExit() {
-	if c.output != nil {
-		c.output.Close()
-	}
-
 	c.aptPipe.Close()
+
+	c.logger.WriteString(fmt.Sprintf("End AptCommand: %s\n", c.JobId))
+	log.Infof(c.logger.String())
 
 	c.cmdSet.RemoveCMD(c.JobId)
 

@@ -10,6 +10,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
 	"internal/system/apt"
@@ -23,13 +24,17 @@ import (
 func main() {
 	flag.Parse()
 
-	SetSeelogger(DefaultLogLevel, DefaultLogFomrat, DefaultLogOutput)
+	err := SetSeelogger(DefaultLogLevel, DefaultLogFomrat, DefaultLogOutput)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-	setupLog()
+	log.Info("Starting lastore-daemon")
 	defer log.Flush()
 
 	if !lib.UniqueOnSystem("com.deepin.lastore") {
-		log.Info("Can't obtain the com.deepin.lastore")
+		log.Infof("Can't obtain the com.deepin.lastore\n")
 		return
 	}
 
@@ -46,7 +51,7 @@ func main() {
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 
 	manager := NewManager(b, config)
-	err := dbus.InstallOnSystem(manager)
+	err = dbus.InstallOnSystem(manager)
 	if err != nil {
 		log.Error("Install manager on system bus :", err)
 		return
