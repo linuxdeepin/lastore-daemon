@@ -81,19 +81,6 @@ write tools to analyze the score of desktop in debs
 which has two or more desktop files.
 So we can know whether it is a reliable way to detect right desktop file.
 
-
-** DO better permission manager.
-See also https://cr.deepin.io/#/c/9797/
-
-
-** Auto recover broken system state.
-In dpkg system, it may be failed in pending status when we abort some
-important operations. At this status it often can be fixed by run
-#+begin_src sh
-dpkg --configure -a
-#+end_src
-And we can find a quick way to detect this bad status for fixing it.
-
 ** Build test environment
 lastore-daemon heavy dependent local package manager status.
 So we have to build a clean root system by tools like debootstrap with
@@ -105,9 +92,25 @@ Currently it using apt-get -o Debug::NoLocking to download package.
 This change need more design.
 The basic idea is write a download manager
 
+
 ** DONE Split the workaround.go into apt.go or elsewhere.
 Only the internal/system/apt package can known about dpkg/apt.
 We need hide the package manager system under internal/system package.
+
+** DONE DO better permission manager.
+See also https://cr.deepin.io/#/c/9797/
+
+** DONE Auto recover broken system state.
+Dpkg may be in dirty status when abort some important operations.
+This status can be fixed by run 
+#+begin_src sh
+dpkg --configure -a
+#+end_src
+
+There has a quick way to detect the dirty status 
+(See debsystem.cc:CheckUpdates in apt project. And CheckDpkgDirtyJournal
+in system_apt.go)
+
 
 * List of Workaround
 ** Parallel download packages
