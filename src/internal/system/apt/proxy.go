@@ -9,11 +9,26 @@
 package apt
 
 import (
+	"bytes"
 	"fmt"
+	log "github.com/cihub/seelog"
 	"internal/system"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+	"unicode"
 )
+
+func init() {
+	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
+	exec.Command("/var/lib/lastore/build_safecache.sh").Run()
+
+	if CheckDpkgDirtyJournal() {
+		TryFixDpkgDirtyStatus()
+	}
+}
 
 type APTSystem struct {
 	cmdSet    map[string]*aptCommand
@@ -33,8 +48,8 @@ func parseProgressField(v string) (float64, error) {
 		return -1, fmt.Errorf("unknown progress value: %q", v)
 	}
 	return progress, nil
-
 }
+
 func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	fs := strings.SplitN(line, ":", 4)
 	if len(fs) != 4 {
@@ -91,17 +106,84 @@ func (p *APTSystem) Download(jobId string, packages []string) error {
 	return c.Start()
 }
 
+// CheckDpkgDirtyJournal check if the dpkg in dirty status
+// Return true if dirty. Dirty status should be fix
+// by FixDpkgDirtyJournal().
+// See also debsystem.cc:CheckUpdates in apt project
+func CheckDpkgDirtyJournal() bool {
+	const updateDir = "/var/lib/dpkg/updates"
+	fs, err := ioutil.ReadDir(updateDir)
+	if err != nil {
+		return false
+	}
+	for _, finfo := range fs {
+		dirty := true
+		for _, c := range finfo.Name() {
+			if !unicode.IsDigit(rune(c)) {
+				dirty = false
+				break
+			}
+		}
+		if dirty {
+			return true
+		}
+	}
+	return false
+}
+
+func TryFixDpkgDirtyStatus() {
+	cmd := exec.Command("dpkg", "--force-confold", "--configure", "-a")
+	buf := new(bytes.Buffer)
+	cmd.Stdout = buf
+	cmd.Stderr = buf
+	cmd.Start()
+
+	err := cmd.Wait()
+	errStr := ""
+	if err != nil {
+		errStr = err.Error()
+	}
+	log.Warn(fmt.Sprintf("Dpkg in dirty status, try fixing. %s\n", errStr))
+	log.Warnf("%s\n", buf.String())
+	log.Warn(fmt.Sprintf("Stage one: FixDpkg: %v\n", err))
+
+	cmd = exec.Command("apt-get", "-f", "install", "-c", "/var/lib/lastore/apt.conf")
+	cmd.Stdout = buf
+	cmd.Stderr = buf
+	cmd.Start()
+
+	err = cmd.Wait()
+	errStr = ""
+	if err != nil {
+		errStr = err.Error()
+	}
+	log.Warn(fmt.Sprintf("Stage two: fixing apt-get -f install. %s\n", errStr))
+	log.Warnf("%s\n", buf.String())
+	log.Warn(fmt.Sprintf("End of FixDpkg: %v\n", err))
+
+}
+
 func (p *APTSystem) Remove(jobId string, packages []string) error {
+	if CheckDpkgDirtyJournal() {
+		TryFixDpkgDirtyStatus()
+	}
 	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
 	return c.Start()
 }
 
 func (p *APTSystem) Install(jobId string, packages []string) error {
+	if CheckDpkgDirtyJournal() {
+		TryFixDpkgDirtyStatus()
+	}
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
 	return c.Start()
 }
 
 func (p *APTSystem) DistUpgrade(jobId string) error {
+	if CheckDpkgDirtyJournal() {
+		TryFixDpkgDirtyStatus()
+	}
+
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
 	return c.Start()
 }

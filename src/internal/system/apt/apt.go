@@ -20,11 +20,6 @@ import (
 	"syscall"
 )
 
-func init() {
-	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
-	exec.Command("/var/lib/lastore/build_safecache.sh").Run()
-}
-
 type CommandSet interface {
 	AddCMD(cmd *aptCommand)
 	RemoveCMD(id string)
