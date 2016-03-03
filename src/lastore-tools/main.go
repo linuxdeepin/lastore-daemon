@@ -71,49 +71,6 @@ func MainUpdater(c *cli.Context) {
 	}
 }
 
-var CMDTester = cli.Command{
-	Name: "test",
-	Usage: `Use lastore-daemon to run jobs
-
-    search will search apps from dstore. It will list all apps
-    if there hasn't any input.
-
-    install/remove will execute the command with the input
-    package name.
-
-    upgrade will first update source and then upgrade packages
-    if there has any one.
-`,
-	Action: MainTester,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "job,j",
-			Value: "",
-			Usage: "install|remove|upgrade|search",
-		},
-	},
-}
-
-func MainTester(c *cli.Context) {
-	var err error
-	switch c.String("job") {
-	case "install":
-		err = LastoreInstall(c.Args().First())
-	case "remove":
-		err = LastoreRemove(c.Args().First())
-	case "upgrade":
-		err = LastoreUpgrade()
-	case "search":
-		err = LastoreSearch(c.GlobalString("dstoreapi"), c.Args().First(), c.GlobalBool("debug"))
-	default:
-		cli.ShowCommandHelp(c, "test")
-	}
-	if err != nil {
-		fmt.Println("E:", err)
-		os.Exit(-1)
-	}
-}
-
 func main() {
 	utils.UnsetEnv("LC_ALL")
 	utils.UnsetEnv("LANGUAGE")
@@ -135,7 +92,11 @@ func main() {
 			Value: "http://api.appstore.deepin.org",
 		},
 	}
-	app.Commands = []cli.Command{CMDUpdater, CMDTester}
+	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror}
 
 	app.RunAndExitOnError()
+}
+
+func debugPrint(fmtStr string, args ...interface{}) {
+	os.Stderr.WriteString(fmt.Sprintf(fmtStr, args...))
 }
