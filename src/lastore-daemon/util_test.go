@@ -11,6 +11,7 @@ package main
 import "testing"
 import C "gopkg.in/check.v1"
 import "internal/system"
+import "fixme/pkg_recommend"
 
 type testWrap struct{}
 
@@ -72,5 +73,25 @@ func (*testWrap) TestTranisition(c *C.C) {
 		if !c.Check(ValidTransitionJobState(d.from, d.to), C.Equals, d.valid) {
 			c.Logf("Transition %s to %s failed (%v)\n", d.from, d.to, d.valid)
 		}
+	}
+}
+
+func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
+	if !system.QueryPackageInstalled("deepin-desktop-base") {
+		c.Skip("deepin-desktop-base not installed")
+		return
+	}
+	lang := "zh_CN.UTF-8"
+
+	positive := []string{"firefox", "libreoffice", "thunderbird", "gimp", "chromium-browser"}
+	negative := []string{"vim", "lastore-daemon"}
+
+	for _, p := range positive {
+		d := pkg_recommend.GetEnhancedLocalePackages(lang, p)
+		c.Check(len(d), C.Not(C.Equals), 0)
+	}
+	for _, p := range negative {
+		d := pkg_recommend.GetEnhancedLocalePackages(lang, p)
+		c.Check(len(d), C.Equals, 0)
 	}
 }

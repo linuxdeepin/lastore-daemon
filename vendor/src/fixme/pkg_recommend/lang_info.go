@@ -26,7 +26,7 @@ type LangCodeInfo struct {
 }
 
 const (
-	LangInfoFile = "/usr/share/dde-daemon/lang/support_languages.json"
+	LangInfoFile = "/usr/share/i18n/language_info.json"
 
 	langSupportedFile = "/usr/share/i18n/SUPPORTED"
 )
