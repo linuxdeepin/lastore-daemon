@@ -11,7 +11,6 @@ package main
 import "dbus/org/freedesktop/accounts"
 import "internal/system"
 import "fixme/pkg_recommend"
-import "fmt"
 import "pkg.deepin.io/lib/dbus"
 
 // QueryLangByUID query Language from org.freedesktop.Accounts
@@ -41,7 +40,6 @@ func QueryLangByUID(uid int64) (string, error) {
 func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ...string) []string {
 	set := make(map[string]struct{})
 	for _, pkg := range pkgs {
-		fmt.Println("Query....", pkg, pkg_recommend.GetEnhancedLocalePackages("zh_CN.UTF-8", pkg))
 		for _, localePkg := range pkg_recommend.GetEnhancedLocalePackages(lang, pkg) {
 			set[localePkg] = struct{}{}
 		}
