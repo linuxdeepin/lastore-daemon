@@ -51,7 +51,6 @@ gen-xml:
 gen-dbus-codes:
 	~/prj/go-dbus-generator/go-dbus-generator -o usr/include/lastore-daemon.h usr/share/dbus-1/interfaces/*.xml
 
-
 build-deb:
 	yes | debuild -us -uc
 
@@ -65,16 +64,16 @@ var/lib/lastore: var/lib/lastore/applications.json var/lib/lastore/categories.js
 
 var/lib/lastore/applications.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/lastore-tools -item applications -output $@
+	./bin/lastore-tools update -j applications -o $@
 
 var/lib/lastore/categories.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/lastore-tools -item categories -output  $@
+	./bin/lastore-tools update -j categories -o $@
 
 var/lib/lastore/xcategories.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/lastore-tools -item xcategories -output  $@
+	./bin/lastore-tools update -j xcategories -o $@
 
 var/lib/lastore/mirrors.json: bin/lastore-tools
 	mkdir -p var/lib/lastore
-	./bin/lastore-tools -item mirrors -output  $@
+	./bin/lastore-tools update -j mirrors -o $@

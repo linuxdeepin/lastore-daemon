@@ -75,26 +75,39 @@ dbus-send --print-reply --system --dest=com.deepin.lastore /com/deepin/lastore c
 ### lastore-tools
 lastore-tools is used generate some index file in /var/lib/lastore
 ```
- % lastore-tools -h
-Usage of ./bin/lastore-tools:
-  -item string
-    	categories|applications|xcategories|desktop|lastore-remove|lastore-install|update_infos|mirrors
-  -output string
-    	the file to write
-```
-There has two group information.
+% lastore-tools -h
+NAME:
+   lastore-tools - help building dstore system.
 
-The first group items, update data from network. lastore-daemon will use this to update meta data.
+USAGE:
+   lastore-tools [global options] command [command options] [arguments...]
+
+VERSION:
+   0.9.18
+
+COMMANDS:
+   update	Update appstore information from server
+   test		Run test job using lastore-daemon
+   help, h	Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --debug, -d		show verbose message
+   --help, -h		show help
+   --version, -v	print the version
+```
+
+The update has two group job.
+The first group jobs are pull data from server. lastore-daemon will use this to update meta data.
 - categories
 - applications
 - xcategories
 - mirrors
 
-And the second group items, update data when local system changed. dpkg hook will use this to update meta data.
+And the second group jobs are update data when local system changed. dpkg hook will use this to update meta data.
 - desktop
 - update_infos
 
-*NOTE*: Don't use lastore-remove and lastore-install items. The is just for internal testing .
+*NOTE*: Don't use lastore-remove and lastore-install jobs. The is just for internal testing .
 It will install or remove  *ALL OF APPLICATIONS* in dstore, So it very likely to broke your system.
 
 
