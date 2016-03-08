@@ -66,17 +66,28 @@ func MainUpdater(c *cli.Context) {
 		return
 	}
 	if err != nil {
-		fmt.Printf("Do %q(%q) failed: %v\n", job, fpath, err)
+		fmt.Println("E:", err)
+		os.Exit(-1)
 	}
 }
 
 var CMDTester = cli.Command{
-	Name:   "test",
-	Usage:  "Run test job using lastore-daemon",
+	Name: "test",
+	Usage: `Use lastore-daemon to run jobs
+
+    search will search apps from dstore. It will list all apps
+    if there hasn't any input.
+
+    install/remove will execute the command with the input
+    package name.
+
+    upgrade will first update source and then upgrade packages
+    if there has any one.
+`,
 	Action: MainTester,
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "item",
+			Name:  "job,j",
 			Value: "",
 			Usage: "install|remove|upgrade|search",
 		},
@@ -84,11 +95,22 @@ var CMDTester = cli.Command{
 }
 
 func MainTester(c *cli.Context) {
-	switch c.String("item") {
-	case "lastore-remove":
-		RemoveAll()
-	case "lastore-install":
-		InstallAll()
+	var err error
+	switch c.String("job") {
+	case "install":
+		err = LastoreInstall(c.Args().First())
+	case "remove":
+		err = LastoreRemove(c.Args().First())
+	case "upgrade":
+		err = LastoreUpgrade()
+	case "search":
+		err = LastoreSearch(c.GlobalString("dstoreapi"), c.Args().First(), c.GlobalBool("debug"))
+	default:
+		cli.ShowCommandHelp(c, "test")
+	}
+	if err != nil {
+		fmt.Println("E:", err)
+		os.Exit(-1)
 	}
 }
 
@@ -107,8 +129,13 @@ func main() {
 			Name:  "debug,d",
 			Usage: "show verbose message",
 		},
+		cli.StringFlag{
+			Name:  "dstoreapi",
+			Usage: "the dstore api server url. There has many jobs would use the to fetch data",
+			Value: "http://api.appstore.deepin.org",
+		},
 	}
 	app.Commands = []cli.Command{CMDUpdater, CMDTester}
 
-	app.Run(os.Args)
+	app.RunAndExitOnError()
 }
