@@ -7,7 +7,7 @@ type DependentInfo struct {
 type DependentInfos []DependentInfo
 
 const (
-	pkgDependsFile = "/usr/share/dde-daemon/lang/pkg_depends.json"
+	pkgDependsFile = "/usr/share/i18n/i18n_dependent.json"
 )
 
 func GetEnhancedLocalePackages(lang string, pkg string) []string {
