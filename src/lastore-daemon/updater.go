@@ -203,17 +203,17 @@ func (m *Manager) doUpdate() {
 }
 
 func updateDeepinStoreInfos(repository string) {
-	err := exec.Command("lastore-tools", "-repo", repository, "-item", "applications", "-output", "/var/lib/lastore/applications.json").Run()
+	err := exec.Command("lastore-tools", "update", "-r", repository, "-j", "applications", "-o", "/var/lib/lastore/applications.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[applications]: %v\n", err)
 	}
 
-	err = exec.Command("lastore-tools", "-repo", repository, "-item", "categories", "-output", "/var/lib/lastore/categories.json").Run()
+	err = exec.Command("lastore-tools", "update", "-r", repository, "-j", "categories", "-o", "/var/lib/lastore/categories.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[categories]: %v\n", err)
 	}
 
-	exec.Command("lastore-tools", "-repo", repository, "-item", "mirrors", "-output", "/var/lib/lastore/mirrors.json").Run()
+	exec.Command("lastore-tools", "update", "-r", repository, "-j", "mirrors", "-o", "/var/lib/lastore/mirrors.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[mirrors]: %v\n", err)
 	}
