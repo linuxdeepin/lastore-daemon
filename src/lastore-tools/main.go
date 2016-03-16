@@ -136,7 +136,7 @@ func main() {
 			Value: "http://api.appstore.deepin.org",
 		},
 	}
-	app.Commands = []cli.Command{CMDUpdater, CMDTester}
+	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror}
 
 	app.RunAndExitOnError()
 }

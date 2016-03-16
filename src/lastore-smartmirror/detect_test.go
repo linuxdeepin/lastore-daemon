@@ -26,7 +26,7 @@ func (*testWrap) TestDetect(c *C.C) {
 	}{
 		{
 			"http://packages.deepin.com/favicon.ico",
-			"http://notavaliddoamian.com/abc",
+			"http://localhost/abc",
 			true,
 		},
 		{
@@ -35,7 +35,7 @@ func (*testWrap) TestDetect(c *C.C) {
 			false,
 		},
 		{
-			"http://notexit.com/abc",
+			"http://localhost/abc",
 			"http://cdn.packages.deepin.com/packages-debian/dists/unstable/Release",
 			false,
 		},
