@@ -75,8 +75,8 @@ var CMDSmartMirror = cli.Command{
 		{
 			Name: "stats",
 			Usage: `show the history of serving
-     💯 and 🌠 indicate the candidates in next mirror selecting.
-     But 🌠 also indicate the mirror was unworkable in 
+     ✓ and ★ indicate the candidates in next mirror selecting.
+     But ★ also indicate the mirror was unworkable in
      preview detecting.`,
 			Action: SubmainMirrorStats,
 		},
