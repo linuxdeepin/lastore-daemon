@@ -39,7 +39,7 @@ var (
 )
 
 func LoadMirrorCache(dbPath string) (MirrorCache, error) {
-	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second, ReadOnly: true})
+	db, err := bolt.Open(dbPath, 0666, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func LoadMirrorCache(dbPath string) (MirrorCache, error) {
 
 func Record(dbPath string, server string, latency time.Duration, hit bool, used bool) error {
 	// Don't write anything to stdout/stderr.
-	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(dbPath, 0666, nil)
 	if err != nil {
 		return err
 	}
