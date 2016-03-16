@@ -26,7 +26,7 @@ var (
 	LastCheckTimeBucket = ([]byte)("last_check_time")
 
 	// last checking time delay
-	DeleayBucket = ([]byte)("delay")
+	LatencyBucket = ([]byte)("latency")
 
 	// total of selected
 	UsedCountBucket = ([]byte)("used_count")
@@ -86,8 +86,8 @@ func LoadMirrorCache(dbPath string) (MirrorCache, error) {
 			return err
 		}
 
-		err = forEach(tx.Bucket(DeleayBucket), func(name string, v []byte) error {
-			r[name].Timeout, err = time.ParseDuration(string(v))
+		err = forEach(tx.Bucket(LatencyBucket), func(name string, v []byte) error {
+			r[name].Latency, err = time.ParseDuration(string(v))
 			return err
 		})
 		if err != nil {
@@ -122,7 +122,7 @@ func LoadMirrorCache(dbPath string) (MirrorCache, error) {
 	return cache, err
 }
 
-func Record(dbPath string, server string, timeout time.Duration, hit bool, used bool) error {
+func Record(dbPath string, server string, latency time.Duration, hit bool, used bool) error {
 	// Don't write anything to stdout/stderr.
 	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
@@ -133,11 +133,11 @@ func Record(dbPath string, server string, timeout time.Duration, hit bool, used 
 	return db.Update(func(tx *bolt.Tx) error {
 		keyS := ([]byte)(server)
 
-		b, err := tx.CreateBucketIfNotExists(DeleayBucket)
+		b, err := tx.CreateBucketIfNotExists(LatencyBucket)
 		if err != nil {
 			return err
 		}
-		b.Put(keyS, ([]byte)(timeout.String()))
+		b.Put(keyS, ([]byte)(latency.String()))
 
 		b, err = tx.CreateBucketIfNotExists(LastCheckTimeBucket)
 		if err != nil {
@@ -190,7 +190,7 @@ type MirrorCacheInfo struct {
 	Name          string
 	Health        int
 	LastCheckTime time.Time
-	Timeout       time.Duration
+	Latency       time.Duration
 
 	FailedCount    int
 	SucceededCount int
@@ -220,17 +220,17 @@ func (c MirrorCache) ShowStats(parallel int, interval time.Duration) string {
 		best[v.Name] = v.Health >= 0
 	}
 
-	r := fmt.Sprintf("  |%-48s|%6s| Timeout |Selected| %-10s | %-5s |\n",
+	r := fmt.Sprintf("  |%-48s|%6s| Latency |Selected| %-10s | %-5s |\n",
 		"Name", "Health", "Hit Ratio", "Check Time")
 
-	sort.Sort(sort.Reverse(_MirrorByTimeout{c}))
+	sort.Sort(sort.Reverse(_MirrorByLatency{c}))
 	for _, v := range c {
 		name := v.Name
 		if v, ok := best[name]; ok {
 			if v {
-				name = "💯 " + name
+				name = "✓ " + name
 			} else {
-				name = "🌠 " + name
+				name = "★ " + name
 			}
 		} else {
 			name = "  " + name
@@ -244,7 +244,7 @@ func (c MirrorCache) ShowStats(parallel int, interval time.Duration) string {
 			r = r + fmt.Sprintf("%-50s | %-4d | %5.0fms |%8s| %d/%d(%0.1f%%)| %.0fs ago\n",
 				name,
 				v.Health,
-				v.Timeout.Seconds()*1000,
+				v.Latency.Seconds()*1000,
 				fmt.Sprintf("%.1f%%", float64(v.UsedCount)*100/float64(count)),
 				v.SucceededCount, v.FailedCount,
 				float64(v.SucceededCount)*100/float64(v.SucceededCount+v.FailedCount),
@@ -254,7 +254,7 @@ func (c MirrorCache) ShowStats(parallel int, interval time.Duration) string {
 			r = r + ColorSprintf(Red, "%-50s | %-4d | %5.0fms |%8s| %d/%d(%0.1f%%)| %.0fs ago\n",
 				name,
 				v.Health,
-				v.Timeout.Seconds()*1000,
+				v.Latency.Seconds()*1000,
 				fmt.Sprintf("%.1f%%", float64(v.UsedCount)*100/float64(count)),
 				v.SucceededCount, v.FailedCount,
 				float64(v.SucceededCount)*100/float64(v.SucceededCount+v.FailedCount),
@@ -266,12 +266,12 @@ func (c MirrorCache) ShowStats(parallel int, interval time.Duration) string {
 	return r
 }
 
-type _MirrorByTimeout struct{ MirrorCache }
+type _MirrorByLatency struct{ MirrorCache }
 type _MirrorByFailed struct{ MirrorCache }
 type _MirrorByHealth struct{ MirrorCache }
 
-func (m _MirrorByTimeout) Less(i, j int) bool {
-	return m.MirrorCache[i].Timeout > m.MirrorCache[j].Timeout
+func (m _MirrorByLatency) Less(i, j int) bool {
+	return m.MirrorCache[i].Latency > m.MirrorCache[j].Latency
 }
 func (m _MirrorByHealth) Less(i, j int) bool {
 	return m.MirrorCache[i].Health < m.MirrorCache[j].Health
@@ -282,7 +282,7 @@ func (m _MirrorByFailed) Less(i, j int) bool {
 
 // Bests return the best mirror list.
 func (c MirrorCache) Bests(n int) MirrorCache {
-	sort.Sort(sort.Reverse(_MirrorByTimeout{c}))
+	sort.Sort(sort.Reverse(_MirrorByLatency{c}))
 
 	var r MirrorCache
 
