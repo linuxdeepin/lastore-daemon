@@ -81,6 +81,22 @@ var CMDSmartMirror = cli.Command{
 			Action: SubmainMirrorStats,
 		},
 		{
+			Name:   "server_stats",
+			Usage:  "report the status of all knonw mirrors",
+			Action: SubmainMirrorSynProgress,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "index,i",
+					Value: ".__GUARD__INDEX__",
+					Usage: "the guard index path in official",
+				},
+				cli.BoolFlag{
+					Name:  "list,l",
+					Usage: "only list knonwn mirrors",
+				},
+			},
+		},
+		{
 			Name:   "report",
 			Usage:  "report the choiced server for serving filename",
 			Action: SubmainMirrorReport,
@@ -92,6 +108,27 @@ var CMDSmartMirror = cli.Command{
 			},
 		},
 	},
+}
+
+func SubmainMirrorSynProgress(c *cli.Context) {
+	index := c.String("index")
+	url := appendSuffix(c.Parent().String("official"), "/") + index
+	onlyList := c.Bool("list")
+	n := c.Parent().Int("parallel")
+
+	if onlyList {
+		mlist, _ := getMirrorList(c.Parent().String("mirrorlist"))
+		for _, m := range mlist {
+			fmt.Println(m)
+		}
+		return
+	}
+
+	mlist := c.Args()
+	if len(mlist) == 0 {
+		mlist, _ = getMirrorList(c.Parent().String("mirrorlist"))
+	}
+	ShowMirrorInfos(DetectServer(n, url, mlist))
 }
 
 func SubmainMirrorStats(c *cli.Context) {
@@ -308,10 +345,25 @@ func appendSuffix(r string, suffix string) string {
 }
 
 func getMirrorList(p string) ([]string, error) {
+	if strings.HasPrefix(p, "http://") {
+		ms, err := LoadMirrorSources(p)
+		if err != nil {
+			return nil, err
+		}
+
+		var r []string
+		for _, m := range ms {
+			r = append(r, m.Url)
+		}
+		return r, nil
+	}
+
 	f, err := os.Open(p)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
+
 	d := json.NewDecoder(f)
 	var raw []struct {
 		Url string `json:"url"`
