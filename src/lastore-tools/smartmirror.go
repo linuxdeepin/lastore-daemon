@@ -63,7 +63,7 @@ var CMDSmartMirror = cli.Command{
 		{
 			Name:   "choose",
 			Usage:  "detect who will serve the pkg",
-			Action: SubmainMirrorSelect,
+			Action: SubmainMirrorChoose,
 			Flags: []cli.Flag{
 				cli.IntFlag{
 					Name:  "timeout,t",
@@ -97,15 +97,20 @@ var CMDSmartMirror = cli.Command{
 func SubmainMirrorStats(c *cli.Context) {
 	parallel := c.Parent().Int("parallel")
 	interval := time.Second * time.Duration(c.Parent().Int("interval"))
-	cache, err := LoadMirrorCache(c.Parent().String("db"))
+	db, err := NewDBReadonly(c.Parent().String("db"))
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			fmt.Println("Hasn't any history! Please go back after play for a while.")
 			os.Exit(0)
 		}
+	}
+	defer db.Close()
+	cache, err := db.LoadMirrorCache()
+	if err != nil {
 		fmt.Printf("E:%v\n", err)
 	}
 	fmt.Println(cache.ShowStats(parallel, interval))
+
 }
 
 func ShowBest(url string) {
@@ -117,7 +122,7 @@ func ShowBestOnError(url string, err error) {
 	os.Exit(-1)
 }
 
-func SubmainMirrorSelect(c *cli.Context) {
+func SubmainMirrorChoose(c *cli.Context) {
 	signal.Ignore(syscall.SIGPIPE, syscall.SIGIO)
 
 	filename := c.Args().First()
@@ -136,7 +141,12 @@ func SubmainMirrorSelect(c *cli.Context) {
 		ShowBestOnError(official, err)
 	}
 
-	cache, err := LoadMirrorCache(dbPath)
+	db, err := NewDB(dbPath)
+	if err != nil {
+		ShowBestOnError(official, err)
+	}
+	defer db.Close()
+	cache, err := db.LoadMirrorCache()
 	if err != nil {
 		ShowBest(official)
 	}
@@ -149,7 +159,7 @@ func SubmainMirrorSelect(c *cli.Context) {
 		candidate = mlist
 	}
 	r := func(s string, t time.Duration, h bool, u bool) error {
-		return Record(dbPath, s, t, h, u)
+		return db.Record(s, t, h, u)
 	}
 	d := NewDetector(filename, timeout, r, c.GlobalBool("debug"))
 	d.Do(candidate)
