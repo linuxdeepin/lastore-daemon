@@ -38,13 +38,76 @@ var (
 	SucceededCountBucket = ([]byte)("succeeded_count")
 )
 
-func LoadMirrorCache(dbPath string) (MirrorCache, error) {
-	db, err := bolt.Open(dbPath, 0666, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
+type DB struct {
+	*bolt.DB
+}
 
+func NewDB(dbPath string) (DB, error) {
+	db, err := bolt.Open(dbPath, 0644, nil)
+	return DB{db}, err
+}
+
+func NewDBReadonly(dbPath string) (DB, error) {
+	db, err := bolt.Open(dbPath, 0644, &bolt.Options{ReadOnly: true})
+	return DB{db}, err
+}
+
+func (db DB) Record(server string, latency time.Duration, hit bool, used bool) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		keyS := ([]byte)(server)
+
+		b, err := tx.CreateBucketIfNotExists(LatencyBucket)
+		if err != nil {
+			return err
+		}
+		b.Put(keyS, ([]byte)(latency.String()))
+
+		b, err = tx.CreateBucketIfNotExists(LastCheckTimeBucket)
+		if err != nil {
+			return err
+		}
+		t, _ := time.Now().MarshalBinary()
+		b.Put(keyS, t)
+
+		b, err = tx.CreateBucketIfNotExists(HealthBucket)
+		nS, _ := strconv.Atoi(string(b.Get((keyS))))
+		if hit {
+			if nS < 0 {
+				nS = 0
+			}
+			b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
+		} else {
+			if nS > 0 {
+				nS = 0
+			}
+			b.Put(keyS, ([]byte)(strconv.Itoa(nS-1)))
+		}
+
+		if hit {
+			b, err = tx.CreateBucketIfNotExists(SucceededCountBucket)
+		} else {
+			b, err = tx.CreateBucketIfNotExists(FailedCountBucket)
+		}
+		if err != nil {
+			return err
+		}
+		nS, _ = strconv.Atoi(string(b.Get((keyS))))
+		b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
+
+		if used {
+			b, err = tx.CreateBucketIfNotExists(UsedCountBucket)
+			if err != nil {
+				return err
+			}
+			nS, _ = strconv.Atoi(string(b.Get((keyS))))
+			b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
+		}
+
+		return nil
+	})
+}
+
+func (db DB) LoadMirrorCache() (MirrorCache, error) {
 	r := make(map[string]*MirrorCacheInfo)
 
 	forEach := func(b *bolt.Bucket, seter func(k string, v []byte) error) error {
@@ -61,8 +124,9 @@ func LoadMirrorCache(dbPath string) (MirrorCache, error) {
 		})
 	}
 
-	err = db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		err := forEach(tx.Bucket(FailedCountBucket), func(name string, v []byte) error {
+			var err error
 			r[name].FailedCount, err = strconv.Atoi(string(v))
 			return err
 		})
@@ -120,68 +184,6 @@ func LoadMirrorCache(dbPath string) (MirrorCache, error) {
 	}
 
 	return cache, err
-}
-
-func Record(dbPath string, server string, latency time.Duration, hit bool, used bool) error {
-	// Don't write anything to stdout/stderr.
-	db, err := bolt.Open(dbPath, 0666, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return db.Update(func(tx *bolt.Tx) error {
-		keyS := ([]byte)(server)
-
-		b, err := tx.CreateBucketIfNotExists(LatencyBucket)
-		if err != nil {
-			return err
-		}
-		b.Put(keyS, ([]byte)(latency.String()))
-
-		b, err = tx.CreateBucketIfNotExists(LastCheckTimeBucket)
-		if err != nil {
-			return err
-		}
-		t, _ := time.Now().MarshalBinary()
-		b.Put(keyS, t)
-
-		b, err = tx.CreateBucketIfNotExists(HealthBucket)
-		nS, _ := strconv.Atoi(string(b.Get((keyS))))
-		if hit {
-			if nS < 0 {
-				nS = 0
-			}
-			b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
-		} else {
-			if nS > 0 {
-				nS = 0
-			}
-			b.Put(keyS, ([]byte)(strconv.Itoa(nS-1)))
-		}
-
-		if hit {
-			b, err = tx.CreateBucketIfNotExists(SucceededCountBucket)
-		} else {
-			b, err = tx.CreateBucketIfNotExists(FailedCountBucket)
-		}
-		if err != nil {
-			return err
-		}
-		nS, _ = strconv.Atoi(string(b.Get((keyS))))
-		b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
-
-		if used {
-			b, err = tx.CreateBucketIfNotExists(UsedCountBucket)
-			if err != nil {
-				return err
-			}
-			nS, _ = strconv.Atoi(string(b.Get((keyS))))
-			b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
-		}
-
-		return nil
-	})
 }
 
 type MirrorCache []*MirrorCacheInfo
