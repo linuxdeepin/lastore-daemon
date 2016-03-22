@@ -317,6 +317,30 @@ func (c MirrorCache) Standby(n int, begin time.Time, d time.Duration) MirrorCach
 	}
 }
 
+// Filter return MirrorCcache in whiteList and new servers
+func (c MirrorCache) Filter(whiteList []string) (MirrorCache, []string) {
+	checker := make(map[string]bool)
+	for _, w := range whiteList {
+		checker[w] = true
+	}
+
+	var r1 MirrorCache
+	for _, i := range c {
+		if checker[i.Name] {
+			r1 = append(r1, i)
+			delete(checker, i.Name)
+		}
+	}
+
+	var r2 []string
+	for _, i := range whiteList {
+		if checker[i] {
+			r2 = append(r2, i)
+		}
+	}
+	return r1, r2
+}
+
 func (c MirrorCache) Find(n int, d time.Duration) MirrorCache {
 	if n < 2 {
 		panic("At least 2")

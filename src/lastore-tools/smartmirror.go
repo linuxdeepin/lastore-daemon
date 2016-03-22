@@ -150,7 +150,6 @@ func SubmainMirrorStats(c *cli.Context) {
 		fmt.Printf("E:%v\n", err)
 	}
 	fmt.Println(cache.ShowStats(parallel, interval))
-
 }
 
 func ShowBest(url string) {
@@ -171,7 +170,11 @@ func SubmainMirrorChoose(c *cli.Context) {
 	parallel := c.Parent().Int("parallel")
 	interval := time.Second * time.Duration(c.Parent().Int("interval"))
 	timeout := time.Second * time.Duration(c.Int("timeout"))
-	permanent := c.StringSlice("permanent")
+
+	var permanent []string
+	for _, i := range c.StringSlice("permanent") {
+		permanent = append(permanent, appendSuffix(i, "/"))
+	}
 
 	if parallel < 1 {
 		fmt.Printf("At least two http connections for detecting, but there has only %d\n", parallel)
@@ -191,19 +194,20 @@ func SubmainMirrorChoose(c *cli.Context) {
 	if err != nil {
 		ShowBest(official)
 	}
+
+	cacheFiltered, newServers := cache.Filter(mlist)
 	var candidate []string
-	for _, v := range cache.Find(parallel, interval) {
+	for _, v := range cacheFiltered.Find(parallel, interval) {
 		candidate = append(candidate, v.Name)
 	}
+	candidate = append(candidate, newServers...)
+	candidate = append(candidate, permanent...)
 
-	if len(candidate) == 0 {
-		candidate = mlist
-	}
 	r := func(s string, t time.Duration, h bool, u bool) error {
 		return db.Record(s, t, h, u)
 	}
 	d := NewDetector(filename, timeout, r, c.GlobalBool("debug"))
-	d.Do((append(candidate, permanent...)))
+	d.Do(candidate)
 	d.WaitAll()
 }
 
