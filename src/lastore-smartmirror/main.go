@@ -25,12 +25,16 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Printf("Usage %s URL Official\n", os.Args[0])
+		fmt.Printf("Usage %s URL Official mirror\n", os.Args[0])
 		os.Exit(-1)
 	}
 
 	origin := os.Args[1]
 	official := appendSuffix(os.Args[2], "/")
+	var mirror string
+	if len(os.Args) >= 4 {
+		mirror = os.Args[3]
+	}
 
 	// invliad url schema, e.g. cd://
 	if !isSchema(origin, "http") || !isSchema(official, "http") {
@@ -53,7 +57,7 @@ func main() {
 	// Try serving this file from mirrors
 	if strings.HasPrefix(filename, "pool") ||
 		strings.HasPrefix(filename, "dists") && strings.Contains(filename, "/by-hash") {
-		EndAndReport(filename, ChooseMirror(filename, official))
+		EndAndReport(filename, ChooseMirror(filename, official, mirror))
 	}
 
 	EndImmediately(origin)
@@ -77,9 +81,9 @@ func EndAndReport(filename string, server string) {
 
 // ChooseMirror use lastore-tools to detect dynamically
 // the best server
-func ChooseMirror(filename string, official string) string {
+func ChooseMirror(filename string, official string, mirror string) string {
 	cmd := exec.Command("lastore-tools", "smartmirror",
-		"--official", official, "choose", filename)
+		"--official", official, "choose", "-p", mirror, filename)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	out, err := cmd.StdoutPipe()
