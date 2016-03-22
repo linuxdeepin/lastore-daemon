@@ -10,6 +10,27 @@ package main
 
 import "internal/system"
 import C "gopkg.in/check.v1"
+import "strings"
+
+func (*testWrap) TestParseApt(c *C.C) {
+	const d = `Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+Calculating upgrade... Done
+The following NEW packages will be installed:
+The following packages will be upgraded:
+  lastore-daemon abc
+The following packages will be upgraded:
+1 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Need to get 7,378 kB of archives.
+After this operation, 10.2 kB of additional disk space will be used`
+
+	const upgraded = "The following packages will be upgraded:"
+
+	p := parseAptShowList(strings.NewReader(d), upgraded)
+	c.Check(p[0], C.Equals, "lastore-daemon")
+	c.Check(len(p), C.Equals, 2)
+}
 
 func (*testWrap) TestBuildUpgradeInfo(c *C.C) {
 	data := []struct {
