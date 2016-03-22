@@ -9,9 +9,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	log "github.com/cihub/seelog"
 	"internal/system"
+	"io"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -53,8 +55,51 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 	return infos
 }
 
+func distupgradList() []string {
+	cmd := exec.Command("apt-get", "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
+	bs, _ := cmd.Output()
+	const upgraded = "The following packages will be upgraded:"
+	const newInstalled = "The following NEW packages will be installed:"
+	p := parseAptShowList(bytes.NewBuffer(bs), upgraded)
+	p = append(p, parseAptShowList(bytes.NewBuffer(bs), newInstalled)...)
+	return p
+}
+
+func parseAptShowList(r io.Reader, title string) []string {
+	buf := bufio.NewReader(r)
+
+	var p []string
+
+	var line string
+	in := false
+
+	var err error
+	for err == nil {
+		line, err = buf.ReadString('\n')
+		if strings.TrimSpace(title) == strings.TrimSpace(line) {
+			in = true
+			continue
+		}
+
+		if !in {
+			continue
+		}
+
+		if !strings.HasPrefix(line, " ") {
+			break
+		}
+
+		p = append(p, strings.Fields(line)...)
+	}
+	return p
+}
+
 func queryDpkgUpgradeInfoByAptList() []string {
-	cmd := exec.Command("apt", "list", "--upgradable")
+	ps := distupgradList()
+	if len(ps) == 0 {
+		return nil
+	}
+	cmd := exec.Command("apt", append([]string{"list", "--upgradable"}, ps...)...)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {
