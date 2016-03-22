@@ -70,14 +70,17 @@ var CMDSmartMirror = cli.Command{
 					Value: 5,
 					Usage: "maximum time in seconds allow for detecting to take",
 				},
+				cli.StringSliceFlag{
+					Name:  "permanent,p",
+					Usage: "this mirrors will be detected no matter what they status",
+				},
 			},
 		},
 		{
 			Name: "stats",
 			Usage: `show the history of serving
      ✓ and ★ indicate the candidates in next mirror selecting.
-     But ★ also indicate the mirror was unworkable in
-     preview detecting.`,
+     But ★ also indicate the mirror was unworkable in preview detecting.`,
 			Action: SubmainMirrorStats,
 		},
 		{
@@ -168,6 +171,7 @@ func SubmainMirrorChoose(c *cli.Context) {
 	parallel := c.Parent().Int("parallel")
 	interval := time.Second * time.Duration(c.Parent().Int("interval"))
 	timeout := time.Second * time.Duration(c.Int("timeout"))
+	permanent := c.StringSlice("permanent")
 
 	if parallel < 1 {
 		fmt.Printf("At least two http connections for detecting, but there has only %d\n", parallel)
@@ -199,7 +203,7 @@ func SubmainMirrorChoose(c *cli.Context) {
 		return db.Record(s, t, h, u)
 	}
 	d := NewDetector(filename, timeout, r, c.GlobalBool("debug"))
-	d.Do(candidate)
+	d.Do((append(candidate, permanent...)))
 	d.WaitAll()
 }
 
@@ -226,7 +230,13 @@ func NewDetector(filename string, timeout time.Duration, recorder DetectRecorder
 
 func (d *Detector) Do(mirrors []string) {
 	result := make(chan string, len(mirrors))
+	doneList := make(map[string]struct{})
 	for _, m := range mirrors {
+		if _, ok := doneList[m]; ok {
+			continue
+		}
+		doneList[m] = struct{}{}
+
 		d.waiter.Add(1)
 		go d.doOne(m, result)
 	}
