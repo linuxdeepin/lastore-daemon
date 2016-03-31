@@ -12,6 +12,7 @@ import "net/http"
 import "time"
 import "encoding/json"
 import "fmt"
+import "github.com/apcera/termtables"
 
 type URLChecker struct {
 	workQueue   chan string
@@ -113,7 +114,12 @@ func (MirrorInfo) String() {
 }
 
 func ShowMirrorInfos(infos []MirrorInfo) {
-	fmt.Printf("\n|%50s| 2014 | 2015 | Latency | Progress |\n", "Name")
+	termtables.EnableUTF8PerLocale()
+
+	t := termtables.CreateTable()
+	t.AddHeaders("Name", "2014", "2015", "Latency", "Progress")
+	t.AddTitle(fmt.Sprintf("Report At %v", time.Now()))
+
 	sym := map[bool]string{
 		true:  "✔",
 		false: "✖",
@@ -123,11 +129,16 @@ func ShowMirrorInfos(infos []MirrorInfo) {
 		if len(name) > 47 {
 			name = name[0:47] + "..."
 		}
-		fmt.Printf("|%-50s| %4s | %4s | %5.0fms | %7.0f%% |\n",
-			name,
-			sym[info.Support2014], sym[info.Support2015],
-			info.Latency.Seconds()*1000, info.Progress*100)
+		t.AddRow(name,
+			sym[info.Support2014],
+			sym[info.Support2015],
+			fmt.Sprintf("%5.0fms", info.Latency.Seconds()*1000),
+			fmt.Sprintf("%7.0f%%", info.Progress*100),
+		)
 	}
+
+	fmt.Println("\n")
+	fmt.Println(t.Render())
 }
 
 func u2014(server string) string {

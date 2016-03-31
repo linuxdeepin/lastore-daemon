@@ -10,6 +10,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/apcera/termtables"
 	"github.com/boltdb/bolt"
 	"sort"
 	"strconv"
@@ -222,8 +223,10 @@ func (c MirrorCache) ShowStats(parallel int, interval time.Duration) string {
 		best[v.Name] = v.Health >= 0
 	}
 
-	r := fmt.Sprintf("  |%-48s|%6s| Latency |Selected| %-10s | %-5s |\n",
-		"Name", "Health", "Hit Ratio", "Check Time")
+	termtables.EnableUTF8PerLocale()
+
+	t := termtables.CreateTable()
+	t.AddHeaders("Name", "Health", "Latency", "Selected", "Hit Ratio", "Check Time")
 
 	sort.Sort(sort.Reverse(_MirrorByLatency{c}))
 	for _, v := range c {
@@ -242,30 +245,19 @@ func (c MirrorCache) ShowStats(parallel int, interval time.Duration) string {
 		}
 
 		duration := time.Since(v.LastCheckTime).Seconds()
-		if v.Health >= 0 {
-			r = r + fmt.Sprintf("%-50s | %-4d | %5.0fms |%8s| %d/%d(%0.1f%%)| %.0fs ago\n",
-				name,
-				v.Health,
-				v.Latency.Seconds()*1000,
-				fmt.Sprintf("%.1f%%", float64(v.UsedCount)*100/float64(count)),
-				v.SucceededCount, v.FailedCount,
-				float64(v.SucceededCount)*100/float64(v.SucceededCount+v.FailedCount),
-				duration)
-
-		} else {
-			r = r + ColorSprintf(Red, "%-50s | %-4d | %5.0fms |%8s| %d/%d(%0.1f%%)| %.0fs ago\n",
-				name,
-				v.Health,
-				v.Latency.Seconds()*1000,
-				fmt.Sprintf("%.1f%%", float64(v.UsedCount)*100/float64(count)),
-				v.SucceededCount, v.FailedCount,
-				float64(v.SucceededCount)*100/float64(v.SucceededCount+v.FailedCount),
-
-				duration)
+		health := fmt.Sprintf("%v", v.Health)
+		if v.Health < 0 {
+			health = ColorSprintf(Red, health)
 		}
+		t.AddRow(name,
+			health,
+			fmt.Sprintf("%5.0fms", v.Latency.Seconds()*1000),
+			fmt.Sprintf("%.1f%%", float64(v.UsedCount)*100/float64(count)),
+			fmt.Sprintf("%d/%d(%0.1f%%)", v.SucceededCount, v.FailedCount, float64(v.SucceededCount)*100/float64(v.SucceededCount+v.FailedCount)),
+			fmt.Sprintf("%.0fs ago", duration),
+		)
 	}
-
-	return r
+	return t.Render()
 }
 
 type _MirrorByLatency struct{ MirrorCache }
