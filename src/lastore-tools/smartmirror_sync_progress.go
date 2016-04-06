@@ -87,17 +87,23 @@ func CheckURLExists(url string) *URLCheckResult {
 	return &URLCheckResult{url, false, time.Since(n)}
 }
 
-func ParseIndex(indexUrl string) ([]string, error) {
+func ParseIndex(indexUrl string) ([]string, time.Time, error) {
 	resp, err := http.Get(indexUrl)
 	if err != nil {
-		return nil, err
+		fmt.Println("E:", resp)
+		return nil, time.Now(), err
 	}
 	defer resp.Body.Close()
 
 	d := json.NewDecoder(resp.Body)
 	var lines []string
 	err = d.Decode(&lines)
-	return lines, err
+
+	t, e := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
+	if e != nil {
+		fmt.Println("W:", e)
+	}
+	return lines, t, err
 }
 
 type MirrorInfo struct {
@@ -113,12 +119,15 @@ func (MirrorInfo) String() {
 	fmt.Sprint("%s 2014:%s")
 }
 
-func ShowMirrorInfos(infos []MirrorInfo) {
+func ShowMirrorInfos(infos []MirrorInfo, rd time.Time) {
 	termtables.EnableUTF8PerLocale()
 
 	t := termtables.CreateTable()
 	t.AddHeaders("Name", "2014", "2015", "Latency", "Progress")
-	t.AddTitle(fmt.Sprintf("Report At %v", time.Now()))
+	title := fmt.Sprintf("Release at: %v  | report after %v",
+		rd.Format(time.ANSIC),
+		time.Now().Sub(rd))
+	t.AddTitle(title)
 
 	sym := map[bool]string{
 		true:  "✔",
@@ -158,10 +167,11 @@ func uGuards(server string, guards []string) []string {
 	return r
 }
 
-func DetectServer(parallel int, indexUrl string, mlist []string) []MirrorInfo {
-	index, err := ParseIndex(indexUrl)
-	if err != nil {
-		return nil
+func DetectServer(parallel int, indexUrl string, mlist []string) ([]MirrorInfo, time.Time) {
+	index, rd, err := ParseIndex(indexUrl)
+	if err != nil || len(index) == 0 {
+		fmt.Println("E:", err)
+		return nil, rd
 	}
 
 	checker := NewURLChecker(parallel)
@@ -194,5 +204,5 @@ func DetectServer(parallel int, indexUrl string, mlist []string) []MirrorInfo {
 		info.Latency = time.Duration(int64(latency.Nanoseconds() / int64(len(guards))))
 		r = append(r, info)
 	}
-	return r
+	return r, rd
 }
