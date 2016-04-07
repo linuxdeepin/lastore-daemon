@@ -114,8 +114,9 @@ var CMDSmartMirror = cli.Command{
 }
 
 func SubmainMirrorSynProgress(c *cli.Context) {
-	index := c.String("index")
-	url := appendSuffix(c.Parent().String("official"), "/") + index
+	indexName := c.String("index")
+	official := c.Parent().String("official")
+
 	onlyList := c.Bool("list")
 	n := c.Parent().Int("parallel")
 
@@ -131,7 +132,8 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	if len(mlist) == 0 {
 		mlist, _ = getMirrorList(c.Parent().String("mirrorlist"))
 	}
-	ShowMirrorInfos(DetectServer(n, url, mlist))
+
+	ShowMirrorInfos(DetectServer(n, indexName, official, mlist))
 }
 
 func SubmainMirrorStats(c *cli.Context) {

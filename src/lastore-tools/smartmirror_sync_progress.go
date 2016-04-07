@@ -87,11 +87,11 @@ func CheckURLExists(url string) *URLCheckResult {
 	return &URLCheckResult{url, false, time.Since(n)}
 }
 
-func ParseIndex(indexUrl string) ([]string, time.Time, error) {
+func ParseIndex(indexUrl string) ([]string, error) {
 	resp, err := http.Get(indexUrl)
 	if err != nil {
 		fmt.Println("E:", resp)
-		return nil, time.Now(), err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -99,11 +99,7 @@ func ParseIndex(indexUrl string) ([]string, time.Time, error) {
 	var lines []string
 	err = d.Decode(&lines)
 
-	t, e := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
-	if e != nil {
-		fmt.Println("W:", e)
-	}
-	return lines, t, err
+	return lines, err
 }
 
 type MirrorInfo struct {
@@ -111,6 +107,7 @@ type MirrorInfo struct {
 	Support2014 bool
 	Support2015 bool
 	Progress    float64
+	LastSync    time.Time
 	Latency     time.Duration
 	failedURLs  []string
 }
@@ -119,15 +116,12 @@ func (MirrorInfo) String() {
 	fmt.Sprint("%s 2014:%s")
 }
 
-func ShowMirrorInfos(infos []MirrorInfo, rd time.Time) {
+func ShowMirrorInfos(infos []MirrorInfo) {
 	termtables.EnableUTF8PerLocale()
 
 	t := termtables.CreateTable()
-	t.AddHeaders("Name", "2014", "2015", "Latency", "Progress")
-	title := fmt.Sprintf("Release at: %v  | report after %v",
-		rd.Format(time.ANSIC),
-		time.Now().Sub(rd))
-	t.AddTitle(title)
+	t.AddHeaders("Name", "2014", "Latency", "2015", "LastSync")
+	t.AddTitle(fmt.Sprintf("Report at %v", time.Now()))
 
 	sym := map[bool]string{
 		true:  "✔",
@@ -138,11 +132,15 @@ func ShowMirrorInfos(infos []MirrorInfo, rd time.Time) {
 		if len(name) > 47 {
 			name = name[0:47] + "..."
 		}
+		var lm string = info.LastSync.Format(time.ANSIC)
+		if info.LastSync.IsZero() {
+			lm = "?"
+		}
 		t.AddRow(name,
 			sym[info.Support2014],
-			sym[info.Support2015],
 			fmt.Sprintf("%5.0fms", info.Latency.Seconds()*1000),
 			fmt.Sprintf("%7.0f%%", info.Progress*100),
+			lm,
 		)
 	}
 
@@ -167,12 +165,14 @@ func uGuards(server string, guards []string) []string {
 	return r
 }
 
-func DetectServer(parallel int, indexUrl string, mlist []string) ([]MirrorInfo, time.Time) {
-	index, rd, err := ParseIndex(indexUrl)
+func DetectServer(parallel int, indexName string, official string, mlist []string) []MirrorInfo {
+	indexUrl := appendSuffix(official, "/") + indexName
+	index, err := ParseIndex(indexUrl)
 	if err != nil || len(index) == 0 {
 		fmt.Println("E:", err)
-		return nil, rd
+		return nil
 	}
+	mlist = append([]string{official}, mlist...)
 
 	checker := NewURLChecker(parallel)
 	for _, s := range mlist {
@@ -184,7 +184,10 @@ func DetectServer(parallel int, indexUrl string, mlist []string) ([]MirrorInfo, 
 
 	var r []MirrorInfo
 	for _, s := range mlist {
-		info := MirrorInfo{Name: s}
+		info := MirrorInfo{
+			Name:     s,
+			LastSync: fetchLastSync(appendSuffix(s, "/") + indexName),
+		}
 		p := 0
 		guards := uGuards(s, index)
 		var latency time.Duration
@@ -204,5 +207,19 @@ func DetectServer(parallel int, indexUrl string, mlist []string) ([]MirrorInfo, 
 		info.Latency = time.Duration(int64(latency.Nanoseconds() / int64(len(guards))))
 		r = append(r, info)
 	}
-	return r, rd
+	return r
+}
+
+func fetchLastSync(url string) time.Time {
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println("E:", resp)
+		return time.Time{}
+	}
+	defer resp.Body.Close()
+	t, e := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
+	if e != nil {
+		fmt.Println("\nfetchLastSync:", url, e)
+	}
+	return t
 }
