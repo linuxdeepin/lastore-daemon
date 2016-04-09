@@ -13,6 +13,8 @@ import "time"
 import "encoding/json"
 import "fmt"
 import "github.com/apcera/termtables"
+import "strings"
+import "io"
 
 type URLChecker struct {
 	workQueue   chan string
@@ -21,9 +23,11 @@ type URLChecker struct {
 	nDone       int
 }
 type URLCheckResult struct {
-	URL     string
-	Result  bool
-	Latency time.Duration
+	URL        string
+	Result     bool
+	ResultCode int
+	StartTime  time.Time
+	Latency    time.Duration
 }
 
 func (c *URLChecker) Check(urls ...string) {
@@ -67,24 +71,23 @@ func (u *URLChecker) Wait() {
 		worker := <-u.workerQueue
 		worker <- url
 	}
-	//	u.Stop()
 }
 
 func CheckURLExists(url string) *URLCheckResult {
-	n := time.Now()
+	n := time.Now().UTC()
 	resp, err := http.Get(url)
 	if err != nil {
-		return &URLCheckResult{url, false, time.Since(n)}
+		return &URLCheckResult{url, false, 0, n, time.Since(n)}
 	}
 	defer resp.Body.Close()
 
 	switch resp.StatusCode / 100 {
 	case 4, 5:
-		return &URLCheckResult{url, false, time.Since(n)}
+		return &URLCheckResult{url, false, resp.StatusCode, n, time.Since(n)}
 	case 3, 2, 1:
-		return &URLCheckResult{url, true, time.Since(n)}
+		return &URLCheckResult{url, true, resp.StatusCode, n, time.Since(n)}
 	}
-	return &URLCheckResult{url, false, time.Since(n)}
+	return &URLCheckResult{url, false, resp.StatusCode, n, time.Since(n)}
 }
 
 func ParseIndex(indexUrl string) ([]string, error) {
@@ -109,11 +112,15 @@ type MirrorInfo struct {
 	Progress    float64
 	LastSync    time.Time
 	Latency     time.Duration
-	failedURLs  []string
+	Detail      []URLCheckResult
 }
 
 func (MirrorInfo) String() {
 	fmt.Sprint("%s 2014:%s")
+}
+
+func SaveMirrorInfos(infos []MirrorInfo, w io.Writer) error {
+	return json.NewEncoder(w).Encode(infos)
 }
 
 func ShowMirrorInfos(infos []MirrorInfo) {
@@ -182,7 +189,7 @@ func DetectServer(parallel int, indexName string, official string, mlist []strin
 	}
 	checker.Wait()
 
-	var r []MirrorInfo
+	var infos []MirrorInfo
 	for _, s := range mlist {
 		info := MirrorInfo{
 			Name:     s,
@@ -195,8 +202,9 @@ func DetectServer(parallel int, indexName string, official string, mlist []strin
 			r := checker.Result(u)
 			if r.Result {
 				p = p + 1
-			} else {
-				info.failedURLs = append(info.failedURLs, r.URL)
+			}
+			if strings.HasPrefix(r.URL, s) {
+				info.Detail = append(info.Detail, *r)
 			}
 			latency = latency + r.Latency
 		}
@@ -205,9 +213,9 @@ func DetectServer(parallel int, indexName string, official string, mlist []strin
 		info.Support2014 = checker.Result(u2014(s)).Result
 		info.Support2015 = checker.Result(u2015(s)).Result
 		info.Latency = time.Duration(int64(latency.Nanoseconds() / int64(len(guards))))
-		r = append(r, info)
+		infos = append(infos, info)
 	}
-	return r
+	return infos
 }
 
 func fetchLastSync(url string) time.Time {

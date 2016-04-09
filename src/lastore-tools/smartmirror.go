@@ -97,6 +97,11 @@ var CMDSmartMirror = cli.Command{
 					Name:  "list,l",
 					Usage: "only list knonwn mirrors",
 				},
+				cli.StringFlag{
+					Name:  "export,e",
+					Value: "result.json",
+					Usage: "the file to save the results in json format",
+				},
 			},
 		},
 		{
@@ -115,6 +120,7 @@ var CMDSmartMirror = cli.Command{
 
 func SubmainMirrorSynProgress(c *cli.Context) {
 	indexName := c.String("index")
+	exportPath := c.String("export")
 	official := c.Parent().String("official")
 
 	onlyList := c.Bool("list")
@@ -133,7 +139,18 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 		mlist, _ = getMirrorList(c.Parent().String("mirrorlist"))
 	}
 
-	ShowMirrorInfos(DetectServer(n, indexName, official, mlist))
+	infos := DetectServer(n, indexName, official, mlist)
+	ShowMirrorInfos(infos)
+
+	f, err := os.Create(exportPath)
+	if err != nil {
+		fmt.Println("E:", err)
+		return
+	}
+	err = SaveMirrorInfos(infos, f)
+	if err != nil {
+		fmt.Println("E:", err)
+	}
 }
 
 func SubmainMirrorStats(c *cli.Context) {
