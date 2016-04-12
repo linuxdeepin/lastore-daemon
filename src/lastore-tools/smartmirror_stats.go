@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/apcera/termtables"
 	"github.com/boltdb/bolt"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -40,21 +41,17 @@ var (
 )
 
 type DB struct {
-	*bolt.DB
-}
-
-func NewDB(dbPath string) (DB, error) {
-	db, err := bolt.Open(dbPath, 0644, nil)
-	return DB{db}, err
-}
-
-func NewDBReadonly(dbPath string) (DB, error) {
-	db, err := bolt.Open(dbPath, 0644, &bolt.Options{ReadOnly: true})
-	return DB{db}, err
+	dbPath string
 }
 
 func (db DB) Record(server string, latency time.Duration, hit bool, used bool) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	core, err := bolt.Open(db.dbPath, 0644, nil)
+	if err != nil {
+		return err
+	}
+	defer core.Close()
+
+	return core.Update(func(tx *bolt.Tx) error {
 		keyS := ([]byte)(server)
 
 		b, err := tx.CreateBucketIfNotExists(LatencyBucket)
@@ -109,6 +106,15 @@ func (db DB) Record(server string, latency time.Duration, hit bool, used bool) e
 }
 
 func (db DB) LoadMirrorCache() (MirrorCache, error) {
+	core, err := bolt.Open(db.dbPath, 0644, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		if _, ok := err.(*os.PathError); ok {
+			return nil, fmt.Errorf("Hasn't any history! Please go back after play for a while.")
+		}
+		return nil, err
+	}
+	defer core.Close()
+
 	r := make(map[string]*MirrorCacheInfo)
 
 	forEach := func(b *bolt.Bucket, seter func(k string, v []byte) error) error {
@@ -125,7 +131,7 @@ func (db DB) LoadMirrorCache() (MirrorCache, error) {
 		})
 	}
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err = core.View(func(tx *bolt.Tx) error {
 		err := forEach(tx.Bucket(FailedCountBucket), func(name string, v []byte) error {
 			var err error
 			r[name].FailedCount, err = strconv.Atoi(string(v))

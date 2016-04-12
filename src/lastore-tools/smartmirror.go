@@ -139,14 +139,7 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 func SubmainMirrorStats(c *cli.Context) {
 	parallel := c.Parent().Int("parallel")
 	interval := time.Second * time.Duration(c.Parent().Int("interval"))
-	db, err := NewDBReadonly(c.Parent().String("db"))
-	if err != nil {
-		if _, ok := err.(*os.PathError); ok {
-			fmt.Println("Hasn't any history! Please go back after play for a while.")
-			os.Exit(0)
-		}
-	}
-	defer db.Close()
+	db := DB{c.Parent().String("db")}
 	cache, err := db.LoadMirrorCache()
 	if err != nil {
 		fmt.Printf("E:%v\n", err)
@@ -187,11 +180,7 @@ func SubmainMirrorChoose(c *cli.Context) {
 		ShowBestOnError(official, err)
 	}
 
-	db, err := NewDB(dbPath)
-	if err != nil {
-		ShowBestOnError(official, err)
-	}
-	defer db.Close()
+	db := DB{dbPath}
 	cache, err := db.LoadMirrorCache()
 	if err != nil {
 		ShowBest(official)
