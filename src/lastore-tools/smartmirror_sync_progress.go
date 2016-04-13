@@ -15,6 +15,7 @@ import "fmt"
 import "github.com/apcera/termtables"
 import "strings"
 import "io"
+import "internal/utils"
 
 type URLChecker struct {
 	workQueue   chan string
@@ -156,24 +157,24 @@ func ShowMirrorInfos(infos []MirrorInfo) {
 }
 
 func u2014(server string) string {
-	return appendSuffix(server, "/") + "dists/trusty/Release"
+	return utils.AppendSuffix(server, "/") + "dists/trusty/Release"
 }
 func u2015(server string) string {
-	return appendSuffix(server, "/") + "dists/unstable/Release"
+	return utils.AppendSuffix(server, "/") + "dists/unstable/Release"
 }
 func uGuards(server string, guards []string) []string {
 	var r []string
 	// Just need precise of 5%. (Currently has 1%)
 	for i, g := range guards {
 		if i%5 == 0 {
-			r = append(r, appendSuffix(server, "/")+g)
+			r = append(r, utils.AppendSuffix(server, "/")+g)
 		}
 	}
 	return r
 }
 
 func DetectServer(parallel int, indexName string, official string, mlist []string) []MirrorInfo {
-	indexUrl := appendSuffix(official, "/") + indexName
+	indexUrl := utils.AppendSuffix(official, "/") + indexName
 	index, err := ParseIndex(indexUrl)
 	if err != nil || len(index) == 0 {
 		fmt.Println("E:", err)
@@ -193,7 +194,7 @@ func DetectServer(parallel int, indexName string, official string, mlist []strin
 	for _, s := range mlist {
 		info := MirrorInfo{
 			Name:     s,
-			LastSync: fetchLastSync(appendSuffix(s, "/") + indexName),
+			LastSync: fetchLastSync(utils.AppendSuffix(s, "/") + indexName),
 		}
 		p := 0
 		guards := uGuards(s, index)

@@ -40,72 +40,83 @@ var (
 	SucceededCountBucket = ([]byte)("succeeded_count")
 )
 
-type DB struct {
+type MirrorRecordDB struct {
 	dbPath string
 }
 
-func (db DB) Record(server string, latency time.Duration, hit bool, used bool) error {
-	core, err := bolt.Open(db.dbPath, 0644, nil)
+func (db MirrorRecordDB) Record(choosed string, result []*URLCheckResult) error {
+	core, err := bolt.Open(db.dbPath, 0644, &bolt.Options{Timeout: time.Second * 10})
 	if err != nil {
 		return err
 	}
 	defer core.Close()
 
 	return core.Update(func(tx *bolt.Tx) error {
-		keyS := ([]byte)(server)
-
-		b, err := tx.CreateBucketIfNotExists(LatencyBucket)
-		if err != nil {
-			return err
-		}
-		b.Put(keyS, ([]byte)(latency.String()))
-
-		b, err = tx.CreateBucketIfNotExists(LastCheckTimeBucket)
-		if err != nil {
-			return err
-		}
-		t, _ := time.Now().MarshalBinary()
-		b.Put(keyS, t)
-
-		b, err = tx.CreateBucketIfNotExists(HealthBucket)
-		nS, _ := strconv.Atoi(string(b.Get((keyS))))
-		if hit {
-			if nS < 0 {
-				nS = 0
+		for _, r := range result {
+			err := recordWorker(tx, r.URL, r.Latency, r.Result, r.URL == choosed)
+			if err != nil {
+				return err
 			}
-			b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
-		} else {
-			if nS > 0 {
-				nS = 0
-			}
-			b.Put(keyS, ([]byte)(strconv.Itoa(nS-1)))
 		}
+		return nil
+	})
+}
 
-		if hit {
-			b, err = tx.CreateBucketIfNotExists(SucceededCountBucket)
-		} else {
-			b, err = tx.CreateBucketIfNotExists(FailedCountBucket)
+func recordWorker(tx *bolt.Tx, server string, latency time.Duration, hit, used bool) error {
+	fmt.Println("Record:", server, latency, hit, used)
+	keyS := ([]byte)(server)
+
+	b, err := tx.CreateBucketIfNotExists(LatencyBucket)
+	if err != nil {
+		return err
+	}
+	b.Put(keyS, ([]byte)(latency.String()))
+
+	b, err = tx.CreateBucketIfNotExists(LastCheckTimeBucket)
+	if err != nil {
+		return err
+	}
+	t, _ := time.Now().MarshalBinary()
+	b.Put(keyS, t)
+
+	b, err = tx.CreateBucketIfNotExists(HealthBucket)
+	nS, _ := strconv.Atoi(string(b.Get((keyS))))
+	if hit {
+		if nS < 0 {
+			nS = 0
 		}
+		b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
+	} else {
+		if nS > 0 {
+			nS = 0
+		}
+		b.Put(keyS, ([]byte)(strconv.Itoa(nS-1)))
+	}
+
+	if hit {
+		b, err = tx.CreateBucketIfNotExists(SucceededCountBucket)
+	} else {
+		b, err = tx.CreateBucketIfNotExists(FailedCountBucket)
+	}
+	if err != nil {
+		return err
+	}
+	nS, _ = strconv.Atoi(string(b.Get((keyS))))
+	b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
+
+	if used {
+		b, err = tx.CreateBucketIfNotExists(UsedCountBucket)
 		if err != nil {
 			return err
 		}
 		nS, _ = strconv.Atoi(string(b.Get((keyS))))
 		b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
+	}
 
-		if used {
-			b, err = tx.CreateBucketIfNotExists(UsedCountBucket)
-			if err != nil {
-				return err
-			}
-			nS, _ = strconv.Atoi(string(b.Get((keyS))))
-			b.Put(keyS, ([]byte)(strconv.Itoa(nS+1)))
-		}
-
-		return nil
-	})
+	return nil
 }
 
-func (db DB) LoadMirrorCache() (MirrorCache, error) {
+func (db MirrorRecordDB) LoadMirrorCache() (MirrorCache, error) {
 	core, err := bolt.Open(db.dbPath, 0644, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
@@ -346,4 +357,26 @@ func (c MirrorCache) Find(n int, d time.Duration) MirrorCache {
 	bests := c.Bests(n - 1)
 	r := append(bests, c.Standby(n-len(bests), time.Now(), d)...)
 	return r
+}
+
+func LoadAutochooseMirrors(parallel int, interval time.Duration, db MirrorRecordDB, list string) ([]string, error) {
+	if parallel < 1 {
+		return nil, fmt.Errorf("At least two http connections for detecting, but there has only %d\n", parallel)
+	}
+
+	mlist, err := getMirrorList(list)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := db.LoadMirrorCache()
+	if err != nil {
+		return mlist, err
+	}
+
+	cacheFiltered, newServers := cache.Filter(mlist)
+	var candidate []string
+	for _, v := range cacheFiltered.Find(parallel, interval) {
+		candidate = append(candidate, v.Name)
+	}
+	return append(candidate, newServers...), nil
 }

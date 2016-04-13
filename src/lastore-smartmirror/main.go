@@ -17,6 +17,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"internal/utils"
 	"os"
 	"os/exec"
 	"strings"
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	origin := os.Args[1]
-	official := appendSuffix(os.Args[2], "/")
+	official := os.Args[2]
 	var mirror string
 	if len(os.Args) >= 4 {
 		mirror = os.Args[3]
@@ -51,13 +52,15 @@ func main() {
 
 	// Just touch file in official
 	if strings.HasPrefix(filename, "dists") && strings.Contains(filename, "Release") {
-		EndAndReport(filename, official)
+		fmt.Printf(origin)
+		utils.ReportChoosedServer(official, filename, official)
+		os.Exit(0)
 	}
 
 	// Try serving this file from mirrors
 	if strings.HasPrefix(filename, "pool") ||
 		strings.HasPrefix(filename, "dists") && strings.Contains(filename, "/by-hash") {
-		EndAndReport(filename, ChooseMirror(filename, official, mirror))
+		EndImmediately(ChooseMirror(filename, official, mirror))
 	}
 
 	EndImmediately(origin)
@@ -66,16 +69,6 @@ func main() {
 // EndImmediately print the choice and exit immediately
 func EndImmediately(url string) {
 	fmt.Printf(url)
-	os.Exit(0)
-}
-
-// EndAndReport print the choice and report it to official before exit
-func EndAndReport(filename string, server string) {
-	fmt.Printf(appendSuffix(server, "/") + filename)
-	cmd := exec.Command("lastore-tools", "smartmirror",
-		"report", "--server", server, filename)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Start()
 	os.Exit(0)
 }
 
@@ -92,20 +85,13 @@ func ChooseMirror(filename string, official string, mirror string) string {
 	r := bufio.NewReader(out)
 	line, err := r.ReadString('\n')
 	if err != nil {
-
 		return official
 	}
 	go cmd.Wait()
-	return strings.TrimSpace(strings.Replace(line, filename, "", 1))
+	server := strings.TrimSpace(line)
+	return server + filename
 }
 
 func isSchema(url string, schema string) bool {
 	return strings.HasPrefix(url, schema+"://")
-}
-
-func appendSuffix(r string, suffix string) string {
-	if strings.HasSuffix(r, suffix) {
-		return r
-	}
-	return r + suffix
 }
