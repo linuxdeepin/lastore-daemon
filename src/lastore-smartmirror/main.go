@@ -30,5 +30,10 @@ func main() {
 	mirrorHost := os.Args[3]
 
 	r := Route(rawURL, officialHost, mirrorHost)
-	fmt.Print(r)
+	if validURL(r) {
+		fmt.Print(r)
+		return
+	}
+
+	fmt.Print(rawURL)
 }
