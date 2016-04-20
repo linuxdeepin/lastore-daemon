@@ -10,8 +10,8 @@
 /*
 This tools implement SmartMirrorDetector.
 
-Run with `detector url Official`
-The result will be the best url.
+Run with `lastore-smartmirror rawUrl officialServer preferenceServer`
+
 */
 package main
 
@@ -25,6 +25,50 @@ import (
 	"syscall"
 )
 
+// AutoChoose use preference server no matter the latency,
+// unless the request file on the server is unreachable.
+//
+// If the request is unreachable in preference mirror
+// then it will auto choose one according the recently
+// request quality records.
+// It will force choose official server either
+// due to the 5s timeout or there hasn't any reachable server.
+func AutoChoose(raw string, official string, preference string) string {
+	official = utils.AppendSuffix(official, "/")
+	if preference != "" {
+		preference = utils.AppendSuffix(preference, "/")
+	}
+
+	// invliad url schema, e.g. cd://
+	if !strings.HasPrefix(raw, "http://") ||
+		!strings.HasPrefix(official, "http://") {
+		return show(raw)
+	}
+
+	filename := strings.Replace(raw, official, "", 1)
+
+	// Can't serve this file from mirrors
+	// because the origin url isn't from official server
+	if filename == raw {
+		return show(raw)
+	}
+
+	// Just touch file in official
+	if strings.HasPrefix(filename, "dists") && strings.Contains(filename, "Release") {
+		show(raw)
+		utils.ReportChoosedServer(official, filename, official)
+		return raw
+	}
+
+	// Try serving this file from mirrors
+	if strings.HasPrefix(filename, "pool") ||
+		strings.HasPrefix(filename, "dists") && strings.Contains(filename, "/by-hash") {
+		return show(chooseMirror(filename, official, preference))
+	}
+
+	return show(raw)
+}
+
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Printf("Usage %s URL Official mirror\n", os.Args[0])
@@ -32,50 +76,26 @@ func main() {
 	}
 
 	origin := os.Args[1]
+
 	official := os.Args[2]
-	var mirror string
+
+	var preference string
 	if len(os.Args) >= 4 {
-		mirror = os.Args[3]
+		preference = os.Args[3]
 	}
 
-	// invliad url schema, e.g. cd://
-	if !isSchema(origin, "http") || !isSchema(official, "http") {
-		EndImmediately(origin)
-	}
-
-	filename := strings.Replace(origin, official, "", 1)
-
-	// Can't serve this file from mirrors
-	// because the origin url isn't from official server
-	if filename == origin {
-		EndImmediately(origin)
-	}
-
-	// Just touch file in official
-	if strings.HasPrefix(filename, "dists") && strings.Contains(filename, "Release") {
-		fmt.Printf(origin)
-		utils.ReportChoosedServer(official, filename, official)
-		os.Exit(0)
-	}
-
-	// Try serving this file from mirrors
-	if strings.HasPrefix(filename, "pool") ||
-		strings.HasPrefix(filename, "dists") && strings.Contains(filename, "/by-hash") {
-		EndImmediately(ChooseMirror(filename, official, mirror))
-	}
-
-	EndImmediately(origin)
+	AutoChoose(origin, official, preference)
 }
 
-// EndImmediately print the choice and exit immediately
-func EndImmediately(url string) {
+// show the choosed server
+func show(url string) string {
 	fmt.Printf(url)
-	os.Exit(0)
+	return url
 }
 
-// ChooseMirror use lastore-tools to detect dynamically
+// chooseMirror use lastore-tools to detect dynamically
 // the best server
-func ChooseMirror(filename string, official string, mirror string) string {
+func chooseMirror(filename string, official string, mirror string) string {
 	cmd := exec.Command("lastore-tools", "smartmirror",
 		"--official", official, "choose", "-p", mirror, filename)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -91,8 +111,4 @@ func ChooseMirror(filename string, official string, mirror string) string {
 	go cmd.Wait()
 	server := strings.TrimSpace(line)
 	return server + filename
-}
-
-func isSchema(url string, schema string) bool {
-	return strings.HasPrefix(url, schema+"://")
 }
