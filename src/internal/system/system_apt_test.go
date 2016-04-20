@@ -6,6 +6,7 @@
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  **/
+
 package system
 
 import C "gopkg.in/check.v1"
