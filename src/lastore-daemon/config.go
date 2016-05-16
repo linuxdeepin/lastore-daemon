@@ -10,7 +10,6 @@
 package main
 
 import (
-	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
 	"time"
@@ -69,9 +68,6 @@ func (c *Config) SetMirrorSource(id string) error {
 }
 
 func (c *Config) SetAppstoreRegion(region string) error {
-	if region != "mainland" && region != "international" {
-		return fmt.Errorf("the region of %q is not supported", region)
-	}
 	c.AppstoreRegion = region
 	return c.save()
 }
