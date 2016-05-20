@@ -1,8 +1,7 @@
 ifndef USE_GCCGO
 	GOBUILD = go build
 else
-	LDFLAGS = $(shell pkg-config --libs glib-2.0)
-	GOBUILD = go build -compiler gccgo -gccgoflags "${LDFLAGS}"
+	GOBUILD = go build -compiler gccgo 
 endif
 
 all:  build

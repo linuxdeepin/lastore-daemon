@@ -141,7 +141,8 @@ func SubmainMirrorChoose(c *cli.Context) {
 	timeout := time.Second * time.Duration(c.Int("timeout"))
 	choosedServer, results := checker.Check(filename, timeout)
 
-	signal.Ignore(syscall.SIGPIPE, syscall.SIGIO)
+	ignorePipeSignal()
+
 	fmt.Println(choosedServer)
 
 	err = utils.ReportChoosedServer(official, filename, choosedServer)
@@ -153,6 +154,18 @@ func SubmainMirrorChoose(c *cli.Context) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "W:", err)
 	}
+}
+
+func ignorePipeSignal() {
+	// Just workaround for gccgo hasn't function of signal.Ignore
+
+	c := make(chan os.Signal)
+	go func() {
+		for {
+			<-c
+		}
+	}()
+	signal.Notify(c, syscall.SIGPIPE)
 }
 
 func SubmainMirrorSynProgress(c *cli.Context) {
