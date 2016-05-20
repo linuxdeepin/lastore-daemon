@@ -114,6 +114,27 @@ It will install or remove  *ALL OF APPLICATIONS* in dstore, So it very likely to
 ### lastore-smartmirror
 It's the helper utils for apt with smartmirror patch. Can't be used alone.
 
+## Build Configure for mirrors
+
+1. _./var/lib/lastore/mirrors.json_
+
+  The package maintainer should rewrite the content if the initial values
+  doesn't match the target system.
+
+  Note:
+  - It's safely remove this file from package.
+  - It will update automatically at runtime by configuration.
+
+
+2. _./var/lib/lastore/repository\_info.json_
+
+  The lastore-tools will parse this file, according "/etc/apt/sources.list".
+
+  This file support three field:
+  1. *name* : the repository name. It will be send to server when update mirror lists
+  2. *url* : the official repository url which will be parsed with sources.list and get the correct *name*
+  3. *mirror* (optional): the default mirror url
+
 
 ## Getting help
 
