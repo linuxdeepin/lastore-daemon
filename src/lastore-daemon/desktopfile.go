@@ -143,13 +143,26 @@ func QueryDesktopFilePath(pkgId string) string {
 //    evince --> evince-common
 //    evince-gtk --> evince, evince-common  Note: (recursion guest)
 func queryRelateDependencies(pkgId string) []string {
-	var r = []string{pkgId}
+	var set = map[string]struct{}{
+		pkgId: struct{}{},
+	}
+
 	for _, p := range system.QueryPackageDependencies(pkgId) {
+		if _, ok := set[p]; ok {
+			continue
+		}
+
 		if !system.QueryPackageInstalled(p) {
 			continue
 		}
-		r = append(r, p)
-		r = append(r, queryRelateDependencies(p)...)
+		set[p] = struct{}{}
+		for _, x := range queryRelateDependencies(p) {
+			set[x] = struct{}{}
+		}
+	}
+	var r []string
+	for v := range set {
+		r = append(r, v)
 	}
 	return r
 }

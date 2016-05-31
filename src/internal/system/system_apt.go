@@ -49,7 +49,7 @@ func QueryPackageDependencies(pkgId string) []string {
 	var r []string
 	for _, line := range strings.Fields(string(out)) {
 		if strings.Contains(line, baseName) {
-			r = append(r, line)
+			r = append(r, strings.Trim(line, ","))
 		}
 	}
 	return r
