@@ -89,10 +89,15 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 
 	for _, p := range positive {
 		d := pkg_recommend.GetEnhancedLocalePackages(lang, p)
-		c.Check(len(d), C.Not(C.Equals), 0)
+		if !c.Check(len(d), C.Not(C.Equals), 0) {
+			c.Errorf("Can't find enhanced packages for %q\n", p)
+		}
 	}
 	for _, p := range negative {
 		d := pkg_recommend.GetEnhancedLocalePackages(lang, p)
-		c.Check(len(d), C.Equals, 0)
+		if !c.Check(len(d), C.Equals, 0) {
+			c.Errorf("%q shouldn't have any enhanced packages\n", p)
+		}
+
 	}
 }

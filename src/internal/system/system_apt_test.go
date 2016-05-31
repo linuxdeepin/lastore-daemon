@@ -37,6 +37,25 @@ func (*testWrap) TestPackageDownloadSize(c *C.C) {
 	}
 }
 
+func (*testWrap) TestQueryPackageDepend(c *C.C) {
+	p := "firefox-dde"
+	if !QueryPackageInstalled(p) {
+		return
+	}
+	ds := QueryPackageDependencies(p)
+
+	c.Check(len(ds) > 0, C.Equals, true)
+
+	found := false
+	for _, i := range ds {
+		if i == "firefox" {
+			found = true
+			break
+		}
+	}
+	c.Check(found, C.Equals, true)
+}
+
 func (*testWrap) TestParseSize(c *C.C) {
 	data := []struct {
 		Line string
