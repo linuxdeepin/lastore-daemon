@@ -18,6 +18,7 @@ import (
 	"path"
 	"pkg.deepin.io/lib"
 	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/utils"
 )
 
@@ -42,6 +43,9 @@ func main() {
 	utils.UnsetEnv("LANGUAGE")
 	utils.UnsetEnv("LC_MESSAGES")
 	utils.UnsetEnv("LANG")
+
+	gettext.InitI18n()
+	gettext.Textdomain("lastore-daemon")
 
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
