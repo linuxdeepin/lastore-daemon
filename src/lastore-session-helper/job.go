@@ -15,7 +15,7 @@ import "pkg.deepin.io/lib/dbus"
 import "internal/system"
 import "pkg.deepin.io/lib/gettext"
 import "dbus/com/deepin/daemon/power"
-import "syscall"
+
 import log "github.com/cihub/seelog"
 import "strings"
 import "os/exec"
@@ -30,11 +30,10 @@ type CacheJobInfo struct {
 }
 
 type Lastore struct {
-	JobStatus        map[dbus.ObjectPath]CacheJobInfo
-	SystemOnChanging bool
-	Lang             string
-	OnLine           bool
-	inhibitFd        dbus.UnixFD
+	JobStatus map[dbus.ObjectPath]CacheJobInfo
+	Lang      string
+	OnLine    bool
+	inhibitFd dbus.UnixFD
 
 	upower  *power.Power
 	core    *lastore.Manager
@@ -47,10 +46,9 @@ type Lastore struct {
 
 func NewLastore() *Lastore {
 	l := &Lastore{
-		JobStatus:        make(map[dbus.ObjectPath]CacheJobInfo),
-		SystemOnChanging: true,
-		inhibitFd:        -1,
-		Lang:             QueryLang(),
+		JobStatus: make(map[dbus.ObjectPath]CacheJobInfo),
+		inhibitFd: -1,
+		Lang:      QueryLang(),
 	}
 
 	log.Debugf("CurrentLang: %q\n", l.Lang)
@@ -74,7 +72,6 @@ func NewLastore() *Lastore {
 	}
 	l.updater = updater
 
-	l.updateSystemOnChaning(core.SystemOnChanging.Get())
 	l.updateJobList(core.JobList.Get())
 	l.updateUpdatableApps()
 	l.online()
@@ -108,11 +105,6 @@ func (l *Lastore) monitorSignal() {
 			case "com.deepin.lastore.Job":
 				l.updateCacheJobInfo(v.Path, props)
 			case "com.deepin.lastore.Manager":
-				if onChaning, ok := props["SystemOnChanging"]; ok {
-					chaning, _ := onChaning.Value().(bool)
-					l.updateSystemOnChaning(chaning)
-				}
-
 				if jobList, ok := props["JobList"]; ok {
 					list, _ := jobList.Value().([]dbus.ObjectPath)
 					l.updateJobList(list)
@@ -260,39 +252,10 @@ func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath, props map[string]dbus
 	return l.JobStatus[path]
 }
 
-func (l *Lastore) updateSystemOnChaning(onChanging bool) {
-	if onChanging {
-		l.checkBattery()
-	}
-
-	l.SystemOnChanging = onChanging
-	log.Infof("SystemOnChaning to %v\n", onChanging)
-	if onChanging && l.inhibitFd == -1 {
-		fd, err := Inhibitor("shutdown", gettext.Tr("Deepin Store"),
-			gettext.Tr("System is updating, please shut down or reboot later."))
-		log.Infof("Prevent shutdown...: fd:%v\n", fd)
-		if err != nil {
-			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
-			return
-		}
-		l.inhibitFd = fd
-	}
-
-	if !onChanging && l.inhibitFd != -1 {
-		err := syscall.Close(int(l.inhibitFd))
-		log.Infof("Enable shutdown...")
-		if err != nil {
-			log.Infof("Enable shutdown...: fd:%d, err:%s\n", l.inhibitFd, err)
-		}
-		l.inhibitFd = -1
-	}
-}
-
 func (l *Lastore) offline() {
 	log.Info("Lastore.Daemon Offline\n")
 	l.OnLine = false
 	l.JobStatus = make(map[dbus.ObjectPath]CacheJobInfo)
-	l.updateSystemOnChaning(false)
 }
 
 func (l *Lastore) online() {

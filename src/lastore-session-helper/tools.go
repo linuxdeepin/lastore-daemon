@@ -10,11 +10,9 @@
 package main
 
 import (
-	"dbus/org/freedesktop/login1"
 	"internal/system"
 	"os"
 	"path"
-	"pkg.deepin.io/lib/dbus"
 	"strings"
 )
 
@@ -80,15 +78,6 @@ func PackageName(pkg string, lang string) string {
 		name = info.Name
 	}
 	return name
-}
-
-func Inhibitor(what, who, why string) (dbus.UnixFD, error) {
-	m, err := login1.NewManager("org.freedesktop.login1", "/org/freedesktop/login1")
-	if err != nil {
-		return -1, err
-	}
-	defer login1.DestroyManager(m)
-	return m.Inhibit(what, who, why, "block")
 }
 
 func FileExist(fpath string) bool {

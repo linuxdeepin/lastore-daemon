@@ -43,16 +43,15 @@ func (m *Manager) updateJobList() {
 			break
 		}
 	}
-
+	m.updatableApps()
 	if jobChanged {
 		m.JobList = list
 		dbus.NotifyChange(m, "JobList")
-
-		m.updatableApps()
 	}
 
 	if systemOnChanging != m.SystemOnChanging {
 		m.SystemOnChanging = systemOnChanging
+		m.updateSystemOnChaning(systemOnChanging)
 		dbus.NotifyChange(m, "SystemOnChanging")
 	}
 }

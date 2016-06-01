@@ -30,6 +30,7 @@ type Manager struct {
 	UpgradableApps []string
 
 	SystemOnChanging bool
+	inhibitFd        dbus.UnixFD
 
 	updated bool
 
@@ -49,13 +50,13 @@ func NewManager(b system.System, c *Config) *Manager {
 		b:                   b,
 		SystemArchitectures: archs,
 		cachedLocale:        make(map[uint64]string),
+		inhibitFd:           -1,
 	}
 
 	m.jobManager = NewJobManager(b, m.updateJobList)
 
 	go m.jobManager.Dispatch()
 
-	m.updatableApps()
 	m.updateJobList()
 
 	// Force notify changed at the first time
