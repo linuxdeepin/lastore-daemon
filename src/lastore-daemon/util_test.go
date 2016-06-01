@@ -83,7 +83,7 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 	}
 	lang := "zh_CN.UTF-8"
 
-	positive := []string{"firefox", "libreoffice", "thunderbird", "gimp", "chromium-browser"}
+	positive := []string{"firefox-dde", "libreoffice", "thunderbird", "gimp", "chromium-browser"}
 	negative := []string{"vim", "lastore-daemon"}
 
 	for _, p := range positive {

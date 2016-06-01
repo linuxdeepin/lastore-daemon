@@ -19,7 +19,7 @@ func (l *Lastore) MonitorBatteryPersent() {
 }
 
 func (l *Lastore) checkBattery() {
-	if l.notifiedBattery || !l.SystemOnChanging {
+	if l.notifiedBattery {
 		return
 	}
 	percent := l.upower.BatteryPercentage.Get()
