@@ -14,7 +14,7 @@ build:
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-tools lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 
 test: gb-bin
 	./vendor/gb test
@@ -23,7 +23,7 @@ gb: gb-bin
 	./vendor/gb build lastore-daemon
 	./vendor/gb build lastore-tools
 	./vendor/gb build lastore-session-helper
-	./vendor/gb build lastore-smartmirror
+	./vendor/gb build lastore-smartmirror || echo "build failed, disable smartmirror support "
 
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
