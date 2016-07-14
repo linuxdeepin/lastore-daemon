@@ -124,7 +124,6 @@ func (m *Manager) installPackage(jobName string, packages string) (*Job, error) 
 		return nil, system.ResourceExitError
 	}
 
-	go Touch(string(m.SystemArchitectures[0]), m.config.AppstoreRegion, pList...)
 	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList)
 	if err != nil {
 		log.Warnf("InstallPackage %q error: %v\n", packages, err)
