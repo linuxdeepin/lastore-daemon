@@ -12,7 +12,11 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 )
@@ -49,4 +53,42 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 			cmd.Args, errBuf.String(), err)
 	}
 	return lines, nil
+}
+
+// OpenURL open the url for reading
+// It will reaturn error if open failed or the
+// StatusCode is bigger than 299
+// NOTE: the return reader need be closed
+func OpenURL(url string) (io.ReadCloser, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode > 299 {
+		resp.Body.Close()
+		return nil, fmt.Errorf("OpenURL %q failed %q", url, resp.Status)
+	}
+	return resp.Body, nil
+}
+
+// TeeToFile invoke the handler with a new io.Reader which created by
+// TeeReader in and the fpath's writer
+func TeeToFile(in io.Reader, fpath string, handler func(io.Reader) error) error {
+	_, err := os.Stat(path.Dir(fpath))
+	if err != nil {
+		err = os.MkdirAll(path.Dir(fpath), 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	out, err := os.Create(fpath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	tee := io.TeeReader(in, out)
+
+	return handler(tee)
 }
