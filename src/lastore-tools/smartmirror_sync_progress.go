@@ -15,6 +15,7 @@ import "fmt"
 import "github.com/apcera/termtables"
 import "strings"
 import "io"
+import "internal/utils"
 
 type URLChecker struct {
 	workQueue   chan string
@@ -91,14 +92,13 @@ func CheckURLExists(url string) *URLCheckResult {
 }
 
 func ParseIndex(indexUrl string) ([]string, error) {
-	resp, err := http.Get(indexUrl)
+	f, err := utils.OpenURL(indexUrl)
 	if err != nil {
-		fmt.Println("E:", resp)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer f.Close()
 
-	d := json.NewDecoder(resp.Body)
+	d := json.NewDecoder(f)
 	var lines []string
 	err = d.Decode(&lines)
 
