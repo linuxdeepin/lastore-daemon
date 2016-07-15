@@ -10,6 +10,7 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -91,4 +92,21 @@ func TeeToFile(in io.Reader, fpath string, handler func(io.Reader) error) error 
 	tee := io.TeeReader(in, out)
 
 	return handler(tee)
+}
+
+func RemoteCatLine(url string) (string, error) {
+	in, err := OpenURL(url)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
+
+	r := bufio.NewReader(in)
+
+	_line, isPrefix, err := r.ReadLine()
+	line := string(_line)
+	if isPrefix {
+		return line, fmt.Errorf("the line %q is too long", line)
+	}
+	return line, err
 }
