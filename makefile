@@ -1,7 +1,7 @@
 ifndef USE_GCCGO
 	GOBUILD = go build
 else
-	GOBUILD = go build -compiler gccgo 
+	GOBUILD = go build -compiler gccgo
 endif
 
 all:  build
@@ -10,9 +10,11 @@ gb-bin:
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o vendor/gb github.com/constabulary/gb/cmd/gb
 
 
-build: 
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
+bin/lastore-tools:
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-tools lastore-tools
+
+build:  bin/lastore-tools var/lib/lastore
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 
@@ -55,24 +57,15 @@ build-deb:
 
 clean:
 	rm -rf bin
+	rm -rf pkg
+	rm -rf vendor/pkg
+	rm -rf vendor/gb
+	rm -rf vendor/bin
 
-bin/lastore-tools:
-	gb build -o bin/lastore-tools tools
 
-var/lib/lastore: var/lib/lastore/applications.json var/lib/lastore/categories.json var/lib/lastore/xcategories.json var/lib/lastore/mirrors.json
-
-var/lib/lastore/applications.json: bin/lastore-tools
-	mkdir -p var/lib/lastore
-	./bin/lastore-tools update -j applications -o $@
-
-var/lib/lastore/categories.json: bin/lastore-tools
-	mkdir -p var/lib/lastore
-	./bin/lastore-tools update -j categories -o $@
-
-var/lib/lastore/xcategories.json: bin/lastore-tools
-	mkdir -p var/lib/lastore
-	./bin/lastore-tools update -j xcategories -o $@
-
-var/lib/lastore/mirrors.json: bin/lastore-tools
-	mkdir -p var/lib/lastore
-	./bin/lastore-tools update -j mirrors -o $@
+var/lib/lastore: bin/lastore-tools
+	./bin/lastore-tools update -j applications -o var/lib/lastore/applications.json
+	./bin/lastore-tools update -j categories -o var/lib/lastore/categories.json
+	./bin/lastore-tools update -j xcategories -o var/lib/lastore/xcategories.json
+	./bin/lastore-tools update -j mirrors -o var/lib/lastore/mirrors.json
+	./bin/lastore-tools metadata --local var/lib/lastore/tree -u
