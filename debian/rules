@@ -1,0 +1,14 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_install:
+	dh_install --sourcedir=debian/tmp
+
+override_dh_installdeb:
+	dh_installdeb
+	@echo "Remove unused conffiles which lastore-daemon should skip them."
+	find debian -name "conffiles" -exec rm -f \{\} \;
+
+override_dh_strip:
+	true

@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure|abort-upgrade)
+	[ -x /usr/share/update-notifier/notify-reboot-required ] && /usr/share/update-notifier/notify-reboot-required || true
+	if dpkg --compare-versions "$2" le 0.9.18.5; then
+		[ -e /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist ] && mv /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist  /etc/apt/apt.conf.d/99lastore.conf || true
+	fi
+	;;
+
+    triggered)
+	if [ -x /usr/bin/lastore-tools ]; then
+	    set +e
+	    # lastore-tools interface changed after 0.9.18
+	    lastore-tools -v > /dev/null 2>&1
+	    state=$?
+	    set -e
+
+	    if [ $state -eq 0 ]; then
+		/usr/bin/lastore-tools update -j desktop -o /var/lib/lastore/ || true
+	    else
+		/usr/bin/lastore-tools -item desktop -output /var/lib/lastore/ || true
+	    fi
+	fi
+	# old store.api, used to marking opened desktop file
+	[ -x /var/lib/lastore/mark-desktopfile-daemon ] && /var/lib/lastore/mark-desktopfile-daemon -s || true
+	;;
+esac
