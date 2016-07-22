@@ -10,15 +10,14 @@ Homepage: http://github.com/linuxdeepin/lastore-daemon
 
 Package: lastore-daemon
 Architecture: any
-Depends: ${shlibs:Depends},
- ${misc:Depends}, ostree
-Description: daemon of lastore
- support dbus interface
 Provides: update-notifier
+Depends: ${shlibs:Depends}, ${misc:Depends}, ostree, dbus
+Description: daemon of lastore
+ daemon of lastore - support dbus interface
 
 Package: lastore-daemon-dev
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends},
  lastore-daemon (= ${binary:Version})
 Description: daemon of lastore - development files.
- support dbus interface - development files.
+ daemon of lastore - support dbus interface - development files.
