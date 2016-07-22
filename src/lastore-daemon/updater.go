@@ -204,6 +204,8 @@ func (m *Manager) doUpdate() {
 }
 
 func updateDeepinStoreInfos(repository string) {
+	// TODO: use systemd.timer to handle this
+
 	err := exec.Command("lastore-tools", "update", "-r", repository, "-j", "applications", "-o", "/var/lib/lastore/applications.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[applications]: %v\n", err)
@@ -217,5 +219,10 @@ func updateDeepinStoreInfos(repository string) {
 	exec.Command("lastore-tools", "update", "-r", repository, "-j", "mirrors", "-o", "/var/lib/lastore/mirrors.json").Run()
 	if err != nil {
 		log.Errorf("updateDeepinStoreInfos[mirrors]: %v\n", err)
+	}
+
+	exec.Command("lastore-tools", "metadata", "-u").Run()
+	if err != nil {
+		log.Errorf("updateMetadata: %v\n", err)
 	}
 }

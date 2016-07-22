@@ -13,7 +13,7 @@ gb-bin:
 bin/lastore-tools:
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-tools lastore-tools
 
-build:  bin/lastore-tools var/lib/lastore
+build:  bin/lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
@@ -27,12 +27,19 @@ gb: gb-bin
 	./vendor/gb build lastore-session-helper
 	./vendor/gb build lastore-smartmirror || echo "build failed, disable smartmirror support "
 
-install: gen_mo
+install: gen_mo bin/lastore-tools
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
 	cp -rf etc ${DESTDIR}${PREFIX}/etc
+
 	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/
 	cp -rf var/lib/lastore/* ${DESTDIR}${PREFIX}/var/lib/lastore/
+
+	./bin/lastore-tools update -j applications -o ${DESTDIR}/var/lib/lastore/applications.json
+	./bin/lastore-tools update -j categories -o ${DESTDIR}/var/lib/lastore/categories.json
+	./bin/lastore-tools update -j xcategories -o ${DESTDIR}/var/lib/lastore/xcategories.json
+	./bin/lastore-tools update -j mirrors -o ${DESTDIR}/var/lib/lastore/mirrors.json
+	./bin/lastore-tools metadata --local ${DESTDIR}/var/lib/lastore/tree -c ${DESTDIR}/lastore/metadata -u
 
 update_pot:
 	deepin-update-pot locale/locale_config.ini
@@ -61,11 +68,3 @@ clean:
 	rm -rf vendor/pkg
 	rm -rf vendor/gb
 	rm -rf vendor/bin
-
-
-var/lib/lastore: bin/lastore-tools
-	./bin/lastore-tools update -j applications -o var/lib/lastore/applications.json
-	./bin/lastore-tools update -j categories -o var/lib/lastore/categories.json
-	./bin/lastore-tools update -j xcategories -o var/lib/lastore/xcategories.json
-	./bin/lastore-tools update -j mirrors -o var/lib/lastore/mirrors.json
-	./bin/lastore-tools metadata --local var/lib/lastore/tree -u

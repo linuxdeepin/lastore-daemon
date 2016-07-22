@@ -23,7 +23,12 @@ var CMDMetadata = cli.Command{
 		cli.StringFlag{
 			Name:  "local",
 			Value: "/var/lib/lastore/tree",
-			Usage: "the directory to cache metadata",
+			Usage: "the local ostree repo",
+		},
+		cli.StringFlag{
+			Name:  "checkout,c",
+			Value: "/lastore/metadata",
+			Usage: "the directory to checkout the metadata",
 		},
 		cli.StringFlag{
 			Name:  "remote",
@@ -36,6 +41,7 @@ var CMDMetadata = cli.Command{
 func MainMetadata(c *cli.Context) {
 	remote := c.String("remote")
 	repo := c.String("local")
+	checkout := c.String("checkout")
 
 	tree, err := utils.NewOSTree(repo, remote)
 	if err != nil {
@@ -49,6 +55,11 @@ func MainMetadata(c *cli.Context) {
 		err = tree.Pull("master")
 		if err != nil {
 			fmt.Println("pullRepo:", err)
+			return
+		}
+		err = tree.Checkout("master", checkout, false)
+		if err != nil {
+			fmt.Println("checkoutRepo:", err)
 			return
 		}
 	}

@@ -72,15 +72,21 @@ func OpenURL(url string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
+// EnsureBaseDir make sure the parent directory of fpath exists
+func EnsureBaseDir(fpath string) error {
+	baseDir := path.Dir(fpath)
+	info, err := os.Stat(baseDir)
+	if err == nil && info.IsDir() {
+		return nil
+	}
+	return os.MkdirAll(baseDir, 0755)
+}
+
 // TeeToFile invoke the handler with a new io.Reader which created by
 // TeeReader in and the fpath's writer
 func TeeToFile(in io.Reader, fpath string, handler func(io.Reader) error) error {
-	_, err := os.Stat(path.Dir(fpath))
-	if err != nil {
-		err = os.MkdirAll(path.Dir(fpath), 0755)
-		if err != nil {
-			return err
-		}
+	if err := EnsureBaseDir(fpath); err != nil {
+		return err
 	}
 
 	out, err := os.Create(fpath)

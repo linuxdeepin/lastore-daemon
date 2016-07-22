@@ -2,8 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -15,6 +17,9 @@ func NewOSTree(repo string, remote string) (*OSTree, error) {
 	tree := &OSTree{repo}
 	if remote == tree.RemoteURL() {
 		return tree, nil
+	}
+	if err := EnsureBaseDir(repo); err != nil {
+		return nil, err
 	}
 	_, err := tree.do("init")
 	if err != nil {
@@ -35,7 +40,6 @@ func (tree *OSTree) Pull(branch string) error {
 }
 
 func (tree *OSTree) List(branch string, root string) (string, error) {
-
 	return tree.do("ls", branch, root)
 }
 
@@ -55,9 +59,39 @@ func (tree *OSTree) HasBranch(branch string) bool {
 	return strings.Contains(raw, branch)
 }
 
-func (tree *OSTree) Checkout(branch string, target string) error {
+// NeedCheckout check whether the target content by target/.checkout_commit file
+func (tree *OSTree) NeedCheckout(branch string, target string) bool {
+	bs, err := ioutil.ReadFile(path.Join(target, ".checkout_commit"))
+	if err != nil {
+		return true
+	}
+
+	rev, err := tree.do("rev-parse", branch)
+	if err != nil || string(rev) != string(bs) {
+		return true
+	}
+	return false
+}
+
+func (tree *OSTree) Checkout(branch string, target string, force bool) error {
+	if !force && !tree.NeedCheckout(branch, target) {
+		return nil
+	}
+
+	if err := EnsureBaseDir(target); err != nil {
+		return err
+	}
+	// TODO: Record the old file list and remove the they after checkout end
 	_, err := tree.do("checkout", "--union", branch, target)
-	return err
+	if err != nil {
+		return err
+	}
+
+	rev, err := tree.do("rev-parse", branch)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path.Join(target, ".checkout_commit"), ([]byte)(rev), 0644)
 }
 
 func (tree *OSTree) Cat(branch string, fpath string) (string, error) {
