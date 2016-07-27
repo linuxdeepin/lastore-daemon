@@ -33,12 +33,20 @@ type URLCheckResult struct {
 
 func (c *URLChecker) Check(urls ...string) {
 	for _, url := range urls {
+		if _, ok := c.result[url]; ok {
+			panic(fmt.Sprintf("URLChecker try checking exists url %q", url))
+		}
 		c.result[url] = make(chan *URLCheckResult, 1)
 	}
 }
 
 func (c *URLChecker) Result(url string) *URLCheckResult {
-	return <-c.result[url]
+	r, ok := c.result[url]
+	if !ok {
+		panic(fmt.Sprintf("URLChecker try geting doesn't exists url %q", url))
+	}
+	delete(c.result, url)
+	return <-r
 }
 
 func NewURLChecker(thread int) *URLChecker {
@@ -102,7 +110,16 @@ func ParseIndex(indexUrl string) ([]string, error) {
 	var lines []string
 	err = d.Decode(&lines)
 
-	return lines, err
+	// filter repeat lines.
+	tmp := make(map[string]struct{})
+	for _, line := range lines {
+		tmp[line] = struct{}{}
+	}
+	var r []string
+	for line := range tmp {
+		r = append(r, line)
+	}
+	return r, err
 }
 
 type MirrorInfo struct {
