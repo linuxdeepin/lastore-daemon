@@ -2,4 +2,4 @@
 /usr/share
 /etc
 /var/lib/lastore
-/lastore/metadata
+lib/systemd/system

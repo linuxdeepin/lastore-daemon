@@ -53,10 +53,24 @@ func EncodeJson(fpath string, d interface{}) error {
 	return json.NewEncoder(f).Encode(d)
 }
 
+func NormalFileExists(fpath string) bool {
+	info, err := os.Stat(fpath)
+	if err != nil {
+		return false
+	}
+	if info.IsDir() {
+		return false
+	}
+	return true
+}
+
 func SystemUpgradeInfo() ([]UpgradeInfo, error) {
+	info_path := path.Join(VarLibDir, "update_infos.json")
+	if !NormalFileExists(info_path) {
+		return nil, nil
+	}
 	var r []UpgradeInfo
-	err := DecodeJson(path.Join(VarLibDir, "update_infos.json"),
-		&r)
+	err := DecodeJson(info_path, &r)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
 	}

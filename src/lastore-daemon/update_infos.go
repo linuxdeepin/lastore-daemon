@@ -26,7 +26,7 @@ type ApplicationInfo struct {
 func (u *Updater) loadUpdateInfos() {
 	info, err := system.SystemUpgradeInfo()
 	if err != nil {
-		log.Errorf("loadUpdateInfos:%v\n", err)
+		log.Warnf("loadUpdateInfos:%v\n", err)
 		return
 	}
 	u.setPropUpdatablePackages(UpdatableNames(info))

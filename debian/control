@@ -2,7 +2,7 @@ Source: lastore-daemon
 Section: admin
 Priority: extra
 Maintainer: Deepin Sysdev <sysdev@deepin.com>
-Build-Depends: debhelper (>= 9), pkg-config, golang-go, ostree,
+Build-Depends: debhelper (>= 9), pkg-config, golang-go,
  golang-dlib-dev,
  deepin-gettext-tools,
 Standards-Version: 0.1
@@ -17,7 +17,7 @@ Description: daemon of lastore
 
 Package: lastore-daemon-dev
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends},
+Depends: ${misc:Depends},
  lastore-daemon (= ${binary:Version})
 Description: daemon of lastore - development files.
  daemon of lastore - support dbus interface - development files.

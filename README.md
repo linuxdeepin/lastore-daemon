@@ -136,6 +136,12 @@ It's the helper utils for apt with smartmirror patch. Can't be used alone.
   3. *mirror* (optional): the default mirror url
 
 
+3. disable automatically notify system upgrade information
+  1. rm /var/lib/lastore/update_infos.json
+  2. run `systemctl mask lastore-build-system-info.service` for disable notify upgrade information.
+  2. (DON'T DO THIS) run `systemctl mask lastore-update-metadata-info.timer` for disable update lastore metadata infos
+
+
 ## Getting help
 
 Any usage issues can ask for help via

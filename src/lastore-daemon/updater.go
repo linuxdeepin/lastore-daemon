@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path"
 	"pkg.deepin.io/lib/dbus"
-	"time"
 )
 
 type ApplicationUpdateInfo struct {
@@ -51,10 +50,16 @@ func NewUpdater(b system.System, config *Config) *Updater {
 		MirrorSource:     config.MirrorSource,
 	}
 
+	if u.AutoCheckUpdates {
+		go exec.Command("systemctl start lastore-update-metadata-info.timer").Run()
+	}
+
 	dm := system.NewDirMonitor(system.VarLibDir)
+
 	dm.Add(func(fpath string, op uint32) {
 		u.loadUpdateInfos()
 	}, "update_infos.json", "package_icons.json", "applications.json")
+
 	err := dm.Start()
 	if err != nil {
 		log.Warnf("Can't create inotify on %s: %v\n", system.VarLibDir, err)
@@ -96,21 +101,6 @@ func (u *Updater) SetMirrorSource(id string) error {
 	}
 	u.MirrorSource = u.config.MirrorSource
 	dbus.NotifyChange(u, "MirrorSource")
-	return nil
-}
-
-func (u *Updater) SetAutoCheckUpdates(enable bool) error {
-	if u.AutoCheckUpdates == enable {
-		return nil
-	}
-
-	err := u.config.SetAutoCheckUpdates(enable)
-	if err != nil {
-		return err
-	}
-
-	u.AutoCheckUpdates = u.config.AutoCheckUpdates
-	dbus.NotifyChange(u, "AutoCheckUpdates")
 	return nil
 }
 
@@ -157,72 +147,17 @@ func UpdatableNames(infos []system.UpgradeInfo) []string {
 	return apps
 }
 
-func (m *Manager) loopUpdate() {
-	remaining := m.config.CheckInterval - time.Now().Sub(m.config.LastCheckTime)
-	if remaining > 0 {
-		log.Infof("Next Update time will be in %v\n", time.Now().Add(remaining).Local().String())
-		time.AfterFunc(remaining, m.loopUpdate)
-		return
+func (u *Updater) SetAutoCheckUpdates(enable bool) error {
+	if u.AutoCheckUpdates == enable {
+		return nil
 	}
 
-	busy := false
-	for _, job := range m.JobList {
-		if job.Status == system.RunningStatus {
-			busy = true
-			break
-		}
-		if job.Type == system.UpdateSourceJobType {
-			if job.Status == system.FailedStatus {
-				err := m.StartJob(job.Id)
-				log.Infof("Restart failed UpdateSource Job:%v ... :%v\n", job, err)
-			}
-			busy = true
-			break
-		}
-	}
-	if busy {
-		log.Infof("Next Update time will be in %v\n", time.Now().Add(remaining).Local().String())
-		time.AfterFunc(time.Second*30, m.loopUpdate)
-		return
-	}
+	u.AutoCheckUpdates = enable
+	dbus.NotifyChange(u, "AutoCheckUpdates")
 
-	m.doUpdate()
-	log.Infof("Next Update time will be in %v\n", time.Now().Add(m.config.CheckInterval))
-	time.AfterFunc(m.config.CheckInterval, m.loopUpdate)
-}
-
-func (m *Manager) doUpdate() {
-	m.config.UpdateLastCheckTime()
-
-	log.Info("Try update remote data...", m.config)
-	if m.config.AutoCheckUpdates {
-		go updateDeepinStoreInfos(m.config.Repository)
-
-		job, err := m.UpdateSource()
-		log.Infof("It's not busy, so try update remote data... %v:%v\n", job, err)
-	}
-}
-
-func updateDeepinStoreInfos(repository string) {
-	// TODO: use systemd.timer to handle this
-
-	err := exec.Command("lastore-tools", "update", "-r", repository, "-j", "applications", "-o", "/var/lib/lastore/applications.json").Run()
-	if err != nil {
-		log.Errorf("updateDeepinStoreInfos[applications]: %v\n", err)
-	}
-
-	err = exec.Command("lastore-tools", "update", "-r", repository, "-j", "categories", "-o", "/var/lib/lastore/categories.json").Run()
-	if err != nil {
-		log.Errorf("updateDeepinStoreInfos[categories]: %v\n", err)
-	}
-
-	exec.Command("lastore-tools", "update", "-r", repository, "-j", "mirrors", "-o", "/var/lib/lastore/mirrors.json").Run()
-	if err != nil {
-		log.Errorf("updateDeepinStoreInfos[mirrors]: %v\n", err)
-	}
-
-	exec.Command("lastore-tools", "metadata", "-u").Run()
-	if err != nil {
-		log.Errorf("updateMetadata: %v\n", err)
+	if enable {
+		return exec.Command("systemctl", "unmask", "lastore-update-metadata-info.timer").Run()
+	} else {
+		return exec.Command("systemctl", "mask", "lastore-update-metadata-info.timer").Run()
 	}
 }
