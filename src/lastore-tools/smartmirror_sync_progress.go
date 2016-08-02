@@ -45,7 +45,7 @@ func (c *URLChecker) Result(url string) *URLCheckResult {
 	if !ok {
 		panic(fmt.Sprintf("URLChecker try geting doesn't exists url %q", url))
 	}
-	delete(c.result, url)
+	defer delete(c.result, url)
 	return <-r
 }
 
@@ -75,7 +75,7 @@ func NewURLChecker(thread int) *URLChecker {
 	}
 	return c
 }
-func (u *URLChecker) Wait() {
+func (u *URLChecker) SendAllRequest() {
 	for url := range u.result {
 		worker := <-u.workerQueue
 		worker <- url
@@ -132,10 +132,6 @@ type MirrorInfo struct {
 	Detail      []URLCheckResult
 }
 
-func (MirrorInfo) String() {
-	fmt.Sprint("%s 2014:%s")
-}
-
 func SaveMirrorInfos(infos []MirrorInfo, w io.Writer) error {
 	return json.NewEncoder(w).Encode(infos)
 }
@@ -168,7 +164,7 @@ func ShowMirrorInfos(infos []MirrorInfo) {
 		)
 	}
 
-	fmt.Println("\n")
+	fmt.Print("\n\n")
 	fmt.Println(t.Render())
 }
 
@@ -204,7 +200,7 @@ func DetectServer(parallel int, indexName string, official string, mlist []strin
 		checker.Check(u2015(s))
 		checker.Check(uGuards(s, index)...)
 	}
-	checker.Wait()
+	checker.SendAllRequest()
 
 	var infos []MirrorInfo
 	for _, s := range mlist {
