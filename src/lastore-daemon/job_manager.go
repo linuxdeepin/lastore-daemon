@@ -72,9 +72,9 @@ func (jm *JobManager) List() JobList {
 	return r
 }
 
-func (m *JobManager) guest(jobType string, packages []string) string {
+func (list JobList) guest(jobType string, packages []string) string {
 	pList := strings.Join(packages, "")
-	for _, job := range m.List() {
+	for _, job := range list {
 		if job.Type == jobType && strings.Join(job.Packages, "") == pList {
 			return job.Id
 		}
@@ -92,26 +92,26 @@ func (m *JobManager) guest(jobType string, packages []string) string {
 
 // CreateJob create the job and try starting it
 func (jm *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
-	if job := jm.find(jm.guest(jobType, packages)); job != nil {
+	if job := jm.find(jm.List().guest(jobType, packages)); job != nil {
 		return job, jm.MarkStart(job.Id)
 	}
 
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:
-		job = NewJob(jobName, packages, system.DownloadJobType, DownloadQueue)
+		job = NewJob(false, jobName, packages, system.DownloadJobType, DownloadQueue)
 	case system.InstallJobType:
-		job = NewJob(jobName, packages, system.DownloadJobType, DownloadQueue)
-		job.next = NewJob(jobName, packages, system.InstallJobType, SystemChangeQueue)
+		job = NewJob(false, jobName, packages, system.DownloadJobType, DownloadQueue)
+		job.next = NewJob(false, jobName, packages, system.InstallJobType, SystemChangeQueue)
 		job.Id = job.next.Id
 	case system.RemoveJobType:
-		job = NewJob(jobName, packages, system.RemoveJobType, SystemChangeQueue)
+		job = NewJob(false, jobName, packages, system.RemoveJobType, SystemChangeQueue)
 	case system.UpdateSourceJobType:
-		job = NewJob(jobName, nil, system.UpdateSourceJobType, LockQueue)
+		job = NewJob(true, jobName, nil, system.UpdateSourceJobType, LockQueue)
 	case system.DistUpgradeJobType:
-		job = NewJob(jobName, packages, system.DistUpgradeJobType, LockQueue)
+		job = NewJob(true, jobName, packages, system.DistUpgradeJobType, LockQueue)
 	case system.UpdateJobType:
-		job = NewJob(jobName, packages, system.UpdateJobType, SystemChangeQueue)
+		job = NewJob(false, jobName, packages, system.UpdateJobType, SystemChangeQueue)
 	default:
 		return nil, system.NotSupportError
 	}

@@ -30,6 +30,8 @@ type Job struct {
 	next   *Job
 	option map[string]string
 
+	single bool
+
 	Id         string
 	Name       string
 	Packages   []string
@@ -52,9 +54,16 @@ type Job struct {
 	retry     int
 }
 
-func NewJob(jobName string, packages []string, jobType string, queueName string) *Job {
+func NewJob(single bool, jobName string, packages []string, jobType string, queueName string) *Job {
+	var id string
+	if single {
+		id = jobType
+	} else {
+		id = genJobId() + jobType
+	}
+
 	j := &Job{
-		Id:         genJobId() + jobType,
+		Id:         id,
 		Name:       jobName,
 		CreateTime: time.Now().UnixNano(),
 		Type:       jobType,
@@ -62,9 +71,11 @@ func NewJob(jobName string, packages []string, jobType string, queueName string)
 		Status:     system.ReadyStatus,
 		Progress:   .0,
 		Cancelable: true,
-		option:     make(map[string]string),
-		queueName:  queueName,
-		retry:      3,
+
+		option:    make(map[string]string),
+		queueName: queueName,
+		retry:     3,
+		single:    single,
 	}
 
 	switch jobType {
@@ -73,7 +84,6 @@ func NewJob(jobName string, packages []string, jobType string, queueName string)
 	case system.DownloadJobType:
 		go j.initDownloadSize()
 	}
-
 	return j
 }
 

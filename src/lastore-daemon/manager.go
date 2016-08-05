@@ -152,6 +152,24 @@ func (m *Manager) UpdateSource() (*Job, error) {
 	return job, err
 }
 
+func (m *Manager) cancelAllJob() error {
+	var updateJobIds []string
+	for _, job := range m.jobManager.List() {
+		if job.Type == system.UpdateJobType && job.Status != system.RunningStatus {
+			updateJobIds = append(updateJobIds, job.Id)
+		}
+	}
+
+	for _, jobId := range updateJobIds {
+		err := m.jobManager.CleanJob(jobId)
+		if err != nil {
+			log.Warnf("CleanJob %q error: %v\n", jobId, err)
+		}
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) DistUpgrade() (*Job, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
@@ -162,26 +180,18 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 		return nil, system.NotFoundError
 	}
 
-	var updateJobIds []string
-	for _, job := range m.jobManager.List() {
-		if job.Type == system.DistUpgradeJobType {
-			err := m.StartJob(job.Id)
-			log.Warnf("Using exist DistUpgradeJob %v --> %v\n", job, err)
-			return job, err
-		}
-		if job.Type == system.UpdateJobType && job.Status != system.RunningStatus {
-			updateJobIds = append(updateJobIds, job.Id)
-		}
+	job := m.jobManager.find(system.DistUpgradeJobType)
+	if job != nil {
+		return job, m.jobManager.MarkStart(job.Id)
 	}
 
-	for _, jobId := range updateJobIds {
-		m.CleanJob(jobId)
-	}
-
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
+	job, err := m.jobManager.CreateJob(system.DistUpgradeJobType, system.DistUpgradeJobType, m.UpgradableApps)
 	if err != nil {
 		log.Warnf("DistUpgrade error: %v\n", err)
+		return nil, err
 	}
+
+	m.cancelAllJob()
 	return job, err
 }
 

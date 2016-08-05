@@ -96,3 +96,18 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 		c.Check(len(d), C.Equals, 0)
 	}
 }
+
+func (*testWrap) TestGuestJobType(c *C.C) {
+	list := NewJobQueue("test", 100)
+	j := NewJob(true, system.DistUpgradeJobType, []string{}, system.DistUpgradeJobType, "test")
+	list.Add(j)
+	list.Add(j)
+	c.Check(list.Jobs.guest(system.DistUpgradeJobType, nil), C.Equals, system.DistUpgradeJobType)
+	c.Check(list.Find(system.DistUpgradeJobType), C.Equals, j)
+
+	j2 := NewJob(false, system.DistUpgradeJobType, []string{}, system.DistUpgradeJobType, "test")
+	list2 := NewJobQueue("test", 100)
+	list2.Add(j2)
+	c.Check(list2.Find(system.DistUpgradeJobType), C.Not(C.Equals), j2)
+
+}
