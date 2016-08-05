@@ -72,11 +72,15 @@ func (jm *JobManager) List() JobList {
 	return r
 }
 
-func (list JobList) guest(jobType string, packages []string) string {
-	pList := strings.Join(packages, "")
-	for _, job := range list {
+func (jm *JobManager) findAndRunJob(jobType string, pkgs []string) (*Job, error) {
+	job := jm.find(jobType)
+	if job != nil {
+		return job, jm.MarkStart(job.Id)
+	}
+	pList := strings.Join(pkgs, "")
+	for _, job := range jm.List() {
 		if job.Type == jobType && strings.Join(job.Packages, "") == pList {
-			return job.Id
+			return job, jm.MarkStart(job.Id)
 		}
 		if job.next == nil {
 			continue
@@ -84,16 +88,16 @@ func (list JobList) guest(jobType string, packages []string) string {
 		if job.next.Type == jobType && strings.Join(job.next.Packages, "") == pList {
 			// Don't return the job.next.
 			// It's not a workable Job before the Job finished.
-			return job.Id
+			return job, jm.MarkStart(job.Id)
 		}
 	}
-	return ""
+	return nil, system.NotFoundError
 }
 
 // CreateJob create the job and try starting it
 func (jm *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
-	if job := jm.find(jm.List().guest(jobType, packages)); job != nil {
-		return job, jm.MarkStart(job.Id)
+	if job, err := jm.findAndRunJob(jobType, packages); job != nil {
+		return job, err
 	}
 
 	var job *Job

@@ -102,7 +102,6 @@ func (*testWrap) TestGuestJobType(c *C.C) {
 	j := NewJob(true, system.DistUpgradeJobType, []string{}, system.DistUpgradeJobType, "test")
 	list.Add(j)
 	list.Add(j)
-	c.Check(list.Jobs.guest(system.DistUpgradeJobType, nil), C.Equals, system.DistUpgradeJobType)
 	c.Check(list.Find(system.DistUpgradeJobType), C.Equals, j)
 
 	j2 := NewJob(false, system.DistUpgradeJobType, []string{}, system.DistUpgradeJobType, "test")
