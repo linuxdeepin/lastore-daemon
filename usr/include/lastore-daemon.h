@@ -575,6 +575,12 @@ class Manager : public dbus::common::DBusObject
 	}
 	
 
+	dbus::common::R<QDBusObjectPath> PrepareDistUpgrade () {
+		QList<QVariant> argumentList;
+		;
+		QDBusPendingReply<> call = asyncCallWithArgumentList(QLatin1String("PrepareDistUpgrade"), argumentList);
+		return dbus::common::R<QDBusObjectPath>(call);
+	}
 	
 	
 	

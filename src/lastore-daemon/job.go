@@ -14,23 +14,12 @@ import (
 	log "github.com/cihub/seelog"
 	"internal/system"
 	"pkg.deepin.io/lib/dbus"
-	"strconv"
 	"time"
 )
-
-var genJobId = func() func() string {
-	var __count = 0
-	return func() string {
-		__count++
-		return strconv.Itoa(__count)
-	}
-}()
 
 type Job struct {
 	next   *Job
 	option map[string]string
-
-	single bool
 
 	Id         string
 	Name       string
@@ -54,13 +43,7 @@ type Job struct {
 	retry     int
 }
 
-func NewJob(single bool, jobName string, packages []string, jobType string, queueName string) *Job {
-	var id string
-	if single {
-		id = jobType
-	} else {
-		id = genJobId() + jobType
-	}
+func NewJob(id string, jobName string, packages []string, jobType string, queueName string) *Job {
 
 	j := &Job{
 		Id:         id,
@@ -75,7 +58,6 @@ func NewJob(single bool, jobName string, packages []string, jobType string, queu
 		option:    make(map[string]string),
 		queueName: queueName,
 		retry:     3,
-		single:    single,
 	}
 
 	switch jobType {

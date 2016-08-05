@@ -15,6 +15,7 @@ import (
 	"internal/system"
 	"pkg.deepin.io/lib/dbus"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,8 +46,8 @@ type JobManager struct {
 }
 
 func NewJobManager(api system.System, notifyFn func()) *JobManager {
-	if api == nil || notifyFn == nil {
-		panic("NewJobManager with api=nil, notifyFn=nil")
+	if api == nil {
+		panic("NewJobManager with api=nil")
 	}
 	m := &JobManager{
 		queues: make(map[string]*JobQueue),
@@ -72,50 +73,35 @@ func (jm *JobManager) List() JobList {
 	return r
 }
 
-func (jm *JobManager) findAndRunJob(jobType string, pkgs []string) (*Job, error) {
-	job := jm.find(jobType)
-	if job != nil {
-		return job, jm.MarkStart(job.Id)
-	}
-	pList := strings.Join(pkgs, "")
-	for _, job := range jm.List() {
-		if job.Type == jobType && strings.Join(job.Packages, "") == pList {
-			return job, jm.MarkStart(job.Id)
-		}
-		if job.next == nil {
-			continue
-		}
-		if job.next.Type == jobType && strings.Join(job.next.Packages, "") == pList {
-			// Don't return the job.next.
-			// It's not a workable Job before the Job finished.
-			return job, jm.MarkStart(job.Id)
-		}
-	}
-	return nil, system.NotFoundError
-}
-
 // CreateJob create the job and try starting it
 func (jm *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
-	if job, err := jm.findAndRunJob(jobType, packages); job != nil {
-		return job, err
+	if job := jm.findJobByType(jobType, packages); job != nil {
+		switch job.Status {
+		case system.FailedStatus, system.PausedStatus:
+			return job, jm.MarkStart(job.Id)
+		default:
+			return job, nil
+		}
 	}
 
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:
-		job = NewJob(false, jobName, packages, system.DownloadJobType, DownloadQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, DownloadQueue)
 	case system.InstallJobType:
-		job = NewJob(false, jobName, packages, system.DownloadJobType, DownloadQueue)
-		job.next = NewJob(false, jobName, packages, system.InstallJobType, SystemChangeQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue)
+		job.next = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
 		job.Id = job.next.Id
 	case system.RemoveJobType:
-		job = NewJob(false, jobName, packages, system.RemoveJobType, SystemChangeQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
 	case system.UpdateSourceJobType:
-		job = NewJob(true, jobName, nil, system.UpdateSourceJobType, LockQueue)
+		job = NewJob(genJobId(jobType), jobName, nil, jobType, LockQueue)
 	case system.DistUpgradeJobType:
-		job = NewJob(true, jobName, packages, system.DistUpgradeJobType, LockQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue)
+	case system.PrepareDistUpgradeJobType:
+		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue)
 	case system.UpdateJobType:
-		job = NewJob(false, jobName, packages, system.UpdateJobType, SystemChangeQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
 	default:
 		return nil, system.NotSupportError
 	}
@@ -127,7 +113,7 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 // MarkStart transition the Job status to ReadyStatus
 // and move the it to the head of queue.
 func (jm *JobManager) MarkStart(jobId string) error {
-	job := jm.find(jobId)
+	job := jm.findJobById(jobId)
 	if job == nil {
 		return system.NotFoundError
 	}
@@ -149,7 +135,7 @@ func (jm *JobManager) MarkStart(jobId string) error {
 // CleanJob transition the Job status to EndStatus,
 // so the job will be auto clean in next dispatch run.
 func (jm *JobManager) CleanJob(jobId string) error {
-	job := jm.find(jobId)
+	job := jm.findJobById(jobId)
 	if job == nil {
 		return system.NotFoundError
 	}
@@ -169,7 +155,7 @@ func (jm *JobManager) CleanJob(jobId string) error {
 
 // PauseJob try aborting the job and transition the status to PauseStatus
 func (jm *JobManager) PauseJob(jobId string) error {
-	job := jm.find(jobId)
+	job := jm.findJobById(jobId)
 	if job == nil {
 		return system.NotFoundError
 	}
@@ -185,16 +171,6 @@ func (jm *JobManager) PauseJob(jobId string) error {
 	}
 
 	return TransitionJobState(job, system.PausedStatus)
-}
-
-func (jm *JobManager) find(jobId string) *Job {
-	for _, queue := range jm.queues {
-		job := queue.Find(jobId)
-		if job != nil {
-			return job
-		}
-	}
-	return nil
 }
 
 // Dispatch transition Job status in Job Queues
@@ -433,7 +409,7 @@ func (l *JobQueue) Find(id string) *Job {
 }
 
 func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
-	j := jm.find(info.JobId)
+	j := jm.findJobById(info.JobId)
 	if j == nil {
 		log.Warnf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
@@ -444,3 +420,47 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	}
 	jm.dispatch()
 }
+
+func (jm *JobManager) findJobById(jobId string) *Job {
+	for _, queue := range jm.queues {
+		job := queue.Find(jobId)
+		if job != nil {
+			return job
+		}
+	}
+	return nil
+}
+
+func (jm *JobManager) findJobByType(jobType string, pkgs []string) *Job {
+	pList := strings.Join(pkgs, "")
+	for _, job := range jm.List() {
+		if job.Id == jobType {
+			return job
+		}
+		if job.Type == jobType && strings.Join(job.Packages, "") == pList {
+			return job
+		}
+		if job.next == nil {
+			continue
+		}
+		if job.next.Type == jobType && strings.Join(job.next.Packages, "") == pList {
+			// Don't return the job.next.
+			// It's not a workable Job before the Job finished.
+			return job
+		}
+	}
+	return nil
+}
+
+var genJobId = func() func(string) string {
+	var __count = 0
+	return func(jobType string) string {
+		switch jobType {
+		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType, system.UpdateSourceJobType:
+			return jobType
+		default:
+			__count++
+			return strconv.Itoa(__count) + jobType
+		}
+	}
+}()

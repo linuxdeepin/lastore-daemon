@@ -28,12 +28,13 @@ const (
 )
 
 const (
-	DownloadJobType     = "download"
-	InstallJobType      = "install"
-	RemoveJobType       = "remove"
-	UpdateJobType       = "update"
-	DistUpgradeJobType  = "dist_upgrade"
-	UpdateSourceJobType = "update_source"
+	DownloadJobType           = "download"
+	InstallJobType            = "install"
+	RemoveJobType             = "remove"
+	UpdateJobType             = "update"
+	DistUpgradeJobType        = "dist_upgrade"
+	PrepareDistUpgradeJobType = "prepare_dist_upgrade"
+	UpdateSourceJobType       = "update_source"
 )
 
 type JobProgressInfo struct {

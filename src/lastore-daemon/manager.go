@@ -38,6 +38,11 @@ type Manager struct {
 	cachedLocale map[uint64]string
 }
 
+/*
+NOTE: Most of export function of Manager will hold the lock,
+so don't invoke they in inner functions
+*/
+
 func NewManager(b system.System, c *Config) *Manager {
 	archs, err := system.SystemArchitectures()
 	if err != nil {
@@ -92,6 +97,10 @@ func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 }
 
 func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
+
 	locale, ok := m.cachedLocale[uint64(msg.GetSenderUID())]
 	if !ok {
 		log.Warnf("Can't find lang information from :%v %v\n", msg)
@@ -107,10 +116,6 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 }
 
 func (m *Manager) installPackage(jobName string, packages string) (*Job, error) {
-	m.checkNeedUpdate()
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	pList := strings.Fields(packages)
 
 	installedN := 0
@@ -180,18 +185,35 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 		return nil, system.NotFoundError
 	}
 
-	job := m.jobManager.find(system.DistUpgradeJobType)
-	if job != nil {
-		return job, m.jobManager.MarkStart(job.Id)
-	}
-
-	job, err := m.jobManager.CreateJob(system.DistUpgradeJobType, system.DistUpgradeJobType, m.UpgradableApps)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
 	if err != nil {
 		log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
 	}
 
 	m.cancelAllJob()
+	return job, err
+}
+
+func (m *Manager) PrepareDistUpgrade() (*Job, error) {
+	m.checkNeedUpdate()
+	m.do.Lock()
+	defer m.do.Unlock()
+
+	m.updateJobList()
+
+	if len(m.UpgradableApps) == 0 {
+		return nil, system.NotFoundError
+	}
+	if s, err := system.QueryPackageDownloadSize(m.UpgradableApps...); err == nil && s == 0 {
+		return nil, system.NotFoundError
+	}
+
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, m.UpgradableApps)
+	if err != nil {
+		log.Warnf("PrepareDistUpgrade error: %v\n", err)
+		return nil, err
+	}
 	return job, err
 }
 
@@ -227,10 +249,14 @@ func (m *Manager) CleanJob(jobId string) error {
 }
 
 func (m *Manager) PackageInstallable(pkgId string) bool {
+	m.do.Lock()
+	defer m.do.Unlock()
 	return system.QueryPackageInstallable(pkgId)
 }
 
 func (m *Manager) PackageExists(pkgId string) bool {
+	m.do.Lock()
+	defer m.do.Unlock()
 	return system.QueryPackageInstalled(pkgId)
 }
 
@@ -238,10 +264,6 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
 	m.checkNeedUpdate()
 	m.do.Lock()
 	defer m.do.Unlock()
-
-	if len(packages) == 1 && m.PackageExists(packages[0]) {
-		return system.SizeDownloaded, nil
-	}
 
 	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil {

@@ -9,6 +9,9 @@
           <method name="DistUpgrade">
                <arg type="o" direction="out"></arg>
           </method>
+	  <method name="PrepareDistUpgrade">
+               <arg type="o" direction="out"></arg>
+          </method>
           <method name="InstallPackage">
                <arg type="s" direction="in"></arg>
                <arg type="s" direction="in"></arg>

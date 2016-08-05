@@ -89,6 +89,14 @@ func (obj *Manager) DistUpgrade() (arg0 dbus.ObjectPath, _err error) {
 	return
 }
 
+func (obj *Manager) PrepareDistUpgrade() (arg0 dbus.ObjectPath, _err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.PrepareDistUpgrade", 0).Store(&arg0)
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
 func (obj *Manager) InstallPackage(arg0 string, arg1 string) (arg2 dbus.ObjectPath, _err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.InstallPackage", 0, arg0, arg1).Store(&arg2)
 	if _err != nil {
