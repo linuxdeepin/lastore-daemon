@@ -13,6 +13,7 @@ import (
 	"internal/system"
 	"os"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -83,4 +84,18 @@ func PackageName(pkg string, lang string) string {
 func FileExist(fpath string) bool {
 	_, err := os.Stat(fpath)
 	return err == nil || os.IsExist(err)
+}
+
+func strSliceSetEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	sort.Strings(a)
+	sort.Strings(b)
+	for i, va := range a {
+		if va != b[i] {
+			return false
+		}
+	}
+	return true
 }

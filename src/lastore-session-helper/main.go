@@ -22,6 +22,7 @@ func main() {
 	gettext.Textdomain("lastore-daemon")
 
 	NewLastore()
+	dbus.DealWithUnhandledMessage()
 	if err := dbus.Wait(); err != nil {
 	}
 }

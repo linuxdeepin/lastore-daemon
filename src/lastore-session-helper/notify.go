@@ -106,7 +106,7 @@ func NotifyUpgrade(succeed bool, ac []Action) {
 
 }
 
-func NotifyNewUpdates(nApps int, hasLibs bool) {
+func (l *Lastore) notifyDownloadUpgradablePackages(nApps int, hasLibs bool) {
 	var msg string
 	switch {
 	case nApps > 0 && !hasLibs:
@@ -121,10 +121,15 @@ func NotifyNewUpdates(nApps int, hasLibs bool) {
 
 	SendNotify("system_updated",
 		msg, []Action{Action{
-			Id:   "update",
-			Name: gettext.Tr("Update Now"),
+			Id:   "download",
+			Name: gettext.Tr("Download"),
 			Callback: func() {
-				LaunchDCCAndUpgrade()
+				l.core.PrepareDistUpgrade()
 			},
 		}})
+}
+
+func notifyDownloadUpgradablePackagesFailed(ac []Action) {
+	msg := gettext.Tr("Upgradable packages failed to download.")
+	SendNotify("package_download_failed", msg, ac)
 }

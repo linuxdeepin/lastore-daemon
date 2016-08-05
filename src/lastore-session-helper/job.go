@@ -18,8 +18,8 @@ import "dbus/com/deepin/daemon/power"
 
 import log "github.com/cihub/seelog"
 import "strings"
-import "os/exec"
 import "os"
+import "time"
 
 type CacheJobInfo struct {
 	Id       string
@@ -30,28 +30,28 @@ type CacheJobInfo struct {
 }
 
 type Lastore struct {
-	JobStatus map[dbus.ObjectPath]CacheJobInfo
-	Lang      string
-	OnLine    bool
+	jobStatus map[dbus.ObjectPath]CacheJobInfo
+	lang      string
+	onLine    bool
 	inhibitFd dbus.UnixFD
 
 	upower  *power.Power
 	core    *lastore.Manager
 	updater *lastore.Updater
 
-	notifiedBattery bool
-	updatableApps   []string
-	hasLibChanged   bool
+	notifiedBattery   bool
+	updatablePackages []string
+	laterUpgradeTimer *time.Timer
 }
 
 func NewLastore() *Lastore {
 	l := &Lastore{
-		JobStatus: make(map[dbus.ObjectPath]CacheJobInfo),
+		jobStatus: make(map[dbus.ObjectPath]CacheJobInfo),
 		inhibitFd: -1,
-		Lang:      QueryLang(),
+		lang:      QueryLang(),
 	}
 
-	log.Debugf("CurrentLang: %q\n", l.Lang)
+	log.Debugf("CurrentLang: %q\n", l.lang)
 	upower, err := power.NewPower("com.deepin.daemon.Power", "/com/deepin/daemon/Power")
 	if err != nil {
 		log.Warnf("Failed MonitorBattery: %v\n", err)
@@ -75,11 +75,23 @@ func NewLastore() *Lastore {
 	l.updateJobList(core.JobList.Get())
 	l.updateUpdatableApps()
 	l.online()
+	l.monitorBatteryPersent()
 
-	l.MonitorBatteryPersent()
+	err = dbus.InstallOnSession(l)
+	if err != nil {
+		log.Warn("install on session failed:", err)
+	}
 
 	go l.monitorSignal()
 	return l
+}
+
+func (l *Lastore) GetDBusInfo() dbus.DBusInfo {
+	return dbus.DBusInfo{
+		Dest:       "com.deepin.LastoreSessionHelper",
+		ObjectPath: "/com/deepin/LastoreSessionHelper",
+		Interface:  "com.deepin.LastoreSessionHelper",
+	}
 }
 
 func (l *Lastore) monitorSignal() {
@@ -111,7 +123,7 @@ func (l *Lastore) monitorSignal() {
 				}
 			case "com.deepin.lastore.Updater":
 				_, ok := props["UpdatableApps"]
-				_, ok2 := props["UpatablePackages"]
+				_, ok2 := props["UpdatablePackages"]
 				if ok || ok2 {
 					l.updateUpdatableApps()
 				}
@@ -137,39 +149,28 @@ func (l *Lastore) monitorSignal() {
 // 1. if find new app in apps notify it.
 // 2. update record values
 func (l *Lastore) updateUpdatableApps() {
+	log.Info("on updatable apps and packages change")
 	apps := l.updater.UpdatableApps.Get()
-	hasLibChanged := len(l.updater.UpdatablePackages.Get()) != len(apps)
+	packages := l.updater.UpdatablePackages.Get()
 
-	defer func() {
-		l.updatableApps = apps
-		l.hasLibChanged = hasLibChanged
-	}()
+	log.Info("apps:", apps)
+	log.Info("packages:", packages)
 
-	if hasLibChanged != l.hasLibChanged {
-		NotifyNewUpdates(len(apps), hasLibChanged)
+	if strSliceSetEqual(packages, l.updatablePackages) {
+		// no change
 		return
 	}
-	for _, new := range apps {
-		foundNew := false
-		for _, old := range l.updatableApps {
-			if new == old {
-				foundNew = true
-				break
-			}
-		}
-		if !foundNew {
-			NotifyNewUpdates(len(apps), hasLibChanged)
-			return
-		}
-	}
-	return
+
+	// change
+	l.handleUpdatablePackagesChanged(packages, apps)
+	l.updatablePackages = packages
 }
 
 // updateJobList clean invalid cached Job status
 // The list is the newest JobList.
 func (l *Lastore) updateJobList(list []dbus.ObjectPath) {
 	var invalids []dbus.ObjectPath
-	for jobPath := range l.JobStatus {
+	for jobPath := range l.jobStatus {
 		safe := false
 		for _, p := range list {
 			if p == jobPath {
@@ -182,7 +183,7 @@ func (l *Lastore) updateJobList(list []dbus.ObjectPath) {
 		}
 	}
 	for _, jobPath := range invalids {
-		delete(l.JobStatus, jobPath)
+		delete(l.jobStatus, jobPath)
 	}
 	log.Infof("UpdateJobList: %v - %v\n", list, invalids)
 }
@@ -202,7 +203,7 @@ func TryFetchProperty(getter func() (interface{}, error), propName string, props
 }
 
 func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath, props map[string]dbus.Variant) CacheJobInfo {
-	info := l.JobStatus[path]
+	info := l.jobStatus[path]
 	oldStatus := info.Status
 
 	job, _ := lastore.NewJob("com.deepin.lastore", path)
@@ -226,7 +227,7 @@ func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath, props map[string]dbus
 				if len(pkgs) == 0 {
 					name = "unknown"
 				} else {
-					name = PackageName(pkgs[0], l.Lang)
+					name = PackageName(pkgs[0], l.lang)
 				}
 			}
 		}
@@ -244,23 +245,23 @@ func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath, props map[string]dbus
 		}
 	}
 
-	l.JobStatus[path] = info
-	log.Debugf("updateCacheJobInfo: %v\n", l.JobStatus[path])
+	l.jobStatus[path] = info
+	log.Debugf("updateCacheJobInfo: %v\n", l.jobStatus[path])
 	if oldStatus != info.Status {
 		l.notifyJob(path)
 	}
-	return l.JobStatus[path]
+	return l.jobStatus[path]
 }
 
 func (l *Lastore) offline() {
 	log.Info("Lastore.Daemon Offline\n")
-	l.OnLine = false
-	l.JobStatus = make(map[dbus.ObjectPath]CacheJobInfo)
+	l.onLine = false
+	l.jobStatus = make(map[dbus.ObjectPath]CacheJobInfo)
 }
 
 func (l *Lastore) online() {
 	log.Info("Lastore.Daemon Online\n")
-	l.OnLine = true
+	l.onLine = true
 }
 
 func (l *Lastore) createUpgradeActions() []Action {
@@ -311,10 +312,18 @@ func (l *Lastore) createJobFailedActions(jobId string) []Action {
 func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 	l.checkBattery()
 
-	info := l.JobStatus[path]
+	info := l.jobStatus[path]
 	status := info.Status
 	log.Debugf("notifyJob: %q %q --> %v\n", path, status, info)
 	switch guestJobTypeFromPath(path) {
+	case system.PrepareDistUpgradeJobType:
+		switch status {
+		case system.FailedStatus:
+			notifyDownloadUpgradablePackagesFailed(l.createJobFailedActions(info.Id))
+		case system.SucceedStatus:
+			LaunchOfflineUpgrader()
+		}
+
 	case system.InstallJobType:
 		switch status {
 		case system.FailedStatus:
@@ -352,22 +361,10 @@ func guestJobTypeFromPath(path dbus.ObjectPath) string {
 		return system.DownloadJobType
 	} else if strings.Contains(string(path), system.RemoveJobType) {
 		return system.RemoveJobType
+	} else if strings.Contains(string(path), system.PrepareDistUpgradeJobType) {
+		return system.PrepareDistUpgradeJobType
 	} else if strings.Contains(string(path), system.DistUpgradeJobType) {
 		return system.DistUpgradeJobType
 	}
 	return ""
-}
-
-func LaunchDCCAndUpgrade() {
-	cmd := exec.Command("dde-control-center", "system_info")
-	cmd.Start()
-	go cmd.Wait()
-
-	core, err := lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
-	if err != nil {
-		log.Warnf("NewLastore: %v\n", err)
-		return
-	}
-	core.DistUpgrade()
-	lastore.DestroyManager(core)
 }
