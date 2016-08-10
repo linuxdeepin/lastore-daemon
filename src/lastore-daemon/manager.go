@@ -32,11 +32,20 @@ type Manager struct {
 	SystemOnChanging bool
 	inhibitFd        dbus.UnixFD
 
-	updated bool
-
 	//TODO: remove this. It should be record in com.deepin.Accounts
 	cachedLocale map[uint64]string
 }
+
+var EnsureUpdateSourceOnce = func() func(*Manager) {
+	updated := false
+	return func(m *Manager) {
+		if updated {
+			return
+		}
+		updated = true
+		m.UpdateSource()
+	}
+}()
 
 /*
 NOTE: Most of export function of Manager will hold the lock,
@@ -72,20 +81,9 @@ func NewManager(b system.System, c *Config) *Manager {
 	return m
 }
 
-func (m *Manager) checkNeedUpdate() {
-	m.do.Lock()
-	if m.updated {
-		m.do.Unlock()
-		return
-	}
-	m.updated = true
-	m.do.Unlock()
-
-	m.UpdateSource()
-}
-
 func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
-	m.checkNeedUpdate()
+	EnsureUpdateSourceOnce(m)
+
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -97,7 +95,8 @@ func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 }
 
 func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
-	m.checkNeedUpdate()
+	EnsureUpdateSourceOnce(m)
+
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -111,6 +110,7 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 	if len(localePkgs) != 0 {
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
+
 	pkgs := strings.Join(append(strings.Fields(packages), localePkgs...), " ")
 	return m.installPackage(jobName, pkgs)
 }
@@ -120,7 +120,7 @@ func (m *Manager) installPackage(jobName string, packages string) (*Job, error) 
 
 	installedN := 0
 	for _, pkg := range pList {
-		if m.PackageExists(pkg) {
+		if system.QueryPackageInstalled(pkg) {
 			installedN++
 		}
 	}
@@ -136,6 +136,8 @@ func (m *Manager) installPackage(jobName string, packages string) (*Job, error) 
 }
 
 func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
+	EnsureUpdateSourceOnce(m)
+
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -176,7 +178,8 @@ func (m *Manager) cancelAllJob() error {
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
-	m.checkNeedUpdate()
+	EnsureUpdateSourceOnce(m)
+
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -196,7 +199,8 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 }
 
 func (m *Manager) PrepareDistUpgrade() (*Job, error) {
-	m.checkNeedUpdate()
+	EnsureUpdateSourceOnce(m)
+
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -248,20 +252,9 @@ func (m *Manager) CleanJob(jobId string) error {
 	return err
 }
 
-func (m *Manager) PackageInstallable(pkgId string) bool {
-	m.do.Lock()
-	defer m.do.Unlock()
-	return system.QueryPackageInstallable(pkgId)
-}
-
-func (m *Manager) PackageExists(pkgId string) bool {
-	m.do.Lock()
-	defer m.do.Unlock()
-	return system.QueryPackageInstalled(pkgId)
-}
-
 func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
-	m.checkNeedUpdate()
+	EnsureUpdateSourceOnce(m)
+
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -272,16 +265,18 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
 	return int64(s), err
 }
 
-func (m *Manager) PackageDesktopPath(pkgId string) string {
-	m.do.Lock()
-	defer m.do.Unlock()
+func (m *Manager) PackageInstallable(pkgId string) bool {
+	return system.QueryPackageInstallable(pkgId)
+}
 
+func (m *Manager) PackageExists(pkgId string) bool {
+	return system.QueryPackageInstalled(pkgId)
+}
+
+func (m *Manager) PackageDesktopPath(pkgId string) string {
 	return QueryDesktopFilePath(pkgId)
 }
 
 func (m *Manager) SetRegion(region string) error {
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	return m.config.SetAppstoreRegion(region)
 }
