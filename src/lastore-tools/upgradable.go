@@ -56,6 +56,8 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 	return infos
 }
 
+// distupgradeList return the pkgs from apt dist-upgrade
+// NOTE: the result strim the arch suffix
 func distupgradList() []string {
 	cmd := exec.Command("apt-get", "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
 	bs, _ := cmd.Output()
@@ -90,8 +92,11 @@ func parseAptShowList(r io.Reader, title string) []string {
 			break
 		}
 
-		p = append(p, strings.Fields(line)...)
+		for _, f := range strings.Fields(line) {
+			p = append(p, strings.Split(f, ":")[0])
+		}
 	}
+
 	return p
 }
 
