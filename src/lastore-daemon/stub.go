@@ -112,7 +112,7 @@ func (u *Updater) setPropUpdatablePackages(ids []string) {
 
 func DestroyJob(j *Job) {
 	j.notifyAll()
-	<-time.After(time.Millisecond * 10)
+	<-time.After(time.Millisecond * 100)
 	dbus.UnInstallObject(j)
 }
 

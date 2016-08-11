@@ -41,10 +41,13 @@ type Job struct {
 
 	queueName string
 	retry     int
+
+	// adjust the progress range, used by some download job type
+	progressRangeBegin float64
+	progressRangeEnd   float64
 }
 
 func NewJob(id string, jobName string, packages []string, jobType string, queueName string) *Job {
-
 	j := &Job{
 		Id:         id,
 		Name:       jobName,
@@ -58,12 +61,11 @@ func NewJob(id string, jobName string, packages []string, jobType string, queueN
 		option:    make(map[string]string),
 		queueName: queueName,
 		retry:     3,
-	}
 
-	switch jobType {
-	case system.InstallJobType:
-		j.Progress = 0.5
-	case system.DownloadJobType:
+		progressRangeBegin: 0,
+		progressRangeEnd:   1,
+	}
+	if jobType == system.DownloadJobType {
 		go j.initDownloadSize()
 	}
 	return j
@@ -107,14 +109,15 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	}
 	log.Tracef("updateInfo %v <- %v\n", j, info)
 
-	if info.Progress > j.Progress {
+	cProgress := buildProgress(info.Progress, j.progressRangeBegin, j.progressRangeEnd)
+	if cProgress > j.Progress {
 		changed = true
-		j.Progress = info.Progress
+		j.Progress = cProgress
 		dbus.NotifyChange(j, "Progress")
 	}
 
 	// see the apt.go, we scale download progress value range in [0,0.5
-	speed := j.speedMeter.Speed(info.Progress * 2)
+	speed := j.speedMeter.Speed(info.Progress)
 
 	if speed != j.Speed {
 		changed = true
@@ -131,4 +134,20 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		changed = true
 	}
 	return changed
+}
+
+func (j *Job) _InitProgressRange(begin, end float64) {
+	if end <= begin || end-begin > 1 || begin > 1 || end > 1 {
+		panic("Invalid Progress range init")
+	}
+	if j.Progress != 0 {
+		panic("InitProgressRange can only invoke once and before job start")
+	}
+	j.progressRangeBegin = begin
+	j.progressRangeEnd = end
+	j.Progress = j.progressRangeBegin
+}
+
+func buildProgress(p, begin, end float64) float64 {
+	return begin + p*(end-begin)
 }

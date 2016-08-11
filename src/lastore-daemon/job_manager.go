@@ -90,8 +90,13 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 		job = NewJob(genJobId(jobType), jobName, packages, jobType, DownloadQueue)
 	case system.InstallJobType:
 		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue)
-		job.next = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
-		job.Id = job.next.Id
+		job._InitProgressRange(0, 0.5)
+
+		next := NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
+		next._InitProgressRange(0.5, 1)
+
+		job.Id = next.Id
+		job.next = next
 	case system.RemoveJobType:
 		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
 	case system.UpdateSourceJobType:
@@ -105,6 +110,7 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 	default:
 		return nil, system.NotSupportError
 	}
+
 	log.Infof("CreateJob with %q %q %q\n", jobName, jobType, packages)
 	jm.addJob(job)
 	return job, jm.MarkStart(job.Id)

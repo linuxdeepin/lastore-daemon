@@ -37,7 +37,7 @@ var CMDTester = cli.Command{
 		cli.StringFlag{
 			Name:  "job,j",
 			Value: "",
-			Usage: "install|remove|upgrade|search",
+			Usage: "install|remove|upgrade|prepare_upgrade|search",
 		},
 	},
 }
@@ -53,6 +53,8 @@ func MainTester(c *cli.Context) {
 		err = LastoreUpgrade()
 	case "search":
 		err = LastoreSearch(c.GlobalString("dstoreapi"), c.Args().First(), c.GlobalBool("debug"))
+	case "prepare_upgrade":
+		err = LastorePrepareUpgrade()
 	default:
 		cli.ShowCommandHelp(c, "test")
 	}
@@ -84,6 +86,21 @@ func LastoreInstall(p string) error {
 
 	fmt.Println("Try installing", p)
 	j, err := m.InstallPackage("InstallForTesing "+p, p)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+
+	fmt.Printf("Created Job: %q successful\n", j)
+
+	return waitJob(j)
+}
+
+func LastorePrepareUpgrade() error {
+	m := getLastore()
+	fmt.Println("Connected lastore-daemon..")
+
+	j, err := m.PrepareDistUpgrade()
 	if err != nil {
 		return err
 	}
@@ -160,6 +177,13 @@ func getLastore() *lastore.Manager {
 	}
 	return m
 }
+
+func showLine(j *lastore.Job) string {
+	return fmt.Sprintf("id:%v(%v)\tProgress:%v:%v%%\tDesc:%q",
+		j.Id.Get(), j.Type.Get(), j.Status.Get(), j.Progress.Get()*100,
+		j.Description.Get())
+}
+
 func waitJob(p dbus.ObjectPath) error {
 	j, err := lastore.NewJob("com.deepin.lastore", p)
 	if err != nil {
@@ -167,11 +191,16 @@ func waitJob(p dbus.ObjectPath) error {
 	}
 
 	s := j.Status.Get()
-	for s != "" {
-		fmt.Printf("id:%v(%v,%v) %q\n",
-			j.Id.Get(), s, j.Progress.Get(),
-			j.Description.Get())
+	if s != "" {
+		fmt.Println(showLine(j))
+	}
 
+	for l := showLine(j); s != ""; {
+		t := showLine(j)
+		if t != l {
+			l = t
+			fmt.Println(t)
+		}
 		switch system.Status(s) {
 		case system.ReadyStatus, system.RunningStatus:
 		case system.PausedStatus:
@@ -183,7 +212,7 @@ func waitJob(p dbus.ObjectPath) error {
 			return fmt.Errorf("Job %v failed %v", p, j)
 		}
 
-		time.Sleep(time.Millisecond * 300)
+		time.Sleep(time.Millisecond * 50)
 		s = j.Status.Get()
 	}
 	return err

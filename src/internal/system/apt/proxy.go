@@ -73,10 +73,10 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	case "dummy":
 		status = system.Status(fs[1])
 	case "dlstatus":
-		progress = progress / 100.0 * 0.5
+		progress = progress / 100.0
 		status = system.RunningStatus
 	case "pmstatus":
-		progress = 0.5 + progress/100.0*0.5
+		progress = progress / 100.0
 		status = system.RunningStatus
 		cancelable = false
 	case "pmerror":
