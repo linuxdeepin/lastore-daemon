@@ -90,8 +90,12 @@ func QueryPackageInstalled(pkgId string) bool {
 
 // QueryPackageInstallable query whether the pkgId can be installed
 func QueryPackageInstallable(pkgId string) bool {
-	_, err := exec.Command("/usr/bin/apt-cache", "show", "--", pkgId).CombinedOutput()
+	out, err := exec.Command("/bin/sh", "-c",
+		fmt.Sprintf("/usr/bin/apt-cache show -- %s && /usr/bin/apt-cache policy -- %s", pkgId, pkgId)).CombinedOutput()
 	if err != nil {
+		return false
+	}
+	if strings.Contains(string(out), `Candidate: (none)`) {
 		return false
 	}
 	return true
