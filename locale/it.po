@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Massimo Antonio Carofano <real.massimo@hotmail.it>, 2015
+# Ivan Murano <grattakappa@gmail.com>, 2016
+# Massimo Antonio Carofano <real.massimo@hotmail.it>, 2015-2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-02 13:39+0000\n"
+"PO-Revision-Date: 2016-03-25 20:13+0000\n"
 "Last-Translator: Massimo Antonio Carofano <real.massimo@hotmail.it>\n"
 "Language-Team: Italian (http://www.transifex.com/linuxdeepin/deepin-store/language/it/)\n"
 "MIME-Version: 1.0\n"
@@ -56,16 +57,16 @@ msgstr "%q rimossa con successo."
 
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "rimozione %q fallita."
+msgstr "rimozione di %q fallita."
 
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "download %q fallito."
+msgstr "download di %q fallito."
 
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "Per evitare spegnimenti imprevisti, collega il PC alla corrente per aggiornare."
+msgstr "Per evitare spegnimenti imprevisti, collega il PC alla corrente prima di aggiornare."
 
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
@@ -92,7 +93,7 @@ msgstr "Alcune patch devono esser aggiornate."
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "Alcune patch ed i software %d devono esser aggiornati."
+msgstr "Alcune patch e software %d devono esser aggiornati."
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
