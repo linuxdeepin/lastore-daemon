@@ -14,7 +14,7 @@ import "dbus/com/deepin/lastore"
 import "pkg.deepin.io/lib/dbus"
 import "internal/system"
 import "pkg.deepin.io/lib/gettext"
-import "dbus/com/deepin/daemon/power"
+import "dbus/com/deepin/system/power"
 
 import log "github.com/cihub/seelog"
 import "strings"
@@ -35,7 +35,7 @@ type Lastore struct {
 	onLine    bool
 	inhibitFd dbus.UnixFD
 
-	upower  *power.Power
+	power   *power.Power
 	core    *lastore.Manager
 	updater *lastore.Updater
 
@@ -52,11 +52,11 @@ func NewLastore() *Lastore {
 	}
 
 	log.Debugf("CurrentLang: %q\n", l.lang)
-	upower, err := power.NewPower("com.deepin.daemon.Power", "/com/deepin/daemon/Power")
+	power, err := power.NewPower("com.deepin.system.Power", "/com/deepin/system/Power")
 	if err != nil {
 		log.Warnf("Failed MonitorBattery: %v\n", err)
 	}
-	l.upower = upower
+	l.power = power
 
 	core, err := lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
 	if err != nil {
