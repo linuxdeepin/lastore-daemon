@@ -7,4 +7,6 @@ After=network.target
 Type=dbus
 BusName=com.deepin.lastore
 ExecStart=/usr/bin/lastore-daemon
+
+[Install]
 WantedBy=multi-user.target
