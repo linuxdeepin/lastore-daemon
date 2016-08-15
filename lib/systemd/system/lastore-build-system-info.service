@@ -5,7 +5,9 @@ Description=Build system info
 Type=idle
 
 # The unit is typically launched by apt hooks,
-# so Wait two minutes is speed up apt-get dist-upgrade which has many dpkg operation.
-ExecStart=/bin/sh -c "sleep 120;/usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json; /var/lib/lastore/build_safecache.sh; /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/"
+# so we just directly exit failed when the apt-get is still running, and restart it after 1 seconds.
+ExecStartPre=/bin/sh -c "if /usr/bin/pgrep apt-get > /dev/null; then exit 1;  else exit 0; fi"
+RestartSec=1s
+Restart=on-failure
+ExecStart=/bin/sh -c "/usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json; /var/lib/lastore/build_safecache.sh; /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/"
 
-RestartSec=1min

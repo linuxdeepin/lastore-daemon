@@ -51,7 +51,7 @@ func NewUpdater(b system.System, config *Config) *Updater {
 	}
 
 	if u.AutoCheckUpdates {
-		go exec.Command("systemctl start lastore-update-metadata-info.timer").Run()
+		go exec.Command("systemctl", "start", "--no-block", "lastore-update-metadata-info.timer").Run()
 	}
 
 	dm := system.NewDirMonitor(system.VarLibDir)
