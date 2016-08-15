@@ -130,6 +130,6 @@ func (l *Lastore) notifyDownloadUpgradablePackages(nApps int, hasLibs bool) {
 }
 
 func notifyDownloadUpgradablePackagesFailed(ac []Action) {
-	msg := gettext.Tr("Upgradable packages failed to download.")
+	msg := gettext.Tr("Failed to download upgradeable packages.")
 	SendNotify("package_download_failed", msg, ac)
 }
