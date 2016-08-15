@@ -59,6 +59,9 @@ func QueryPackageDependencies(pkgId string) []string {
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
 func QueryPackageDownloadSize(packages ...string) (float64, error) {
+	if len(packages) == 0 {
+		return SizeUnknown, NotFoundError
+	}
 	cmd := exec.Command("/usr/bin/apt-get",
 		append([]string{"-d", "-o", "Debug::NoLocking=1", "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
