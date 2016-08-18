@@ -258,17 +258,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	var newPackages []string
-	for _, pkg := range packages {
-		if !system.QueryPackageInstalled(pkg) {
-			newPackages = append(newPackages, pkg)
-		}
-	}
-	if len(newPackages) == 0 {
-		return 0, nil
-	}
-
-	s, err := system.QueryPackageDownloadSize(newPackages...)
+	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil || s == system.SizeUnknown {
 		log.Warnf("PackagesDownloadSize(%q)=%d %v\n", strings.Join(packages, " "), s, err)
 	}
