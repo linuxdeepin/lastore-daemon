@@ -344,8 +344,6 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 		switch status {
 		case system.FailedStatus:
 			NotifyUpgrade(false, l.createJobFailedActions(info.Id))
-		case system.SucceedStatus:
-			NotifyUpgrade(true, l.createUpgradeActions())
 		}
 	default:
 		return
