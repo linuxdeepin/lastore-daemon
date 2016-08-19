@@ -18,6 +18,11 @@ build:  bin/lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 
+fetch-base-metadata:
+	./bin/lastore-tools update -r desktop -j applications -o ${DESTDIR}${PREFIX}/var/lib/lastore/applications.json
+	./bin/lastore-tools update -r desktop -j categories -o ${DESTDIR}${PREFIX}/var/lib/lastore/categories.json
+	./bin/lastore-tools update -r desktop -j mirrors -o ${DESTDIR}${PREFIX}/var/lib/lastore/mirrors.json
+
 test: gb-bin
 	./vendor/gb test
 
@@ -27,7 +32,7 @@ gb: gb-bin
 	./vendor/gb build lastore-session-helper
 	./vendor/gb build lastore-smartmirror || echo "build failed, disable smartmirror support "
 
-install: gen_mo bin/lastore-tools
+install: gen_mo bin/lastore-tools fetch-base-metadata
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
 	cp -rf etc ${DESTDIR}${PREFIX}/etc
