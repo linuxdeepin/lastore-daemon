@@ -152,6 +152,9 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 		return nil
 	}
 
+	// save the config to disk
+	u.config.SetAutoCheckUpdates(enable)
+
 	u.AutoCheckUpdates = enable
 	dbus.NotifyChange(u, "AutoCheckUpdates")
 
