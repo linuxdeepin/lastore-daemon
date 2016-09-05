@@ -25,7 +25,7 @@ import (
 func init() {
 	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
 	os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
-	exec.Command("/var/lib/lastore/build_safecache.sh").Run()
+	exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
 
 	if CheckDpkgDirtyJournal() {
 		TryFixDpkgDirtyStatus()

@@ -16,5 +16,5 @@ ExecStartPre=-/bin/rm /var/lib/lastore/update_infos.json
 ExecStartPre=/bin/sh -c "if /usr/bin/pgrep apt-get > /dev/null; then exit 1;  else exit 0; fi"
 RestartSec=1s
 Restart=on-failure
-ExecStart=/bin/sh -c "/usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json; /var/lib/lastore/build_safecache.sh; /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/"
+ExecStart=/bin/sh -c "/usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json; /var/lib/lastore/scripts/build_safecache.sh; /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/"
 

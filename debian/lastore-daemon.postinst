@@ -9,7 +9,8 @@ case "$1" in
 	    systemctl disable dbus-com.deepin.lastore.service || true
 	    [ -e /lib/systemd/dbus-com.deepin.lastore.service ] && rm /lib/systemd/system/dbus-com.deepin.lastore.service || true
 	fi
-	systemctl start lastore-update-metadata-info.service || true
-	systemctl daemon-reload || true
+    systemctl daemon-reload || true
+    /var/lib/lastore/scripts/update-metadata-info || true
+    /var/lib/lastore/scripts/build-system-info || true
 	;;
 esac

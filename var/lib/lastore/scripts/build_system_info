@@ -1,0 +1,20 @@
+#!/bin/bash
+
+function systemd_build_system_info()
+{
+    systemctl start lastore-build-system-info.service
+}
+
+function build_system_info()
+{
+    /usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json
+    /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/
+    /var/lib/lastore/scripts/build_safecache.sh > /dev/null
+}
+
+
+if [[ -S /var/run/systemd/notify ]]; then
+    systemd_build_system_info
+else
+    build_system_info
+fi
