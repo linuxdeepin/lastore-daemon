@@ -20,7 +20,3 @@ done
 # update list files
 cp -v ${source}/* $target
 cp -v /var/cache/apt/pkgcache.bin /var/lib/lastore/safecache/
-
-
-# autoclean useless deb cache
-apt-get autoclean
