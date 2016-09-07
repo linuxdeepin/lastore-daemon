@@ -69,8 +69,8 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 		_, _err := parsePackageSize(line)
 		return _err == nil
 	})
-	if err != nil {
-		return SizeUnknown, err
+	if err != nil && len(lines) == 0 {
+		return SizeUnknown, fmt.Errorf("Run:%v failed-->%v", cmd.Args, err)
 	}
 
 	if len(lines) != 0 {

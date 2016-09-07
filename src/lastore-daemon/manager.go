@@ -260,7 +260,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
 
 	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil || s == system.SizeUnknown {
-		log.Warnf("PackagesDownloadSize(%q)=%d %v\n", strings.Join(packages, " "), s, err)
+		log.Warnf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
 	}
 	return int64(s), err
 }
