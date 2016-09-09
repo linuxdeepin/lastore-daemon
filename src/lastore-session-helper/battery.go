@@ -24,7 +24,9 @@ func (l *Lastore) checkBattery() {
 		return
 	}
 	percent := l.power.BatteryPercentage.Get()
-	if percent <= MinBatteryPercent && l.power.HasBattery.Get() {
+	if l.power.HasBattery.Get() &&
+		l.power.OnBattery.Get() &&
+		percent <= MinBatteryPercent {
 		l.notifiedBattery = true
 		NotifyLowPower()
 	}
