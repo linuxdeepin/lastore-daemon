@@ -18,5 +18,5 @@ do
 done
 
 # update list files
-cp -v ${source}/* $target
-cp -v /var/cache/apt/pkgcache.bin /var/lib/lastore/safecache/
+find ${source} -maxdepth 1 -type f -exec cp '{}' ${target} \;
+cp  /var/cache/apt/pkgcache.bin /var/lib/lastore/safecache/
