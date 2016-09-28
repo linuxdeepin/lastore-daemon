@@ -13,6 +13,12 @@ function build_system_info()
 }
 
 
+#We should clean the update_infos.json early, otherwise
+#actions, like systemctl stop, reboot immediately after apt-get
+#would cause the update_infos.json invalid.
+[ -f /var/lib/lastore/update_infos.json ] && rm /var/lib/lastore/update_infos.json
+
+
 if [[ -S /var/run/systemd/notify ]]; then
     systemd_build_system_info
 else
