@@ -77,8 +77,17 @@ func GenerateDesktopIndexes(baseDir string) error {
 	os.MkdirAll(baseDir, 0755)
 
 	packageIndex, installTimeIndex := ParsePackageInfos()
-	writeData(path.Join(baseDir, "pacakge_installedTime.json"), installTimeIndex)
+	if err := writeData(path.Join(baseDir, "pacakge_installedTime.json"), installTimeIndex); err != nil {
+		return err
+	}
 
+	if d, err := BuildDesktop2uaid(); err == nil {
+		for k, v := range d {
+			packageIndex[k] = v
+		}
+	} else {
+		return err
+	}
 	packageIndex = mergeDesktopIndex(packageIndex, path.Join(baseDir, "desktop_package.json"))
 
 	var execInfo, iconInfo = make(map[string]string), make(map[string]string)
