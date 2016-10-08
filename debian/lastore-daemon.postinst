@@ -15,6 +15,7 @@ case "$1" in
 	;;
     triggered)
         /var/lib/lastore/scripts/build_system_info || true
+        [ -x /var/lib/lastore/mark-desktopfile-daemon ] && /var/lib/lastore/mark-desktopfile-daemon -s || true
 	;;
 esac
 
