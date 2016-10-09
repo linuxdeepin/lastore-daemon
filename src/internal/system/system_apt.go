@@ -142,6 +142,8 @@ func init() {
 	if err != nil {
 		RepoInfos = []RepositoryInfo{defaultRepoInfo}
 	}
+	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
+	os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
 }
 
 func DetectDefaultRepoInfo(rInfos []RepositoryInfo) RepositoryInfo {

@@ -54,19 +54,6 @@ func NewUpdater(b system.System, config *Config) *Updater {
 		go exec.Command("systemctl", "start", "--no-block", "lastore-update-metadata-info.timer").Run()
 	}
 
-	dm := system.NewDirMonitor(system.VarLibDir)
-
-	dm.Add(func(fpath string, op uint32) {
-		u.loadUpdateInfos()
-	}, "update_infos.json", "package_icons.json", "applications.json")
-
-	err := dm.Start()
-	if err != nil {
-		log.Warnf("Can't create inotify on %s: %v\n", system.VarLibDir, err)
-	}
-
-	u.loadUpdateInfos()
-
 	return u
 }
 

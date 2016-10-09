@@ -11,26 +11,17 @@ package apt
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
-
-func init() {
-	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
-	os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
-	exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
-
-	if CheckDpkgDirtyJournal() {
-		TryFixDpkgDirtyStatus()
-	}
-}
 
 type APTSystem struct {
 	cmdSet    map[string]*aptCommand
@@ -41,6 +32,8 @@ func New() system.System {
 	p := &APTSystem{
 		cmdSet: make(map[string]*aptCommand),
 	}
+	PrepareRunApt()
+	exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
 	return p
 }
 
@@ -108,11 +101,55 @@ func (p *APTSystem) Download(jobId string, packages []string) error {
 	return c.Start()
 }
 
+func PrepareRunApt() {
+	if msg, wait := checkLock("/var/lib/dpkg/lock"); !wait {
+		if checkDpkgDirtyJournal() {
+			tryFixDpkgDirtyStatus()
+		}
+	} else {
+		log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
+			msg, time.Now())
+		<-time.After(time.Second * 5)
+		PrepareRunApt()
+	}
+}
+
+func checkLock(p string) (string, bool) {
+	cmd := exec.Command("lslocks", "-J")
+	f, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", false
+	}
+	cmd.Start()
+
+	d := json.NewDecoder(f)
+	var data = struct {
+		Locks []map[string]string `json:"locks"`
+	}{}
+	d.Decode(&data)
+	cmd.Wait()
+	for _, line := range data.Locks {
+		if line["path"] == p {
+			bs, err := exec.Command("ps",
+				"-p",
+				line["pid"],
+				"-o",
+				"pid,ppid,tty,cmd",
+			).Output()
+			if err != nil {
+				return "", false
+			}
+			return string(bs), true
+		}
+	}
+	return "", false
+}
+
 // CheckDpkgDirtyJournal check if the dpkg in dirty status
 // Return true if dirty. Dirty status should be fix
 // by FixDpkgDirtyJournal().
 // See also debsystem.cc:CheckUpdates in apt project
-func CheckDpkgDirtyJournal() bool {
+func checkDpkgDirtyJournal() bool {
 	const updateDir = "/var/lib/dpkg/updates"
 	fs, err := ioutil.ReadDir(updateDir)
 	if err != nil {
@@ -133,7 +170,7 @@ func CheckDpkgDirtyJournal() bool {
 	return false
 }
 
-func TryFixDpkgDirtyStatus() {
+func tryFixDpkgDirtyStatus() {
 	cmd := exec.Command("dpkg", "--force-confold", "--configure", "-a")
 	buf := new(bytes.Buffer)
 	cmd.Stdout = buf
@@ -166,26 +203,19 @@ func TryFixDpkgDirtyStatus() {
 }
 
 func (p *APTSystem) Remove(jobId string, packages []string) error {
-	if CheckDpkgDirtyJournal() {
-		TryFixDpkgDirtyStatus()
-	}
+	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
 	return c.Start()
 }
 
 func (p *APTSystem) Install(jobId string, packages []string) error {
-	if CheckDpkgDirtyJournal() {
-		TryFixDpkgDirtyStatus()
-	}
+	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
 	return c.Start()
 }
 
 func (p *APTSystem) DistUpgrade(jobId string) error {
-	if CheckDpkgDirtyJournal() {
-		TryFixDpkgDirtyStatus()
-	}
-
+	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
 	return c.Start()
 }

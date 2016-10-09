@@ -10,7 +10,6 @@
 package main
 
 import (
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"pkg.deepin.io/lib/dbus"
 	"time"
@@ -43,7 +42,6 @@ func (m *Manager) updateJobList() {
 			break
 		}
 	}
-	m.updatableApps()
 	if jobChanged {
 		m.JobList = list
 		dbus.NotifyChange(m, "JobList")
@@ -56,12 +54,7 @@ func (m *Manager) updateJobList() {
 	}
 }
 
-func (m *Manager) updatableApps() {
-	info, err := system.SystemUpgradeInfo()
-	if err != nil {
-		log.Errorf("updateableApps:%v\n", err)
-	}
-
+func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 	apps := UpdatableNames(info)
 	changed := len(apps) != len(m.UpgradableApps)
 	if !changed {

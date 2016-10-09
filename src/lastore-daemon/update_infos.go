@@ -10,7 +10,6 @@
 package main
 
 import (
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"path"
 )
@@ -23,12 +22,7 @@ type ApplicationInfo struct {
 	LocaleName map[string]string `json:"locale_name"`
 }
 
-func (u *Updater) loadUpdateInfos() {
-	info, err := system.SystemUpgradeInfo()
-	if err != nil {
-		log.Warnf("loadUpdateInfos:%v\n", err)
-		return
-	}
+func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 	u.setPropUpdatablePackages(UpdatableNames(info))
 
 	var apps []string

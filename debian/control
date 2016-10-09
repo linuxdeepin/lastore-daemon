@@ -10,7 +10,7 @@ Homepage: http://github.com/linuxdeepin/lastore-daemon
 Package: lastore-daemon
 Architecture: any
 Provides: update-notifier
-Depends: ${shlibs:Depends}, ${misc:Depends}, dbus, procps
+Depends: ${shlibs:Depends}, ${misc:Depends}, dbus, procps, util-linux
 Recommends: ostree
 Description: daemon of lastore
  daemon of lastore - support dbus interface
