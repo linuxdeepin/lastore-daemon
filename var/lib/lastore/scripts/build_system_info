@@ -5,22 +5,27 @@ function systemd_build_system_info()
     systemctl start lastore-build-system-info.service
 }
 
-function build_system_info()
+function build_system_info_now()
 {
     /usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json
     /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/
     /var/lib/lastore/scripts/build_safecache.sh > /dev/null
 }
 
-
 #We should clean the update_infos.json early, otherwise
 #actions, like systemctl stop, reboot immediately after apt-get
 #would cause the update_infos.json invalid.
 [ -f /var/lib/lastore/update_infos.json ] && rm /var/lib/lastore/update_infos.json
 
-
-if [[ -S /var/run/systemd/notify ]]; then
-    systemd_build_system_info
-else
-    build_system_info
-fi
+case "$1" in
+    "-now")
+        build_system_info_now
+        ;;
+    *)
+        if [[ -S /var/run/systemd/notify ]]; then
+            systemd_build_system_info
+        else
+            build_system_info_now
+        fi
+        ;;
+esac
