@@ -10,6 +10,7 @@ function update_metadata_info_now()
     /usr/bin/lastore-tools metadata -u --remote=http://cdn.packages.deepin.com/deepin/tree/lastore
     /usr/bin/lastore-tools update -r desktop -j applications -o /var/lib/lastore/applications.json
     /usr/bin/lastore-tools update -r desktop -j categories -o /var/lib/lastore/categories.json
+    /usr/bin/lastore-tools update -r desktop -j xcategories -o /var/lib/lastore/xcategories.json
     /usr/bin/lastore-tools update -r desktop -j mirrors -o /var/lib/lastore/mirrors.json
 }
 
