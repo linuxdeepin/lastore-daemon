@@ -27,7 +27,7 @@ function build_system_info_now()
     /var/lib/lastore/scripts/build_safecache.sh > /dev/null
 }
 
-prepare
+
 
 #We should clean the update_infos.json early, otherwise
 #actions, like systemctl stop, reboot immediately after apt-get
@@ -36,6 +36,7 @@ prepare
 
 case "$1" in
     "-now")
+        prepare
         build_system_info_now
         ;;
     *)
