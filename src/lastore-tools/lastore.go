@@ -37,7 +37,7 @@ var CMDTester = cli.Command{
 		cli.StringFlag{
 			Name:  "job,j",
 			Value: "",
-			Usage: "install|remove|upgrade|prepare_upgrade|search",
+			Usage: "install|remove|upgrade|prepare_upgrade|search|update",
 		},
 	},
 }
@@ -51,6 +51,8 @@ func MainTester(c *cli.Context) {
 		err = LastoreRemove(c.Args().First())
 	case "upgrade":
 		err = LastoreUpgrade()
+	case "update":
+		err = LastoreUpdate()
 	case "search":
 		err = LastoreSearch(c.GlobalString("dstoreapi"), c.Args().First(), c.GlobalBool("debug"))
 	case "prepare_upgrade":
@@ -62,6 +64,22 @@ func MainTester(c *cli.Context) {
 		fmt.Println("E:", err)
 		os.Exit(-1)
 	}
+}
+
+func LastoreUpdate() error {
+	m := getLastore()
+	fmt.Println("Connected lastore-daemon..")
+
+	fmt.Println("Try updating source")
+	j, err := m.UpdateSource()
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+
+	fmt.Printf("Created Job: %q successful\n", j)
+
+	return waitJob(j)
 }
 
 func LastoreRemove(p string) error {
