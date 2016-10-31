@@ -6,10 +6,6 @@ endif
 
 all:  build
 
-gb-bin:
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o vendor/gb github.com/constabulary/gb/cmd/gb
-
-
 bin/lastore-tools:
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-tools lastore-tools
 
@@ -23,14 +19,9 @@ fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j categories -o ${DESTDIR}${PREFIX}/var/lib/lastore/categories.json
 	./bin/lastore-tools update -r desktop -j mirrors -o ${DESTDIR}${PREFIX}/var/lib/lastore/mirrors.json
 
-test: gb-bin
-	./vendor/gb test
-
-gb: gb-bin
-	./vendor/gb build lastore-daemon
-	./vendor/gb build lastore-tools
-	./vendor/gb build lastore-session-helper
-	./vendor/gb build lastore-smartmirror || echo "build failed, disable smartmirror support "
+test:
+	GOPATH=`pwd`:`pwd`/vendor go test internal/system internal/system/apt \
+	internal/utils	lastore-daemon  lastore-session-helper  lastore-smartmirror  lastore-tools
 
 install: gen_mo bin/lastore-tools fetch-base-metadata
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
@@ -66,5 +57,4 @@ clean:
 	rm -rf bin
 	rm -rf pkg
 	rm -rf vendor/pkg
-	rm -rf vendor/gb
 	rm -rf vendor/bin

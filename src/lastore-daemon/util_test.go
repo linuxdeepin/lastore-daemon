@@ -14,6 +14,7 @@ import C "gopkg.in/check.v1"
 import "internal/system"
 import "fixme/pkg_recommend"
 import "internal/system/apt"
+import "strings"
 
 type testWrap struct{}
 
@@ -108,5 +109,14 @@ func (*testWrap) TestGuestJobType(c *C.C) {
 	job, err = jm.CreateJob("", system.DistUpgradeJobType, nil)
 	c.Check(err, C.Equals, nil)
 	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, job)
+}
 
+func (*testWrap) TestNormalizePackageNames(c *C.C) {
+	s, err := NormalizePackageNames("a b c")
+	c.Check(err, C.Equals, nil)
+	c.Check(strings.Join(s, "_"), C.Equals, "a_b_c")
+
+	s, err = NormalizePackageNames("")
+	c.Check(err, C.Not(C.Equals), nil)
+	c.Check(len(s), C.Equals, 0)
 }

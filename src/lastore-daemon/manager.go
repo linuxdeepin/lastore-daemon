@@ -10,6 +10,7 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
 	"pkg.deepin.io/lib/dbus"
@@ -81,13 +82,26 @@ func NewManager(b system.System, c *Config) *Manager {
 	return m
 }
 
+func NormalizePackageNames(s string) ([]string, error) {
+	r := strings.Fields(s)
+	if s == "" || len(r) == 0 {
+		return nil, fmt.Errorf("Empty value")
+	}
+	return r, nil
+}
+
 func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
+	pkgs, err := NormalizePackageNames(packages)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
+	}
+
 	EnsureUpdateSourceOnce(m)
 
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, strings.Fields(packages))
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs)
 	if err != nil {
 		log.Warnf("UpdatePackage %q error: %v\n", packages, err)
 	}
@@ -95,6 +109,11 @@ func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 }
 
 func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
+	pkgs, err := NormalizePackageNames(packages)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
+	}
+
 	EnsureUpdateSourceOnce(m)
 
 	m.do.Lock()
@@ -106,13 +125,12 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 		return m.installPackage(jobName, packages)
 	}
 
-	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, locale, strings.Fields(packages)...)
+	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, locale, pkgs...)
 	if len(localePkgs) != 0 {
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
 
-	pkgs := strings.Join(append(strings.Fields(packages), localePkgs...), " ")
-	return m.installPackage(jobName, pkgs)
+	return m.installPackage(jobName, strings.Join(append(strings.Fields(packages), localePkgs...), " "))
 }
 
 func (m *Manager) installPackage(jobName string, packages string) (*Job, error) {
@@ -136,12 +154,17 @@ func (m *Manager) installPackage(jobName string, packages string) (*Job, error) 
 }
 
 func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
+	pkgs, err := NormalizePackageNames(packages)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
+	}
+
 	EnsureUpdateSourceOnce(m)
 
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, strings.Fields(packages))
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs)
 	if err != nil {
 		log.Warnf("RemovePackage %q error: %v\n", packages, err)
 	}
