@@ -3,7 +3,8 @@ Description=Build system info
 
 [Service]
 Type=idle
-RestartSec=1s
+StartLimitInterval=10s
+StartLimitBurst=20
+RestartSec=5s
 Restart=on-failure
-
 ExecStart=/var/lib/lastore/scripts/build_system_info -now
