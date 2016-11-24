@@ -3,15 +3,16 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# szd_liufei <liufei@linuxdeepin.com>, 2015
-# szd_liufei <liufei@linuxdeepin.com>, 2015
+# szd_liufei <liufei@deepin.com>, 2016
+# szd_liufei <liufei@deepin.com>, 2015
+# szd_liufei <liufei@deepin.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-21 01:00+0000\n"
-"Last-Translator: szd_liufei <liufei@linuxdeepin.com>\n"
+"POT-Creation-Date: 2016-08-15 11:23+0800\n"
+"PO-Revision-Date: 2016-08-15 03:40+0000\n"
+"Last-Translator: szd_liufei <liufei@deepin.com>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -28,72 +29,105 @@ msgid "System is updating, please shut down or reboot later."
 msgstr "系统正在更新，请稍后关机或重启。"
 
 #: ../src/lastore-session-helper/job.go:225
+#: ../src/lastore-session-helper/job.go:263
+#: ../src/lastore-session-helper/job.go:271
+#: ../src/lastore-session-helper/job.go:308
 msgid "Reboot Now"
 msgstr "立即重启"
 
 #: ../src/lastore-session-helper/job.go:239
+#: ../src/lastore-session-helper/job.go:277
+#: ../src/lastore-session-helper/job.go:285
+#: ../src/lastore-session-helper/job.go:322
 msgid "Reboot Later"
 msgstr "稍后重启"
 
 #: ../src/lastore-session-helper/job.go:248
+#: ../src/lastore-session-helper/job.go:286
+#: ../src/lastore-session-helper/job.go:294
+#: ../src/lastore-session-helper/job.go:331
 msgid "Retry"
 msgstr "重试 "
 
 #: ../src/lastore-session-helper/job.go:256
+#: ../src/lastore-session-helper/job.go:294
+#: ../src/lastore-session-helper/job.go:302
+#: ../src/lastore-session-helper/job.go:339
 msgid "Cancel"
 msgstr "取消"
 
+#: ../src/lastore-session-helper/notify.go:62
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
 msgstr "%q 安装成功。"
 
+#: ../src/lastore-session-helper/notify.go:65
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
 msgstr "%q 安装失败。"
 
+#: ../src/lastore-session-helper/notify.go:74
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
 msgstr "卸载 %q 成功。"
 
+#: ../src/lastore-session-helper/notify.go:76
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
 msgstr "卸载 %q 失败。"
 
+#: ../src/lastore-session-helper/notify.go:83
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
 msgstr "%q 下载失败。"
 
+#: ../src/lastore-session-helper/notify.go:89
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "为防止自动关机，请连接电源以保证安全更新。"
 
+#: ../src/lastore-session-helper/notify.go:97
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
 msgstr "部分功能需重启后才能生效，是否重启？"
 
+#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:99
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
 msgstr "更新成功！"
 
+#: ../src/lastore-session-helper/notify.go:103
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
 msgstr "更新失败。"
 
+#: ../src/lastore-session-helper/notify.go:113
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
 msgstr "您有%d个软件需要更新。"
 
+#: ../src/lastore-session-helper/notify.go:115
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
 msgstr "您有系统补丁需要更新。"
 
+#: ../src/lastore-session-helper/notify.go:117
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr "您有系统补丁和%d个软件需要更新。"
+
+#: ../src/lastore-session-helper/notify.go:125
+msgid "Download"
+msgstr "下载"
+
+#: ../src/lastore-session-helper/notify.go:133
+msgid "Failed to download upgradeable packages."
+msgstr "更新包下载失败。"
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"

@@ -1,0 +1,133 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# 
+# Translators:
+# Andreas Dreyer Hysing <andreashysing@gmail.com>, 2016
+# Espen Bye, 2016
+msgid ""
+msgstr ""
+"Project-Id-Version: Deepin Store\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-08-15 11:23+0800\n"
+"PO-Revision-Date: 2016-08-15 03:37+0000\n"
+"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"Language-Team: Norwegian Bokmål (http://www.transifex.com/linuxdeepin/deepin-store/language/nb/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: nb\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ../src/lastore-session-helper/job.go:189
+msgid "Deepin Store"
+msgstr "Deepin Butikk"
+
+#: ../src/lastore-session-helper/job.go:190
+msgid "System is updating, please shut down or reboot later."
+msgstr "Systemet oppdateres. Vennligst skru av eller omstart senere."
+
+#: ../src/lastore-session-helper/job.go:225
+#: ../src/lastore-session-helper/job.go:263
+#: ../src/lastore-session-helper/job.go:271
+#: ../src/lastore-session-helper/job.go:308
+msgid "Reboot Now"
+msgstr "Restart nå"
+
+#: ../src/lastore-session-helper/job.go:239
+#: ../src/lastore-session-helper/job.go:277
+#: ../src/lastore-session-helper/job.go:285
+#: ../src/lastore-session-helper/job.go:322
+msgid "Reboot Later"
+msgstr "Omstart senere"
+
+#: ../src/lastore-session-helper/job.go:248
+#: ../src/lastore-session-helper/job.go:286
+#: ../src/lastore-session-helper/job.go:294
+#: ../src/lastore-session-helper/job.go:331
+msgid "Retry"
+msgstr "Prøv igjen"
+
+#: ../src/lastore-session-helper/job.go:256
+#: ../src/lastore-session-helper/job.go:294
+#: ../src/lastore-session-helper/job.go:302
+#: ../src/lastore-session-helper/job.go:339
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: ../src/lastore-session-helper/notify.go:62
+#: ../src/lastore-session-helper/ntofiy.go:51
+msgid "%q installed successfully."
+msgstr "Installasjon av %q var vellykket."
+
+#: ../src/lastore-session-helper/notify.go:65
+#: ../src/lastore-session-helper/ntofiy.go:53
+msgid "%q failed to install."
+msgstr "Installasjon av %q feilet."
+
+#: ../src/lastore-session-helper/notify.go:74
+#: ../src/lastore-session-helper/ntofiy.go:61
+msgid "%q removed successfully."
+msgstr "%q ble fjernet"
+
+#: ../src/lastore-session-helper/notify.go:76
+#: ../src/lastore-session-helper/ntofiy.go:63
+msgid "%q failed to remove."
+msgstr "Feilet ved flytting av %q."
+
+#: ../src/lastore-session-helper/notify.go:83
+#: ../src/lastore-session-helper/ntofiy.go:70
+msgid "%q failed to download."
+msgstr "Nedlastning av %q feilet."
+
+#: ../src/lastore-session-helper/notify.go:89
+#: ../src/lastore-session-helper/ntofiy.go:76
+msgid ""
+"In order to prevent automatic shutdown, please plug in for normal update."
+msgstr "For å hindre automatisk nedlasning vennligst koble til for å motta normale oppdateringer."
+
+#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/ntofiy.go:85
+msgid "Some functions will take effect after rebooting."
+msgstr "Noen funksjoner begynner etter omstart."
+
+#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:99
+#: ../src/lastore-session-helper/ntofiy.go:85
+#: ../src/lastore-session-helper/ntofiy.go:87
+msgid "Updated successfully!"
+msgstr "Oppdatering var vellykket."
+
+#: ../src/lastore-session-helper/notify.go:103
+#: ../src/lastore-session-helper/ntofiy.go:90
+msgid "Failed to update."
+msgstr "Oppdatering feilet."
+
+#: ../src/lastore-session-helper/notify.go:113
+#: ../src/lastore-session-helper/ntofiy.go:106
+#, c-format
+msgid "%d software need to be updated."
+msgstr "%d programmer trenger en oppdatering."
+
+#: ../src/lastore-session-helper/notify.go:115
+#: ../src/lastore-session-helper/ntofiy.go:108
+msgid "Some patches need to be updated."
+msgstr "Noen programlapper trenger en oppdatering"
+
+#: ../src/lastore-session-helper/notify.go:117
+#: ../src/lastore-session-helper/ntofiy.go:110
+#, c-format
+msgid "Some patches and %d software need to be updated."
+msgstr "Noen programlapper og %d programmer trenger en oppdatering."
+
+#: ../src/lastore-session-helper/notify.go:125
+msgid "Download"
+msgstr "Last ned"
+
+#: ../src/lastore-session-helper/notify.go:133
+msgid "Failed to download upgradeable packages."
+msgstr ""
+
+#: ../src/lastore-session-helper/ntofiy.go:117
+msgid "Update Now"
+msgstr "Oppdater nå"

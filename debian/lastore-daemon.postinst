@@ -3,13 +3,20 @@ set -e
 
 case "$1" in
     configure|abort-upgrade)
-	[ -x /usr/share/update-notifier/notify-reboot-required ] && /usr/share/update-notifier/notify-reboot-required || true
-	if dpkg --compare-versions "$2" le 0.9.30; then
-	    [ -e /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist ] && mv /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist  /etc/apt/apt.conf.d/99lastore.conf || true
-	    systemctl disable dbus-com.deepin.lastore.service || true
-	    [ -e /lib/systemd/dbus-com.deepin.lastore.service ] && rm /lib/systemd/system/dbus-com.deepin.lastore.service || true
-	fi
-	systemctl start lastore-update-metadata-info.service || true
-	systemctl daemon-reload || true
+        [ -x /usr/share/update-notifier/notify-reboot-required ] && /usr/share/update-notifier/notify-reboot-required || true
+        if dpkg --compare-versions "$2" le 0.9.30; then
+            [ -e /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist ] && mv /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist  /etc/apt/apt.conf.d/99lastore.conf || true
+            systemctl disable dbus-com.deepin.lastore.service > /dev/null || true
+            [ -e /lib/systemd/dbus-com.deepin.lastore.service ] && rm /lib/systemd/system/dbus-com.deepin.lastore.service || true
+        fi
+    	systemctl daemon-reload || true
+        /var/lib/lastore/scripts/update_metadata_info || true
+        /var/lib/lastore/scripts/build_system_info || true
+	;;
+    triggered)
+        /var/lib/lastore/scripts/build_system_info || true
+        [ -x /var/lib/lastore/mark-desktopfile-daemon ] && /var/lib/lastore/mark-desktopfile-daemon -s || true
 	;;
 esac
+
+#DEBHELPER#

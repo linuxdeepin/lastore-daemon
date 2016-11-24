@@ -64,14 +64,46 @@ func main() {
 	log.Info("Started service at system bus")
 
 	updater := NewUpdater(b, config)
+
 	err = dbus.InstallOnSystem(updater)
 	if err != nil {
 		log.Error("Start failed:", err)
 		return
 	}
 
+	update_handler := func() {
+		info, err := system.SystemUpgradeInfo()
+		if err == system.NotFoundError {
+			//temp fail
+			return
+		}
+		if err != nil {
+			log.Errorf("updateableApps:%v\n", err)
+		}
+		updater.loadUpdateInfos(info)
+		manager.updatableApps(info)
+	}
+
+	RegisterMonitor(update_handler,
+		"update_infos.json", "package_icons.json", "applications.json")
+
+	update_handler()
+
 	dbus.DealWithUnhandledMessage()
 	if err := dbus.Wait(); err != nil {
 		log.Warn("DBus Error:", err)
+	}
+}
+
+func RegisterMonitor(handler func(), paths ...string) {
+	dm := system.NewDirMonitor(system.VarLibDir)
+
+	dm.Add(func(fpath string, op uint32) {
+		handler()
+	}, paths...)
+
+	err := dm.Start()
+	if err != nil {
+		log.Warnf("Can't create inotify on %s: %v\n", system.VarLibDir, err)
 	}
 }

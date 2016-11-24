@@ -4,15 +4,15 @@
 # 
 # Translators:
 # FFXP <ffxpstudio@gmail.com>, 2015
-# lexross <its4moi@gmail.com>, 2015
-# Jeremy Shields <jeremy.shields1@gmail.com>, 2015
+# lexross <its4moi@gmail.com>, 2015-2016
+# jeremy shields <jeremy.shields@orange.fr>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-02 10:58+0800\n"
-"PO-Revision-Date: 2015-12-24 09:17+0000\n"
-"Last-Translator: FFXP <ffxpstudio@gmail.com>\n"
+"POT-Creation-Date: 2016-08-15 11:23+0800\n"
+"PO-Revision-Date: 2016-08-15 03:37+0000\n"
+"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: French (http://www.transifex.com/linuxdeepin/deepin-store/language/fr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -26,76 +26,109 @@ msgstr "Logithèque Deepin"
 
 #: ../src/lastore-session-helper/job.go:190
 msgid "System is updating, please shut down or reboot later."
-msgstr "Le système se met à jour, s.v.p. arrêter ou redémarrer plus tard."
+msgstr "Le système s'actualise, ne pas arrêter ou redémarrer Deepin."
 
 #: ../src/lastore-session-helper/job.go:225
+#: ../src/lastore-session-helper/job.go:263
+#: ../src/lastore-session-helper/job.go:271
+#: ../src/lastore-session-helper/job.go:308
 msgid "Reboot Now"
 msgstr "Redémarrer "
 
 #: ../src/lastore-session-helper/job.go:239
+#: ../src/lastore-session-helper/job.go:277
+#: ../src/lastore-session-helper/job.go:285
+#: ../src/lastore-session-helper/job.go:322
 msgid "Reboot Later"
 msgstr "Redémarrer plus tard"
 
 #: ../src/lastore-session-helper/job.go:248
+#: ../src/lastore-session-helper/job.go:286
+#: ../src/lastore-session-helper/job.go:294
+#: ../src/lastore-session-helper/job.go:331
 msgid "Retry"
 msgstr "Réessayer"
 
 #: ../src/lastore-session-helper/job.go:256
+#: ../src/lastore-session-helper/job.go:294
+#: ../src/lastore-session-helper/job.go:302
+#: ../src/lastore-session-helper/job.go:339
 msgid "Cancel"
 msgstr "Annuler"
 
+#: ../src/lastore-session-helper/notify.go:62
 #: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
 msgstr "%q Installation terminée."
 
+#: ../src/lastore-session-helper/notify.go:65
 #: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
 msgstr "%q installation échouée."
 
+#: ../src/lastore-session-helper/notify.go:74
 #: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
 msgstr "%q désinstallation terminée."
 
+#: ../src/lastore-session-helper/notify.go:76
 #: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
 msgstr "%q désinstallation échouée."
 
+#: ../src/lastore-session-helper/notify.go:83
 #: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
 msgstr "%q téléchargement échoué."
 
+#: ../src/lastore-session-helper/notify.go:89
 #: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "Afin d'éviter l'arrêt automatique, veuillez branchez votre appareil pendant l'actualisation."
 
+#: ../src/lastore-session-helper/notify.go:97
 #: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
 msgstr "Certaines modifications prendront effet après redémarrage."
 
+#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:99
 #: ../src/lastore-session-helper/ntofiy.go:85
 #: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "Mise à jour réussie !"
+msgstr "Actualisation réussie !"
 
+#: ../src/lastore-session-helper/notify.go:103
 #: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
-msgstr "Mise à jour échouée."
+msgstr "Actualisation échouée."
 
+#: ../src/lastore-session-helper/notify.go:113
 #: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "%d logiciel(s) doivent être mis à jour."
+msgstr "%d logiciel(s) doivent être actualisés."
 
+#: ../src/lastore-session-helper/notify.go:115
 #: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr "Des patchs doivent être mis à jour."
+msgstr "Des fichiers doivent être actualisés."
 
+#: ../src/lastore-session-helper/notify.go:117
 #: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "Des patchs et %d logiciel(s) doivent être mis à jour."
+msgstr "Des fichiers et %d logiciel(s) doivent être actualisés."
+
+#: ../src/lastore-session-helper/notify.go:125
+msgid "Download"
+msgstr "Télécharger"
+
+#: ../src/lastore-session-helper/notify.go:133
+msgid "Failed to download upgradeable packages."
+msgstr ""
 
 #: ../src/lastore-session-helper/ntofiy.go:117
 msgid "Update Now"
-msgstr "Mettre à jour maintenant"
+msgstr "Actualiser maintenant"

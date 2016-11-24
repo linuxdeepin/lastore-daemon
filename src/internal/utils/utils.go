@@ -53,7 +53,7 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 		return nil, fmt.Errorf("Run cmd %v --> %q(stderr) --> %v\n",
 			cmd.Args, errBuf.String(), err)
 	}
-	return lines, nil
+	return lines, err
 }
 
 // OpenURL open the url for reading

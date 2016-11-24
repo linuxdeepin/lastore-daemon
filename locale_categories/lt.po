@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# 
+# Translators:
+# Translators:
+# Moo, 2016
+msgid ""
+msgstr ""
+"Project-Id-Version: Deepin Store\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
+"PO-Revision-Date: 2016-04-22 21:58+0000\n"
+"Last-Translator: Moo\n"
+"Language-Team: Lithuanian (http://www.transifex.com/linuxdeepin/deepin-store/language/lt/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: lt\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "Internet"
+msgstr "Internetas"
+
+msgid "Office"
+msgstr "Biuras"
+
+msgid "Development"
+msgstr "Kūrimas"
+
+msgid "Reading"
+msgstr "Skaitymas"
+
+msgid "Graphics"
+msgstr "Grafika"
+
+msgid "Game"
+msgstr "Žaidimai"
+
+msgid "Music"
+msgstr "Muzika"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "Video"
+msgstr "Vaizdo įrašai"
+
+msgid "Chat"
+msgstr "Pokalbiai"
+
+msgid "Others"
+msgstr "Kita"

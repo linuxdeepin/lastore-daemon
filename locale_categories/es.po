@@ -4,14 +4,15 @@
 # 
 # Translators:
 # Translators:
+# Benjamin Perez Carrillo <benperezc@gmail.com>, 2016
 # jose manuel <josemdance@outlook.com>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
-"PO-Revision-Date: 2015-12-29 03:25+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"PO-Revision-Date: 2016-03-14 14:14+0000\n"
+"Last-Translator: Benjamin Perez Carrillo <benperezc@gmail.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/linuxdeepin/deepin-store/language/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -29,13 +30,13 @@ msgid "Development"
 msgstr "Desarrollo"
 
 msgid "Reading"
-msgstr "Leyendo"
+msgstr "Lectura"
 
 msgid "Graphics"
 msgstr "Gráficos"
 
 msgid "Game"
-msgstr "Juego"
+msgstr "Juegos"
 
 msgid "Music"
 msgstr "Música"
@@ -47,7 +48,7 @@ msgid "Video"
 msgstr "Video"
 
 msgid "Chat"
-msgstr "Chat"
+msgstr "Conversación"
 
 msgid "Others"
 msgstr "Otros"

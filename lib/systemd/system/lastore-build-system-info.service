@@ -3,9 +3,8 @@ Description=Build system info
 
 [Service]
 Type=idle
-
-# The unit is typically launched by apt hooks,
-# so Wait two minutes is speed up apt-get dist-upgrade which has many dpkg operation.
-ExecStart=/bin/sh -c "sleep 120;/usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json; /var/lib/lastore/build_safecache.sh; /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/"
-
-RestartSec=1min
+StartLimitInterval=10s
+StartLimitBurst=20
+RestartSec=5s
+Restart=on-failure
+ExecStart=/var/lib/lastore/scripts/build_system_info -now

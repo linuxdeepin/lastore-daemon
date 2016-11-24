@@ -12,6 +12,7 @@ package main
 import (
 	"encoding/json"
 	log "github.com/cihub/seelog"
+	"internal/utils"
 	"io/ioutil"
 	"net/http"
 )
@@ -49,6 +50,7 @@ func writeData(fpath string, data interface{}) error {
 	if err != nil {
 		return err
 	}
+	utils.EnsureBaseDir(fpath)
 	return ioutil.WriteFile(fpath, content, 0644)
 }
 

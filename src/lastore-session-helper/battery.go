@@ -12,8 +12,8 @@ package main
 var MinBatteryPercent = 30.0
 
 func (l *Lastore) monitorBatteryPersent() {
-	l.upower.BatteryIsPresent.ConnectChanged(func() {
-		if !l.upower.BatteryIsPresent.Get() {
+	l.power.HasBattery.ConnectChanged(func() {
+		if !l.power.HasBattery.Get() {
 			l.notifiedBattery = false
 		}
 	})
@@ -23,8 +23,10 @@ func (l *Lastore) checkBattery() {
 	if l.notifiedBattery {
 		return
 	}
-	percent := l.upower.BatteryPercentage.Get()
-	if percent <= MinBatteryPercent && l.upower.BatteryIsPresent.Get() {
+	percent := l.power.BatteryPercentage.Get()
+	if l.power.HasBattery.Get() &&
+		l.power.OnBattery.Get() &&
+		percent <= MinBatteryPercent {
 		l.notifiedBattery = true
 		NotifyLowPower()
 	}

@@ -27,12 +27,12 @@ var CMDMetadata = cli.Command{
 		},
 		cli.StringFlag{
 			Name:  "checkout,c",
-			Value: "/lastore/metadata",
+			Value: "/lastore",
 			Usage: "the directory to checkout the metadata",
 		},
 		cli.StringFlag{
 			Name:  "remote",
-			Value: "http://packages.deepin.com/deepin/tree/lastore",
+			Value: "http://cdn.packages.deepin.com/deepin/tree/lastore",
 			Usage: "the remote to fetch metadata",
 		},
 	},
@@ -50,14 +50,14 @@ func MainMetadata(c *cli.Context) {
 	}
 
 	updateFlag := c.Bool("update")
-	if updateFlag || !tree.HasBranch("origin:master") {
+	if updateFlag || !tree.HasBranch("origin:lastore") {
 		fmt.Fprintf(os.Stderr, "Try updating from %q to %q\n", remote, repo)
-		err = tree.Pull("master")
+		err = tree.Pull("lastore")
 		if err != nil {
 			fmt.Println("pullRepo:", err)
 			return
 		}
-		err = tree.Checkout("master", checkout, false)
+		err = tree.Checkout("lastore", checkout, false)
 		if err != nil {
 			fmt.Println("checkoutRepo:", err)
 			return
@@ -65,13 +65,13 @@ func MainMetadata(c *cli.Context) {
 	}
 
 	if c.Bool("list") {
-		c, err := tree.List("master", "/")
+		c, err := tree.List("lastore", "/")
 		fmt.Println(c, err)
 		return
 	}
 
 	for _, id := range c.Args() {
-		c, err := tree.Cat("master", id+"/meta/manifest.json")
+		c, err := tree.Cat("lastore", id+"/meta/manifest.json")
 		if err != nil {
 			fmt.Printf("EC:", err)
 			continue

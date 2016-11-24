@@ -52,7 +52,10 @@ func MainUpdater(c *cli.Context) {
 	case "applications":
 		err = GenerateApplications(repo, fpath)
 	case "xcategories":
-		err = GenerateXCategories(fpath)
+		var all map[string]string
+		if all, err = BuildCategories(); err == nil {
+			err = writeData(fpath, all)
+		}
 	case "desktop":
 		if fpath == "" {
 			err = fmt.Errorf("which directory to save  desktop index files?")
