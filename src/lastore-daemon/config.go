@@ -18,21 +18,23 @@ import (
 const MinCheckInterval = time.Minute
 
 type Config struct {
-	AutoCheckUpdates bool
-	MirrorSource     string
-	CheckInterval    time.Duration
-	AppstoreRegion   string
-	LastCheckTime    time.Time
-	Repository       string
+	AutoCheckUpdates    bool
+	AutoDownloadUpdates bool
+	MirrorSource        string
+	CheckInterval       time.Duration
+	AppstoreRegion      string
+	LastCheckTime       time.Time
+	Repository          string
 
 	fpath string
 }
 
 func NewConfig(fpath string) *Config {
 	r := Config{
-		CheckInterval:    time.Minute * 180,
-		AutoCheckUpdates: true,
-		fpath:            fpath,
+		CheckInterval:       time.Minute * 180,
+		AutoCheckUpdates:    true,
+		AutoDownloadUpdates: false,
+		fpath:               fpath,
 	}
 
 	err := system.DecodeJson(fpath, &r)
@@ -59,6 +61,11 @@ func (c *Config) UpdateLastCheckTime() error {
 
 func (c *Config) SetAutoCheckUpdates(enable bool) error {
 	c.AutoCheckUpdates = enable
+	return c.save()
+}
+
+func (c *Config) SetAutoDownloadUpdates(enable bool) error {
+	c.AutoDownloadUpdates = enable
 	return c.save()
 }
 

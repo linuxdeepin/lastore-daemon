@@ -82,6 +82,11 @@ func main() {
 		}
 		updater.loadUpdateInfos(info)
 		manager.updatableApps(info)
+
+		if updater.AutoDownloadUpdates && len(updater.UpdatablePackages) > 0 {
+			log.Info("auto download updates")
+			manager.PrepareDistUpgrade()
+		}
 	}
 
 	RegisterMonitor(update_handler,

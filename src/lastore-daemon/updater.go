@@ -31,7 +31,8 @@ type ApplicationUpdateInfo struct {
 }
 
 type Updater struct {
-	AutoCheckUpdates bool
+	AutoCheckUpdates    bool
+	AutoDownloadUpdates bool
 
 	MirrorSource string
 
@@ -44,10 +45,11 @@ type Updater struct {
 
 func NewUpdater(b system.System, config *Config) *Updater {
 	u := &Updater{
-		b:                b,
-		config:           config,
-		AutoCheckUpdates: config.AutoCheckUpdates,
-		MirrorSource:     config.MirrorSource,
+		b:                   b,
+		config:              config,
+		AutoCheckUpdates:    config.AutoCheckUpdates,
+		AutoDownloadUpdates: config.AutoDownloadUpdates,
+		MirrorSource:        config.MirrorSource,
 	}
 
 	if u.AutoCheckUpdates {
@@ -150,4 +152,16 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 	} else {
 		return exec.Command("systemctl", "mask", "lastore-update-metadata-info.timer").Run()
 	}
+}
+
+func (u *Updater) SetAutoDownloadUpdates(enable bool) {
+	if u.AutoDownloadUpdates == enable {
+		return
+	}
+
+	// save the config to disk
+	u.config.SetAutoDownloadUpdates(enable)
+
+	u.AutoDownloadUpdates = enable
+	dbus.NotifyChange(u, "AutoDownloadUpdates")
 }
