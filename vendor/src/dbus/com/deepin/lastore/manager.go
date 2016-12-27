@@ -369,10 +369,11 @@ type Updater struct {
 	signals       map[<-chan *dbus.Signal]struct{}
 	signalsLocker sync.Mutex
 
-	AutoCheckUpdates  *dbusPropertyUpdaterAutoCheckUpdates
-	MirrorSource      *dbusPropertyUpdaterMirrorSource
-	UpdatableApps     *dbusPropertyUpdaterUpdatableApps
-	UpdatablePackages *dbusPropertyUpdaterUpdatablePackages
+	AutoCheckUpdates    *dbusPropertyUpdaterAutoCheckUpdates
+	AutoDownloadUpdates *dbusPropertyUpdaterAutoDownloadUpdates
+	MirrorSource        *dbusPropertyUpdaterMirrorSource
+	UpdatableApps       *dbusPropertyUpdaterUpdatableApps
+	UpdatablePackages   *dbusPropertyUpdaterUpdatablePackages
 }
 
 func (obj *Updater) _createSignalChan() <-chan *dbus.Signal {
@@ -405,6 +406,7 @@ func DestroyUpdater(obj *Updater) {
 	dbusRemoveMatch("type='signal',path='" + string(obj.Path) + "',interface='com.deepin.lastore.Updater',sender='" + obj.DestName + "',member='PropertiesChanged'")
 
 	obj.AutoCheckUpdates.Reset()
+	obj.AutoDownloadUpdates.Reset()
 	obj.MirrorSource.Reset()
 	obj.UpdatableApps.Reset()
 	obj.UpdatablePackages.Reset()
@@ -428,6 +430,14 @@ func (obj *Updater) ListMirrorSources(arg0 string) (arg1 [][]interface{}, _err e
 
 func (obj *Updater) SetAutoCheckUpdates(arg0 bool) (_err error) {
 	_err = obj.core.Call("com.deepin.lastore.Updater.SetAutoCheckUpdates", 0, arg0).Store()
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
+
+func (obj *Updater) SetAutoDownloadUpdates(arg0 bool) (_err error) {
+	_err = obj.core.Call("com.deepin.lastore.Updater.SetAutoDownloadUpdates", 0, arg0).Store()
 	if _err != nil {
 		fmt.Println(_err)
 	}
@@ -466,6 +476,32 @@ func (this *dbusPropertyUpdaterAutoCheckUpdates) GetValue() (interface{} /*bool*
 	return *new(bool), err
 }
 func (this *dbusPropertyUpdaterAutoCheckUpdates) GetType() reflect.Type {
+	return reflect.TypeOf((*bool)(nil)).Elem()
+}
+
+type dbusPropertyUpdaterAutoDownloadUpdates struct {
+	*property.BaseObserver
+	core *dbus.Object
+}
+
+func (this *dbusPropertyUpdaterAutoDownloadUpdates) SetValue(notwritable interface{}) {
+	fmt.Println("com.deepin.lastore.Updater.AutoDownloadUpdates is not writable")
+}
+
+func (this *dbusPropertyUpdaterAutoDownloadUpdates) Get() bool {
+	v, _ := this.GetValue()
+	return v.(bool)
+}
+func (this *dbusPropertyUpdaterAutoDownloadUpdates) GetValue() (interface{} /*bool*/, error) {
+	var r dbus.Variant
+	err := this.core.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Updater", "AutoDownloadUpdates").Store(&r)
+	if err == nil && r.Signature().String() == "b" {
+		v, _ := r.Value().(bool)
+		return v, nil
+	}
+	return *new(bool), err
+}
+func (this *dbusPropertyUpdaterAutoDownloadUpdates) GetType() reflect.Type {
 	return reflect.TypeOf((*bool)(nil)).Elem()
 }
 
@@ -560,6 +596,7 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 	obj := &Updater{Path: path, DestName: destName, core: core, signals: make(map[<-chan *dbus.Signal]struct{})}
 
 	obj.AutoCheckUpdates = &dbusPropertyUpdaterAutoCheckUpdates{&property.BaseObserver{}, core}
+	obj.AutoDownloadUpdates = &dbusPropertyUpdaterAutoDownloadUpdates{&property.BaseObserver{}, core}
 	obj.MirrorSource = &dbusPropertyUpdaterMirrorSource{&property.BaseObserver{}, core}
 	obj.UpdatableApps = &dbusPropertyUpdaterUpdatableApps{&property.BaseObserver{}, core}
 	obj.UpdatablePackages = &dbusPropertyUpdaterUpdatablePackages{&property.BaseObserver{}, core}
@@ -584,6 +621,9 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 					} else if key == "AutoCheckUpdates" {
 						obj.AutoCheckUpdates.Notify()
 
+					} else if key == "AutoDownloadUpdates" {
+						obj.AutoDownloadUpdates.Notify()
+
 					} else if key == "MirrorSource" {
 						obj.MirrorSource.Notify()
 
@@ -599,6 +639,9 @@ func NewUpdater(destName string, path dbus.ObjectPath) (*Updater, error) {
 					if false {
 					} else if key == "AutoCheckUpdates" {
 						obj.AutoCheckUpdates.Notify()
+
+					} else if key == "AutoDownloadUpdates" {
+						obj.AutoDownloadUpdates.Notify()
 
 					} else if key == "MirrorSource" {
 						obj.MirrorSource.Notify()

@@ -73,10 +73,14 @@
           <method name="SetAutoCheckUpdates">
                <arg type="b" direction="in"></arg>
           </method>
+          <method name="SetAutoDownloadUpdates">
+               <arg type="b" direction="in"></arg>
+          </method>
           <method name="SetMirrorSource">
                <arg type="s" direction="in"></arg>
           </method>
           <property name="AutoCheckUpdates" type="b" access="read"></property>
+          <property name="AutoDownloadUpdates" type="b" access="read"></property>
           <property name="MirrorSource" type="s" access="read"></property>
           <property name="UpdatableApps" type="as" access="read"></property>
           <property name="UpdatablePackages" type="as" access="read"></property>
