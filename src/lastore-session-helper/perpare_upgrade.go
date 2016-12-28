@@ -61,6 +61,11 @@ func (l *Lastore) handleUpdatablePackagesChanged(packages []string, apps []strin
 		return
 	}
 	if !complete && job == nilObjPath {
+		if l.updater.AutoDownloadUpdates.Get() {
+			// updatable packages are downloaded automatically,
+			// so there is no need to notify the user.
+			return
+		}
 		l.notifyDownloadUpgradablePackages(len(apps), libChanged)
 		return
 	}
