@@ -129,6 +129,9 @@ func (fs DesktopFiles) score(i int) int {
 func QueryDesktopFilePath(pkgId string) string {
 	var r []string
 	for _, f := range system.ListPackageFile(queryRelateDependencies(pkgId)...) {
+		if path.Base(f) == pkgId+".desktop" {
+			return f
+		}
 		if strings.HasSuffix(f, ".desktop") {
 			r = append(r, f)
 		}

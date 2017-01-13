@@ -31,12 +31,12 @@ func (*testWrap) TestDetect(c *C.C) {
 		},
 		{
 			"http://packages.deepin.com/favicon.ico",
-			"http://cdn.packages.deepin.com/packages-debian/dists/unstable/Release",
+			"http://cdn.packages.deepin.com/deepin/dists/unstable/Release",
 			false,
 		},
 		{
 			"http://localhost/abc",
-			"http://cdn.packages.deepin.com/packages-debian/dists/unstable/Release",
+			"http://cdn.packages.deepin.com/deepin/dists/unstable/Release",
 			false,
 		},
 		{
