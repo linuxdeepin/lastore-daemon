@@ -128,12 +128,17 @@ func (fs DesktopFiles) score(i int) int {
 // It will parsing pkgId plus all dependencies of it.
 func QueryDesktopFilePath(pkgId string) string {
 	var r []string
-	for _, f := range system.ListPackageFile(queryRelateDependencies(pkgId)...) {
-		if path.Base(f) == pkgId+".desktop" {
-			return f
-		}
-		if strings.HasSuffix(f, ".desktop") {
-			r = append(r, f)
+	found := make(chan bool)
+	ch := queryRelateDependencies(found, pkgId, nil)
+	for pkgname := range ch {
+		for _, f := range system.ListPackageFile(pkgname) {
+			if path.Base(f) == pkgId+".desktop" {
+				found <- true
+				return f
+			}
+			if strings.HasSuffix(f, ".desktop") {
+				r = append(r, f)
+			}
 		}
 	}
 	return DesktopFiles(r).BestOne()
@@ -146,27 +151,41 @@ func QueryDesktopFilePath(pkgId string) string {
 //    stardict-gnome --> stardict-common
 //    evince --> evince-common
 //    evince-gtk --> evince, evince-common  Note: (recursion guest)
-func queryRelateDependencies(pkgId string) []string {
-	var set = map[string]struct{}{
-		pkgId: struct{}{},
+func queryRelateDependencies(stopCh chan bool, pkgId string, set map[string]struct{}) chan string {
+	ch := make(chan string, 1)
+	if set == nil {
+		set = map[string]struct{}{pkgId: struct{}{}}
+		ch <- pkgId
 	}
 
-	for _, p := range system.QueryPackageDependencies(pkgId) {
-		if _, ok := set[p]; ok {
-			continue
-		}
+	go func() {
+		defer close(ch)
+		for _, p := range system.QueryPackageDependencies(pkgId) {
+			if _, ok := set[p]; ok {
+				continue
+			}
 
-		if !system.QueryPackageInstalled(p) {
-			continue
+			if !system.QueryPackageInstalled(p) {
+				continue
+			}
+
+			set[p] = struct{}{}
+			select {
+			case <-stopCh:
+				return
+			case ch <- p:
+			}
+
+			for x := range queryRelateDependencies(stopCh, p, set) {
+				set[x] = struct{}{}
+				select {
+				case <-stopCh:
+					return
+				case ch <- p:
+				}
+			}
 		}
-		set[p] = struct{}{}
-		for _, x := range queryRelateDependencies(p) {
-			set[x] = struct{}{}
-		}
-	}
-	var r []string
-	for v := range set {
-		r = append(r, v)
-	}
-	return r
+	}()
+
+	return ch
 }
