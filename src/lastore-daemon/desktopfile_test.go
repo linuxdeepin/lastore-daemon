@@ -10,6 +10,10 @@
 package main
 
 import C "gopkg.in/check.v1"
+import "os/exec"
+import "time"
+
+import "internal/utils"
 
 func (*testWrap) TestDesktopBestOne(c *C.C) {
 	data := []struct {
@@ -27,4 +31,25 @@ func (*testWrap) TestDesktopBestOne(c *C.C) {
 	for _, item := range data {
 		c.Check(DesktopFiles(item.Files).BestOne(), C.Equals, item.Files[item.BestOne])
 	}
+
+}
+
+func (*testWrap) TestDesktopQuery(c *C.C) {
+	c.Skip("this test is too time consuming")
+
+	for _, pkgName := range ListInstalled() {
+		QueryDesktopFilePath(pkgName)
+	}
+}
+
+func ListInstalled() []string {
+	desktopFiles, err := utils.FilterExecOutput(
+		exec.Command("bash", "-c", "dpkg -l | awk '{print $2}'"),
+		time.Second*2,
+		func(string) bool { return true },
+	)
+	if err != nil {
+		return nil
+	}
+	return desktopFiles
 }

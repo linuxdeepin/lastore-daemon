@@ -128,7 +128,7 @@ func (fs DesktopFiles) score(i int) int {
 // It will parsing pkgId plus all dependencies of it.
 func QueryDesktopFilePath(pkgId string) string {
 	var r []string
-	found := make(chan bool)
+	found := make(chan bool, 1)
 	ch := queryRelateDependencies(found, pkgId, nil)
 	for pkgname := range ch {
 		for _, f := range system.ListPackageFile(pkgname) {
