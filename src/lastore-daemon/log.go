@@ -17,7 +17,7 @@ import (
 )
 
 func SetSeelogger(levels string, format string, output string) error {
-	os.MkdirAll(path.Base(output), 0755)
+	os.MkdirAll(path.Dir(output), 0755)
 
 	config := `
 <seelog type="sync">
