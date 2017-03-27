@@ -53,20 +53,10 @@ func LaunchOfflineUpgrader() {
 }
 
 func (l *Lastore) handleUpdatablePackagesChanged(packages []string, apps []string) {
-	libChanged := len(packages) != len(apps)
 	complete, job, err := l.checkPrepareDistUpgradeJob(packages)
 	log.Debugf("CheckDownloadUpgradablePackagesJob complete: %v job %q err %v", complete, job, err)
 	if err != nil {
 		log.Warn(err)
-		return
-	}
-	if !complete && job == nilObjPath {
-		if l.updater.AutoDownloadUpdates.Get() {
-			// updatable packages are downloaded automatically,
-			// so there is no need to notify the user.
-			return
-		}
-		l.notifyDownloadUpgradablePackages(len(apps), libChanged)
 		return
 	}
 	if complete && len(packages) > 0 {
