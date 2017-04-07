@@ -227,6 +227,7 @@ func (jm *JobManager) dispatch() {
 			}
 			err := StartSystemJob(jm.system, job)
 			if err != nil {
+				TransitionJobState(job, system.FailedStatus)
 				log.Errorf("StartSystemJob failed %v :%v\n", job, err)
 			}
 		}

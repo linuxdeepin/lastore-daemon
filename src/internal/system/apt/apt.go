@@ -209,6 +209,18 @@ func (c *aptCommand) atExit() {
 	c.indicator(info)
 }
 
+func (c *aptCommand) indicateFailed(description string) {
+	log.Warn("AptCommand Failed: ", description)
+	progressInfo := system.JobProgressInfo{
+		JobId:       c.JobId,
+		Progress:    -1.0,
+		Description: description,
+		Status:      system.FailedStatus,
+	}
+	c.cmdSet.RemoveCMD(c.JobId)
+	c.indicator(progressInfo)
+}
+
 func (c *aptCommand) Abort() error {
 	if c.Cancelable {
 		log.Tracef("Abort Command: %v\n", c)

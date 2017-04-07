@@ -202,22 +202,89 @@ func tryFixDpkgDirtyStatus() {
 
 }
 
+// remove package checker
+type rmPkgChecker struct {
+	buf    bytes.Buffer // line buffer
+	remove bool
+}
+
+// impl io.Writer
+func (c *rmPkgChecker) Write(data []byte) (n int, err error) {
+	if c.remove {
+		return len(data), nil
+	}
+	for _, b := range data {
+		if b != '\n' {
+			err = c.buf.WriteByte(b)
+			if err != nil {
+				return
+			}
+		} else {
+			// b is newline
+			line := c.buf.Bytes()
+			// remove package dde?
+			if bytes.HasPrefix(line, []byte("Remv dde ")) {
+				c.remove = true
+				return len(data), nil
+			}
+			c.buf.Reset()
+		}
+		n++
+	}
+	return
+}
+
+func safeStart(c *aptCommand) error {
+	args := c.apt.Args
+	// add -s option
+	args = append([]string{"-s"}, args[1:]...)
+	cmd := exec.Command("apt-get", args...)
+	var checker rmPkgChecker
+	cmd.Stdout = &checker
+	// perform apt-get action simulate
+	err := cmd.Start()
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			c.indicateFailed("apt-get simulate failed " + err.Error())
+			return
+		}
+
+		// cmd run ok
+		// check rm dde?
+		if checker.remove {
+			c.indicateFailed("remove dde")
+			return
+		}
+
+		// really perform apt-get action
+		err = c.Start()
+		if err != nil {
+			c.indicateFailed("apt-get start failed " + err.Error())
+		}
+	}()
+	return nil
+}
+
 func (p *APTSystem) Remove(jobId string, packages []string) error {
 	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
-	return c.Start()
+	return safeStart(c)
 }
 
 func (p *APTSystem) Install(jobId string, packages []string) error {
 	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
-	return c.Start()
+	return safeStart(c)
 }
 
 func (p *APTSystem) DistUpgrade(jobId string) error {
 	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
-	return c.Start()
+	return safeStart(c)
 }
 
 func (p *APTSystem) UpdateSource(jobId string) error {
