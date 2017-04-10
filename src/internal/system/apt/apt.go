@@ -216,6 +216,7 @@ func (c *aptCommand) indicateFailed(description string) {
 		Progress:    -1.0,
 		Description: description,
 		Status:      system.FailedStatus,
+		Cancelable:  true,
 	}
 	c.cmdSet.RemoveCMD(c.JobId)
 	c.indicator(progressInfo)

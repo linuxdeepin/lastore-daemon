@@ -30,23 +30,12 @@ type Manager struct {
 
 	UpgradableApps []string
 
-	SystemOnChanging bool
-	inhibitFd        dbus.UnixFD
-
+	SystemOnChanging  bool
+	inhibitFd         dbus.UnixFD
+	sourceUpdatedOnce bool
 	//TODO: remove this. It should be record in com.deepin.Accounts
 	cachedLocale map[uint64]string
 }
-
-var EnsureUpdateSourceOnce = func() func(*Manager) {
-	updated := false
-	return func(m *Manager) {
-		if updated {
-			return
-		}
-		updated = true
-		m.UpdateSource()
-	}
-}()
 
 /*
 NOTE: Most of export function of Manager will hold the lock,
@@ -96,7 +85,7 @@ func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
 		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
 	}
 
-	EnsureUpdateSourceOnce(m)
+	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -114,7 +103,7 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
 	}
 
-	EnsureUpdateSourceOnce(m)
+	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -159,7 +148,7 @@ func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
 		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
 	}
 
-	EnsureUpdateSourceOnce(m)
+	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -171,9 +160,16 @@ func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
 	return job, err
 }
 
+func (m *Manager) ensureUpdateSourceOnce() {
+	if !m.sourceUpdatedOnce {
+		m.UpdateSource()
+	}
+}
+
 func (m *Manager) UpdateSource() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
+	m.sourceUpdatedOnce = true
 
 	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil)
 	if err != nil {
@@ -201,7 +197,7 @@ func (m *Manager) cancelAllJob() error {
 }
 
 func (m *Manager) DistUpgrade() (*Job, error) {
-	EnsureUpdateSourceOnce(m)
+	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -222,7 +218,7 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 }
 
 func (m *Manager) PrepareDistUpgrade() (*Job, error) {
-	EnsureUpdateSourceOnce(m)
+	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -276,7 +272,7 @@ func (m *Manager) CleanJob(jobId string) error {
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
-	EnsureUpdateSourceOnce(m)
+	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
 	defer m.do.Unlock()
