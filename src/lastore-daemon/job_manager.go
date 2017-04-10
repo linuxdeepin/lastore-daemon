@@ -211,31 +211,35 @@ func (jm *JobManager) dispatch() {
 		}
 	}
 
-	for name, queue := range jm.queues {
-		// wait for LockQueue be idled
-		if name != LockQueue && len(jm.queues[LockQueue].RunningJobs()) != 0 {
-			continue
-		}
+	// 2. Try starting jobs with ReadyStatus
+	lockQueue := jm.queues[LockQueue]
+	jm.startJobsInQueue(lockQueue)
 
-		// 2. Try starting jobs with ReadyStatus
-		jobs := queue.PendingJobs()
-		for _, job := range jobs {
-			jm.changed = true
-			if job.Status == system.FailedStatus {
-				jm.MarkStart(job.Id)
-				log.Infof("Retry failed Job %v\n", job)
-			}
-			err := StartSystemJob(jm.system, job)
-			if err != nil {
-				TransitionJobState(job, system.FailedStatus)
-				log.Errorf("StartSystemJob failed %v :%v\n", job, err)
-			}
-		}
+	// wait for LockQueue be idled
+	if len(lockQueue.RunningJobs()) == 0 {
+		jm.startJobsInQueue(jm.queues[DownloadQueue])
+		jm.startJobsInQueue(jm.queues[SystemChangeQueue])
 	}
 
 	if jm.changed && jm.notify != nil {
 		jm.changed = false
 		jm.notify()
+	}
+}
+
+func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
+	jobs := queue.PendingJobs()
+	for _, job := range jobs {
+		jm.changed = true
+		if job.Status == system.FailedStatus {
+			jm.MarkStart(job.Id)
+			log.Infof("Retry failed Job %v\n", job)
+		}
+		err := StartSystemJob(jm.system, job)
+		if err != nil {
+			TransitionJobState(job, system.FailedStatus)
+			log.Errorf("StartSystemJob failed %v :%v\n", job, err)
+		}
 	}
 }
 
