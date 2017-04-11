@@ -8,8 +8,11 @@
  **/
 package main
 
-import "testing"
-import C "gopkg.in/check.v1"
+import (
+	C "gopkg.in/check.v1"
+	"os"
+	"testing"
+)
 
 type testWrap struct{}
 
@@ -19,6 +22,9 @@ func init() {
 }
 
 func (*testWrap) TestDetect(c *C.C) {
+	if os.Getenv("NO_TEST_NETWORK") == "1" {
+		c.Skip("NO_TEST_NETWORK")
+	}
 	data := []struct {
 		Official   string
 		Mirror     string

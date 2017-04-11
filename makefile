@@ -1,3 +1,5 @@
+PBUILDER_PKG = pbuilder-satisfydepends-dummy
+
 ifndef USE_GCCGO
 	GOBUILD = go build
 else
@@ -15,15 +17,22 @@ build:  bin/lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 
 fetch-base-metadata:
-	./bin/lastore-tools update -r desktop -j applications -o ${DESTDIR}${PREFIX}/var/lib/lastore/applications.json
-	./bin/lastore-tools update -r desktop -j categories -o ${DESTDIR}${PREFIX}/var/lib/lastore/categories.json
-	./bin/lastore-tools update -r desktop -j mirrors -o ${DESTDIR}${PREFIX}/var/lib/lastore/mirrors.json
+	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
+	./bin/lastore-tools update -r desktop -j categories -o var/lib/lastore/categories.json
+	./bin/lastore-tools update -r desktop -j mirrors -o var/lib/lastore/mirrors.json
+
 
 test:
-	GOPATH=`pwd`:`pwd`/vendor go test internal/system internal/system/apt \
+	NO_TEST_NETWORK=$(shell \
+	if which dpkg >/dev/null;then \
+		if dpkg -s ${PBUILDER_PKG} 2>/dev/null|grep 'Status:.*installed' >/dev/null;then \
+			echo 1; \
+		fi; \
+	fi) \
+	GOPATH=`pwd`:`pwd`/vendor go test -v internal/system internal/system/apt \
 	internal/utils	lastore-daemon  lastore-session-helper  lastore-smartmirror  lastore-tools
 
-install: gen_mo bin/lastore-tools fetch-base-metadata
+install: gen_mo bin/lastore-tools
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
 	cp -rf etc ${DESTDIR}${PREFIX}/etc
