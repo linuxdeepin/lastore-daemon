@@ -12,9 +12,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -154,6 +156,8 @@ type watch struct {
 	flags uint32 // inotify flags of this watch (see inotify(7) for the list of valid flags)
 }
 
+const isMIPS64le = runtime.GOARCH == "mips64le"
+
 // readEvents reads from the inotify file descriptor, converts the
 // received events into Event objects and sends them via the Events channel
 func (w *Watcher) readEvents() {
@@ -174,6 +178,10 @@ func (w *Watcher) readEvents() {
 		// See if we have been closed.
 		if w.isClosed() {
 			return
+		}
+
+		if isMIPS64le {
+			<-time.After(time.Second)
 		}
 
 		ok, errno = w.poller.wait()
