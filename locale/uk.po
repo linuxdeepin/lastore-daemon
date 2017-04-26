@@ -3,12 +3,13 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# zubr139, 2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-08-15 11:23+0800\n"
-"PO-Revision-Date: 2016-08-15 03:37+0000\n"
+"POT-Creation-Date: 2017-08-24 10:28+0800\n"
+"PO-Revision-Date: 2017-08-29 05:06+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Ukrainian (http://www.transifex.com/linuxdeepin/deepin-store/language/uk/)\n"
 "MIME-Version: 1.0\n"
@@ -17,103 +18,70 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: ../src/lastore-session-helper/job.go:189
-msgid "Deepin Store"
-msgstr "Сховище Deepin"
-
-#: ../src/lastore-session-helper/job.go:190
-msgid "System is updating, please shut down or reboot later."
-msgstr "Система оновлюється. Виконайте завершення роботи або перезавантаження пізніше."
-
-#: ../src/lastore-session-helper/job.go:225
-#: ../src/lastore-session-helper/job.go:263
-#: ../src/lastore-session-helper/job.go:271
-#: ../src/lastore-session-helper/job.go:308
+#: ../src/lastore-session-helper/job.go:270
 msgid "Reboot Now"
 msgstr "Перезавантажити зараз"
 
-#: ../src/lastore-session-helper/job.go:239
-#: ../src/lastore-session-helper/job.go:277
-#: ../src/lastore-session-helper/job.go:285
-#: ../src/lastore-session-helper/job.go:322
+#: ../src/lastore-session-helper/job.go:284
 msgid "Reboot Later"
 msgstr "Перезавантажитися пізніше"
 
-#: ../src/lastore-session-helper/job.go:248
-#: ../src/lastore-session-helper/job.go:286
-#: ../src/lastore-session-helper/job.go:294
-#: ../src/lastore-session-helper/job.go:331
+#: ../src/lastore-session-helper/job.go:293
 msgid "Retry"
 msgstr "Спробувати ще раз"
 
-#: ../src/lastore-session-helper/job.go:256
-#: ../src/lastore-session-helper/job.go:294
-#: ../src/lastore-session-helper/job.go:302
-#: ../src/lastore-session-helper/job.go:339
+#: ../src/lastore-session-helper/job.go:301
 msgid "Cancel"
 msgstr "Скасувати"
 
 #: ../src/lastore-session-helper/notify.go:62
-#: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
 msgstr "%q інстальовано успішно."
 
 #: ../src/lastore-session-helper/notify.go:65
-#: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
 msgstr "Не вдалося встановити %q."
 
 #: ../src/lastore-session-helper/notify.go:74
-#: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
 msgstr "%q успішно видалено."
 
 #: ../src/lastore-session-helper/notify.go:76
-#: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
 msgstr "Не вдалося видалити %q."
 
 #: ../src/lastore-session-helper/notify.go:83
-#: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
 msgstr "%q не вдалось завантажити."
 
 #: ../src/lastore-session-helper/notify.go:89
-#: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "Підключіть, щоб запобігти автоматичному вимкненню й належним чином здійснити оновлення."
 
 #: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
 msgstr "Деякі функції набудуть чинності після перезавантаження."
 
 #: ../src/lastore-session-helper/notify.go:97
 #: ../src/lastore-session-helper/notify.go:99
-#: ../src/lastore-session-helper/ntofiy.go:85
-#: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
 msgstr "Успішно оновлено!"
 
 #: ../src/lastore-session-helper/notify.go:103
-#: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
 msgstr "Не вдалося оновити."
 
 #: ../src/lastore-session-helper/notify.go:113
-#: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
 msgstr "Програмне забезпечення %d потрібно оновити."
 
 #: ../src/lastore-session-helper/notify.go:115
-#: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
 msgstr "Деякі патчі потрібно оновити."
 
 #: ../src/lastore-session-helper/notify.go:117
-#: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr "Деякі патчі та програмне забезпечення%d необхідно оновити."
@@ -124,8 +92,8 @@ msgstr "Завантажити"
 
 #: ../src/lastore-session-helper/notify.go:133
 msgid "Failed to download upgradeable packages."
-msgstr ""
+msgstr "Не вдалося завантажити оновлення пакунків."
 
-#: ../src/lastore-session-helper/ntofiy.go:117
-msgid "Update Now"
-msgstr "Оновити зараз"
+#: ../src/lastore-session-helper/notify.go:138
+msgid "Package cache wiped"
+msgstr ""

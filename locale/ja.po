@@ -3,12 +3,13 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# ふうせん Fu-sen. | BALLOON a.k.a. Fu-sen., 2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-08-15 11:23+0800\n"
-"PO-Revision-Date: 2016-08-15 03:37+0000\n"
+"POT-Creation-Date: 2017-08-24 10:28+0800\n"
+"PO-Revision-Date: 2017-08-29 05:06+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Japanese (http://www.transifex.com/linuxdeepin/deepin-store/language/ja/)\n"
 "MIME-Version: 1.0\n"
@@ -17,115 +18,82 @@ msgstr ""
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-session-helper/job.go:189
-msgid "Deepin Store"
-msgstr "DEEPINストア"
-
-#: ../src/lastore-session-helper/job.go:190
-msgid "System is updating, please shut down or reboot later."
-msgstr "システムをアップデートしています。後ほどシャットダウンするか再起動してください。"
-
-#: ../src/lastore-session-helper/job.go:225
-#: ../src/lastore-session-helper/job.go:263
-#: ../src/lastore-session-helper/job.go:271
-#: ../src/lastore-session-helper/job.go:308
+#: ../src/lastore-session-helper/job.go:270
 msgid "Reboot Now"
-msgstr "今すぐ再起動してください"
+msgstr "今すぐ再起動"
 
-#: ../src/lastore-session-helper/job.go:239
-#: ../src/lastore-session-helper/job.go:277
-#: ../src/lastore-session-helper/job.go:285
-#: ../src/lastore-session-helper/job.go:322
+#: ../src/lastore-session-helper/job.go:284
 msgid "Reboot Later"
-msgstr "後ほど再起動する"
+msgstr "あとで再起動"
 
-#: ../src/lastore-session-helper/job.go:248
-#: ../src/lastore-session-helper/job.go:286
-#: ../src/lastore-session-helper/job.go:294
-#: ../src/lastore-session-helper/job.go:331
+#: ../src/lastore-session-helper/job.go:293
 msgid "Retry"
-msgstr "リトライ"
+msgstr "再試行"
 
-#: ../src/lastore-session-helper/job.go:256
-#: ../src/lastore-session-helper/job.go:294
-#: ../src/lastore-session-helper/job.go:302
-#: ../src/lastore-session-helper/job.go:339
+#: ../src/lastore-session-helper/job.go:301
 msgid "Cancel"
 msgstr "キャンセル"
 
 #: ../src/lastore-session-helper/notify.go:62
-#: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
-msgstr "%q  正しくインストールされました。"
+msgstr "%q  をインストールしました。"
 
 #: ../src/lastore-session-helper/notify.go:65
-#: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
-msgstr "%q インストールに失敗。"
+msgstr "%q のインストールに失敗しました。"
 
 #: ../src/lastore-session-helper/notify.go:74
-#: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
-msgstr "%q 正常に削除されました。"
+msgstr "%q を削除しました。"
 
 #: ../src/lastore-session-helper/notify.go:76
-#: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
-msgstr "%q の削除を失敗しました。"
+msgstr "%q の削除に失敗しました。"
 
 #: ../src/lastore-session-helper/notify.go:83
-#: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
-msgstr "%qはダウンロードに失敗しました。"
+msgstr "%q のダウンロードに失敗しました。"
 
 #: ../src/lastore-session-helper/notify.go:89
-#: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "自動停止を防ぐために、通常のアップデートを行うようプラグ・インしてください。"
 
 #: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
-msgstr "いくつかのファンクションが再起動のあと有効になります"
+msgstr "いくつかの機能が再起動の後に有効となります。"
 
 #: ../src/lastore-session-helper/notify.go:97
 #: ../src/lastore-session-helper/notify.go:99
-#: ../src/lastore-session-helper/ntofiy.go:85
-#: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
-msgstr "無事にアップデートされました！"
+msgstr "更新しました！"
 
 #: ../src/lastore-session-helper/notify.go:103
-#: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
-msgstr "アップデートに失敗しました。"
+msgstr "更新に失敗しました。"
 
 #: ../src/lastore-session-helper/notify.go:113
-#: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
-msgstr "%dのソフトウェアはアップデートが必要です。"
+msgstr "%d のソフトウェアはアップデートが必要です。"
 
 #: ../src/lastore-session-helper/notify.go:115
-#: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
-msgstr "いくつかのパッチはアップデートの必要があります。"
+msgstr "いくつかのパッチはアップデートが必要です。"
 
 #: ../src/lastore-session-helper/notify.go:117
-#: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr "パッチと%dソフトウェアが更新される必要があります"
+msgstr "いくつかのパッチと %d ソフトウェアがは更新が必要です。"
 
 #: ../src/lastore-session-helper/notify.go:125
 msgid "Download"
-msgstr "ダウンロードする"
+msgstr "ダウンロード"
 
 #: ../src/lastore-session-helper/notify.go:133
 msgid "Failed to download upgradeable packages."
-msgstr ""
+msgstr "アップグレードパッケージのダウンロードに失敗しました。"
 
-#: ../src/lastore-session-helper/ntofiy.go:117
-msgid "Update Now"
-msgstr "今すぐ更新"
+#: ../src/lastore-session-helper/notify.go:138
+msgid "Package cache wiped"
+msgstr ""

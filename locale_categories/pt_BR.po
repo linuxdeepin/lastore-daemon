@@ -4,13 +4,13 @@
 # 
 # Translators:
 # Translators:
-# Raphael Miquelis <raphaelmiquelis@gmail.com>, 2016
+# Raphael Miquelis <raphaelmiquelis@gmail.com>, 2016-2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
-"PO-Revision-Date: 2016-02-22 16:23+0000\n"
+"PO-Revision-Date: 2017-08-03 14:35+0000\n"
 "Last-Translator: Raphael Miquelis <raphaelmiquelis@gmail.com>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/linuxdeepin/deepin-store/language/pt_BR/)\n"
 "MIME-Version: 1.0\n"
@@ -26,10 +26,10 @@ msgid "Office"
 msgstr "Escritório"
 
 msgid "Development"
-msgstr "Desenvolvimento"
+msgstr "Desenvolvedor"
 
 msgid "Reading"
-msgstr "Leitura "
+msgstr "Leituras"
 
 msgid "Graphics"
 msgstr "Gráficos"
@@ -38,13 +38,13 @@ msgid "Game"
 msgstr "Jogos"
 
 msgid "Music"
-msgstr "Música"
+msgstr "Músicas"
 
 msgid "System"
 msgstr "Sistema"
 
 msgid "Video"
-msgstr "Vídeo"
+msgstr "Vídeos"
 
 msgid "Chat"
 msgstr "Chat"

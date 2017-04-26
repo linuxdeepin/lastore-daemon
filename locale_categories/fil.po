@@ -1,0 +1,53 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# 
+# Translators:
+# Translators:
+# Selwyn Francisco <selwynaerole@gmail.com>, 2016
+msgid ""
+msgstr ""
+"Project-Id-Version: Deepin Store\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
+"PO-Revision-Date: 2017-08-03 14:35+0000\n"
+"Last-Translator: Selwyn Francisco <selwynaerole@gmail.com>\n"
+"Language-Team: Filipino (http://www.transifex.com/linuxdeepin/deepin-store/language/fil/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fil\n"
+"Plural-Forms: nplurals=2; plural=(n == 1 || n==2 || n==3) || (n % 10 != 4 || n % 10 != 6 || n % 10 != 9);\n"
+
+msgid "Internet"
+msgstr "Internet"
+
+msgid "Office"
+msgstr ""
+
+msgid "Development"
+msgstr ""
+
+msgid "Reading"
+msgstr "Pagbabasa"
+
+msgid "Graphics"
+msgstr "Grapiko"
+
+msgid "Game"
+msgstr "Laro"
+
+msgid "Music"
+msgstr "Musika"
+
+msgid "System"
+msgstr ""
+
+msgid "Video"
+msgstr "Bidyo"
+
+msgid "Chat"
+msgstr "Komunikasyon"
+
+msgid "Others"
+msgstr "Iba"
