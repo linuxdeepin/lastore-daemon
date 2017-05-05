@@ -162,7 +162,6 @@ func (l *Lastore) updateUpdatableApps() {
 	}
 
 	// change
-	l.handleUpdatablePackagesChanged(packages, apps)
 	l.updatablePackages = packages
 }
 
@@ -316,14 +315,6 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 	status := info.Status
 	log.Debugf("notifyJob: %q %q --> %v\n", path, status, info)
 	switch guestJobTypeFromPath(path) {
-	case system.PrepareDistUpgradeJobType:
-		switch status {
-		case system.FailedStatus:
-			notifyDownloadUpgradablePackagesFailed(l.createJobFailedActions(info.Id))
-		case system.SucceedStatus:
-			LaunchOfflineUpgrader()
-		}
-
 	case system.InstallJobType:
 		switch status {
 		case system.FailedStatus:
@@ -340,13 +331,6 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 		case system.SucceedStatus:
 			NotifyRemove(info.Name, true, nil)
 		}
-	case system.DistUpgradeJobType:
-		switch status {
-		case system.FailedStatus:
-			NotifyUpgrade(false, l.createJobFailedActions(info.Id))
-		}
-	default:
-		return
 	}
 }
 

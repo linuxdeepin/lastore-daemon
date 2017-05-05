@@ -12,9 +12,7 @@ package main
 import (
 	log "github.com/cihub/seelog"
 	"internal/system"
-	"os/exec"
 	"pkg.deepin.io/lib/dbus"
-	"time"
 )
 
 var nilObjPath = dbus.ObjectPath("/")
@@ -29,11 +27,16 @@ func (l *Lastore) findPrepareDistUpgradeJob() dbus.ObjectPath {
 	return nilObjPath
 }
 
-func (l *Lastore) checkPrepareDistUpgradeJob(packages []string) (bool, dbus.ObjectPath, error) {
+func (l *Lastore) CheckPrepareDistUpgradeJob() (complete bool, objpath dbus.ObjectPath, err error) {
 	job := l.findPrepareDistUpgradeJob()
 	if job != nilObjPath {
 		// in progress
 		return false, job, nil
+	}
+
+	packages := l.updatablePackages
+	if len(packages) == 0 {
+		return true, nilObjPath, nil
 	}
 
 	size, err := l.core.PackagesDownloadSize(packages)
@@ -41,47 +44,5 @@ func (l *Lastore) checkPrepareDistUpgradeJob(packages []string) (bool, dbus.Obje
 	if err != nil {
 		return false, nilObjPath, err
 	}
-	if size == 0 {
-		return true, nilObjPath, nil
-	}
-	return false, nilObjPath, nil
-}
-
-func LaunchOfflineUpgrader() {
-	log.Debug("Launch offline upgrader")
-	go exec.Command("/usr/lib/deepin-daemon/dde-offline-upgrader").Run()
-}
-
-func (l *Lastore) handleUpdatablePackagesChanged(packages []string, apps []string) {
-	complete, job, err := l.checkPrepareDistUpgradeJob(packages)
-	log.Debugf("CheckDownloadUpgradablePackagesJob complete: %v job %q err %v", complete, job, err)
-	if err != nil {
-		log.Warn(err)
-		return
-	}
-	if complete && len(packages) > 0 {
-		LaunchOfflineUpgrader()
-	}
-}
-
-func (l *Lastore) CheckPrepareDistUpgradeJob() (bool, dbus.ObjectPath, error) {
-	return l.checkPrepareDistUpgradeJob(l.updatablePackages)
-}
-
-func (l *Lastore) LaterUpgrade(nsecs uint32) {
-	if l.laterUpgradeTimer != nil {
-		l.laterUpgradeTimer.Stop()
-	}
-
-	l.laterUpgradeTimer = time.AfterFunc(time.Duration(nsecs)*time.Second, func() {
-		complete, job, err := l.CheckPrepareDistUpgradeJob()
-		log.Debugf("CheckDownloadUpgradablePackagesJob complete: %v job %q err %v", complete, job, err)
-		if err != nil {
-			log.Warn(err)
-			return
-		}
-		if complete && len(l.updatablePackages) > 0 {
-			LaunchOfflineUpgrader()
-		}
-	})
+	return size == 0, nilObjPath, nil
 }
