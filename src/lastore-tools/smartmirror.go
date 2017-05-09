@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 var CMDSmartMirror = cli.Command{
@@ -58,7 +57,9 @@ var CMDSmartMirror = cli.Command{
 			Usage: `show the history of serving
      ✓ and ★ indicate the candidates in next mirror selecting.
      But ★ also indicate the mirror was unworkable in preview detecting.`,
-			Action: SubmainMirrorStats,
+			Action: func(c *cli.Context) {
+				fmt.Println("Didn't support at this version")
+			},
 		},
 		{
 			Name:   "server_stats",
@@ -117,17 +118,6 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	if err != nil {
 		fmt.Println("E:", err)
 	}
-}
-
-func SubmainMirrorStats(c *cli.Context) {
-	parallel := c.Parent().Int("parallel")
-	interval := time.Second * time.Duration(c.Parent().Int("interval"))
-	db := DB{c.Parent().String("db")}
-	cache, err := db.LoadMirrorCache()
-	if err != nil {
-		fmt.Printf("E:%v\n", err)
-	}
-	fmt.Println(cache.ShowStats(parallel, interval))
 }
 
 func ShowBest(url string) {
