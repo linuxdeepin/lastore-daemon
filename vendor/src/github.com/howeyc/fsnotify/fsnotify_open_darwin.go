@@ -8,5 +8,4 @@ package fsnotify
 
 import "syscall"
 
-// note: this constant is not defined on BSD
-const openMode = syscall.O_EVTONLY
+const open_FLAGS = syscall.O_EVTONLY

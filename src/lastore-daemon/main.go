@@ -103,7 +103,7 @@ func main() {
 func RegisterMonitor(handler func(), paths ...string) {
 	dm := system.NewDirMonitor(system.VarLibDir)
 
-	dm.Add(func(fpath string, op uint32) {
+	dm.Add(func(fpath string) {
 		handler()
 	}, paths...)
 

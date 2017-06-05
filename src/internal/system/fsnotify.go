@@ -11,14 +11,12 @@ package system
 
 import (
 	log "github.com/cihub/seelog"
-	"gopkg.in/fsnotify.v1"
+	"github.com/howeyc/fsnotify"
 	"path"
 	"sync"
 )
 
 type DirMonitorChangeType string
-
-const ()
 
 type DirMonitor struct {
 	sync.Mutex
@@ -29,7 +27,7 @@ type DirMonitor struct {
 	baseDir   string
 }
 
-type DirMonitorCallback func(fpath string, ops uint32)
+type DirMonitorCallback func(fpath string)
 
 func (f *DirMonitor) Add(fn DirMonitorCallback, names ...string) error {
 	f.Lock()
@@ -65,7 +63,7 @@ func (f *DirMonitor) Start() error {
 	f.watcher = w
 	f.Unlock()
 
-	err = f.watcher.Add(f.baseDir)
+	err = f.watcher.Watch(f.baseDir)
 	if err != nil {
 		return err
 	}
@@ -73,9 +71,9 @@ func (f *DirMonitor) Start() error {
 	go func() {
 		for {
 			select {
-			case event := <-f.watcher.Events:
-				f.tryNotify(event.Name, event.Op)
-			case err := <-f.watcher.Errors:
+			case event := <-f.watcher.Event:
+				f.tryNotify(event)
+			case err := <-f.watcher.Error:
 				log.Warn(err)
 			case <-f.done:
 				goto end
@@ -86,17 +84,18 @@ func (f *DirMonitor) Start() error {
 	return nil
 }
 
-func (f *DirMonitor) tryNotify(fpath string, op fsnotify.Op) {
+func (f *DirMonitor) tryNotify(event *fsnotify.FileEvent) {
 	f.Lock()
 	defer f.Unlock()
 
+	fpath := event.Name
 	fn, ok := f.callbacks[fpath]
 	if !ok {
 		return
 	}
 
-	if op&fsnotify.Write == fsnotify.Write || op&fsnotify.Remove == fsnotify.Remove {
-		fn(fpath, uint32(op))
+	if event.IsModify() || event.IsDelete() {
+		fn(fpath)
 	}
 }
 
