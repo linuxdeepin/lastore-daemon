@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# This script will be invoked by lastore-update-metadata-info.timer every 3 hours
+# 1. Trigger a apt-get update, so other component can update /var/lib/lastore/update_infos.json.
+# 2. Pull appstore.deepin.com's metadata by lastore-tools,
+#    inlcude a large ostree repo (http://packages.deepin.com/deepin/tree/lastore/) and some small json metadata.
+
 function systemd_update_metadata_info()
 {
     systemctl start lastore-update-metadata-info.service
@@ -14,6 +19,8 @@ function update_metadata_info_now()
     /usr/bin/lastore-tools update -r desktop -j mirrors -o /var/lib/lastore/mirrors.json
 }
 
+
+dbus-send --system --print-reply --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.UpdateSource
 
 [ -x /usr/bin/ostree ] || exit 0
 

@@ -17,6 +17,12 @@ import (
 
 const MinCheckInterval = time.Minute
 
+var DefaultConfig = Config{
+	CheckInterval:       time.Minute * 180,
+	AutoCheckUpdates:    true,
+	AutoDownloadUpdates: false,
+}
+
 type Config struct {
 	AutoCheckUpdates    bool
 	AutoDownloadUpdates bool
@@ -26,32 +32,27 @@ type Config struct {
 	LastCheckTime       time.Time
 	Repository          string
 
-	fpath string
+	filePath string
 }
 
 func NewConfig(fpath string) *Config {
-	r := Config{
-		CheckInterval:       time.Minute * 180,
-		AutoCheckUpdates:    true,
-		AutoDownloadUpdates: false,
-		fpath:               fpath,
-	}
-
-	err := system.DecodeJson(fpath, &r)
+	c := DefaultConfig
+	err := system.DecodeJson(fpath, &c)
 	if err != nil {
 		log.Warnf("Can't load config file: %v\n", err)
 	}
+	c.filePath = fpath
 
-	if r.CheckInterval < MinCheckInterval {
-		r.CheckInterval = MinCheckInterval
+	if c.CheckInterval < MinCheckInterval {
+		c.CheckInterval = MinCheckInterval
 	}
-	if r.Repository == "" || r.MirrorSource == "" {
+	if c.Repository == "" || c.MirrorSource == "" {
 		info := system.DetectDefaultRepoInfo(system.RepoInfos)
-		r.Repository = info.Name
-		r.MirrorSource = "default" //info.Mirror
+		c.Repository = info.Name
+		c.MirrorSource = "default" //info.Mirror
 	}
 
-	return &r
+	return &c
 }
 
 func (c *Config) UpdateLastCheckTime() error {
@@ -80,5 +81,5 @@ func (c *Config) SetAppstoreRegion(region string) error {
 }
 
 func (c *Config) save() error {
-	return system.EncodeJson(c.fpath, c)
+	return system.EncodeJson(c.filePath, c)
 }

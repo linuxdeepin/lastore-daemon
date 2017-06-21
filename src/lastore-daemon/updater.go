@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"pkg.deepin.io/lib/dbus"
+	"time"
 )
 
 type ApplicationUpdateInfo struct {
@@ -36,7 +37,6 @@ type Updater struct {
 
 	MirrorSource string
 
-	b      system.System
 	config *Config
 
 	UpdatableApps     []string
@@ -45,18 +45,47 @@ type Updater struct {
 
 func NewUpdater(b system.System, config *Config) *Updater {
 	u := &Updater{
-		b:                   b,
 		config:              config,
 		AutoCheckUpdates:    config.AutoCheckUpdates,
 		AutoDownloadUpdates: config.AutoDownloadUpdates,
 		MirrorSource:        config.MirrorSource,
 	}
+	go u.loopCheck()
+	return u
+}
 
-	if u.AutoCheckUpdates {
-		go exec.Command("systemctl", "start", "--no-block", "lastore-update-metadata-info.timer").Run()
+func (u *Updater) loopCheck() {
+	doUpdate := func() {
+		err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
+		if err != nil {
+			log.Warnf("AutoCheck Update failed: %v", err)
+		}
+		u.config.UpdateLastCheckTime()
 	}
 
-	return u
+	calcDelay := func() time.Duration {
+		elapsed := time.Now().Sub(u.config.LastCheckTime)
+		remaind := u.config.CheckInterval - elapsed
+		if remaind < 0 {
+			return 0
+		}
+		return remaind
+	}
+
+	for {
+		// ensure delay at least have 10 seconds
+		delay := calcDelay() + time.Second*10
+
+		fmt.Println("HH", time.Now().Add(delay), u.AutoCheckUpdates)
+		if u.AutoCheckUpdates {
+			log.Warnf("Next Check Updates will trigger at %v", time.Now().Add(delay))
+		}
+		<-time.After(delay)
+		if !u.AutoCheckUpdates {
+			continue
+		}
+		doUpdate()
+	}
 }
 
 func SetAPTSmartMirror(url string) error {
@@ -142,26 +171,28 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 	}
 
 	// save the config to disk
-	u.config.SetAutoCheckUpdates(enable)
+	err := u.config.SetAutoCheckUpdates(enable)
+	if err != nil {
+		return err
+	}
 
 	u.AutoCheckUpdates = enable
 	dbus.NotifyChange(u, "AutoCheckUpdates")
-
-	if enable {
-		return exec.Command("systemctl", "unmask", "lastore-update-metadata-info.timer").Run()
-	} else {
-		return exec.Command("systemctl", "mask", "lastore-update-metadata-info.timer").Run()
-	}
+	return nil
 }
 
-func (u *Updater) SetAutoDownloadUpdates(enable bool) {
+func (u *Updater) SetAutoDownloadUpdates(enable bool) error {
 	if u.AutoDownloadUpdates == enable {
-		return
+		return nil
 	}
 
 	// save the config to disk
-	u.config.SetAutoDownloadUpdates(enable)
+	err := u.config.SetAutoDownloadUpdates(enable)
+	if err != nil {
+		return err
+	}
 
 	u.AutoDownloadUpdates = enable
 	dbus.NotifyChange(u, "AutoDownloadUpdates")
+	return nil
 }

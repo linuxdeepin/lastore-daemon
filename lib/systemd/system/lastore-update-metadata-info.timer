@@ -1,9 +1,0 @@
-[Unit]
-Description=Update lastore metadata info
-
-[Timer]
-OnUnitActiveSec=3h
-OnBootSec=15min
-
-[Install]
-WantedBy=timers.target
