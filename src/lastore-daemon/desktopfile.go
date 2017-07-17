@@ -19,7 +19,7 @@ import (
 )
 
 // TODO: write tools to analyze the score of desktop in debs
-// which has two or more desktop files.
+// which has more then one of desktop files.
 // So we can know whether it is a reliable way to detect right desktop file.
 
 type DesktopFiles []string
@@ -31,7 +31,11 @@ func (fs DesktopFiles) Swap(i, j int) {
 	fs[i], fs[j] = fs[j], fs[i]
 }
 func (fs DesktopFiles) Less(i, j int) bool {
-	return fs.score(i) < fs.score(j)
+	si, sj := fs.score(i), fs.score(j)
+	if si == sj {
+		return len(fs[i]) > len(fs[j])
+	}
+	return si < sj
 }
 
 func (fs DesktopFiles) BestOne() string {
