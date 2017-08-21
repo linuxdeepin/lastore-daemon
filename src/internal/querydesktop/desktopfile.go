@@ -7,10 +7,9 @@
  * (at your option) any later version.
  **/
 
-package main
+package querydesktop
 
 import (
-	"internal/system"
 	"io/ioutil"
 	"os"
 	"path"
@@ -22,38 +21,45 @@ import (
 // which has more then one of desktop files.
 // So we can know whether it is a reliable way to detect right desktop file.
 
-type DesktopFiles []string
+type DesktopFiles struct {
+	PkgName string
+	Files   []string
+}
 
 func (fs DesktopFiles) Len() int {
-	return len(fs)
+	return len(fs.Files)
 }
 func (fs DesktopFiles) Swap(i, j int) {
-	fs[i], fs[j] = fs[j], fs[i]
+	fs.Files[i], fs.Files[j] = fs.Files[j], fs.Files[i]
 }
 func (fs DesktopFiles) Less(i, j int) bool {
 	si, sj := fs.score(i), fs.score(j)
 	if si == sj {
-		return len(fs[i]) > len(fs[j])
+		return len(fs.Files[i]) > len(fs.Files[j])
 	}
 	return si < sj
 }
 
 func (fs DesktopFiles) BestOne() string {
-	if len(fs) == 0 {
+	if len(fs.Files) == 0 {
 		return ""
 	}
 	sort.Sort(fs)
-	return fs[len(fs)-1]
+	return fs.Files[len(fs.Files)-1]
 }
 
 func (fs DesktopFiles) score(i int) int {
 	var score int
-	bs, err := ioutil.ReadFile(fs[i])
+	bs, err := ioutil.ReadFile(fs.Files[i])
 	if err != nil {
 		return -10
 	}
 
-	fpath := fs[i]
+	fpath := fs.Files[i]
+	if strings.Contains(fpath, fs.PkgName) {
+		score = score + 20
+	}
+
 	content := string(bs)
 
 	// Begin desktop content feature detect
@@ -110,16 +116,16 @@ func (fs DesktopFiles) score(i int) int {
 	if strings.Contains(fpath, "/xsessions/") {
 		score = score - 10
 	}
-	if strings.Contains(fs[i], "qtcreator/templates") {
+	if strings.Contains(fpath, "qtcreator/templates") {
 		score = score - 5
 	}
-	if strings.Contains(fs[i], "autostart") {
+	if strings.Contains(fpath, "autostart") {
 		score = score - 1
 	}
-	if strings.Contains(fs[i], "desktop-base") {
+	if strings.Contains(fpath, "desktop-base") {
 		score = score - 5
 	}
-	if strings.Contains(fs[i], "xgreeters") {
+	if strings.Contains(fpath, "xgreeters") {
 		score = score - 5
 	}
 	// End black list
@@ -127,69 +133,7 @@ func (fs DesktopFiles) score(i int) int {
 	return score
 }
 
-// QueryDesktopFilePath return the most possible right
-// desktop file in the pkgId.
-// It will parsing pkgId plus all dependencies of it.
-func QueryDesktopFilePath(pkgId string) string {
-	var r []string
-	found := make(chan bool, 1)
-	ch := queryRelateDependencies(found, pkgId, nil)
-	for pkgname := range ch {
-		for _, f := range system.ListPackageFile(pkgname) {
-			if path.Base(f) == pkgId+".desktop" {
-				found <- true
-				return f
-			}
-			if strings.HasSuffix(f, ".desktop") {
-				r = append(r, f)
-			}
-		}
-	}
-	return DesktopFiles(r).BestOne()
-}
-
-// QueryPackageSameNameDepends try find the packages which possible
-// contain the right desktop file.
-// e.g.
-//    stardict-gtk --> stardict-common
-//    stardict-gnome --> stardict-common
-//    evince --> evince-common
-//    evince-gtk --> evince, evince-common  Note: (recursion guest)
-func queryRelateDependencies(stopCh chan bool, pkgId string, set map[string]struct{}) chan string {
-	ch := make(chan string, 1)
-	if set == nil {
-		set = map[string]struct{}{pkgId: struct{}{}}
-		ch <- pkgId
-	}
-
-	go func() {
-		defer close(ch)
-		for _, p := range system.QueryPackageDependencies(pkgId) {
-			if _, ok := set[p]; ok {
-				continue
-			}
-
-			if !system.QueryPackageInstalled(p) {
-				continue
-			}
-
-			set[p] = struct{}{}
-			select {
-			case <-stopCh:
-				return
-			case ch <- p:
-			}
-
-			for x := range queryRelateDependencies(stopCh, p, set) {
-				set[x] = struct{}{}
-				select {
-				case <-stopCh:
-					return
-				case ch <- p:
-				}
-			}
-		}
-	}()
-
-	return ch
+func QueryDesktopFile(pkg string) string {
+	all := ListDesktopFiles(pkg)
+	return (DesktopFiles{pkg, all}.BestOne())
 }

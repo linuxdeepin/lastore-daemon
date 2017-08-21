@@ -13,6 +13,7 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"internal/system"
+	"internal/utils"
 	"pkg.deepin.io/lib/dbus"
 	"strings"
 	"sync"
@@ -298,8 +299,14 @@ func (m *Manager) PackageExists(pkgId string) bool {
 	return system.QueryPackageInstalled(pkgId)
 }
 
+// TODO: Remove this API
 func (m *Manager) PackageDesktopPath(pkgId string) string {
-	return QueryDesktopFilePath(pkgId)
+	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
+	if err != nil {
+		log.Warnf("QueryDesktopPath failed: %q\n", err)
+		return ""
+	}
+	return p
 }
 
 func (m *Manager) SetRegion(region string) error {

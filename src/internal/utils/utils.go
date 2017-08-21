@@ -22,6 +22,17 @@ import (
 	"time"
 )
 
+func RunCommand(prog string, args ...string) (string, error) {
+	buf := bytes.NewBuffer(nil)
+	cmd := exec.Command(prog, args...)
+	cmd.Stdout = (buf)
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(buf.String()), nil
+}
+
 func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line string) bool) ([]string, error) {
 	r, err := cmd.StdoutPipe()
 	if err != nil {

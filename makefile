@@ -30,7 +30,8 @@ test:
 		fi; \
 	fi) \
 	GOPATH=`pwd`:`pwd`/vendor go test -v internal/system internal/system/apt \
-	internal/utils	lastore-daemon  lastore-session-helper  lastore-smartmirror  lastore-tools
+	internal/utils	internal/querydesktop \
+	lastore-daemon  lastore-session-helper  lastore-smartmirror  lastore-tools
 
 install: gen_mo bin/lastore-tools
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
