@@ -292,6 +292,11 @@ func (p *APTSystem) UpdateSource(jobId string) error {
 	return c.Start()
 }
 
+func (p *APTSystem) Clean(jobId string) error {
+	c := newAPTCommand(p, jobId, system.CleanJobType, p.indicator, nil)
+	return c.Start()
+}
+
 func (p *APTSystem) Abort(jobId string) error {
 	if c := p.FindCMD(jobId); c != nil {
 		return c.Abort()

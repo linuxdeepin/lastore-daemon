@@ -35,6 +35,7 @@ const (
 	DistUpgradeJobType        = "dist_upgrade"
 	PrepareDistUpgradeJobType = "prepare_dist_upgrade"
 	UpdateSourceJobType       = "update_source"
+	CleanJobType              = "clean"
 )
 
 type JobProgressInfo struct {
@@ -69,6 +70,7 @@ type System interface {
 	DistUpgrade(jobId string) error
 
 	UpdateSource(jobId string) error
+	Clean(jobId string) error
 
 	Abort(jobId string) error
 

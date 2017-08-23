@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-08-15 11:23+0800\n"
+"POT-Creation-Date: 2017-08-24 10:28+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,103 +17,70 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lastore-session-helper/job.go:189
-msgid "Deepin Store"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:190
-msgid "System is updating, please shut down or reboot later."
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:225
-#: ../src/lastore-session-helper/job.go:263
-#: ../src/lastore-session-helper/job.go:271
-#: ../src/lastore-session-helper/job.go:308
+#: ../src/lastore-session-helper/job.go:270
 msgid "Reboot Now"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:239
-#: ../src/lastore-session-helper/job.go:277
-#: ../src/lastore-session-helper/job.go:285
-#: ../src/lastore-session-helper/job.go:322
+#: ../src/lastore-session-helper/job.go:284
 msgid "Reboot Later"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:248
-#: ../src/lastore-session-helper/job.go:286
-#: ../src/lastore-session-helper/job.go:294
-#: ../src/lastore-session-helper/job.go:331
+#: ../src/lastore-session-helper/job.go:293
 msgid "Retry"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:256
-#: ../src/lastore-session-helper/job.go:294
-#: ../src/lastore-session-helper/job.go:302
-#: ../src/lastore-session-helper/job.go:339
+#: ../src/lastore-session-helper/job.go:301
 msgid "Cancel"
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:62
-#: ../src/lastore-session-helper/ntofiy.go:51
 msgid "%q installed successfully."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:65
-#: ../src/lastore-session-helper/ntofiy.go:53
 msgid "%q failed to install."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:74
-#: ../src/lastore-session-helper/ntofiy.go:61
 msgid "%q removed successfully."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:76
-#: ../src/lastore-session-helper/ntofiy.go:63
 msgid "%q failed to remove."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:83
-#: ../src/lastore-session-helper/ntofiy.go:70
 msgid "%q failed to download."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:89
-#: ../src/lastore-session-helper/ntofiy.go:76
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/ntofiy.go:85
 msgid "Some functions will take effect after rebooting."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:97
 #: ../src/lastore-session-helper/notify.go:99
-#: ../src/lastore-session-helper/ntofiy.go:85
-#: ../src/lastore-session-helper/ntofiy.go:87
 msgid "Updated successfully!"
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:103
-#: ../src/lastore-session-helper/ntofiy.go:90
 msgid "Failed to update."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:113
-#: ../src/lastore-session-helper/ntofiy.go:106
 #, c-format
 msgid "%d software need to be updated."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:115
-#: ../src/lastore-session-helper/ntofiy.go:108
 msgid "Some patches need to be updated."
 msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:117
-#: ../src/lastore-session-helper/ntofiy.go:110
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr ""
@@ -126,6 +93,6 @@ msgstr ""
 msgid "Failed to download upgradeable packages."
 msgstr ""
 
-#: ../src/lastore-session-helper/ntofiy.go:117
-msgid "Update Now"
+#: ../src/lastore-session-helper/notify.go:138
+msgid "Package cache wiped"
 msgstr ""

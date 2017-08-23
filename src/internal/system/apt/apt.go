@@ -110,6 +110,9 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		sh := "apt-get -y -o APT::Status-Fd=3 -o Dir::Etc::sourceparts=/var/lib/lastore/source.d update && /var/lib/lastore/scripts/build_system_info -now"
 		return exec.Command("/bin/sh", "-c", sh)
 
+	case system.CleanJobType:
+		args = append(args, "-c", "/var/lib/lastore/apt.conf")
+		args = append(args, "autoclean")
 	}
 
 	return exec.Command("apt-get", args...)

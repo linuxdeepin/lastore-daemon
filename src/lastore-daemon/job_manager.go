@@ -107,6 +107,9 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue)
 	case system.UpdateJobType:
 		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
+
+	case system.CleanJobType:
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue)
 	default:
 		return nil, system.NotSupportError
 	}
@@ -467,7 +470,8 @@ var genJobId = func() func(string) string {
 	var __count = 0
 	return func(jobType string) string {
 		switch jobType {
-		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType, system.UpdateSourceJobType:
+		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType,
+			system.UpdateSourceJobType, system.CleanJobType:
 			return jobType
 		default:
 			__count++

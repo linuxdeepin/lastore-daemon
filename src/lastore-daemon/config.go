@@ -19,17 +19,22 @@ const MinCheckInterval = time.Minute
 
 var DefaultConfig = Config{
 	CheckInterval:       time.Minute * 180,
+	CleanInterval:       time.Hour * 48,
 	AutoCheckUpdates:    true,
 	AutoDownloadUpdates: false,
+	AutoClean:           true,
 }
 
 type Config struct {
 	AutoCheckUpdates    bool
 	AutoDownloadUpdates bool
+	AutoClean           bool
 	MirrorSource        string
 	CheckInterval       time.Duration
+	CleanInterval       time.Duration
 	AppstoreRegion      string
 	LastCheckTime       time.Time
+	LastCleanTime       time.Time
 	Repository          string
 
 	filePath string
@@ -60,6 +65,11 @@ func (c *Config) UpdateLastCheckTime() error {
 	return c.save()
 }
 
+func (c *Config) UpdateLastCleanTime() error {
+	c.LastCleanTime = time.Now()
+	return c.save()
+}
+
 func (c *Config) SetAutoCheckUpdates(enable bool) error {
 	c.AutoCheckUpdates = enable
 	return c.save()
@@ -67,6 +77,11 @@ func (c *Config) SetAutoCheckUpdates(enable bool) error {
 
 func (c *Config) SetAutoDownloadUpdates(enable bool) error {
 	c.AutoDownloadUpdates = enable
+	return c.save()
+}
+
+func (c *Config) SetAutoClean(enable bool) error {
+	c.AutoClean = enable
 	return c.save()
 }
 

@@ -331,22 +331,26 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 		case system.SucceedStatus:
 			NotifyRemove(info.Name, true, nil)
 		}
+
+	case system.CleanJobType:
+		if status == system.SucceedStatus {
+			notifyAutoClean()
+		}
 	}
 }
 
 // guestJobTypeFromPath guest the JobType from object path
 // We can't get the JobType when the DBusObject destroyed.
 func guestJobTypeFromPath(path dbus.ObjectPath) string {
-	if strings.Contains(string(path), system.InstallJobType) {
-		return system.InstallJobType
-	} else if strings.Contains(string(path), system.DownloadJobType) {
-		return system.DownloadJobType
-	} else if strings.Contains(string(path), system.RemoveJobType) {
-		return system.RemoveJobType
-	} else if strings.Contains(string(path), system.PrepareDistUpgradeJobType) {
-		return system.PrepareDistUpgradeJobType
-	} else if strings.Contains(string(path), system.DistUpgradeJobType) {
-		return system.DistUpgradeJobType
+	_path := string(path)
+	for _, jobType := range []string{
+		// job types:
+		system.InstallJobType, system.DownloadJobType, system.RemoveJobType,
+		system.PrepareDistUpgradeJobType, system.DistUpgradeJobType, system.CleanJobType,
+	} {
+		if strings.Contains(_path, jobType) {
+			return jobType
+		}
 	}
 	return ""
 }

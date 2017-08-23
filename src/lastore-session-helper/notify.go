@@ -133,3 +133,8 @@ func notifyDownloadUpgradablePackagesFailed(ac []Action) {
 	msg := gettext.Tr("Failed to download upgradeable packages.")
 	SendNotify("package_download_failed", msg, ac)
 }
+
+func notifyAutoClean() {
+	msg := gettext.Tr("Package cache wiped")
+	SendNotify("deepin-appstore", msg, nil)
+}

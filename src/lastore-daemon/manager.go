@@ -16,6 +16,7 @@ import (
 	"pkg.deepin.io/lib/dbus"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Manager struct {
@@ -31,6 +32,9 @@ type Manager struct {
 	UpgradableApps []string
 
 	SystemOnChanging  bool
+	AutoClean bool
+	autoCleanCfgChange chan struct{}
+
 	inhibitFd         dbus.UnixFD
 	sourceUpdatedOnce bool
 	//TODO: remove this. It should be record in com.deepin.Accounts
@@ -55,6 +59,7 @@ func NewManager(b system.System, c *Config) *Manager {
 		SystemArchitectures: archs,
 		cachedLocale:        make(map[uint64]string),
 		inhibitFd:           -1,
+		AutoClean: c.AutoClean,
 	}
 
 	m.jobManager = NewJobManager(b, m.updateJobList)
@@ -68,6 +73,7 @@ func NewManager(b system.System, c *Config) *Manager {
 	dbus.NotifyChange(m, "JobList")
 	dbus.NotifyChange(m, "UpgradableApps")
 
+	go m.loopCheck()
 	return m
 }
 
@@ -299,3 +305,72 @@ func (m *Manager) PackageDesktopPath(pkgId string) string {
 func (m *Manager) SetRegion(region string) error {
 	return m.config.SetAppstoreRegion(region)
 }
+
+func (m *Manager) SetAutoClean(enable bool) error {
+	if m.AutoClean == enable {
+		return nil
+	}
+
+	// save the config to disk
+	err := m.config.SetAutoClean(enable)
+	if err != nil {
+		return err
+	}
+
+	m.AutoClean = enable
+	m.autoCleanCfgChange <- struct{}{}
+	dbus.NotifyChange(m, "AutoClean")
+	return nil
+}
+
+
+func (m *Manager) CleanArchives() (*Job, error) {
+	m.do.Lock()
+	defer m.do.Unlock()
+	job, err := m.jobManager.CreateJob("", system.CleanJobType, nil)
+	if err != nil {
+		log.Warnf("CleanArchives error: %v", err)
+	}
+	return job, err
+}
+
+func (m *Manager) loopCheck() {
+	m.autoCleanCfgChange = make(chan struct{})
+	const checkInterval = time.Second * 100
+
+	doClean := func() {
+		log.Debug("call doClean")
+
+		_, err := m.CleanArchives()
+		if err != nil {
+			log.Warnf("CleanArchives failed: %v", err)
+		}
+		m.config.UpdateLastCleanTime()
+	}
+
+	calcDelay := func() time.Duration {
+		elapsed := time.Now().Sub(m.config.LastCleanTime)
+		return m.config.CleanInterval - elapsed
+	}
+
+	for {
+		select {
+		case <-m.autoCleanCfgChange:
+			// auto clean config changed
+			log.Debug("autoclean config changed")
+			continue
+		case <-time.After(checkInterval):
+			log.Debug("tick")
+			if m.AutoClean {
+				remaind := calcDelay()
+				log.Debugf("autoclean remaind %v", remaind)
+				if remaind < 0 {
+					doClean()
+				}
+			} else {
+				log.Debug("autoclean disabled")
+			}
+		}
+	}
+}
+

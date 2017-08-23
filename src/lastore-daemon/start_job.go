@@ -46,6 +46,9 @@ func StartSystemJob(sys system.System, j *Job) error {
 
 	case system.UpdateJobType:
 		return sys.Install(j.Id, j.Packages)
+
+	case system.CleanJobType:
+		return sys.Clean(j.Id)
 	default:
 		return system.NotFoundError
 	}
