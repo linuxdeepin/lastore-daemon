@@ -10,14 +10,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	log "github.com/cihub/seelog"
-	"internal/system"
-	"internal/utils"
-	"pkg.deepin.io/lib/dbus"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	"internal/system"
+	"internal/utils"
+
+	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbus"
 )
 
 type Manager struct {
@@ -32,8 +36,8 @@ type Manager struct {
 
 	UpgradableApps []string
 
-	SystemOnChanging  bool
-	AutoClean bool
+	SystemOnChanging   bool
+	AutoClean          bool
 	autoCleanCfgChange chan struct{}
 
 	inhibitFd         dbus.UnixFD
@@ -60,7 +64,7 @@ func NewManager(b system.System, c *Config) *Manager {
 		SystemArchitectures: archs,
 		cachedLocale:        make(map[uint64]string),
 		inhibitFd:           -1,
-		AutoClean: c.AutoClean,
+		AutoClean:           c.AutoClean,
 	}
 
 	m.jobManager = NewJobManager(b, m.updateJobList)
@@ -330,15 +334,40 @@ func (m *Manager) SetAutoClean(enable bool) error {
 	return nil
 }
 
+var errAptRunning = errors.New("apt or apt-get is running")
 
 func (m *Manager) CleanArchives() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
+
+	aptRunning, err := isAptRunning()
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("apt running: ", aptRunning)
+
+	if aptRunning {
+		return nil, errAptRunning
+	}
+
 	job, err := m.jobManager.CreateJob("", system.CleanJobType, nil)
 	if err != nil {
 		log.Warnf("CleanArchives error: %v", err)
 	}
 	return job, err
+}
+
+func isAptRunning() (bool, error) {
+	cmd := exec.Command("pgrep", "-u", "root", "-x", "apt|apt-get")
+	err := cmd.Run()
+	if err != nil {
+		log.Debugf("isAptRunning err: %#v", err)
+		if _, ok := err.(*exec.ExitError); ok {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (m *Manager) loopCheck() {
@@ -349,7 +378,10 @@ func (m *Manager) loopCheck() {
 		log.Debug("call doClean")
 
 		_, err := m.CleanArchives()
-		if err != nil {
+		if err == errAptRunning {
+			log.Info("apt is running, waiting for the next chance")
+			return
+		} else if err != nil {
 			log.Warnf("CleanArchives failed: %v", err)
 		}
 		m.config.UpdateLastCleanTime()
@@ -380,4 +412,3 @@ func (m *Manager) loopCheck() {
 		}
 	}
 }
-
