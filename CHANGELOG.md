@@ -1,16 +1,14 @@
-<a name="0.9.47"></a>
+<a name="0.9.46"></a>
 ### 0.9.46 (2017-09-14)
+
+#### Features
+
+*  (lastore-tools) add command of querydesktop ([cb3269f4](https://github.com/linuxdeepin/lastore-daemon/commit/cb3269f49fb8739c003a08f9c65ec6f837bf98b0))
 
 
 #### Bug Fixes
 
-*   unify LICENSE header ([28ee13b7](https://github.com/linuxdeepin/lastore-daemon/commit/28ee13b70f98ddf19cc14999ebcd8f8aa185b80e))
-
-
-
-<a name=""></a>
-##  (2017-09-14)
-
+*   unify LICENSE header ([e8ca7e53](https://github.com/linuxdeepin/lastore-daemon/commit/e8ca7e536ff8125695ec278cace25d8a9d61abb7))
 
 #### Others
 
