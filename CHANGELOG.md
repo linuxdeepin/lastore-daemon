@@ -1,3 +1,13 @@
+<a name="0.9.47"></a>
+### 0.9.46 (2017-09-14)
+
+
+#### Bug Fixes
+
+*   unify LICENSE header ([28ee13b7](https://github.com/linuxdeepin/lastore-daemon/commit/28ee13b70f98ddf19cc14999ebcd8f8aa185b80e))
+
+
+
 <a name=""></a>
 ##  (2017-09-14)
 
