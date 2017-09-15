@@ -3,6 +3,3 @@ repository = "https://github.com/linuxdeepin/lastore-daemon"
 from-latest-tag = true
 
 changelog = "CHANGELOG.md"
-
-[sections]
-Others = ["chore"]
