@@ -71,6 +71,7 @@ func NewLastore() *Lastore {
 		log.Warnf("NewLastore: %v\n", err)
 	}
 	core.RecordLocaleInfo(os.Getenv("LANG"))
+	core.SetCurrentX11Id(os.Getenv("DISPLAY"), os.Getenv("XAUTHORITY"))
 
 	l.core = core
 

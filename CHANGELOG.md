@@ -1,3 +1,13 @@
+<a name="0.9.47"></a>
+### 0.9.47 (2017-10-12)
+
+
+#### Features
+
+*   use gnome debconf frontend to avoid blocking ([9eca02af](https://github.com/linuxdeepin/lastore-daemon/commit/9eca02afe73306273d02096cb5285a9badfdc1be))
+
+
+
 <a name="0.9.46"></a>
 ### 0.9.46 (2017-09-14)
 

@@ -160,6 +160,13 @@ func (obj *Manager) RecordLocaleInfo(arg0 string) (_err error) {
 	}
 	return
 }
+func (obj *Manager) SetCurrentX11Id(arg0 string, arg1 string) (_err error) {
+	_err = obj.core.Call("com.deepin.lastore.Manager.SetCurrentX11Id", 0, arg0, arg1).Store()
+	if _err != nil {
+		fmt.Println(_err)
+	}
+	return
+}
 
 func (obj *Manager) StartJob(arg0 string) (_err error) {
 	_err = obj.core.Call("com.deepin.lastore.Manager.StartJob", 0, arg0).Store()

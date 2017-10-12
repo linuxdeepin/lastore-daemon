@@ -29,6 +29,7 @@ import (
 	"internal/utils"
 
 	log "github.com/cihub/seelog"
+	"os"
 	"pkg.deepin.io/lib/dbus"
 )
 
@@ -419,4 +420,9 @@ func (m *Manager) loopCheck() {
 			}
 		}
 	}
+}
+
+func (m *Manager) SetCurrentX11Id(id string, auth string) {
+	os.Setenv("DISPLAY", id)
+	os.Setenv("XAUTHORITY", auth)
 }
