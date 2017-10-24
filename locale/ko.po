@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-24 10:28+0800\n"
-"PO-Revision-Date: 2017-08-29 05:06+0000\n"
+"POT-Creation-Date: 2017-10-24 11:05+0800\n"
+"PO-Revision-Date: 2017-10-24 03:19+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Korean (http://www.transifex.com/linuxdeepin/deepin-store/language/ko/)\n"
 "MIME-Version: 1.0\n"
@@ -18,82 +18,90 @@ msgstr ""
 "Language: ko\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-session-helper/job.go:270
+#: ../src/lastore-daemon/inhibitor.go:30
+msgid "Deepin Store"
+msgstr "Deepin 스토어"
+
+#: ../src/lastore-daemon/inhibitor.go:31
+msgid "System is updating, please shut down or reboot later."
+msgstr "시스템이 업데이트 중입니다, 나중에 종료하거나 다시 시작하세요."
+
+#: ../src/lastore-session-helper/job.go:279
 msgid "Reboot Now"
 msgstr "지금 다시 시작하기"
 
-#: ../src/lastore-session-helper/job.go:284
+#: ../src/lastore-session-helper/job.go:293
 msgid "Reboot Later"
 msgstr "나중에 다시 시작"
 
-#: ../src/lastore-session-helper/job.go:293
+#: ../src/lastore-session-helper/job.go:302
 msgid "Retry"
 msgstr "재시도"
 
-#: ../src/lastore-session-helper/job.go:301
+#: ../src/lastore-session-helper/job.go:310
 msgid "Cancel"
 msgstr "취소"
 
-#: ../src/lastore-session-helper/notify.go:62
+#: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
 msgstr "%q(이)가 성공적으로 설치되었습니다."
 
-#: ../src/lastore-session-helper/notify.go:65
+#: ../src/lastore-session-helper/notify.go:73
 msgid "%q failed to install."
 msgstr "%q(이)가 설치에 실패하였습니다."
 
-#: ../src/lastore-session-helper/notify.go:74
+#: ../src/lastore-session-helper/notify.go:82
 msgid "%q removed successfully."
 msgstr "%q(이)가 성공적으로 제거되었습니다."
 
-#: ../src/lastore-session-helper/notify.go:76
+#: ../src/lastore-session-helper/notify.go:84
 msgid "%q failed to remove."
 msgstr "%q(을)를 삭제하는데 실패하였습니다."
 
-#: ../src/lastore-session-helper/notify.go:83
+#: ../src/lastore-session-helper/notify.go:91
 msgid "%q failed to download."
 msgstr "%q(을)를 다운로드하는데 실패했습니다."
 
-#: ../src/lastore-session-helper/notify.go:89
+#: ../src/lastore-session-helper/notify.go:97
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "자동 종료를 방지하려면 정상 업데이트를 위해 전원을 연결하세요. "
 
-#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
 msgstr "일부 기능은 다시 시작 이후에 작동합니다"
 
-#: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/notify.go:99
+#: ../src/lastore-session-helper/notify.go:105
+#: ../src/lastore-session-helper/notify.go:107
 msgid "Updated successfully!"
 msgstr "성공적으로 업데이트 완료!"
 
-#: ../src/lastore-session-helper/notify.go:103
+#: ../src/lastore-session-helper/notify.go:111
 msgid "Failed to update."
 msgstr "업데이트에 실패했습니다."
 
-#: ../src/lastore-session-helper/notify.go:113
+#: ../src/lastore-session-helper/notify.go:121
 #, c-format
 msgid "%d software need to be updated."
 msgstr "%d개의 소프트웨어가 업데이트를 필요로합니다."
 
-#: ../src/lastore-session-helper/notify.go:115
+#: ../src/lastore-session-helper/notify.go:123
 msgid "Some patches need to be updated."
 msgstr "일부 패치가 업데이트되어야 합니다."
 
-#: ../src/lastore-session-helper/notify.go:117
+#: ../src/lastore-session-helper/notify.go:125
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr "일부 패치 및 %d개의 소프트웨어가 업데이트되어야 합니다."
 
-#: ../src/lastore-session-helper/notify.go:125
+#: ../src/lastore-session-helper/notify.go:133
 msgid "Download"
 msgstr "다운로드"
 
-#: ../src/lastore-session-helper/notify.go:133
+#: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
 msgstr ""
 
-#: ../src/lastore-session-helper/notify.go:138
+#: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
 msgstr ""

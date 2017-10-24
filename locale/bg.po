@@ -3,13 +3,13 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Galin Iskrenov <loot270@abv.bg>, 2016
+# Galin Iskrenov <loot270@abv.bg>, 2016-2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-24 10:28+0800\n"
-"PO-Revision-Date: 2017-08-29 05:06+0000\n"
+"POT-Creation-Date: 2017-10-24 11:05+0800\n"
+"PO-Revision-Date: 2017-10-24 03:19+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Bulgarian (http://www.transifex.com/linuxdeepin/deepin-store/language/bg/)\n"
 "MIME-Version: 1.0\n"
@@ -18,82 +18,90 @@ msgstr ""
 "Language: bg\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-session-helper/job.go:270
+#: ../src/lastore-daemon/inhibitor.go:30
+msgid "Deepin Store"
+msgstr "Deepin Магазин"
+
+#: ../src/lastore-daemon/inhibitor.go:31
+msgid "System is updating, please shut down or reboot later."
+msgstr "Системата се актуализира, моля, изключете или рестартирайте по-късно."
+
+#: ../src/lastore-session-helper/job.go:279
 msgid "Reboot Now"
 msgstr "Рестартиране сега"
 
-#: ../src/lastore-session-helper/job.go:284
+#: ../src/lastore-session-helper/job.go:293
 msgid "Reboot Later"
 msgstr "Рестартирайте по-късно"
 
-#: ../src/lastore-session-helper/job.go:293
+#: ../src/lastore-session-helper/job.go:302
 msgid "Retry"
 msgstr "Отново"
 
-#: ../src/lastore-session-helper/job.go:301
+#: ../src/lastore-session-helper/job.go:310
 msgid "Cancel"
 msgstr "Отмяна"
 
-#: ../src/lastore-session-helper/notify.go:62
+#: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
 msgstr "%q инсталиран успешно."
 
-#: ../src/lastore-session-helper/notify.go:65
+#: ../src/lastore-session-helper/notify.go:73
 msgid "%q failed to install."
 msgstr "%q неуспешен за инсталиране."
 
-#: ../src/lastore-session-helper/notify.go:74
+#: ../src/lastore-session-helper/notify.go:82
 msgid "%q removed successfully."
 msgstr "%q премахнати успешно."
 
-#: ../src/lastore-session-helper/notify.go:76
+#: ../src/lastore-session-helper/notify.go:84
 msgid "%q failed to remove."
 msgstr "%q неосъществено премахване."
 
-#: ../src/lastore-session-helper/notify.go:83
+#: ../src/lastore-session-helper/notify.go:91
 msgid "%q failed to download."
 msgstr "% р не успяхте да изтеглите."
 
-#: ../src/lastore-session-helper/notify.go:89
+#: ../src/lastore-session-helper/notify.go:97
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "За да се предотврати автоматичното изключване, моля, използвайте добавката за нормална актуализация."
 
-#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
 msgstr "Някои функции ще влезнат в сила след рестартирането."
 
-#: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/notify.go:99
+#: ../src/lastore-session-helper/notify.go:105
+#: ../src/lastore-session-helper/notify.go:107
 msgid "Updated successfully!"
 msgstr "Успешно актуализиране!"
 
-#: ../src/lastore-session-helper/notify.go:103
+#: ../src/lastore-session-helper/notify.go:111
 msgid "Failed to update."
 msgstr "Провалена актуализация."
 
-#: ../src/lastore-session-helper/notify.go:113
+#: ../src/lastore-session-helper/notify.go:121
 #, c-format
 msgid "%d software need to be updated."
 msgstr "%d софтуерът се нуждае от актуализиране."
 
-#: ../src/lastore-session-helper/notify.go:115
+#: ../src/lastore-session-helper/notify.go:123
 msgid "Some patches need to be updated."
 msgstr "Някои части се нуждаят от актуализиране."
 
-#: ../src/lastore-session-helper/notify.go:117
+#: ../src/lastore-session-helper/notify.go:125
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr "Някои части и %d софтуер се нуждаят от актуализиране."
 
-#: ../src/lastore-session-helper/notify.go:125
+#: ../src/lastore-session-helper/notify.go:133
 msgid "Download"
 msgstr "Изтегляне"
 
-#: ../src/lastore-session-helper/notify.go:133
+#: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
 msgstr "Неуспешно сваляне на надграждащи пакети."
 
-#: ../src/lastore-session-helper/notify.go:138
+#: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr ""
+msgstr "Изтрит пакетен кеш"

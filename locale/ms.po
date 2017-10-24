@@ -3,13 +3,13 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# abuyop <abuyop@gmail.com>, 2015-2016
+# abuyop <abuyop@gmail.com>, 2015-2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-24 10:28+0800\n"
-"PO-Revision-Date: 2017-08-29 05:06+0000\n"
+"POT-Creation-Date: 2017-10-24 11:05+0800\n"
+"PO-Revision-Date: 2017-10-24 03:19+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Malay (http://www.transifex.com/linuxdeepin/deepin-store/language/ms/)\n"
 "MIME-Version: 1.0\n"
@@ -18,82 +18,90 @@ msgstr ""
 "Language: ms\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-session-helper/job.go:270
+#: ../src/lastore-daemon/inhibitor.go:30
+msgid "Deepin Store"
+msgstr "Kedai Deepin"
+
+#: ../src/lastore-daemon/inhibitor.go:31
+msgid "System is updating, please shut down or reboot later."
+msgstr "Sistem dikemaskinikan, sila matikan atau but semula kemudian."
+
+#: ../src/lastore-session-helper/job.go:279
 msgid "Reboot Now"
 msgstr "But Semula Sekarang"
 
-#: ../src/lastore-session-helper/job.go:284
+#: ../src/lastore-session-helper/job.go:293
 msgid "Reboot Later"
 msgstr "But Semula Kemudian"
 
-#: ../src/lastore-session-helper/job.go:293
+#: ../src/lastore-session-helper/job.go:302
 msgid "Retry"
 msgstr "Cuba lagi"
 
-#: ../src/lastore-session-helper/job.go:301
+#: ../src/lastore-session-helper/job.go:310
 msgid "Cancel"
 msgstr "Batal"
 
-#: ../src/lastore-session-helper/notify.go:62
+#: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
 msgstr "%q berjaya dipasangkan."
 
-#: ../src/lastore-session-helper/notify.go:65
+#: ../src/lastore-session-helper/notify.go:73
 msgid "%q failed to install."
 msgstr "%q gagal dipasangkan."
 
-#: ../src/lastore-session-helper/notify.go:74
+#: ../src/lastore-session-helper/notify.go:82
 msgid "%q removed successfully."
 msgstr "%q berjaya dibuang."
 
-#: ../src/lastore-session-helper/notify.go:76
+#: ../src/lastore-session-helper/notify.go:84
 msgid "%q failed to remove."
 msgstr "%q gagal dibuang."
 
-#: ../src/lastore-session-helper/notify.go:83
+#: ../src/lastore-session-helper/notify.go:91
 msgid "%q failed to download."
 msgstr "%q gagal dimuat turunkan."
 
-#: ../src/lastore-session-helper/notify.go:89
+#: ../src/lastore-session-helper/notify.go:97
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "Untuk menghindari komputer dimatikan secara automatik, sila palamkan bagi kemaskini biasa."
 
-#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
 msgstr "Beberapa fungsi akan berkesan selepas membut semula."
 
-#: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/notify.go:99
+#: ../src/lastore-session-helper/notify.go:105
+#: ../src/lastore-session-helper/notify.go:107
 msgid "Updated successfully!"
 msgstr "Berjaya dikemaskinikan!"
 
-#: ../src/lastore-session-helper/notify.go:103
+#: ../src/lastore-session-helper/notify.go:111
 msgid "Failed to update."
 msgstr "Gagal dikemaskinikan."
 
-#: ../src/lastore-session-helper/notify.go:113
+#: ../src/lastore-session-helper/notify.go:121
 #, c-format
 msgid "%d software need to be updated."
 msgstr "%d perisian perlu dikemaskinikan."
 
-#: ../src/lastore-session-helper/notify.go:115
+#: ../src/lastore-session-helper/notify.go:123
 msgid "Some patches need to be updated."
 msgstr "Beberapa tampalan perlu dikemaskinikan."
 
-#: ../src/lastore-session-helper/notify.go:117
+#: ../src/lastore-session-helper/notify.go:125
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr "Beberapa tampalan dan %d perisian perlu dikemaskinikan."
 
-#: ../src/lastore-session-helper/notify.go:125
+#: ../src/lastore-session-helper/notify.go:133
 msgid "Download"
 msgstr "Muat turun"
 
-#: ../src/lastore-session-helper/notify.go:133
+#: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
 msgstr "Gagal memuat turun pakej boleh tatar."
 
-#: ../src/lastore-session-helper/notify.go:138
+#: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr ""
+msgstr "Cache pakej disapu bersih"

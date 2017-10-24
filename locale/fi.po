@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-24 10:28+0800\n"
-"PO-Revision-Date: 2017-08-29 05:06+0000\n"
+"POT-Creation-Date: 2017-10-24 11:05+0800\n"
+"PO-Revision-Date: 2017-10-24 03:19+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Finnish (http://www.transifex.com/linuxdeepin/deepin-store/language/fi/)\n"
 "MIME-Version: 1.0\n"
@@ -17,82 +17,90 @@ msgstr ""
 "Language: fi\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-session-helper/job.go:270
+#: ../src/lastore-daemon/inhibitor.go:30
+msgid "Deepin Store"
+msgstr "Deepin-kauppa"
+
+#: ../src/lastore-daemon/inhibitor.go:31
+msgid "System is updating, please shut down or reboot later."
+msgstr "Järjestelmää päivitetään. Tämän jälkeen tulee laite sammuttaa tai käynnistää uudelleen."
+
+#: ../src/lastore-session-helper/job.go:279
 msgid "Reboot Now"
 msgstr "Käynnistä uudelleen välittömästi"
 
-#: ../src/lastore-session-helper/job.go:284
+#: ../src/lastore-session-helper/job.go:293
 msgid "Reboot Later"
 msgstr "Käynnistä uudelleen myöhemmin"
 
-#: ../src/lastore-session-helper/job.go:293
+#: ../src/lastore-session-helper/job.go:302
 msgid "Retry"
 msgstr "Yritä uudestaan"
 
-#: ../src/lastore-session-helper/job.go:301
+#: ../src/lastore-session-helper/job.go:310
 msgid "Cancel"
 msgstr "Peruutus"
 
-#: ../src/lastore-session-helper/notify.go:62
+#: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
 msgstr "%q asennettu. "
 
-#: ../src/lastore-session-helper/notify.go:65
+#: ../src/lastore-session-helper/notify.go:73
 msgid "%q failed to install."
 msgstr "Kohteen %q asennus epäonnistui."
 
-#: ../src/lastore-session-helper/notify.go:74
+#: ../src/lastore-session-helper/notify.go:82
 msgid "%q removed successfully."
 msgstr "%q poistettu onnistuneesti. "
 
-#: ../src/lastore-session-helper/notify.go:76
+#: ../src/lastore-session-helper/notify.go:84
 msgid "%q failed to remove."
 msgstr "Kohteen %q poistaminen ei onnistunut."
 
-#: ../src/lastore-session-helper/notify.go:83
+#: ../src/lastore-session-helper/notify.go:91
 msgid "%q failed to download."
 msgstr "%q latautuminen epäonnistui."
 
-#: ../src/lastore-session-helper/notify.go:89
+#: ../src/lastore-session-helper/notify.go:97
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
 msgstr "Kirjaudu sisään saadaksesi normaalipäivitykset ja estääksesi automaattisen sulkeutumisen."
 
-#: ../src/lastore-session-helper/notify.go:97
+#: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
 msgstr "Jotkut toiminnot astuva voimaan vasta uudelleenkäynnistyksen jälkeen."
 
-#: ../src/lastore-session-helper/notify.go:97
-#: ../src/lastore-session-helper/notify.go:99
+#: ../src/lastore-session-helper/notify.go:105
+#: ../src/lastore-session-helper/notify.go:107
 msgid "Updated successfully!"
 msgstr "Päivitys onnistui!"
 
-#: ../src/lastore-session-helper/notify.go:103
+#: ../src/lastore-session-helper/notify.go:111
 msgid "Failed to update."
 msgstr "Päivitys epäonnistui."
 
-#: ../src/lastore-session-helper/notify.go:113
+#: ../src/lastore-session-helper/notify.go:121
 #, c-format
 msgid "%d software need to be updated."
 msgstr "%d ohjelmistosta täytyy päivittää."
 
-#: ../src/lastore-session-helper/notify.go:115
+#: ../src/lastore-session-helper/notify.go:123
 msgid "Some patches need to be updated."
 msgstr "Korjaustiedostoja täytyy päivittää."
 
-#: ../src/lastore-session-helper/notify.go:117
+#: ../src/lastore-session-helper/notify.go:125
 #, c-format
 msgid "Some patches and %d software need to be updated."
 msgstr "Korjaustiedostoja ja %d-ohjelmistoa täytyy päivittää."
 
-#: ../src/lastore-session-helper/notify.go:125
+#: ../src/lastore-session-helper/notify.go:133
 msgid "Download"
 msgstr "Lataa"
 
-#: ../src/lastore-session-helper/notify.go:133
+#: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
 msgstr ""
 
-#: ../src/lastore-session-helper/notify.go:138
+#: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
 msgstr ""
