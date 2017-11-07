@@ -23,6 +23,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"path/filepath"
 )
 
 // TODO: write tools to analyze the score of desktop in debs
@@ -141,7 +142,27 @@ func (fs DesktopFiles) score(i int) int {
 	return score
 }
 
+const (
+	flatpakAppPkgPrefix = "deepin-fpapp-"
+	flatpakAppsDir = "/var/lib/flatpak/exports/share/applications"
+	desktopExt = ".desktop"
+)
+
 func QueryDesktopFile(pkg string) string {
+	if strings.HasPrefix(pkg, flatpakAppPkgPrefix) {
+		appId := pkg[len(flatpakAppPkgPrefix):]
+		files, _ := ioutil.ReadDir(flatpakAppsDir)
+		for _, fi := range files {
+			name := fi.Name()
+			if strings.HasSuffix(name,desktopExt) && !fi.IsDir() {
+				name0 := name[:len(name) - len(desktopExt)] // trim suffix
+				if strings.ToLower(name0) == appId {
+					return filepath.Join(flatpakAppsDir, fi.Name())
+				}
+			}
+		}
+	}
+
 	all := ListDesktopFiles(pkg)
-	return (DesktopFiles{pkg, all}.BestOne())
+	return DesktopFiles{pkg, all}.BestOne()
 }
