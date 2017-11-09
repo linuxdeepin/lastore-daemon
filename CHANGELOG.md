@@ -1,3 +1,10 @@
+<a name="0.9.49"></a>
+### 0.9.49 (2017-11-09)
+
+#### Features
+*   QueryDesktopFile support deepin flatpak app package ([0b8821f8](https://github.com/linuxdeepin/lastore-daemon/commit/0b8821f8993c410e502ce6e85e172d652e285064))
+
+
 <a name="0.9.47"></a>
 ### 0.9.47 (2017-10-17)
 
