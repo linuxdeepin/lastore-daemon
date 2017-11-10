@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# Davidmp <medipas@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-10-24 11:05+0800\n"
-"PO-Revision-Date: 2017-10-24 03:19+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"PO-Revision-Date: 2017-11-16 18:10+0000\n"
+"Last-Translator: Davidmp <medipas@gmail.com>\n"
 "Language-Team: Catalan (http://www.transifex.com/linuxdeepin/deepin-store/language/ca/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -19,23 +20,23 @@ msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:30
 msgid "Deepin Store"
-msgstr ""
+msgstr "Botiga del Deepin"
 
 #: ../src/lastore-daemon/inhibitor.go:31
 msgid "System is updating, please shut down or reboot later."
-msgstr ""
+msgstr "El sistema s'està actualitzant. Atureu o reinicieu l'ordinador després."
 
 #: ../src/lastore-session-helper/job.go:279
 msgid "Reboot Now"
-msgstr ""
+msgstr "Reinicia ara"
 
 #: ../src/lastore-session-helper/job.go:293
 msgid "Reboot Later"
-msgstr ""
+msgstr "Reinicia més tard"
 
 #: ../src/lastore-session-helper/job.go:302
 msgid "Retry"
-msgstr "Reintenta"
+msgstr "Torna-ho a provar"
 
 #: ../src/lastore-session-helper/job.go:310
 msgid "Cancel"
@@ -43,64 +44,64 @@ msgstr "Cancel·la"
 
 #: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
-msgstr ""
+msgstr "%q s'ha instal·lat correctament."
 
 #: ../src/lastore-session-helper/notify.go:73
 msgid "%q failed to install."
-msgstr ""
+msgstr "Ha fallat la instal·lació de %q"
 
 #: ../src/lastore-session-helper/notify.go:82
 msgid "%q removed successfully."
-msgstr ""
+msgstr "%q s'ha eliminat correctament."
 
 #: ../src/lastore-session-helper/notify.go:84
 msgid "%q failed to remove."
-msgstr ""
+msgstr "Ha fallat l'eliminació de %q."
 
 #: ../src/lastore-session-helper/notify.go:91
 msgid "%q failed to download."
-msgstr ""
+msgstr "Ha fallat la baixada de %q."
 
 #: ../src/lastore-session-helper/notify.go:97
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr ""
+msgstr "Per tal d'evitar l'aturada automàtica, connecteu-vos per a l'actualització normal."
 
 #: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
-msgstr ""
+msgstr "Algunes funcions tindran efecte després de reiniciar."
 
 #: ../src/lastore-session-helper/notify.go:105
 #: ../src/lastore-session-helper/notify.go:107
 msgid "Updated successfully!"
-msgstr ""
+msgstr "Actualització correcta!"
 
 #: ../src/lastore-session-helper/notify.go:111
 msgid "Failed to update."
-msgstr ""
+msgstr "Ha fallat l'actualització."
 
 #: ../src/lastore-session-helper/notify.go:121
 #, c-format
 msgid "%d software need to be updated."
-msgstr ""
+msgstr "Cal actualitzar el programari de %d."
 
 #: ../src/lastore-session-helper/notify.go:123
 msgid "Some patches need to be updated."
-msgstr ""
+msgstr "Cal actualitzar alguns pedaços."
 
 #: ../src/lastore-session-helper/notify.go:125
 #, c-format
 msgid "Some patches and %d software need to be updated."
-msgstr ""
+msgstr "Cal actualitzar alguns pedaços i el programari de %d."
 
 #: ../src/lastore-session-helper/notify.go:133
 msgid "Download"
-msgstr ""
+msgstr "Baixa"
 
 #: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
-msgstr ""
+msgstr "Ha fallat la baixada de paquets actualitzables."
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr ""
+msgstr "S'ha netejat la cau de paquets."
