@@ -119,8 +119,7 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		return exec.Command("/bin/sh", "-c", sh)
 
 	case system.CleanJobType:
-		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "clean")
+		return exec.Command("/usr/bin/lastore-apt-clean")
 	}
 
 	return exec.Command("apt-get", args...)

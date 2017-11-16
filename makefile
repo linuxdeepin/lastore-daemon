@@ -15,6 +15,7 @@ build:  bin/lastore-tools
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
+	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
 
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
