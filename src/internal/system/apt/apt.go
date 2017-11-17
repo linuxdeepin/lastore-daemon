@@ -111,7 +111,7 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		args = append(args, packages...)
 	case system.DownloadJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "install", "-d")
+		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, packages...)
 	case system.UpdateSourceJobType:
