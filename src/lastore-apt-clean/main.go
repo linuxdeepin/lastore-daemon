@@ -1,26 +1,26 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"errors"
 	"io/ioutil"
 	"log"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
-	"os/exec"
-	"os"
-	"time"
 	"syscall"
-	"bytes"
-	"bufio"
-	"errors"
+	"time"
 )
 
 const maxElapsed = time.Hour * 24 * 6 // 6 days
 
 var (
-	archivesDir string
-	binDpkg string
+	archivesDir  string
+	binDpkg      string
 	binDpkgQuery string
-	binAptCache string
+	binAptCache  string
 	binAptConfig string
 )
 
@@ -90,12 +90,18 @@ func getArchivesDir() (string, error) {
 	}
 	lines := strings.Split(string(output), "\n")
 	tempMap := make(map[string]string)
-	for _,line := range lines {
+	fieldsCount := 0
+loop:
+	for _, line := range lines {
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) == 2 {
 			switch parts[0] {
 			case "Dir", "Dir::Cache", "Dir::Cache::archives":
 				tempMap[parts[0]] = parts[1]
+				fieldsCount++
+				if fieldsCount == 3 {
+					break loop
+				}
 			}
 		}
 	}
@@ -118,6 +124,9 @@ func getArchivesDir() (string, error) {
 
 func shouldDelete(fileInfo os.FileInfo) (bool, error) {
 	debInfo := getDebFileNameInfo(fileInfo.Name())
+	if debInfo == nil {
+		return false, errors.New("debInfo is nil")
+	}
 	log.Printf("%#v\n", debInfo)
 
 	installedVersion, _ := getInstalledVersion(debInfo)
@@ -133,7 +142,7 @@ func shouldDelete(fileInfo os.FileInfo) (bool, error) {
 			}
 
 			log.Println("candidate version:", candidateVersion)
-			if  candidateVersion != debInfo.version {
+			if candidateVersion != debInfo.version {
 				log.Println("not the candiate version")
 				return true, nil
 			}
@@ -152,9 +161,9 @@ func shouldDelete(fileInfo os.FileInfo) (bool, error) {
 }
 
 type DebFileNameInfo struct {
-	name string
+	name    string
 	version string
-	arch string
+	arch    string
 }
 
 func getDebFileNameInfo(basename string) *DebFileNameInfo {
@@ -184,7 +193,7 @@ func getDebFileNameInfo(basename string) *DebFileNameInfo {
 	return &info
 }
 
-func getInstalledVersion(info *DebFileNameInfo) (string, error)  {
+func getInstalledVersion(info *DebFileNameInfo) (string, error) {
 	pkg := info.name + ":" + info.arch
 	output, err := exec.Command(binDpkgQuery, "-f", "${Version}", "-W", pkg).Output()
 	if err != nil {
