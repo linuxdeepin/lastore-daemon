@@ -1,3 +1,17 @@
+<a name="0.9.50"></a>
+### 0.9.50 (2017-11-17)
+
+
+#### Bug Fixes
+
+*   lastore-apt-clane panic if deb file name is abnormal ([927f36ee](https://github.com/linuxdeepin/lastore-daemon/commit/927f36ee0e4d4d6ebf1bacd83c252e672dfa11c5))
+
+#### Features
+
+*   add lastore-apt-clean tool ([d13a2bd1](https://github.com/linuxdeepin/lastore-daemon/commit/d13a2bd1f0a97c656df583d1b438ddf4f7ec97b4))
+
+
+
 <a name="0.9.49"></a>
 ### 0.9.49 (2017-11-09)
 
