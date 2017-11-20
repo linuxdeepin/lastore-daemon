@@ -1,3 +1,17 @@
+<a name="0.9.51"></a>
+### 0.9.51 (2017-11-20)
+
+
+#### Features
+
+*   add --allow-change-held-packages option for DownloadJobType ([5b2585f5](https://github.com/linuxdeepin/lastore-daemon/commit/5b2585f52290ee9b80b92f1a57c1a1959fe3c19c))
+
+#### Bug Fixes
+
+*   "lastore-tools querydesktop firefox-dde" failed ([060822c1](https://github.com/linuxdeepin/lastore-daemon/commit/060822c109c663037532223c17b80b6293228c8a))
+
+
+
 <a name="0.9.50"></a>
 ### 0.9.50 (2017-11-17)
 
