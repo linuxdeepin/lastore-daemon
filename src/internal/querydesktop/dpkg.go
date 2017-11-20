@@ -18,9 +18,78 @@
 package querydesktop
 
 import (
+	"internal/system"
 	"internal/utils"
+	"path"
 	"strings"
 )
+
+// QueryDesktopFilePath return the most possible right
+// desktop file in the pkgId.
+// It will parsing pkgId plus all dependencies of it.
+func QueryDesktopFilePathByDependencies(pkgId string) string {
+	var r []string
+	found := make(chan bool, 1)
+	ch := queryRelateDependencies(found, pkgId, nil)
+	for pkgname := range ch {
+		for _, f := range system.ListPackageFile(pkgname) {
+			if path.Base(f) == pkgId+".desktop" {
+				found <- true
+				return f
+			}
+			if strings.HasSuffix(f, ".desktop") {
+				r = append(r, f)
+			}
+		}
+	}
+	return DesktopFiles{pkgId, r}.BestOne()
+}
+
+// QueryPackageSameNameDepends try find the packages which possible
+// contain the right desktop file.
+// e.g.
+//    stardict-gtk --> stardict-common
+//    stardict-gnome --> stardict-common
+//    evince --> evince-common
+//    evince-gtk --> evince, evince-common  Note: (recursion guest)
+func queryRelateDependencies(stopCh chan bool, pkgId string, set map[string]struct{}) chan string {
+	ch := make(chan string, 1)
+	if set == nil {
+		set = map[string]struct{}{pkgId: struct{}{}}
+		ch <- pkgId
+	}
+
+	go func() {
+		defer close(ch)
+		for _, p := range system.QueryPackageDependencies(pkgId) {
+			if _, ok := set[p]; ok {
+				continue
+			}
+
+			if !system.QueryPackageInstalled(p) {
+				continue
+			}
+
+			set[p] = struct{}{}
+			select {
+			case <-stopCh:
+				return
+			case ch <- p:
+			}
+
+			for x := range queryRelateDependencies(stopCh, p, set) {
+				set[x] = struct{}{}
+				select {
+				case <-stopCh:
+					return
+				case ch <- p:
+				}
+			}
+		}
+	}()
+
+	return ch
+}
 
 func ListDesktopFiles(pkg string) []string {
 	var ret []string
