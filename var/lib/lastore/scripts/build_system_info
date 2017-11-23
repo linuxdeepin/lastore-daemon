@@ -1,5 +1,7 @@
 #!/bin/bash
 
+UPDATE_INFO="/var/lib/lastore/update_infos.json"
+
 function prepare()
 {
     # The unit is typically launched by apt hooks,
@@ -22,17 +24,23 @@ function systemd_build_system_info()
 
 function build_system_info_now()
 {
-    /usr/bin/lastore-tools update -j=update_infos -output=/var/lib/lastore/update_infos.json
+    /usr/bin/lastore-tools update -j=update_infos -output=$UPDATE_INFO
     /usr/bin/lastore-tools update -j=desktop -o /var/lib/lastore/
     /var/lib/lastore/scripts/build_safecache.sh > /dev/null
 }
 
 
+# If both apt and dpkg hasn't modified after $UPDATE_INFO created, we doesn't need do anything.
+if [[ -f "$UPDATE_INFO" ]] &&
+       [[ "$UPDATE_INFO" -nt "/var/lib/dpkg/status" ]] &&
+       [[ $(find /var/lib/apt/lists -maxdepth 1 -type f -newer "$UPDATE_INFO" ) == "" ]] ;then
+    exit 0
+fi
 
 #We should clean the update_infos.json early, otherwise
 #actions, like systemctl stop, reboot immediately after apt-get
 #would cause the update_infos.json invalid.
-[ -f /var/lib/lastore/update_infos.json ] && rm /var/lib/lastore/update_infos.json
+[ -f $UPDATE_INFO ] && rm $UPDATE_INFO
 
 case "$1" in
     "-now")
