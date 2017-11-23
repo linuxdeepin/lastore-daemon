@@ -1,64 +1,37 @@
+/*
+ * Copyright (C) 2014 ~ 2017 Deepin Technology Co., Ltd.
+ *
+ * Author:     jouyouyun <jouyouwen717@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package dbus
 
 import "encoding/xml"
 import "bytes"
 import "fmt"
 import "reflect"
-import "sync"
 import "pkg.deepin.io/lib/dbus/introspect"
-
-const InterfaceLifeManager = "com.deepin.DBus.LifeManager"
-
-type LifeManager struct {
-	name        string
-	path        ObjectPath
-	count       int32
-	onDestroy   func()
-	countLocker sync.Mutex
-}
-
-func RegisterLifeManagerCallback(m DBusObject, cb func()) {
-	if con := detectConnByDBusObject(m); con != nil {
-		path := ObjectPath(m.GetDBusInfo().ObjectPath)
-		if infos, ok := con.handlers[path]; ok {
-			if i, ok := (infos[InterfaceLifeManager]).(*LifeManager); ok {
-				i.onDestroy = cb
-			}
-		}
-	}
-}
-
-func NewLifeManager(name string, path ObjectPath) *LifeManager {
-	return &LifeManager{name: name, path: path, count: 1}
-}
-
-func (ifc *LifeManager) InterfaceName() string {
-	return InterfaceLifeManager
-}
-
-func (ifc *LifeManager) Ref() {
-	ifc.countLocker.Lock()
-
-	ifc.count++
-
-	ifc.countLocker.Unlock()
-}
-func (ifc *LifeManager) Unref() {
-	ifc.countLocker.Lock()
-
-	ifc.count--
-	if ifc.count == 0 && ifc.onDestroy != nil {
-		ifc.onDestroy()
-	}
-
-	ifc.countLocker.Unlock()
-}
+import "sync"
 
 const InterfaceIntrospectProxy = "org.freedesktop.DBus.Introspectable"
 
 type IntrospectProxy struct {
-	infos map[string]interface{}
-	child map[string]bool
+	locker sync.RWMutex
+	infos  map[string]interface{}
+	child  map[string]bool
 }
 
 func NewIntrospectProxy(infos map[string]interface{}) *IntrospectProxy {
@@ -68,11 +41,19 @@ func NewIntrospectProxy(infos map[string]interface{}) *IntrospectProxy {
 	}
 }
 
-func (ifc IntrospectProxy) InterfaceName() string {
+func (ifc *IntrospectProxy) Enable(childPath string) {
+	ifc.locker.Lock()
+	ifc.child[childPath] = true
+	ifc.locker.Unlock()
+}
+
+func (ifc *IntrospectProxy) InterfaceName() string {
 	return InterfaceIntrospectProxy
 }
 
-func (ifc IntrospectProxy) Introspect() (string, error) {
+func (ifc *IntrospectProxy) Introspect() (string, error) {
+	ifc.locker.RLock()
+	defer ifc.locker.RUnlock()
 	var node = new(introspect.NodeInfo)
 	for k, _ := range ifc.child {
 		node.Children = append(node.Children, introspect.NodeInfo{
@@ -95,6 +76,7 @@ func (ifc IntrospectProxy) Introspect() (string, error) {
 const InterfacePropertiesProxy = "org.freedesktop.DBus.Properties"
 
 type PropertiesProxy struct {
+	locker            sync.RWMutex
 	infos             map[string]interface{}
 	PropertiesChanged func(string, map[string]Variant, []string)
 }
@@ -105,11 +87,14 @@ func NewPropertiesProxy(infos map[string]interface{}) *PropertiesProxy {
 	}
 }
 
-func (PropertiesProxy) InterfaceName() string {
+func (*PropertiesProxy) InterfaceName() string {
 	return InterfacePropertiesProxy
 }
 
-func (propProxy PropertiesProxy) GetAll(ifcName string) (props map[string]Variant, err error) {
+func (propProxy *PropertiesProxy) GetAll(ifcName string) (props map[string]Variant, err error) {
+	propProxy.locker.RLock()
+	defer propProxy.locker.RUnlock()
+
 	props = make(map[string]Variant)
 	if ifc, ok := propProxy.infos[ifcName]; ok {
 		o_type := getTypeOf(ifc)
@@ -127,7 +112,10 @@ func (propProxy PropertiesProxy) GetAll(ifcName string) (props map[string]Varian
 	return
 }
 
-func (propProxy PropertiesProxy) Set(ifcName string, propName string, value Variant) error {
+func (propProxy *PropertiesProxy) Set(ifcName string, propName string, value Variant) error {
+	propProxy.locker.Lock()
+	defer propProxy.locker.Unlock()
+
 	if ifc, ok := propProxy.infos[ifcName]; ok {
 		ifc_t := getTypeOf(ifc)
 		t, ok := ifc_t.FieldByName(propName)
@@ -136,9 +124,11 @@ func (propProxy PropertiesProxy) Set(ifcName string, propName string, value Vari
 			if !v.CanAddr() {
 				return NewPropertyNotWritableError(propName)
 			}
-			if v.Type().Implements(propertyType) {
-				if reflect.TypeOf(value.Value()) == v.MethodByName("GetType").Interface().(func() reflect.Type)() {
-					v.MethodByName("SetValue").Interface().(func(interface{}))(value.Value())
+
+			if p, ok := v.Interface().(Property); ok {
+				if reflect.TypeOf(value.Value()) == p.GetType() {
+					p.SetValue(value.Value())
+
 					fn := reflect.ValueOf(ifc).MethodByName("OnPropertiesChanged")
 					if fn.IsValid() && !fn.IsNil() {
 						fn.Call([]reflect.Value{reflect.ValueOf(propName), reflect.Zero(reflect.TypeOf(value.Value()))})
@@ -180,7 +170,10 @@ func (propProxy PropertiesProxy) Set(ifcName string, propName string, value Vari
 	}
 	return NewUnknowInterfaceError(ifcName)
 }
-func (propProxy PropertiesProxy) Get(ifcName string, propName string) (Variant, error) {
+func (propProxy *PropertiesProxy) Get(ifcName string, propName string) (Variant, error) {
+	propProxy.locker.RLock()
+	defer propProxy.locker.RUnlock()
+
 	if ifc, ok := propProxy.infos[ifcName]; ok {
 		t, ok := getTypeOf(ifc).FieldByName(propName)
 		if !ok || !isExportedStructField(t) {
@@ -191,14 +184,11 @@ func (propProxy PropertiesProxy) Get(ifcName string, propName string) (Variant, 
 			return MakeVariant(""), NewUnknowPropertyError(propName)
 		}
 
-		if value.Type().Implements(propertyType) {
-			if value.IsNil() {
+		if p, ok := value.Interface().(Property); ok {
+			if p == nil {
 				return MakeVariant(""), fmt.Errorf("nil dbus.Property(%s:%s)", ifcName, propName)
-			} else if fun, ok := value.MethodByName("GetValue").Interface().(func() interface{}); ok {
-				t := fun()
-				return MakeVariant(t), nil
 			} else {
-				return MakeVariant(""), NewUnknowPropertyError(propName)
+				return MakeVariant(p.GetValue()), nil
 			}
 		} else if reflect.TypeOf(ifc).Implements(dbusObjectInterface) {
 			value = tryTranslateDBusObjectToObjectPath(detectConnByDBusObject(ifc.(DBusObject)), value)

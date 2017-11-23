@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2014 ~ 2017 Deepin Technology Co., Ltd.
+ *
+ * Author:     jouyouyun <jouyouwen717@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package dbus
 
 import "reflect"
@@ -113,12 +132,13 @@ func BuildInterfaceInfo(ifc interface{}) *introspect.InterfaceInfo {
 			if access != "readwrite" {
 				access = "read"
 			}
-			if field.Type.Implements(propertyType) {
-				field_v := getValueOf(ifc).Field(i)
-				if field_v.IsNil() {
+
+			v := getValueOf(ifc).Field(i)
+			if p, ok := v.Interface().(Property); ok {
+				if p == nil {
 					log.Println("UnInit dbus property", field.Name)
 				} else {
-					t := field_v.MethodByName("GetType").Interface().(func() reflect.Type)()
+					t := p.GetType()
 					if t != nil {
 						ifc_info.Properties = append(ifc_info.Properties, introspect.PropertyInfo{
 							Name:   field.Name,
@@ -203,7 +223,7 @@ func handleSubpath(c *Conn, path ObjectPath) {
 		if parent, ok := c.handlers[ObjectPath(parentpath)]; ok {
 			intro := parent[InterfaceIntrospectProxy]
 			if reflect.TypeOf(intro).AssignableTo(introspectProxyType) {
-				intro.(*IntrospectProxy).child[basepath] = true
+				intro.(*IntrospectProxy).Enable(basepath)
 			}
 			return
 		}
@@ -229,7 +249,9 @@ func export(c *Conn, v DBusObject, interfaces []interfaces.DBusInterface) error 
 		return err
 	}
 
+	c.handlersLck.Lock()
 	handleSubpath(c, path)
+	c.handlersLck.Unlock()
 
 	c.handlersLck.RLock()
 	ifcs := c.handlers[path]
@@ -237,7 +259,6 @@ func export(c *Conn, v DBusObject, interfaces []interfaces.DBusInterface) error 
 
 	interfaces = append(interfaces, NewIntrospectProxy(ifcs))
 	interfaces = append(interfaces, NewPropertiesProxy(ifcs))
-	interfaces = append(interfaces, NewLifeManager(dinfo.Dest, path))
 
 	for _, ifc := range interfaces {
 		c.Export(ifc, path, ifc.InterfaceName())
