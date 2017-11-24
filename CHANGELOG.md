@@ -1,3 +1,17 @@
+<a name="0.9.52"></a>
+### 0.9.52 (2017-11-24)
+
+
+#### Performance
+
+*   don't build cache if both dpkg && apt hasn't any changes. ([6260ab52](https://github.com/linuxdeepin/lastore-daemon/commit/6260ab52e28de70633a18713fd23791adf5f6f8c))
+
+#### Bug Fixes
+
+*   build_system_info ignore executing if lists only change ctime ([3b72fb28](https://github.com/linuxdeepin/lastore-daemon/commit/3b72fb287358df7f8c28936d6000e3cacbe10ef5))
+
+
+
 <a name="0.9.51"></a>
 ### 0.9.51 (2017-11-20)
 
