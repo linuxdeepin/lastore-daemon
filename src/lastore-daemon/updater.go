@@ -113,7 +113,7 @@ func (u *Updater) SetMirrorSource(id string) error {
 		}
 
 		if m.Url == "" {
-			return system.NotFoundError
+			return system.NotFoundError("empty url")
 		}
 		if err := SetAPTSmartMirror(m.Url); err != nil {
 			log.Warnf("SetMirrorSource(%q) failed:%v\n", id, err)

@@ -78,7 +78,7 @@ func LoadMirrorSources(url string) ([]system.MirrorSource, error) {
 		r = append(r, s)
 	}
 	if len(r) == 0 {
-		return nil, system.NotFoundError
+		return nil, system.NotFoundError("fetch mirrors")
 	}
 	return r, nil
 }

@@ -132,7 +132,7 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 func (jm *JobManager) MarkStart(jobId string) error {
 	job := jm.findJobById(jobId)
 	if job == nil {
-		return system.NotFoundError
+		return system.NotFoundError("MarkStart " + jobId)
 	}
 
 	if job.Status != system.ReadyStatus {
@@ -144,7 +144,7 @@ func (jm *JobManager) MarkStart(jobId string) error {
 
 	queue, ok := jm.queues[job.queueName]
 	if !ok {
-		return system.NotFoundError
+		return system.NotFoundError("MarkStart in queues" + job.queueName)
 	}
 	return queue.Raise(jobId)
 }
@@ -154,7 +154,7 @@ func (jm *JobManager) MarkStart(jobId string) error {
 func (jm *JobManager) CleanJob(jobId string) error {
 	job := jm.findJobById(jobId)
 	if job == nil {
-		return system.NotFoundError
+		return system.NotFoundError("CleanJob " + jobId)
 	}
 
 	if job.Cancelable && job.Status == system.RunningStatus {
@@ -174,7 +174,7 @@ func (jm *JobManager) CleanJob(jobId string) error {
 func (jm *JobManager) PauseJob(jobId string) error {
 	job := jm.findJobById(jobId)
 	if job == nil {
-		return system.NotFoundError
+		return system.NotFoundError("PauseJob jobId")
 	}
 	switch job.Status {
 	case system.PausedStatus:
@@ -268,13 +268,12 @@ func (jm *JobManager) createJobList(name string, cap int) {
 
 func (jm *JobManager) addJob(j *Job) error {
 	if j == nil {
-		log.Trace("adJob with nil")
-		return system.NotFoundError
+		return system.NotFoundError("addJob with nil")
 	}
 	queueName := j.queueName
 	queue, ok := jm.queues[queueName]
 	if !ok {
-		return system.NotFoundError
+		return system.NotFoundError("addJob with queue " + queueName)
 	}
 
 	err := queue.Add(j)
@@ -288,7 +287,7 @@ func (jm *JobManager) addJob(j *Job) error {
 func (jm *JobManager) removeJob(jobId string, queueName string) error {
 	queue, ok := jm.queues[queueName]
 	if !ok {
-		return system.NotFoundError
+		return system.NotFoundError("removeJob queue " + queueName)
 	}
 
 	err := queue.Remove(jobId)
@@ -393,7 +392,7 @@ func (l *JobQueue) Remove(id string) error {
 		}
 	}
 	if index == -1 {
-		return system.NotFoundError
+		return system.NotFoundError("JobQueue.Remove " + id)
 	}
 
 	job := l.Jobs[index]
@@ -415,7 +414,7 @@ func (l *JobQueue) Raise(jobId string) error {
 		}
 	}
 	if p == -1 {
-		return system.NotFoundError
+		return system.NotFoundError("JobQueue.Raise " + jobId)
 	}
 	l.Jobs.Swap(0, p)
 	return nil

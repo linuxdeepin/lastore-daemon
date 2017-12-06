@@ -41,7 +41,7 @@ func QueryLangByUID(uid int64) (string, error) {
 	defer accounts.DestroyUser(u)
 	lang := u.Language.Get()
 	if lang == "" {
-		return "", system.NotFoundError
+		return "", system.NotFoundError("empty lang")
 	}
 	return lang, nil
 }
@@ -67,7 +67,7 @@ func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ..
 func (m *Manager) RecordLocaleInfo(msg dbus.DMessage, locale string) error {
 	uid := msg.GetSenderUID()
 	if locale == "" {
-		return system.NotFoundError
+		return system.NotFoundError("empty locale")
 	}
 	m.cachedLocale[uint64(uid)] = locale
 	return nil

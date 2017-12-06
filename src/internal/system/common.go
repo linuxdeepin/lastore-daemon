@@ -75,7 +75,7 @@ func NormalFileExists(fpath string) bool {
 func SystemUpgradeInfo() ([]UpgradeInfo, error) {
 	info_path := path.Join(VarLibDir, "update_infos.json")
 	if !NormalFileExists(info_path) {
-		return nil, NotFoundError
+		return nil, NotFoundError("update_infos.json")
 	}
 	var r []UpgradeInfo
 	err := DecodeJson(info_path, &r)

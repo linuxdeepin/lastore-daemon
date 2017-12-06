@@ -309,5 +309,5 @@ func (p *APTSystem) Abort(jobId string) error {
 	if c := p.FindCMD(jobId); c != nil {
 		return c.Abort()
 	}
-	return system.NotFoundError
+	return system.NotFoundError("abort " + jobId)
 }

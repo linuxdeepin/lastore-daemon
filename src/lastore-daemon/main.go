@@ -81,7 +81,7 @@ func main() {
 
 	update_handler := func() {
 		info, err := system.SystemUpgradeInfo()
-		if err == system.NotFoundError {
+		if _, ok := err.(system.NotFoundErrorType); ok {
 			//temp fail
 			return
 		}

@@ -64,7 +64,17 @@ type UpgradeInfo struct {
 type Architecture string
 
 var NotImplementError = errors.New("not implement")
-var NotFoundError = errors.New("not found resource")
+
+type NotFoundErrorType string
+
+func (e NotFoundErrorType) Error() string {
+	return string(e)
+}
+
+func NotFoundError(w string) NotFoundErrorType {
+	return NotFoundErrorType("not found resource: " + w)
+}
+
 var NotSupportError = errors.New("not support operation")
 var ResourceExitError = errors.New("resource exists")
 

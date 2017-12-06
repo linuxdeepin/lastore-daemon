@@ -224,7 +224,7 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 
 	m.updateJobList()
 	if len(m.UpgradableApps) == 0 {
-		return nil, system.NotFoundError
+		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 
 	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
@@ -246,10 +246,10 @@ func (m *Manager) PrepareDistUpgrade() (*Job, error) {
 	m.updateJobList()
 
 	if len(m.UpgradableApps) == 0 {
-		return nil, system.NotFoundError
+		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 	if s, err := system.QueryPackageDownloadSize(m.UpgradableApps...); err == nil && s == 0 {
-		return nil, system.NotFoundError
+		return nil, system.NotFoundError("no need download")
 	}
 
 	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, m.UpgradableApps)
