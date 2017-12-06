@@ -45,10 +45,10 @@ type JobManager struct {
 
 	system system.System
 
-	dispatchLock sync.Mutex
-
-	notify  func()
+	mux     sync.RWMutex
 	changed bool
+
+	notify func()
 }
 
 func NewJobManager(api system.System, notifyFn func()) *JobManager {
@@ -128,6 +128,8 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 // MarkStart transition the Job status to ReadyStatus
 // and move the it to the head of queue.
 func (jm *JobManager) MarkStart(jobId string) error {
+	jm.markDirty()
+
 	job := jm.findJobById(jobId)
 	if job == nil {
 		return system.NotFoundError("MarkStart " + jobId)
@@ -192,16 +194,13 @@ func (jm *JobManager) PauseJob(jobId string) error {
 // 1. Clean Jobs whose status is system.EndStatus
 // 2. Run all Pending Jobs.
 func (jm *JobManager) dispatch() {
-	jm.dispatchLock.Lock()
-	defer jm.dispatchLock.Unlock()
-
 	var pendingDeleteJobs []*Job
 	for _, queue := range jm.queues {
 		// 1. Clean Jobs with EndStatus
 		pendingDeleteJobs = append(pendingDeleteJobs, queue.DoneJobs()...)
 	}
+
 	for _, job := range pendingDeleteJobs {
-		jm.changed = true
 		jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
 			log.Debugf("Job(%q).next is %v\n", job.Id, job.next)
@@ -225,8 +224,23 @@ func (jm *JobManager) dispatch() {
 		jm.startJobsInQueue(jm.queues[SystemChangeQueue])
 	}
 
-	if jm.changed && jm.notify != nil {
-		jm.changed = false
+	jm.sendNotify()
+}
+
+func (jm *JobManager) markDirty() {
+	jm.mux.Lock()
+	jm.changed = true
+	jm.mux.Unlock()
+}
+func (jm *JobManager) sendNotify() {
+	if jm.notify == nil {
+		return
+	}
+	jm.mux.RLock()
+	r := jm.changed
+	jm.mux.RUnlock()
+	if r {
+		jm.markDirty()
 		jm.notify()
 	}
 }
@@ -234,7 +248,6 @@ func (jm *JobManager) dispatch() {
 func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 	jobs := queue.PendingJobs()
 	for _, job := range jobs {
-		jm.changed = true
 		if job.Status == system.FailedStatus {
 			jm.MarkStart(job.Id)
 			log.Infof("Retry failed Job %v\n", job)
@@ -277,8 +290,7 @@ func (jm *JobManager) addJob(j *Job) error {
 	if err != nil {
 		return err
 	}
-
-	jm.changed = true
+	jm.markDirty()
 	return nil
 }
 func (jm *JobManager) removeJob(jobId string, queueName string) error {
@@ -292,7 +304,7 @@ func (jm *JobManager) removeJob(jobId string, queueName string) error {
 		return err
 	}
 	DestroyJobDBus(job)
-	jm.changed = true
+	jm.markDirty()
 	return nil
 }
 
@@ -304,7 +316,7 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	}
 
 	if j._UpdateInfo(info) {
-		jm.changed = true
+		jm.markDirty()
 	}
 	jm.dispatch()
 }
