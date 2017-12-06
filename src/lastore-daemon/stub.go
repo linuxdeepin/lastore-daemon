@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+var NotUseDBus = false
+
 func (m *Manager) GetDBusInfo() dbus.DBusInfo {
 	return dbus.DBusInfo{
 		Dest:       "com.deepin.lastore",
@@ -112,6 +114,9 @@ func (u *Updater) setPropUpdatablePackages(ids []string) {
 }
 
 func DestroyJobDBus(j *Job) {
+	if NotUseDBus {
+		return
+	}
 	j.notifyAll()
 	<-time.After(time.Millisecond * 100)
 	dbus.UnInstallObject(j)
@@ -131,6 +136,13 @@ func (u Updater) GetDBusInfo() dbus.DBusInfo {
 		ObjectPath: "/com/deepin/lastore",
 		Interface:  "com.deepin.lastore.Updater",
 	}
+}
+
+func InstallDBus(j dbus.DBusObject) error {
+	if NotUseDBus {
+		return nil
+	}
+	return dbus.InstallOnSystem(j)
 }
 
 func (j *Job) notifyAll() {

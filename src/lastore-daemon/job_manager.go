@@ -20,7 +20,6 @@ package main
 import (
 	log "github.com/cihub/seelog"
 	"internal/system"
-	"pkg.deepin.io/lib/dbus"
 	"sort"
 	"strconv"
 	"strings"
@@ -274,7 +273,7 @@ func (jm *JobManager) addJob(j *Job) error {
 	if err != nil {
 		return err
 	}
-	err = dbus.InstallOnSystem(j)
+	err = InstallDBus(j)
 	if err != nil {
 		return err
 	}

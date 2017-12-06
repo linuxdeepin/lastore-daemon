@@ -64,7 +64,7 @@ func main() {
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 
 	manager := NewManager(b, config)
-	err = dbus.InstallOnSystem(manager)
+	err = InstallDBus(manager)
 	if err != nil {
 		log.Error("Install manager on system bus :", err)
 		return
@@ -73,7 +73,7 @@ func main() {
 
 	updater := NewUpdater(b, config)
 
-	err = dbus.InstallOnSystem(updater)
+	err = InstallDBus(updater)
 	if err != nil {
 		log.Error("Start failed:", err)
 		return

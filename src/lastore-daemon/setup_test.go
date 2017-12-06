@@ -17,6 +17,10 @@
 
 package main
 
+func init() {
+	NotUseDBus = true
+}
+
 /*
 import (
 	proxy "./dbusproxy"
