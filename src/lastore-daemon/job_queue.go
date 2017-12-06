@@ -6,6 +6,7 @@ import (
 	"internal/system"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type JobList []*Job
@@ -28,6 +29,8 @@ type JobQueue struct {
 	Cap  int
 
 	jobs JobList
+
+	mux sync.RWMutex
 }
 
 func NewJobQueue(name string, cap int) *JobQueue {
@@ -38,11 +41,19 @@ func NewJobQueue(name string, cap int) *JobQueue {
 }
 
 func (l *JobQueue) AllJobs() JobList {
-	return l.jobs
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+
+	r := make(JobList, len(l.jobs))
+	copy(r, l.jobs)
+	return r
 }
 
 // PendingJob get the workable ready Jobs and recoverable failed Jobs
 func (l *JobQueue) PendingJobs() JobList {
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+
 	var numRunning int
 	var readyJobs []*Job
 	for _, job := range l.jobs {
@@ -76,6 +87,9 @@ func (l *JobQueue) PendingJobs() JobList {
 }
 
 func (l *JobQueue) DoneJobs() JobList {
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+
 	var ret JobList
 	for _, j := range l.jobs {
 		if j.Status == system.EndStatus {
@@ -86,6 +100,9 @@ func (l *JobQueue) DoneJobs() JobList {
 }
 
 func (l *JobQueue) RunningJobs() JobList {
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+
 	var r JobList
 	for _, job := range l.jobs {
 		if job.Status == system.EndStatus {
@@ -96,6 +113,9 @@ func (l *JobQueue) RunningJobs() JobList {
 }
 
 func (l *JobQueue) Add(j *Job) error {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+
 	for _, job := range l.jobs {
 		if job.Type == j.Type && strings.Join(job.Packages, "") == strings.Join(j.Packages, "") {
 			return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)
@@ -107,6 +127,9 @@ func (l *JobQueue) Add(j *Job) error {
 }
 
 func (l *JobQueue) Remove(id string) (*Job, error) {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+
 	index := -1
 	for i, job := range l.jobs {
 		if job.Id == id {
@@ -128,6 +151,9 @@ func (l *JobQueue) Remove(id string) (*Job, error) {
 // Raise raise the specify Job to head of JobList
 // return system.NotFoundError if can't find the specify Job
 func (l *JobQueue) Raise(jobId string) error {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+
 	var p int = -1
 	for i, job := range l.jobs {
 		if job.Id == jobId {
@@ -143,6 +169,9 @@ func (l *JobQueue) Raise(jobId string) error {
 }
 
 func (l *JobQueue) Find(id string) *Job {
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+
 	for _, job := range l.jobs {
 		if job.Id == id {
 			return job
