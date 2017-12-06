@@ -120,7 +120,9 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 	}
 
 	log.Infof("CreateJob with %q %q %q\n", jobName, jobType, packages)
-	jm.addJob(job)
+	if err := jm.addJob(job); err != nil {
+		return nil, err
+	}
 	return job, jm.MarkStart(job.Id)
 }
 

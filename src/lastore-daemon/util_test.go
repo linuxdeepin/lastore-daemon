@@ -17,12 +17,14 @@
 
 package main
 
-import "testing"
-import C "gopkg.in/check.v1"
-import "internal/system"
-import "fixme/pkg_recommend"
-import "internal/system/apt"
-import "strings"
+import (
+	"fixme/pkg_recommend"
+	C "gopkg.in/check.v1"
+	"internal/system"
+	"internal/system/apt"
+	"strings"
+	"testing"
+)
 
 type testWrap struct{}
 
