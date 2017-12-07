@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -20,6 +21,7 @@ var (
 	archivesDir  string
 	binDpkg      string
 	binDpkgQuery string
+	binDpkgDeb   string
 	binAptCache  string
 	binAptConfig string
 )
@@ -36,6 +38,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	binDpkg = mustGetBin("dpkg")
 	binDpkgQuery = mustGetBin("dpkg-query")
+	binDpkgDeb = mustGetBin("dpkg-deb")
 	binAptCache = mustGetBin("apt-cache")
 	binAptConfig = mustGetBin("apt-config")
 
@@ -63,7 +66,7 @@ func main() {
 		}
 
 		log.Println("> ", fileInfo.Name())
-		del, err := shouldDelete(fileInfo)
+		del, err := shouldDelete(archivesDir, fileInfo)
 		if err != nil {
 			log.Println("shouldDelete error:", err)
 			continue
@@ -122,10 +125,10 @@ loop:
 	return filepath.Join(dir, dirCache, dirCacheArchives), nil
 }
 
-func shouldDelete(fileInfo os.FileInfo) (bool, error) {
-	debInfo := getDebFileNameInfo(fileInfo.Name())
-	if debInfo == nil {
-		return false, errors.New("debInfo is nil")
+func shouldDelete(dir string, fileInfo os.FileInfo) (bool, error) {
+	debInfo, err := getDebInfo(filepath.Join(dir, fileInfo.Name()))
+	if err != nil {
+		return false, err
 	}
 	log.Printf("%#v\n", debInfo)
 
@@ -160,40 +163,57 @@ func shouldDelete(fileInfo os.FileInfo) (bool, error) {
 	}
 }
 
-type DebFileNameInfo struct {
+type DebInfo struct {
 	name    string
 	version string
 	arch    string
 }
 
-func getDebFileNameInfo(basename string) *DebFileNameInfo {
-	basename = strings.TrimSuffix(basename, ".deb")
-	parts := strings.Split(basename, "_")
-
-	if len(parts) != 3 {
-		return nil
+func getControlField(line []byte, key []byte) (string, error) {
+	if bytes.HasPrefix(line, key) {
+		return string(line[len(key):]), nil
 	}
-
-	var info DebFileNameInfo
-	info.name = parts[0]
-	if info.name == "" {
-		return nil
-	}
-
-	info.version = parts[1]
-	if info.version == "" {
-		return nil
-	}
-
-	info.arch = parts[2]
-	if info.arch == "" {
-		return nil
-	}
-
-	return &info
+	return "", fmt.Errorf("failed to get control field %s", key[:len(key)-2])
 }
 
-func getInstalledVersion(info *DebFileNameInfo) (string, error) {
+func getDebInfo(filename string) (*DebInfo, error) {
+	const (
+		fieldPkg  = "Package"
+		fieldVer  = "Version"
+		fieldArch = "Architecture"
+		sep       = ": "
+	)
+
+	output, err := exec.Command(binDpkgDeb, "-f", filename,
+		fieldPkg, fieldVer, fieldArch).Output()
+	if err != nil {
+		return nil, err
+	}
+	lines := bytes.Split(output, []byte{'\n'})
+	if len(lines) < 3 {
+		return nil, errors.New("getDebInfo len(lines) < 3")
+	}
+
+	name, err := getControlField(lines[0], []byte(fieldPkg+sep))
+	if err != nil {
+		return nil, err
+	}
+	version, err := getControlField(lines[1], []byte(fieldVer+sep))
+	if err != nil {
+		return nil, err
+	}
+	arch, err := getControlField(lines[2], []byte(fieldArch+sep))
+	if err != nil {
+		return nil, err
+	}
+	return &DebInfo{
+		name:    name,
+		version: version,
+		arch:    arch,
+	}, nil
+}
+
+func getInstalledVersion(info *DebInfo) (string, error) {
 	pkg := info.name + ":" + info.arch
 	output, err := exec.Command(binDpkgQuery, "-f", "${Version}", "-W", pkg).Output()
 	if err != nil {
@@ -202,7 +222,7 @@ func getInstalledVersion(info *DebFileNameInfo) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-func getCandidateVersion(info *DebFileNameInfo) (string, error) {
+func getCandidateVersion(info *DebInfo) (string, error) {
 	pkg := info.name + ":" + info.arch
 	output, err := exec.Command(binAptCache, "policy", "--", pkg).Output()
 	if err != nil {
