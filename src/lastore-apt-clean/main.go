@@ -18,7 +18,6 @@ import (
 const maxElapsed = time.Hour * 24 * 6 // 6 days
 
 var (
-	archivesDir  string
 	binDpkg      string
 	binDpkgQuery string
 	binDpkgDeb   string
@@ -44,8 +43,7 @@ func main() {
 
 	os.Setenv("LC_ALL", "C")
 
-	var err error
-	archivesDir, err = getArchivesDir()
+	archivesDir, err := getArchivesDir()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,15 +64,23 @@ func main() {
 		}
 
 		log.Println("> ", fileInfo.Name())
-		del, err := shouldDelete(archivesDir, fileInfo)
+		deletePolicy, err := shouldDelete(archivesDir, fileInfo)
 		if err != nil {
-			log.Println("shouldDelete error:", err)
-			continue
+			log.Println("shouldDelete Warnning:", err)
 		}
-		if del {
-			deleteDeb(fileInfo.Name())
+		switch deletePolicy {
+		case DeleteImmediately:
+			deleteDeb(archivesDir, fileInfo.Name())
+		case DeleteExpired:
+			debChangeTime := getChangeTime(fileInfo)
+			if time.Since(debChangeTime) > maxElapsed {
+				deleteDeb(archivesDir, fileInfo.Name())
+			} else {
+				log.Println("delete later")
+			}
+		case Keep:
+			log.Println("keep")
 		}
-
 	}
 }
 
@@ -125,42 +131,51 @@ loop:
 	return filepath.Join(dir, dirCache, dirCacheArchives), nil
 }
 
-func shouldDelete(dir string, fileInfo os.FileInfo) (bool, error) {
+type DeletePolicy uint
+
+const (
+	DeleteExpired = iota
+	DeleteImmediately
+	Keep
+)
+
+func shouldDelete(dir string, fileInfo os.FileInfo) (DeletePolicy, error) {
 	debInfo, err := getDebInfo(filepath.Join(dir, fileInfo.Name()))
 	if err != nil {
-		return false, err
+		return DeleteExpired, err
 	}
 	log.Printf("%#v\n", debInfo)
 
-	installedVersion, _ := getInstalledVersion(debInfo)
-
-	if installedVersion != "" {
-		log.Println("installed version:", installedVersion)
-
-		if compareVersions(debInfo.version, "gt", installedVersion) {
+	status, version, err := queryStatusVersion(debInfo)
+	if err != nil {
+		return DeleteExpired, err
+	}
+	log.Printf("current status: %q, version: %q\n", status, version)
+	switch status {
+	case statusInstallInstalled:
+		if compareVersions(debInfo.version, "gt", version) {
 			log.Println("deb version great then installed version")
 			candidateVersion, err := getCandidateVersion(debInfo)
 			if err != nil {
-				return false, err
+				return DeleteExpired, err
 			}
 
 			log.Println("candidate version:", candidateVersion)
 			if candidateVersion != debInfo.version {
 				log.Println("not the candiate version")
-				return true, nil
+				return DeleteImmediately, nil
 			}
-			return false, nil
-		} else {
-			return true, nil
+			return Keep, nil
 		}
 
-	} else {
-		log.Println("package not installed")
-		// removed or newly added
-		debChangeTime := getChangeTime(fileInfo)
-		elapsed := time.Since(debChangeTime)
-		return elapsed > maxElapsed, nil
+		return DeleteImmediately, nil
+
+	case statusRemoveConfigFiles, statusUnknownNotInstalled:
+		return DeleteImmediately, nil
+	default:
+		return DeleteExpired, nil
 	}
+
 }
 
 type DebInfo struct {
@@ -184,7 +199,7 @@ func getDebInfo(filename string) (*DebInfo, error) {
 		sep       = ": "
 	)
 
-	output, err := exec.Command(binDpkgDeb, "-f", filename,
+	output, err := exec.Command(binDpkgDeb, "-f", "--", filename,
 		fieldPkg, fieldVer, fieldArch).Output()
 	if err != nil {
 		return nil, err
@@ -213,13 +228,34 @@ func getDebInfo(filename string) (*DebInfo, error) {
 	}, nil
 }
 
-func getInstalledVersion(info *DebInfo) (string, error) {
+const (
+	statusNotFound            = "@not-found"
+	statusInstallInstalled    = "ii"
+	statusUnknownNotInstalled = "un"
+	statusRemoveConfigFiles   = "rc"
+)
+
+func queryStatusVersion(info *DebInfo) (status, version string, err error) {
 	pkg := info.name + ":" + info.arch
-	output, err := exec.Command(binDpkgQuery, "-f", "${Version}", "-W", pkg).Output()
+	output, err := exec.Command(binDpkgQuery, "-f", "${db:Status-Abbrev}\n${Version}",
+		"-W", "--", pkg).CombinedOutput()
+
 	if err != nil {
-		return "", err
+		if bytes.Contains(output, []byte("no packages found")) {
+			return statusNotFound, "", nil
+		}
+		return
 	}
-	return strings.TrimSpace(string(output)), nil
+
+	lines := bytes.Split(output, []byte{'\n'})
+	if len(lines) < 2 {
+		err = errors.New("queryStatusVersion: len(lines) < 2")
+		return
+	}
+
+	status = string(bytes.TrimSpace(lines[0]))
+	version = string(bytes.TrimSpace(lines[1]))
+	return
 }
 
 func getCandidateVersion(info *DebInfo) (string, error) {
@@ -243,7 +279,7 @@ func getCandidateVersion(info *DebInfo) (string, error) {
 }
 
 func compareVersions(ver1, op, ver2 string) bool {
-	err := exec.Command(binDpkg, "--compare-versions", ver1, op, ver2).Run()
+	err := exec.Command(binDpkg, "--compare-versions", "--", ver1, op, ver2).Run()
 	return err == nil
 }
 
@@ -253,9 +289,9 @@ func getChangeTime(fileInfo os.FileInfo) time.Time {
 	return time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec))
 }
 
-func deleteDeb(name string) {
+func deleteDeb(dir, name string) {
 	log.Println("delete deb", name)
-	err := os.Remove(filepath.Join(archivesDir, name))
+	err := os.Remove(filepath.Join(dir, name))
 	if err != nil {
 		log.Printf("deleteDeb error: %v\n", err)
 	}
