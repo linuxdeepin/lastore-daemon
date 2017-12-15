@@ -1,5 +1,8 @@
 PBUILDER_PKG = pbuilder-satisfydepends-dummy
 
+pwd := ${shell pwd}
+GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
+
 ifndef USE_GCCGO
 	GOBUILD = go build
 else
@@ -9,13 +12,13 @@ endif
 all:  build
 
 bin/lastore-tools:
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-tools lastore-tools
+	${GoPath} ${GOBUILD} -o bin/lastore-tools lastore-tools
 
 build:  bin/lastore-tools
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-daemon lastore-daemon
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
-	GOPATH=`pwd`:`pwd`/vendor ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
+	${GoPath} ${GOBUILD} -o bin/lastore-daemon lastore-daemon
+	${GoPath} ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
+	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
+	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
 
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
@@ -30,7 +33,7 @@ test:
 			echo 1; \
 		fi; \
 	fi) \
-	GOPATH=`pwd`:`pwd`/vendor go test -v internal/system internal/system/apt \
+	${GoPath} go test -v internal/system internal/system/apt \
 	internal/utils	internal/querydesktop \
 	lastore-daemon  lastore-session-helper  lastore-smartmirror  lastore-tools
 
