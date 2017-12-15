@@ -34,6 +34,7 @@ function build_system_info_now()
 if [[ -f "$UPDATE_INFO" ]] &&
        [[ $(find /var/lib/apt/lists -maxdepth 1 -type f -\! -name "lock") != "" ]] &&
        [[ "$UPDATE_INFO" -nt "/var/lib/dpkg/status" ]] &&
+       [[ "$UPDATE_INFO" -ot "/proc/self"  ]] &&
        [[ $(find /var/lib/apt/lists -maxdepth 1 -type f -newercm "$UPDATE_INFO" ) == "" ]] ;then
     exit 0
 fi
