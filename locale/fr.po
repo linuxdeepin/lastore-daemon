@@ -11,9 +11,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-10-24 11:05+0800\n"
-"PO-Revision-Date: 2017-11-11 10:38+0000\n"
-"Last-Translator: lexross <its4moi@gmail.com>\n"
+"POT-Creation-Date: 2017-12-26 15:55+0800\n"
+"PO-Revision-Date: 2017-12-26 09:10+0000\n"
+"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: French (http://www.transifex.com/linuxdeepin/deepin-store/language/fr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -29,21 +29,26 @@ msgstr "Logithèque Deepin"
 msgid "System is updating, please shut down or reboot later."
 msgstr "Le système s'actualise, ne pas arrêter ou redémarrer Deepin."
 
-#: ../src/lastore-session-helper/job.go:279
+#: ../src/lastore-session-helper/check_source.go:47
+msgid "Restore"
+msgstr ""
+
+#: ../src/lastore-session-helper/check_source.go:58
+#: ../src/lastore-session-helper/job.go:325
+msgid "Cancel"
+msgstr "Annuler"
+
+#: ../src/lastore-session-helper/job.go:294
 msgid "Reboot Now"
 msgstr "Redémarrer "
 
-#: ../src/lastore-session-helper/job.go:293
+#: ../src/lastore-session-helper/job.go:308
 msgid "Reboot Later"
 msgstr "Redémarrer plus tard"
 
-#: ../src/lastore-session-helper/job.go:302
+#: ../src/lastore-session-helper/job.go:317
 msgid "Retry"
 msgstr "Réessayer"
-
-#: ../src/lastore-session-helper/job.go:310
-msgid "Cancel"
-msgstr "Annuler"
 
 #: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
@@ -108,3 +113,9 @@ msgstr "Échec du téléchargement des paquets actualisés."
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
 msgstr "Cache de paquets effacé"
+
+#: ../src/lastore-session-helper/notify.go:151
+msgid ""
+"Your system source has been modified, please restore to official source for "
+"your normal use"
+msgstr ""

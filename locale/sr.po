@@ -3,12 +3,13 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# Један Пријатељ <3acejax@gmail.com>, 2017
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-10-24 11:05+0800\n"
-"PO-Revision-Date: 2017-10-24 03:19+0000\n"
+"POT-Creation-Date: 2017-12-26 15:55+0800\n"
+"PO-Revision-Date: 2017-12-26 09:10+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Serbian (http://www.transifex.com/linuxdeepin/deepin-store/language/sr/)\n"
 "MIME-Version: 1.0\n"
@@ -23,39 +24,44 @@ msgstr "Deepin Продавница"
 
 #: ../src/lastore-daemon/inhibitor.go:31
 msgid "System is updating, please shut down or reboot later."
+msgstr "Систем се ажурира, молим одложите искључивање или поновно покретање."
+
+#: ../src/lastore-session-helper/check_source.go:47
+msgid "Restore"
 msgstr ""
 
-#: ../src/lastore-session-helper/job.go:279
-msgid "Reboot Now"
-msgstr "Рестартуј одмах"
-
-#: ../src/lastore-session-helper/job.go:293
-msgid "Reboot Later"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:302
-msgid "Retry"
-msgstr "Поново"
-
-#: ../src/lastore-session-helper/job.go:310
+#: ../src/lastore-session-helper/check_source.go:58
+#: ../src/lastore-session-helper/job.go:325
 msgid "Cancel"
 msgstr "Откажи"
 
+#: ../src/lastore-session-helper/job.go:294
+msgid "Reboot Now"
+msgstr "Рестартуј одмах"
+
+#: ../src/lastore-session-helper/job.go:308
+msgid "Reboot Later"
+msgstr "Поново Покрени Касније"
+
+#: ../src/lastore-session-helper/job.go:317
+msgid "Retry"
+msgstr "Поново"
+
 #: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
-msgstr ""
+msgstr "%q инсталација успешна."
 
 #: ../src/lastore-session-helper/notify.go:73
 msgid "%q failed to install."
-msgstr ""
+msgstr "%q инсталација неуспешна."
 
 #: ../src/lastore-session-helper/notify.go:82
 msgid "%q removed successfully."
-msgstr ""
+msgstr "%q уклањање успешно."
 
 #: ../src/lastore-session-helper/notify.go:84
 msgid "%q failed to remove."
-msgstr ""
+msgstr "%q уклањање неуспешно."
 
 #: ../src/lastore-session-helper/notify.go:91
 msgid "%q failed to download."
@@ -68,16 +74,16 @@ msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
-msgstr ""
+msgstr "Неке функције ће ступити на снагу након поновног покретања."
 
 #: ../src/lastore-session-helper/notify.go:105
 #: ../src/lastore-session-helper/notify.go:107
 msgid "Updated successfully!"
-msgstr ""
+msgstr "Ажурирање успешно!"
 
 #: ../src/lastore-session-helper/notify.go:111
 msgid "Failed to update."
-msgstr ""
+msgstr "Ажурирање неуспешно."
 
 #: ../src/lastore-session-helper/notify.go:121
 #, c-format
@@ -95,12 +101,18 @@ msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:133
 msgid "Download"
-msgstr ""
+msgstr "Преузми"
 
 #: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
-msgstr ""
+msgstr "Неуспешно преузимање пакета за ажурирање."
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
+msgstr "Кеш пакета уклоњен"
+
+#: ../src/lastore-session-helper/notify.go:151
+msgid ""
+"Your system source has been modified, please restore to official source for "
+"your normal use"
 msgstr ""

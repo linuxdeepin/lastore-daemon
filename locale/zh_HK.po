@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-10-24 11:05+0800\n"
-"PO-Revision-Date: 2017-10-24 03:19+0000\n"
+"POT-Creation-Date: 2017-12-26 15:55+0800\n"
+"PO-Revision-Date: 2017-12-26 09:10+0000\n"
 "Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
 "Language-Team: Chinese (Hong Kong) (http://www.transifex.com/linuxdeepin/deepin-store/language/zh_HK/)\n"
 "MIME-Version: 1.0\n"
@@ -26,21 +26,26 @@ msgstr "Deepin 商店"
 msgid "System is updating, please shut down or reboot later."
 msgstr "系統正在更新中，請關機或於稍後重新開機。"
 
-#: ../src/lastore-session-helper/job.go:279
+#: ../src/lastore-session-helper/check_source.go:47
+msgid "Restore"
+msgstr ""
+
+#: ../src/lastore-session-helper/check_source.go:58
+#: ../src/lastore-session-helper/job.go:325
+msgid "Cancel"
+msgstr "取消"
+
+#: ../src/lastore-session-helper/job.go:294
 msgid "Reboot Now"
 msgstr "立刻重新啟動"
 
-#: ../src/lastore-session-helper/job.go:293
+#: ../src/lastore-session-helper/job.go:308
 msgid "Reboot Later"
 msgstr "稍後重新啟動"
 
-#: ../src/lastore-session-helper/job.go:302
+#: ../src/lastore-session-helper/job.go:317
 msgid "Retry"
 msgstr "重試"
-
-#: ../src/lastore-session-helper/job.go:310
-msgid "Cancel"
-msgstr "取消"
 
 #: ../src/lastore-session-helper/notify.go:70
 msgid "%q installed successfully."
@@ -104,4 +109,10 @@ msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
+msgstr ""
+
+#: ../src/lastore-session-helper/notify.go:151
+msgid ""
+"Your system source has been modified, please restore to official source for "
+"your normal use"
 msgstr ""
