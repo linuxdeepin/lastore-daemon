@@ -17,17 +17,23 @@
 
 package main
 
-import "dbus/org/freedesktop/login1"
-import "dbus/com/deepin/lastore"
-import "pkg.deepin.io/lib/dbus"
-import "internal/system"
-import "pkg.deepin.io/lib/gettext"
-import "dbus/com/deepin/system/power"
+import (
+	"fmt"
+	"os"
+	"strings"
+	"time"
 
-import log "github.com/cihub/seelog"
-import "strings"
-import "os"
-import "time"
+	"dbus/com/deepin/lastore"
+	"dbus/com/deepin/system/power"
+	"dbus/org/freedesktop/login1"
+
+	"internal/system"
+
+	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/gettext"
+
+	log "github.com/cihub/seelog"
+)
 
 type CacheJobInfo struct {
 	Id       string
@@ -50,26 +56,34 @@ type Lastore struct {
 	notifiedBattery   bool
 	updatablePackages []string
 	laterUpgradeTimer *time.Timer
+
+	// prop:
+	SourceCheckEnabled bool
 }
 
-func NewLastore() *Lastore {
+func NewLastore() (*Lastore, error) {
 	l := &Lastore{
 		jobStatus: make(map[dbus.ObjectPath]CacheJobInfo),
 		inhibitFd: -1,
 		lang:      QueryLang(),
 	}
 
+	if !FileExist(disableSourceCheckFile) {
+		l.SourceCheckEnabled = true
+	}
+
 	log.Debugf("CurrentLang: %q\n", l.lang)
 	power, err := power.NewPower("com.deepin.system.Power", "/com/deepin/system/Power")
 	if err != nil {
-		log.Warnf("Failed MonitorBattery: %v\n", err)
+		panic(fmt.Errorf("power.NewPower err: %v", err))
 	}
 	l.power = power
 
 	core, err := lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
 	if err != nil {
-		log.Warnf("NewLastore: %v\n", err)
+		panic(fmt.Errorf("lastore.NewManager err: %v", err))
 	}
+
 	core.RecordLocaleInfo(os.Getenv("LANG"))
 	core.SetCurrentX11Id(os.Getenv("DISPLAY"), os.Getenv("XAUTHORITY"))
 
@@ -77,7 +91,7 @@ func NewLastore() *Lastore {
 
 	updater, err := lastore.NewUpdater("com.deepin.lastore", "/com/deepin/lastore")
 	if err != nil {
-		log.Warnf("NewLastore: %v\n", err)
+		panic(fmt.Errorf("lastore.NewUpdater err: %v", err))
 	}
 	l.updater = updater
 
@@ -89,10 +103,11 @@ func NewLastore() *Lastore {
 	err = dbus.InstallOnSession(l)
 	if err != nil {
 		log.Warn("install on session failed:", err)
+		return nil, err
 	}
 
 	go l.monitorSignal()
-	return l
+	return l, nil
 }
 
 func (l *Lastore) GetDBusInfo() dbus.DBusInfo {

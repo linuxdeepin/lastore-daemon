@@ -21,6 +21,7 @@ import (
 	"internal/system"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -106,4 +107,15 @@ func strSliceSetEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func touchFile(filename string) error {
+	dir := filepath.Dir(filename)
+	os.MkdirAll(dir, 0755)
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }

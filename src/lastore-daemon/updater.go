@@ -19,13 +19,17 @@ package main
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
-	"pkg.deepin.io/lib/dbus"
+	"path/filepath"
 	"time"
+
+	"pkg.deepin.io/lib/dbus"
+
+	log "github.com/cihub/seelog"
 )
 
 type ApplicationUpdateInfo struct {
@@ -203,4 +207,40 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) error {
 	u.AutoDownloadUpdates = enable
 	dbus.NotifyChange(u, "AutoDownloadUpdates")
 	return nil
+}
+
+const (
+	aptSource       = "/etc/apt/sources.list"
+	aptSourceOrigin = aptSource + ".origin"
+	aptSourceDir    = aptSource + ".d"
+)
+
+func (u *Updater) RestoreSystemSource() {
+	fileInfoList, err := ioutil.ReadDir(aptSourceDir)
+	if err != nil {
+		log.Warn(err)
+	}
+	for _, fileInfo := range fileInfoList {
+		if fileInfo.IsDir() {
+			continue
+		}
+
+		ext := filepath.Ext(fileInfo.Name())
+		if ext == ".list" || ext == ".sources" {
+			err := os.Remove(filepath.Join(aptSourceDir, fileInfo.Name()))
+			if err != nil {
+				log.Warn(err)
+			}
+		}
+	}
+
+	content, err := ioutil.ReadFile(aptSourceOrigin)
+	if err == nil {
+		err = ioutil.WriteFile(aptSource, content, 0644)
+		if err != nil {
+			log.Warn(err)
+		}
+	} else {
+		log.Warn(err)
+	}
 }

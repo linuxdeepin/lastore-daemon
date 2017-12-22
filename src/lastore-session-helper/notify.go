@@ -146,3 +146,8 @@ func notifyAutoClean() {
 	msg := gettext.Tr("Package cache wiped")
 	SendNotify("deepin-appstore", msg, nil)
 }
+
+func notifySourceModified(actions []Action) {
+	msg := gettext.Tr("Your system source has been modified, please restore to official source for your normal use")
+	SendNotify("dialog-warning", msg, actions)
+}

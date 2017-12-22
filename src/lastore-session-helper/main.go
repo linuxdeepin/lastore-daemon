@@ -17,11 +17,15 @@
 
 package main
 
-import "pkg.deepin.io/lib/gettext"
-import "pkg.deepin.io/lib/dbus"
-import log "github.com/cihub/seelog"
-import "os"
-import "path"
+import (
+	"os"
+	"path/filepath"
+
+	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/gettext"
+
+	log "github.com/cihub/seelog"
+)
 
 func main() {
 	setupLog()
@@ -29,14 +33,23 @@ func main() {
 	gettext.InitI18n()
 	gettext.Textdomain("lastore-daemon")
 
-	NewLastore()
+	lastore, err := NewLastore()
+	if err != nil {
+		log.Warn(err)
+		os.Exit(1)
+	}
 	dbus.DealWithUnhandledMessage()
+
+	if lastore.SourceCheckEnabled {
+		go lastore.checkSource()
+	}
 	if err := dbus.Wait(); err != nil {
+		log.Warn(err)
 	}
 }
 
 func setupLog() {
-	logDirectory := path.Join(os.Getenv("HOME"), ".cache", "lastore-daemon")
+	logDirectory := filepath.Join(os.Getenv("HOME"), ".cache", "lastore-daemon")
 	os.MkdirAll(logDirectory, 0755)
 
 	config := `
