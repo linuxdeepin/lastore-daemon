@@ -9,3 +9,4 @@ RestartSec=1min
 TimeoutStartSec=infinity
 
 ExecStart=/var/lib/lastore/scripts/update_metadata_info -now
+MemoryLimit=50M
