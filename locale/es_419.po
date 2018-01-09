@@ -5,6 +5,7 @@
 # Translators:
 # Alejandro Hamann <linkstat@gmail.com>, 2016
 # Benjamin Perez Carrillo <benperezc@gmail.com>, 2016
+# David Ríos <drios9420@gmail.com>, 2018
 # Deepin en Español, 2017
 # Diego Sanguinetti, 2017
 # e2f_lat_t3 <e2f_lat_t3@outlook.com>, 2015
@@ -17,8 +18,8 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2017-12-26 09:10+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"PO-Revision-Date: 2018-01-15 03:42+0000\n"
+"Last-Translator: David Ríos <drios9420@gmail.com>\n"
 "Language-Team: Spanish (Latin America) (http://www.transifex.com/linuxdeepin/deepin-store/language/es_419/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -36,7 +37,7 @@ msgstr "El sistema se está actualizando. Apague o reinicie el sistema más tard
 
 #: ../src/lastore-session-helper/check_source.go:47
 msgid "Restore"
-msgstr ""
+msgstr "Restaurar"
 
 #: ../src/lastore-session-helper/check_source.go:58
 #: ../src/lastore-session-helper/job.go:325
@@ -117,10 +118,10 @@ msgstr "Error al descargar paquetes de actualización."
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr "Borrado de caché de paquetes"
+msgstr "Se borró el caché de paquetes"
 
 #: ../src/lastore-session-helper/notify.go:151
 msgid ""
 "Your system source has been modified, please restore to official source for "
 "your normal use"
-msgstr ""
+msgstr "La fuente de su sistema fue modificada, por favor, restaure a la fuente oficial para su uso normal"

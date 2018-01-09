@@ -4,13 +4,14 @@
 # 
 # Translators:
 # MUHAAB SHAAM <muhaab.org@gmail.com>, 2016-2017
+# salem alBream <salembream@gmail.com>, 2018
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2017-12-26 09:10+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"PO-Revision-Date: 2018-01-11 09:19+0000\n"
+"Last-Translator: salem alBream <salembream@gmail.com>\n"
 "Language-Team: Arabic (http://www.transifex.com/linuxdeepin/deepin-store/language/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -28,7 +29,7 @@ msgstr "يتم تحديث النظام ، يرجى إعادة التشغيل أ�
 
 #: ../src/lastore-session-helper/check_source.go:47
 msgid "Restore"
-msgstr ""
+msgstr "استعادة"
 
 #: ../src/lastore-session-helper/check_source.go:58
 #: ../src/lastore-session-helper/job.go:325
@@ -115,4 +116,4 @@ msgstr "تم مسح ذاكرة التخزين المؤقت للحزمة"
 msgid ""
 "Your system source has been modified, please restore to official source for "
 "your normal use"
-msgstr ""
+msgstr "نظامك قد تم تعديله، يرجى الرجوع الى الضبط الأصلي للعمل بصورة صحيحة."
