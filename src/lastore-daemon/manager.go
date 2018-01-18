@@ -20,6 +20,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -28,9 +29,9 @@ import (
 	"internal/system"
 	"internal/utils"
 
-	log "github.com/cihub/seelog"
-	"os"
 	"pkg.deepin.io/lib/dbus"
+
+	log "github.com/cihub/seelog"
 )
 
 type Manager struct {
@@ -362,7 +363,9 @@ func (m *Manager) CleanArchives() (*Job, error) {
 	job, err := m.jobManager.CreateJob("", system.CleanJobType, nil)
 	if err != nil {
 		log.Warnf("CleanArchives error: %v", err)
+		return nil, err
 	}
+	m.config.UpdateLastCleanTime()
 	return job, err
 }
 
@@ -393,30 +396,31 @@ func (m *Manager) loopCheck() {
 		} else if err != nil {
 			log.Warnf("CleanArchives failed: %v", err)
 		}
-		m.config.UpdateLastCleanTime()
 	}
 
-	calcDelay := func() time.Duration {
-		elapsed := time.Now().Sub(m.config.LastCleanTime)
+	calcRemainingDuration := func() time.Duration {
+		elapsed := time.Since(m.config.LastCleanTime)
+		if elapsed < 0 {
+			// now time < last clean time : last clean time (from config) is invalid
+			return -1
+		}
 		return m.config.CleanInterval - elapsed
 	}
 
 	for {
 		select {
 		case <-m.autoCleanCfgChange:
-			// auto clean config changed
-			log.Debug("autoclean config changed")
+			log.Debug("auto clean config changed")
 			continue
 		case <-time.After(checkInterval):
-			log.Debug("tick")
 			if m.AutoClean {
-				remaind := calcDelay()
-				log.Debugf("autoclean remaind %v", remaind)
-				if remaind < 0 {
+				remaining := calcRemainingDuration()
+				log.Debugf("auto clean remaining duration: %v", remaining)
+				if remaining < 0 {
 					doClean()
 				}
 			} else {
-				log.Debug("autoclean disabled")
+				log.Debug("auto clean disabled")
 			}
 		}
 	}
