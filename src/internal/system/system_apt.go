@@ -216,7 +216,7 @@ func parsePackageSize(line string) (float64, error) {
 		l := strings.Replace(string(ms[1]), ",", "", -1)
 		size, err := strconv.ParseFloat(l, 64)
 		if err != nil {
-			return SizeUnknown, fmt.Errorf("%q invalid : %v err")
+			return SizeUnknown, fmt.Errorf("%q invalid : %v err", l, err)
 		}
 		if len(ms[2]) == 0 {
 			return size, nil
