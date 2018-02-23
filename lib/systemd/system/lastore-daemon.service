@@ -1,12 +1,8 @@
 [Unit]
 Description=Deepin Lastore Daemon
-DefaultDependencies=no
-After=network.target
+After=display-manager.service
 
 [Service]
 Type=dbus
 BusName=com.deepin.lastore
 ExecStart=/usr/bin/lastore-daemon
-
-[Install]
-WantedBy=multi-user.target

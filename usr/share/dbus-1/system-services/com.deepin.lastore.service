@@ -2,3 +2,4 @@
 Name=com.deepin.lastore
 Exec=/usr/bin/lastore-daemon
 User=root
+SystemdService=lastore-daemon.service
