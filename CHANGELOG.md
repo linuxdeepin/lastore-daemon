@@ -1,3 +1,25 @@
+<a name="0.9.54"></a>
+### 0.9.54 (2018-02-26)
+
+
+#### Performance
+
+*   reduce RAM usage by avoid contents of safecache ([1028f5c4](https://github.com/linuxdeepin/lastore-daemon/commit/1028f5c44b90cf9aa19c5ea0712b0b1fecc91468))
+*   run lastore-daemon by needing ([12001a17](https://github.com/linuxdeepin/lastore-daemon/commit/12001a172280f52bb78218e5c7b86563ac50a63c))
+
+#### Bug Fixes
+
+*   build_system_info exit if UPDATE_INFO time invalid ([95881da4](https://github.com/linuxdeepin/lastore-daemon/commit/95881da41545cfafd28fd122bc320a933037ff28))
+* **apt-clean:**  can not delete some files ([6916eb3c](https://github.com/linuxdeepin/lastore-daemon/commit/6916eb3ca24e4ca2d31d270e306b1db6ecb1b8f9))
+* **autoclean:**  fix calcRemainingDuration ([7ea8126c](https://github.com/linuxdeepin/lastore-daemon/commit/7ea8126ca12fbb146d47444e9a1301fa3f1e7382))
+
+#### Features
+
+* **apt-clean:**  carefully handle status of package ([0e7318ff](https://github.com/linuxdeepin/lastore-daemon/commit/0e7318ffa818fe504c8c973372141c2aaee35bc5))
+* **session-helper:**  check system source ([e6660c88](https://github.com/linuxdeepin/lastore-daemon/commit/e6660c88ce2e6d2fa780b60fa5ecff6dab809576))
+
+
+
 <a name="0.9.53"></a>
 ### 0.9.53 (2017-12-06)
 
