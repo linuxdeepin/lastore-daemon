@@ -1,3 +1,13 @@
+<a name="0.9.55"></a>
+### 0.9.55 (2018-03-19)
+
+
+#### Bug Fixes
+
+*   failed create hardlink if the parenter directory miss ([e7d91ebb](https://github.com/linuxdeepin/lastore-daemon/commit/e7d91ebb520a00801d747d23d5371c6b4166ca2d))
+
+
+
 <a name="0.9.54"></a>
 ### 0.9.54 (2018-02-26)
 
