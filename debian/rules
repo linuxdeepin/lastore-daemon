@@ -1,6 +1,7 @@
 #!/usr/bin/make -f
 
 export GOPATH := /usr/share/gocode
+SYSTYPE=$(shell grep Type= /etc/deepin-version|cut -d= -f 2)
 
 ifeq ($(DEB_BUILD_ARCH), amd64)
 	depend_ostree = true
@@ -19,6 +20,12 @@ endif
 
 override_dh_install:
 	dh_install --sourcedir=debian/tmp
+
+ifeq ($(SYSTYPE), Professional)
+override_dh_auto_configure:
+	dh_auto_configure
+	echo http://pd4x.packages.deepin.com/professional/tree/lastore > var/lib/lastore/scripts/metadata_remote
+endif
 
 override_dh_installdeb:
 	dh_installdeb
