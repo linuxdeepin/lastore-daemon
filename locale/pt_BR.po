@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Allan Richard <luke.downhill@gmail.com>, 2016
+# Allan Richardson <luke.downhill@gmail.com>, 2016
 # Raphael Miquelis <raphaelmiquelis@gmail.com>, 2016-2017
 msgid ""
 msgstr ""

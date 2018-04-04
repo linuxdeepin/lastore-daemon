@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# Tobias Ahlström <tobias.ahlstrom@gmail.com>, 2018
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2017-12-26 09:10+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
+"PO-Revision-Date: 2018-01-26 22:26+0000\n"
+"Last-Translator: Tobias Ahlström <tobias.ahlstrom@gmail.com>\n"
 "Language-Team: Swedish (http://www.transifex.com/linuxdeepin/deepin-store/language/sv/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -27,7 +28,7 @@ msgstr "Systemet uppdateras, vänligen stäng av eller starta om senare."
 
 #: ../src/lastore-session-helper/check_source.go:47
 msgid "Restore"
-msgstr ""
+msgstr "Återställ"
 
 #: ../src/lastore-session-helper/check_source.go:58
 #: ../src/lastore-session-helper/job.go:325
@@ -104,14 +105,14 @@ msgstr "Ladda ner"
 
 #: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
-msgstr ""
+msgstr "Misslyckades med att ladda ner uppgraderbara paket."
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr ""
+msgstr "Paket cache rensad"
 
 #: ../src/lastore-session-helper/notify.go:151
 msgid ""
 "Your system source has been modified, please restore to official source for "
 "your normal use"
-msgstr ""
+msgstr "Din systemkälla har modifierats, vänligen återställ till den officiella källan för normalt användande"
