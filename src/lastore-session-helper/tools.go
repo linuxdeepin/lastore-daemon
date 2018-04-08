@@ -17,6 +17,12 @@
 
 package main
 
+/*
+#include <stdlib.h>
+#include <sys/statvfs.h>
+*/
+import "C"
+
 import (
 	"internal/system"
 	"os"
@@ -24,6 +30,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unsafe"
 )
 
 // QueryLang return user lang.
@@ -118,4 +125,16 @@ func touchFile(filename string) error {
 		return err
 	}
 	return f.Close()
+}
+
+func queryVFSAvailable(path string) (uint64, error) {
+	var vfsStat C.struct_statvfs
+	path0 := C.CString(path)
+	_, err := C.statvfs(path0, &vfsStat)
+	C.free(unsafe.Pointer(path0))
+	if err != nil {
+		return 0, err
+	}
+	avail := uint64(vfsStat.f_bavail) * uint64(vfsStat.f_bsize)
+	return avail, nil
 }

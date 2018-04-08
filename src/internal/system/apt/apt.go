@@ -21,12 +21,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
+
+	log "github.com/cihub/seelog"
 )
 
 type CommandSet interface {
@@ -70,6 +71,7 @@ type aptCommand struct {
 	indicator system.Indicator
 
 	logger bytes.Buffer
+	stderr bytes.Buffer
 }
 
 func (c aptCommand) String() string {
@@ -138,7 +140,7 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 		Cancelable: true,
 	}
 	cmd.Stdout = &r.logger
-	cmd.Stderr = &r.logger
+	cmd.Stderr = &r.stderr
 
 	cmdSet.AddCMD(r)
 	return r
@@ -196,27 +198,36 @@ func (c *aptCommand) atExit() {
 	c.aptPipe.Close()
 
 	c.logger.WriteString(fmt.Sprintf("End AptCommand: %s\n", c.JobId))
-	log.Infof(c.logger.String())
+	log.Info(c.logger.String())
+	log.Info(c.stderr.String())
 
 	c.cmdSet.RemoveCMD(c.JobId)
 
-	var line string
-	var fmtStr = "dummy:%s:%f:%s"
-
 	switch c.exitCode {
 	case ExitSuccess:
-		line = fmt.Sprintf(fmtStr, system.SucceedStatus, 1.0, c.JobId)
+		c.indicator(system.JobProgressInfo{
+			JobId:      c.JobId,
+			Status:     system.SucceedStatus,
+			Progress:   1.0,
+			Cancelable: true,
+		})
 	case ExitFailure:
-		line = fmt.Sprintf(fmtStr, system.FailedStatus, -1.0, c.JobId)
+		errStr := c.stderr.String()
+		c.indicator(system.JobProgressInfo{
+			JobId:       c.JobId,
+			Status:      system.FailedStatus,
+			Progress:    -1.0,
+			Cancelable:  true,
+			Description: errStr,
+		})
 	case ExitPause:
-		line = fmt.Sprintf(fmtStr, system.PausedStatus, -1.0, c.JobId)
+		c.indicator(system.JobProgressInfo{
+			JobId:      c.JobId,
+			Status:     system.PausedStatus,
+			Progress:   -1.0,
+			Cancelable: true,
+		})
 	}
-	info, err := ParseProgressInfo(c.JobId, line)
-	if err != nil {
-		log.Warnf("aptCommand.Wait.ParseProgressInfo (%q): %v\n", line, err)
-	}
-
-	c.indicator(info)
 }
 
 func (c *aptCommand) indicateFailed(description string) {

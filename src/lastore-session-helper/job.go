@@ -378,3 +378,11 @@ func guestJobTypeFromPath(path dbus.ObjectPath) string {
 	}
 	return ""
 }
+
+func (*Lastore) IsDiskSpaceSufficient() (bool, error) {
+	avail, err := queryVFSAvailable("/")
+	if err != nil {
+		return false, err
+	}
+	return avail > 1024*1024*10 /* 10 MB */, nil
+}
