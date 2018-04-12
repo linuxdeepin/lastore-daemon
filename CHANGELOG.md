@@ -1,3 +1,13 @@
+<a name="0.9.56"></a>
+### 0.9.56 (2018-04-12)
+
+
+#### Features
+
+* **session-helper:**  add method IsDiskSpaceSufficient ([b080ef65](https://github.com/linuxdeepin/lastore-daemon/commit/b080ef658449acec0eecd422a83c092df6a9a713))
+
+
+
 <a name="0.9.55"></a>
 ### 0.9.55 (2018-03-19)
 
