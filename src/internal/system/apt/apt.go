@@ -146,6 +146,18 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 	return r
 }
 
+func (c *aptCommand) setEnv(envVarMap map[string]string) {
+	if envVarMap == nil {
+		return
+	}
+
+	envVarSlice := os.Environ()
+	for key, value := range envVarMap {
+		envVarSlice = append(envVarSlice, key+"="+value)
+	}
+	c.apt.Env = envVarSlice
+}
+
 func (c *aptCommand) Start() error {
 	c.logger.WriteString(fmt.Sprintf("Begin AptCommand:%v\n", c))
 

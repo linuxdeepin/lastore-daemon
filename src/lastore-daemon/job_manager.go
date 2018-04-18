@@ -18,13 +18,14 @@
 package main
 
 import (
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
 const (
@@ -78,7 +79,7 @@ func (jm *JobManager) List() JobList {
 }
 
 // CreateJob create the job and try starting it
-func (jm *JobManager) CreateJob(jobName string, jobType string, packages []string) (*Job, error) {
+func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (*Job, error) {
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus, system.PausedStatus:
@@ -91,34 +92,34 @@ func (jm *JobManager) CreateJob(jobName string, jobType string, packages []strin
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, DownloadQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, DownloadQueue, environ)
 	case system.InstallJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ)
 		job._InitProgressRange(0, 0.5)
 
-		next := NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
+		next := NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 		next._InitProgressRange(0.5, 1)
 
 		job.Id = next.Id
 		job.next = next
 	case system.RemoveJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
-		job = NewJob(genJobId(jobType), jobName, nil, jobType, LockQueue)
+		job = NewJob(genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.DistUpgradeJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	case system.PrepareDistUpgradeJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ)
 	case system.UpdateJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 
 	case system.CleanJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue)
+		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	default:
 		return nil, system.NotSupportError
 	}
 
-	log.Infof("CreateJob with %q %q %q\n", jobName, jobType, packages)
+	log.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
 	if err := jm.addJob(job); err != nil {
 		return nil, err
 	}

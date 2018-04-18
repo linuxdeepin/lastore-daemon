@@ -19,11 +19,12 @@ package main
 
 import (
 	"fixme/pkg_recommend"
-	C "gopkg.in/check.v1"
 	"internal/system"
 	"internal/system/apt"
 	"strings"
 	"testing"
+
+	C "gopkg.in/check.v1"
 )
 
 type testWrap struct{}
@@ -112,11 +113,11 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 func (*testWrap) TestGuestJobType(c *C.C) {
 	jm := NewJobManager(apt.New(), nil)
 
-	job, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil)
+	job, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil)
 	c.Check(err, C.Equals, nil)
 	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, (*Job)(nil))
 
-	job, err = jm.CreateJob("", system.DistUpgradeJobType, nil)
+	job, err = jm.CreateJob("", system.DistUpgradeJobType, nil, nil)
 	c.Check(err, C.Equals, nil)
 	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, job)
 }

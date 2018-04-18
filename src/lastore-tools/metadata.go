@@ -19,9 +19,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/codegangsta/cli"
 	"internal/utils"
 	"os"
+
+	"github.com/codegangsta/cli"
 )
 
 var CMDMetadata = cli.Command{
@@ -90,7 +91,7 @@ func MainMetadata(c *cli.Context) {
 	for _, id := range c.Args() {
 		c, err := tree.Cat("lastore", id+"/meta/manifest.json")
 		if err != nil {
-			fmt.Printf("EC:", err)
+			fmt.Println("EC:", err)
 			continue
 		}
 		fmt.Println(c)

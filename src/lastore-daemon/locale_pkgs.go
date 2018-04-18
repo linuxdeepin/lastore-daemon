@@ -17,34 +17,9 @@
 
 package main
 
-import "dbus/org/freedesktop/accounts"
-import "internal/system"
-import "fixme/pkg_recommend"
-import "pkg.deepin.io/lib/dbus"
-
-// QueryLangByUID query Language from org.freedesktop.Accounts
-func QueryLangByUID(uid int64) (string, error) {
-	ac, err := accounts.NewAccounts("org.freedesktop.Accounts", "/org/freedesktop/Accounts")
-	if err != nil {
-		return "", err
-	}
-	defer accounts.DestroyAccounts(ac)
-	upath, err := ac.FindUserById(uid)
-	if err != nil {
-		return "", err
-	}
-
-	u, err := accounts.NewUser("org.freedesktop.Accounts", upath)
-	if err != nil {
-		return "", err
-	}
-	defer accounts.DestroyUser(u)
-	lang := u.Language.Get()
-	if lang == "" {
-		return "", system.NotFoundError("empty lang")
-	}
-	return lang, nil
-}
+import (
+	"fixme/pkg_recommend"
+)
 
 func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ...string) []string {
 	set := make(map[string]struct{})
@@ -61,14 +36,4 @@ func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ..
 		}
 	}
 	return r
-}
-
-// Don't directly use this API. It will be migration to com.deepin.Accounts
-func (m *Manager) RecordLocaleInfo(msg dbus.DMessage, locale string) error {
-	uid := msg.GetSenderUID()
-	if locale == "" {
-		return system.NotFoundError("empty locale")
-	}
-	m.cachedLocale[uint64(uid)] = locale
-	return nil
 }

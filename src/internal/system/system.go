@@ -82,10 +82,10 @@ type Indicator func(JobProgressInfo)
 
 type System interface {
 	Download(jobId string, packages []string) error
-	Install(jobId string, packages []string) error
-	Remove(jobId string, packages []string) error
+	Install(jobId string, packages []string, environ map[string]string) error
+	Remove(jobId string, packages []string, environ map[string]string) error
 
-	DistUpgrade(jobId string) error
+	DistUpgrade(jobId string, environ map[string]string) error
 
 	UpdateSource(jobId string) error
 	Clean(jobId string) error

@@ -20,7 +20,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -30,6 +29,7 @@ import (
 	"internal/utils"
 
 	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/procfs"
 
 	log "github.com/cihub/seelog"
 )
@@ -52,8 +52,6 @@ type Manager struct {
 
 	inhibitFd         dbus.UnixFD
 	sourceUpdatedOnce bool
-	//TODO: remove this. It should be record in com.deepin.Accounts
-	cachedLocale map[uint64]string
 }
 
 /*
@@ -72,7 +70,6 @@ func NewManager(b system.System, c *Config) *Manager {
 		config:              c,
 		b:                   b,
 		SystemArchitectures: archs,
-		cachedLocale:        make(map[uint64]string),
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
 	}
@@ -100,18 +97,47 @@ func NormalizePackageNames(s string) ([]string, error) {
 	return r, nil
 }
 
-func (m *Manager) UpdatePackage(jobName string, packages string) (*Job, error) {
+func makeEnvironWithDMsg(msg dbus.DMessage) map[string]string {
+	environ := make(map[string]string)
+	p := procfs.Process(msg.GetSenderPID())
+	envVars, err := p.Environ()
+	if err != nil {
+		log.Warnf("failed to get process %d environ: %v", p, err)
+	} else {
+		environ["DISPLAY"] = envVars.Get("DISPLAY")
+		environ["XAUTHORITY"] = envVars.Get("XAUTHORITY")
+		environ["DEEPIN_LASTORE_LANG"] = getLang(envVars)
+	}
+	return environ
+}
+
+func getUsedLang(environ map[string]string) string {
+	return environ["DEEPIN_LASTORE_LANG"]
+}
+
+func getLang(envVars procfs.EnvVars) string {
+	for _, name := range []string{"LC_ALL", "LC_MESSAGE", "LANG"} {
+		value := envVars.Get(name)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func (m *Manager) UpdatePackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
 	}
 
 	m.ensureUpdateSourceOnce()
+	environ := makeEnvironWithDMsg(msg)
 
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs)
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
 	if err != nil {
 		log.Warnf("UpdatePackage %q error: %v\n", packages, err)
 	}
@@ -125,25 +151,26 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 	}
 
 	m.ensureUpdateSourceOnce()
+	environ := makeEnvironWithDMsg(msg)
 
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	locale, ok := m.cachedLocale[uint64(msg.GetSenderUID())]
-	if !ok {
-		log.Warnf("Can't find lang information from :%v %v\n", msg)
-		return m.installPackage(jobName, packages)
+	lang := getUsedLang(environ)
+	if lang == "" {
+		log.Warn("failed to get lang")
+		return m.installPackage(jobName, packages, environ)
 	}
 
-	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, locale, pkgs...)
+	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, lang, pkgs...)
 	if len(localePkgs) != 0 {
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
 
-	return m.installPackage(jobName, strings.Join(append(strings.Fields(packages), localePkgs...), " "))
+	return m.installPackage(jobName, strings.Join(append(strings.Fields(packages), localePkgs...), " "), environ)
 }
 
-func (m *Manager) installPackage(jobName string, packages string) (*Job, error) {
+func (m *Manager) installPackage(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
 
 	installedN := 0
@@ -156,25 +183,26 @@ func (m *Manager) installPackage(jobName string, packages string) (*Job, error) 
 		return nil, system.ResourceExitError
 	}
 
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList)
+	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
 	if err != nil {
 		log.Warnf("InstallPackage %q error: %v\n", packages, err)
 	}
 	return job, err
 }
 
-func (m *Manager) RemovePackage(jobName string, packages string) (*Job, error) {
+func (m *Manager) RemovePackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
 	}
 
 	m.ensureUpdateSourceOnce()
+	environ := makeEnvironWithDMsg(msg)
 
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs)
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	if err != nil {
 		log.Warnf("RemovePackage %q error: %v\n", packages, err)
 	}
@@ -192,7 +220,7 @@ func (m *Manager) UpdateSource() (*Job, error) {
 	defer m.do.Unlock()
 	m.sourceUpdatedOnce = true
 
-	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil)
+	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil, nil)
 	if err != nil {
 		log.Warnf("UpdateSource error: %v\n", err)
 	}
@@ -217,8 +245,9 @@ func (m *Manager) cancelAllJob() error {
 	return nil
 }
 
-func (m *Manager) DistUpgrade() (*Job, error) {
+func (m *Manager) DistUpgrade(msg dbus.DMessage) (*Job, error) {
 	m.ensureUpdateSourceOnce()
+	environ := makeEnvironWithDMsg(msg)
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -228,7 +257,7 @@ func (m *Manager) DistUpgrade() (*Job, error) {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps, environ)
 	if err != nil {
 		log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
@@ -253,7 +282,7 @@ func (m *Manager) PrepareDistUpgrade() (*Job, error) {
 		return nil, system.NotFoundError("no need download")
 	}
 
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, m.UpgradableApps)
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, m.UpgradableApps, nil)
 	if err != nil {
 		log.Warnf("PrepareDistUpgrade error: %v\n", err)
 		return nil, err
@@ -360,7 +389,7 @@ func (m *Manager) CleanArchives() (*Job, error) {
 		return nil, errAptRunning
 	}
 
-	job, err := m.jobManager.CreateJob("", system.CleanJobType, nil)
+	job, err := m.jobManager.CreateJob("", system.CleanJobType, nil, nil)
 	if err != nil {
 		log.Warnf("CleanArchives error: %v", err)
 		return nil, err
@@ -424,9 +453,4 @@ func (m *Manager) loopCheck() {
 			}
 		}
 	}
-}
-
-func (m *Manager) SetCurrentX11Id(id string, auth string) {
-	os.Setenv("DISPLAY", id)
-	os.Setenv("XAUTHORITY", auth)
 }

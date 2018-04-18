@@ -25,7 +25,7 @@ func TestJobQueue(t *testing.T) {
 	go func() {
 		for i := 0; i < N; i++ {
 			id := fmt.Sprintf("%d", i)
-			j := NewJob(id, "test1", nil, id, id)
+			j := NewJob(id, "test1", nil, id, id, nil)
 			err := q.Add(j)
 			if err != nil {
 				t.Fatal(err)

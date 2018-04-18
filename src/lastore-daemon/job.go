@@ -19,10 +19,11 @@ package main
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
-	"pkg.deepin.io/lib/dbus"
 	"time"
+
+	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbus"
 )
 
 type Job struct {
@@ -53,9 +54,11 @@ type Job struct {
 	// adjust the progress range, used by some download job type
 	progressRangeBegin float64
 	progressRangeEnd   float64
+
+	environ map[string]string
 }
 
-func NewJob(id string, jobName string, packages []string, jobType string, queueName string) *Job {
+func NewJob(id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
 	j := &Job{
 		Id:         id,
 		Name:       jobName,
@@ -72,6 +75,7 @@ func NewJob(id string, jobName string, packages []string, jobType string, queueN
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
+		environ:            environ,
 	}
 	if jobType == system.DownloadJobType {
 		go j.initDownloadSize()

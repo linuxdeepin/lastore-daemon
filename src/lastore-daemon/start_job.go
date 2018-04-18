@@ -19,8 +19,9 @@ package main
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
+
+	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbus"
 )
 
@@ -41,19 +42,19 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.Download(j.Id, j.Packages)
 
 	case system.InstallJobType:
-		return sys.Install(j.Id, j.Packages)
+		return sys.Install(j.Id, j.Packages, j.environ)
 
 	case system.DistUpgradeJobType:
-		return sys.DistUpgrade(j.Id)
+		return sys.DistUpgrade(j.Id, j.environ)
 
 	case system.RemoveJobType:
-		return sys.Remove(j.Id, j.Packages)
+		return sys.Remove(j.Id, j.Packages, j.environ)
 
 	case system.UpdateSourceJobType:
 		return sys.UpdateSource(j.Id)
 
 	case system.UpdateJobType:
-		return sys.Install(j.Id, j.Packages)
+		return sys.Install(j.Id, j.Packages, j.environ)
 
 	case system.CleanJobType:
 		return sys.Clean(j.Id)

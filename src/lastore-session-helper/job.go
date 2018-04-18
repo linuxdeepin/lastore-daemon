@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -83,9 +82,6 @@ func NewLastore() (*Lastore, error) {
 	if err != nil {
 		panic(fmt.Errorf("lastore.NewManager err: %v", err))
 	}
-
-	core.RecordLocaleInfo(os.Getenv("LANG"))
-	core.SetCurrentX11Id(os.Getenv("DISPLAY"), os.Getenv("XAUTHORITY"))
 
 	l.core = core
 

@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"io/ioutil"
 	"os/exec"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	log "github.com/cihub/seelog"
 )
 
 type APTSystem struct {
@@ -277,21 +278,24 @@ func safeStart(c *aptCommand) error {
 	return nil
 }
 
-func (p *APTSystem) Remove(jobId string, packages []string) error {
+func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
 	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
+	c.setEnv(environ)
 	return safeStart(c)
 }
 
-func (p *APTSystem) Install(jobId string, packages []string) error {
+func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string) error {
 	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
+	c.setEnv(environ)
 	return safeStart(c)
 }
 
-func (p *APTSystem) DistUpgrade(jobId string) error {
+func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string) error {
 	PrepareRunApt()
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
+	c.setEnv(environ)
 	return safeStart(c)
 }
 
