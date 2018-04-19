@@ -1,3 +1,13 @@
+<a name="0.9.57"></a>
+### 0.9.57 (2018-04-19)
+
+
+#### Bug Fixes
+
+*   debconfig frontend locale is not set ([d6659e67](https://github.com/linuxdeepin/lastore-daemon/commit/d6659e67a27abc33c3fb738e5930e4d7e0c0746b))
+
+
+
 <a name="0.9.56"></a>
 ### 0.9.56 (2018-04-12)
 
