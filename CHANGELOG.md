@@ -1,3 +1,13 @@
+<a name="0.9.58"></a>
+### 0.9.58 (2018-04-23)
+
+
+#### Bug Fixes
+
+* **script:**  build_system_info does not trigger update handler ([2e08ccb4](https://github.com/linuxdeepin/lastore-daemon/commit/2e08ccb41867825a3f4feb3a44dcc8d7623e4bc0))
+
+
+
 <a name="0.9.57"></a>
 ### 0.9.57 (2018-04-19)
 
