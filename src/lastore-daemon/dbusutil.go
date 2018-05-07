@@ -112,6 +112,19 @@ func (v *Job) emitPropChangedCreateTime(value int64) error {
 	return v.service.EmitPropertyChanged(v, "CreateTime", value)
 }
 
+func (v *Job) setPropDownloadSize(value int64) (changed bool) {
+	if v.DownloadSize != value {
+		v.DownloadSize = value
+		v.emitPropChangedDownloadSize(value)
+		return true
+	}
+	return false
+}
+
+func (v *Job) emitPropChangedDownloadSize(value int64) error {
+	return v.service.EmitPropertyChanged(v, "DownloadSize", value)
+}
+
 func (v *Job) setPropType(value string) (changed bool) {
 	if v.Type != value {
 		v.Type = value

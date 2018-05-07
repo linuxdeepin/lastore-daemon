@@ -34,8 +34,9 @@ type Job struct {
 	Id   string
 	Name string
 	// dbusutil-gen: equal=nil
-	Packages   []string
-	CreateTime int64
+	Packages     []string
+	CreateTime   int64
+	DownloadSize int64
 
 	Type string
 
@@ -92,7 +93,12 @@ func (j *Job) initDownloadSize() {
 		log.Warnf("initDownloadSize failed: %v", err)
 		return
 	}
-	j.speedMeter.SetDownloadSize(int64(s))
+	size := int64(s)
+	if j.DownloadSize == 0 {
+		j.DownloadSize = size
+		j.emitPropChangedDownloadSize(size)
+	}
+	j.speedMeter.SetDownloadSize(size)
 }
 
 func (j *Job) changeType(jobType string) {
