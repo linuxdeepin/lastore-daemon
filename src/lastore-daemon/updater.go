@@ -27,9 +27,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"pkg.deepin.io/lib/dbus"
-
 	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbus1"
+	"pkg.deepin.io/lib/dbusutil"
 )
 
 type ApplicationUpdateInfo struct {
@@ -44,6 +44,7 @@ type ApplicationUpdateInfo struct {
 }
 
 type Updater struct {
+	service             *dbusutil.Service
 	AutoCheckUpdates    bool
 	AutoDownloadUpdates bool
 
@@ -51,12 +52,23 @@ type Updater struct {
 
 	config *Config
 
-	UpdatableApps     []string
+	// dbusutil-gen: equal=nil
+	UpdatableApps []string
+	// dbusutil-gen: equal=nil
 	UpdatablePackages []string
+
+	methods *struct {
+		ListMirrorSources      func() `in:"lang" out:"mirrorSources"`
+		SetMirrorSource        func() `in:"id"`
+		SetAutoCheckUpdates    func() `in:"enable"`
+		SetAutoDownloadUpdates func() `in:"enable"`
+		ApplicationUpdateInfos func() `in:"lang" out:"updateInfos"`
+	}
 }
 
-func NewUpdater(b system.System, config *Config) *Updater {
+func NewUpdater(service *dbusutil.Service, b system.System, config *Config) *Updater {
 	u := &Updater{
+		service:             service,
 		config:              config,
 		AutoCheckUpdates:    config.AutoCheckUpdates,
 		AutoDownloadUpdates: config.AutoDownloadUpdates,
@@ -107,11 +119,17 @@ func SetAPTSmartMirror(url string) error {
 }
 
 // 设置用于下载软件的镜像源
-func (u *Updater) SetMirrorSource(id string) error {
+func (u *Updater) SetMirrorSource(id string) *dbus.Error {
+	err := u.setMirrorSource(id)
+	return dbusutil.ToError(err)
+}
+
+func (u *Updater) setMirrorSource(id string) error {
 	if u.MirrorSource == id {
 		return nil
 	}
-	for _, m := range u.ListMirrorSources("") {
+
+	for _, m := range u.listMirrorSources("") {
 		if m.Id != id {
 			continue
 		}
@@ -130,7 +148,7 @@ func (u *Updater) SetMirrorSource(id string) error {
 		return err
 	}
 	u.MirrorSource = u.config.MirrorSource
-	dbus.NotifyChange(u, "MirrorSource")
+	u.emitPropChangedMirrorSource(u.MirrorSource)
 	return nil
 }
 
@@ -142,7 +160,11 @@ type LocaleMirrorSource struct {
 
 // ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
 // 其中Name会根据传递进来的lang进行本地化
-func (u Updater) ListMirrorSources(lang string) []LocaleMirrorSource {
+func (u Updater) ListMirrorSources(lang string) ([]LocaleMirrorSource, *dbus.Error) {
+	return u.listMirrorSources(lang), nil
+}
+
+func (u Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	var raws []system.MirrorSource
 	system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
 
@@ -177,7 +199,7 @@ func UpdatableNames(infos []system.UpgradeInfo) []string {
 	return apps
 }
 
-func (u *Updater) SetAutoCheckUpdates(enable bool) error {
+func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
 	if u.AutoCheckUpdates == enable {
 		return nil
 	}
@@ -185,15 +207,15 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) error {
 	// save the config to disk
 	err := u.config.SetAutoCheckUpdates(enable)
 	if err != nil {
-		return err
+		return dbusutil.ToError(err)
 	}
 
 	u.AutoCheckUpdates = enable
-	dbus.NotifyChange(u, "AutoCheckUpdates")
+	u.emitPropChangedAutoCheckUpdates(enable)
 	return nil
 }
 
-func (u *Updater) SetAutoDownloadUpdates(enable bool) error {
+func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 	if u.AutoDownloadUpdates == enable {
 		return nil
 	}
@@ -201,11 +223,11 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) error {
 	// save the config to disk
 	err := u.config.SetAutoDownloadUpdates(enable)
 	if err != nil {
-		return err
+		return dbusutil.ToError(err)
 	}
 
 	u.AutoDownloadUpdates = enable
-	dbus.NotifyChange(u, "AutoDownloadUpdates")
+	u.emitPropChangedAutoDownloadUpdates(enable)
 	return nil
 }
 
@@ -215,7 +237,7 @@ const (
 	aptSourceDir    = aptSource + ".d"
 )
 
-func (u *Updater) RestoreSystemSource() {
+func (u *Updater) RestoreSystemSource() *dbus.Error {
 	fileInfoList, err := ioutil.ReadDir(aptSourceDir)
 	if err != nil {
 		log.Warn(err)
@@ -243,4 +265,5 @@ func (u *Updater) RestoreSystemSource() {
 	} else {
 		log.Warn(err)
 	}
+	return nil
 }

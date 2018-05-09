@@ -26,6 +26,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbusutil"
 )
 
 const (
@@ -42,7 +43,8 @@ const (
 // 1. maintain DownloadQueue and SystemchangeQueue
 // 2. Create, Delete and Pause Jobs and schedule they.
 type JobManager struct {
-	queues map[string]*JobQueue
+	service *dbusutil.Service
+	queues  map[string]*JobQueue
 
 	system system.System
 
@@ -52,14 +54,15 @@ type JobManager struct {
 	notify func()
 }
 
-func NewJobManager(api system.System, notifyFn func()) *JobManager {
+func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()) *JobManager {
 	if api == nil {
 		panic("NewJobManager with api=nil")
 	}
 	m := &JobManager{
-		queues: make(map[string]*JobQueue),
-		notify: notifyFn,
-		system: api,
+		service: service,
+		queues:  make(map[string]*JobQueue),
+		notify:  notifyFn,
+		system:  api,
 	}
 	m.createJobList(DownloadQueue, DownloadQueueCap)
 	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
@@ -92,29 +95,31 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, DownloadQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, DownloadQueue, environ)
 	case system.InstallJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
+			DownloadQueue, environ)
 		job._InitProgressRange(0, 0.5)
 
-		next := NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
+		next := NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 		next._InitProgressRange(0.5, 1)
 
 		job.Id = next.Id
 		job.next = next
 	case system.RemoveJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
-		job = NewJob(genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.DistUpgradeJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	case system.PrepareDistUpgradeJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
+			DownloadQueue, environ)
 	case system.UpdateJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 
 	case system.CleanJobType:
-		job = NewJob(genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	default:
 		return nil, system.NotSupportError
 	}
@@ -287,9 +292,12 @@ func (jm *JobManager) addJob(j *Job) error {
 	if err != nil {
 		return err
 	}
-	err = InstallDBus(j)
-	if err != nil {
-		return err
+	if !NotUseDBus {
+		// use dbus
+		err = jm.service.Export(j.getPath(), j)
+		if err != nil {
+			return err
+		}
 	}
 	jm.markDirty()
 	return nil

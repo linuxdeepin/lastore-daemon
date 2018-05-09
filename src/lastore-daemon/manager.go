@@ -28,22 +28,28 @@ import (
 	"internal/system"
 	"internal/utils"
 
-	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/dbus1"
+	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/procfs"
 
 	log "github.com/cihub/seelog"
 )
 
 type Manager struct {
-	do     sync.Mutex
-	b      system.System
-	config *Config
+	service *dbusutil.Service
+	do      sync.Mutex
+	b       system.System
+	config  *Config
 
-	JobList    []*Job
+	// dbusutil-gen: equal=nil
+	JobList    []dbus.ObjectPath
+	jobList    []*Job
 	jobManager *JobManager
 
+	// dbusutil-gen: ignore
 	SystemArchitectures []system.Architecture
 
+	// dbusutil-gen: equal=nil
 	UpgradableApps []string
 
 	SystemOnChanging   bool
@@ -52,6 +58,26 @@ type Manager struct {
 
 	inhibitFd         dbus.UnixFD
 	sourceUpdatedOnce bool
+
+	methods *struct {
+		CleanArchives        func() `out:"job"`
+		CleanJob             func() `in:"jobId"`
+		StartJob             func() `in:"jobId"`
+		PauseJob             func() `in:"jobId"`
+		InstallPackage       func() `in:"jobName,packages" out:"job"`
+		RemovePackage        func() `in:"jobName,packages" out:"job"`
+		UpdatePackage        func() `in:"jobName,packages" out:"job"`
+		UpdateSource         func() `out:"job"`
+		DistUpgrade          func() `out:"job"`
+		PrepareDistUpgrade   func() `out:"job"`
+		PackageDesktopPath   func() `in:"pkgId" out:"desktopPath"`
+		PackagesDownloadSize func() `in:"packages" out:"size"`
+		PackageExists        func() `in:"pkgId" out:"exist"`
+		PackageInstallable   func() `in:"pkgId" out:"installable"`
+		SetAutoClean         func() `in:"enable"`
+		SetRegion            func() `in:"region"`
+		SetLogger            func() `in:"levels,format,output"`
+	}
 }
 
 /*
@@ -59,7 +85,7 @@ NOTE: Most of export function of Manager will hold the lock,
 so don't invoke they in inner functions
 */
 
-func NewManager(b system.System, c *Config) *Manager {
+func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager {
 	archs, err := system.SystemArchitectures()
 	if err != nil {
 		log.Errorf("Can't detect system supported architectures %v\n", err)
@@ -67,6 +93,7 @@ func NewManager(b system.System, c *Config) *Manager {
 	}
 
 	m := &Manager{
+		service:             service,
 		config:              c,
 		b:                   b,
 		SystemArchitectures: archs,
@@ -74,16 +101,16 @@ func NewManager(b system.System, c *Config) *Manager {
 		AutoClean:           c.AutoClean,
 	}
 
-	m.jobManager = NewJobManager(b, m.updateJobList)
+	m.jobManager = NewJobManager(service, b, m.updateJobList)
 
 	go m.jobManager.Dispatch()
 
 	m.updateJobList()
 
 	// Force notify changed at the first time
-	dbus.NotifyChange(m, "SystemOnChanging")
-	dbus.NotifyChange(m, "JobList")
-	dbus.NotifyChange(m, "UpgradableApps")
+	m.emitPropChangedSystemOnChanging(m.SystemOnChanging)
+	m.emitPropChangedJobList(m.JobList)
+	m.emitPropChangedUpgradableApps(m.UpgradableApps)
 
 	go m.loopCheck()
 	return m
@@ -97,9 +124,15 @@ func NormalizePackageNames(s string) ([]string, error) {
 	return r, nil
 }
 
-func makeEnvironWithDMsg(msg dbus.DMessage) map[string]string {
+func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[string]string, error) {
 	environ := make(map[string]string)
-	p := procfs.Process(msg.GetSenderPID())
+
+	pid, err := service.GetConnPID(string(sender))
+	if err != nil {
+		return nil, err
+	}
+
+	p := procfs.Process(pid)
 	envVars, err := p.Environ()
 	if err != nil {
 		log.Warnf("failed to get process %d environ: %v", p, err)
@@ -108,7 +141,7 @@ func makeEnvironWithDMsg(msg dbus.DMessage) map[string]string {
 		environ["XAUTHORITY"] = envVars.Get("XAUTHORITY")
 		environ["DEEPIN_LASTORE_LANG"] = getLang(envVars)
 	}
-	return environ
+	return environ, nil
 }
 
 func getUsedLang(environ map[string]string) string {
@@ -125,14 +158,17 @@ func getLang(envVars procfs.EnvVars) string {
 	return ""
 }
 
-func (m *Manager) UpdatePackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
+func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
+		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
 	m.ensureUpdateSourceOnce()
-	environ := makeEnvironWithDMsg(msg)
+	environ, err := makeEnvironWithSender(m.service, sender)
+	if err != nil {
+		return nil, err
+	}
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -144,14 +180,26 @@ func (m *Manager) UpdatePackage(msg dbus.DMessage, jobName string, packages stri
 	return job, err
 }
 
-func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
+func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
+	*dbus.Error) {
+	job, err := m.updatePackage(sender, jobName, packages)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
+}
+
+func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
+		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
 	m.ensureUpdateSourceOnce()
-	environ := makeEnvironWithDMsg(msg)
+	environ, err := makeEnvironWithSender(m.service, sender)
+	if err != nil {
+		return nil, err
+	}
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -159,7 +207,7 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 	lang := getUsedLang(environ)
 	if lang == "" {
 		log.Warn("failed to get lang")
-		return m.installPackage(jobName, packages, environ)
+		return m.installPkg(jobName, packages, environ)
 	}
 
 	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, lang, pkgs...)
@@ -167,10 +215,19 @@ func (m *Manager) InstallPackage(msg dbus.DMessage, jobName string, packages str
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
 
-	return m.installPackage(jobName, strings.Join(append(strings.Fields(packages), localePkgs...), " "), environ)
+	return m.installPkg(jobName, strings.Join(append(strings.Fields(packages), localePkgs...), " "), environ)
 }
 
-func (m *Manager) installPackage(jobName, packages string, environ map[string]string) (*Job, error) {
+func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
+	*dbus.Error) {
+	job, err := m.installPackage(sender, jobName, packages)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
+}
+
+func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
 
 	installedN := 0
@@ -185,28 +242,40 @@ func (m *Manager) installPackage(jobName, packages string, environ map[string]st
 
 	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
 	if err != nil {
-		log.Warnf("InstallPackage %q error: %v\n", packages, err)
+		log.Warnf("installPackage %q error: %v\n", packages, err)
 	}
 	return job, err
 }
 
-func (m *Manager) RemovePackage(msg dbus.DMessage, jobName string, packages string) (*Job, error) {
+func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid packages arguments %q : %v", packages, err)
+		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
 	m.ensureUpdateSourceOnce()
-	environ := makeEnvironWithDMsg(msg)
+	environ, err := makeEnvironWithSender(m.service, sender)
+	if err != nil {
+		return nil, err
+	}
 
 	m.do.Lock()
 	defer m.do.Unlock()
 
 	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	if err != nil {
-		log.Warnf("RemovePackage %q error: %v\n", packages, err)
+		log.Warnf("removePackage %q error: %v\n", packages, err)
 	}
 	return job, err
+}
+
+func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
+	*dbus.Error) {
+	job, err := m.removePackage(sender, jobName, packages)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
 }
 
 func (m *Manager) ensureUpdateSourceOnce() {
@@ -215,7 +284,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
-func (m *Manager) UpdateSource() (*Job, error) {
+func (m *Manager) updateSource() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 	m.sourceUpdatedOnce = true
@@ -225,6 +294,14 @@ func (m *Manager) UpdateSource() (*Job, error) {
 		log.Warnf("UpdateSource error: %v\n", err)
 	}
 	return job, err
+}
+
+func (m *Manager) UpdateSource() (dbus.ObjectPath, *dbus.Error) {
+	job, err := m.updateSource()
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
 }
 
 func (m *Manager) cancelAllJob() error {
@@ -245,9 +322,20 @@ func (m *Manager) cancelAllJob() error {
 	return nil
 }
 
-func (m *Manager) DistUpgrade(msg dbus.DMessage) (*Job, error) {
+func (m *Manager) DistUpgrade(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
+	job, err := m.distUpgrade(sender)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
+}
+
+func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	m.ensureUpdateSourceOnce()
-	environ := makeEnvironWithDMsg(msg)
+	environ, err := makeEnvironWithSender(m.service, sender)
+	if err != nil {
+		return nil, err
+	}
 
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -267,7 +355,15 @@ func (m *Manager) DistUpgrade(msg dbus.DMessage) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) PrepareDistUpgrade() (*Job, error) {
+func (m *Manager) PrepareDistUpgrade() (dbus.ObjectPath, *dbus.Error) {
+	job, err := m.prepareDistUpgrade()
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
+}
+
+func (m *Manager) prepareDistUpgrade() (*Job, error) {
 	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
@@ -290,7 +386,7 @@ func (m *Manager) PrepareDistUpgrade() (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) StartJob(jobId string) error {
+func (m *Manager) StartJob(jobId string) *dbus.Error {
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -298,9 +394,10 @@ func (m *Manager) StartJob(jobId string) error {
 	if err != nil {
 		log.Warnf("StartJob %q error: %v\n", jobId, err)
 	}
-	return err
+	return dbusutil.ToError(err)
 }
-func (m *Manager) PauseJob(jobId string) error {
+
+func (m *Manager) PauseJob(jobId string) *dbus.Error {
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -308,9 +405,10 @@ func (m *Manager) PauseJob(jobId string) error {
 	if err != nil {
 		log.Warnf("PauseJob %q error: %v\n", jobId, err)
 	}
-	return err
+	return dbusutil.ToError(err)
 }
-func (m *Manager) CleanJob(jobId string) error {
+
+func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	m.do.Lock()
 	defer m.do.Unlock()
 
@@ -318,10 +416,10 @@ func (m *Manager) CleanJob(jobId string) error {
 	if err != nil {
 		log.Warnf("CleanJob %q error: %v\n", jobId, err)
 	}
-	return err
+	return dbusutil.ToError(err)
 }
 
-func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
+func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	m.ensureUpdateSourceOnce()
 
 	m.do.Lock()
@@ -331,32 +429,33 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, error) {
 	if err != nil || s == system.SizeUnknown {
 		log.Warnf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
 	}
-	return int64(s), err
+	return int64(s), dbusutil.ToError(err)
 }
 
-func (m *Manager) PackageInstallable(pkgId string) bool {
-	return system.QueryPackageInstallable(pkgId)
+func (m *Manager) PackageInstallable(pkgId string) (bool, *dbus.Error) {
+	return system.QueryPackageInstallable(pkgId), nil
 }
 
-func (m *Manager) PackageExists(pkgId string) bool {
-	return system.QueryPackageInstalled(pkgId)
+func (m *Manager) PackageExists(pkgId string) (bool, *dbus.Error) {
+	return system.QueryPackageInstalled(pkgId), nil
 }
 
 // TODO: Remove this API
-func (m *Manager) PackageDesktopPath(pkgId string) string {
+func (m *Manager) PackageDesktopPath(pkgId string) (string, *dbus.Error) {
 	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
 	if err != nil {
 		log.Warnf("QueryDesktopPath failed: %q\n", err)
-		return ""
+		return "", dbusutil.ToError(err)
 	}
-	return p
+	return p, nil
 }
 
-func (m *Manager) SetRegion(region string) error {
-	return m.config.SetAppstoreRegion(region)
+func (m *Manager) SetRegion(region string) *dbus.Error {
+	err := m.config.SetAppstoreRegion(region)
+	return dbusutil.ToError(err)
 }
 
-func (m *Manager) SetAutoClean(enable bool) error {
+func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	if m.AutoClean == enable {
 		return nil
 	}
@@ -364,18 +463,26 @@ func (m *Manager) SetAutoClean(enable bool) error {
 	// save the config to disk
 	err := m.config.SetAutoClean(enable)
 	if err != nil {
-		return err
+		return dbusutil.ToError(err)
 	}
 
 	m.AutoClean = enable
 	m.autoCleanCfgChange <- struct{}{}
-	dbus.NotifyChange(m, "AutoClean")
+	m.emitPropChangedAutoClean(enable)
 	return nil
 }
 
 var errAptRunning = errors.New("apt or apt-get is running")
 
-func (m *Manager) CleanArchives() (*Job, error) {
+func (m *Manager) CleanArchives() (dbus.ObjectPath, *dbus.Error) {
+	job, err := m.cleanArchives()
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return job.getPath(), nil
+}
+
+func (m *Manager) cleanArchives() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 

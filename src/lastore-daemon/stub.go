@@ -19,23 +19,21 @@ package main
 
 import (
 	"internal/system"
-	"pkg.deepin.io/lib/dbus"
 	"time"
+
+	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbus1"
 )
 
 var NotUseDBus = false
 
-func (m *Manager) GetDBusInfo() dbus.DBusInfo {
-	return dbus.DBusInfo{
-		Dest:       "com.deepin.lastore",
-		ObjectPath: "/com/deepin/lastore",
-		Interface:  "com.deepin.lastore.Manager",
-	}
+func (*Manager) GetInterfaceName() string {
+	return "com.deepin.lastore.Manager"
 }
 
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
-	jobChanged := len(list) != len(m.JobList)
+	jobChanged := len(list) != len(m.jobList)
 	systemOnChanging := false
 
 	for i, j2 := range list {
@@ -43,7 +41,7 @@ func (m *Manager) updateJobList() {
 			systemOnChanging = true
 		}
 
-		if jobChanged || (i < len(m.JobList) && j2 == m.JobList[i]) {
+		if jobChanged || (i < len(m.jobList) && j2 == m.jobList[i]) {
 			continue
 		}
 		jobChanged = true
@@ -53,14 +51,19 @@ func (m *Manager) updateJobList() {
 		}
 	}
 	if jobChanged {
-		m.JobList = list
-		dbus.NotifyChange(m, "JobList")
+		m.jobList = list
+		var jobPaths []dbus.ObjectPath
+		for _, j := range list {
+			jobPaths = append(jobPaths, j.getPath())
+		}
+		m.JobList = jobPaths
+		m.emitPropChangedJobList(jobPaths)
 	}
 
 	if systemOnChanging != m.SystemOnChanging {
 		m.SystemOnChanging = systemOnChanging
 		m.updateSystemOnChaning(systemOnChanging)
-		dbus.NotifyChange(m, "SystemOnChanging")
+		m.emitPropChangedSystemOnChanging(systemOnChanging)
 	}
 }
 
@@ -77,11 +80,11 @@ func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 	}
 	if changed {
 		m.UpgradableApps = apps
-		dbus.NotifyChange(m, "UpgradableApps")
+		m.emitPropChangedUpgradableApps(apps)
 	}
 }
 
-func (u *Updater) setPropUpdatableApps(ids []string) {
+func (u *Updater) setUpdatableApps(ids []string) {
 	changed := len(ids) != len(u.UpdatableApps)
 	if !changed {
 		for i, id := range ids {
@@ -93,11 +96,11 @@ func (u *Updater) setPropUpdatableApps(ids []string) {
 	}
 	if changed {
 		u.UpdatableApps = ids
-		dbus.NotifyChange(u, "UpdatableApps")
+		u.emitPropChangedUpdatableApps(ids)
 	}
 }
 
-func (u *Updater) setPropUpdatablePackages(ids []string) {
+func (u *Updater) setUpdatablePackages(ids []string) {
 	changed := len(ids) != len(u.UpdatablePackages)
 	if !changed {
 		for i, id := range ids {
@@ -109,7 +112,7 @@ func (u *Updater) setPropUpdatablePackages(ids []string) {
 	}
 	if changed {
 		u.UpdatablePackages = ids
-		dbus.NotifyChange(u, "UpdatablePackages")
+		u.emitPropChangedUpdatablePackages(ids)
 	}
 }
 
@@ -119,36 +122,28 @@ func DestroyJobDBus(j *Job) {
 	}
 	j.notifyAll()
 	<-time.After(time.Millisecond * 100)
-	dbus.UnInstallObject(j)
-}
-
-func (j *Job) GetDBusInfo() dbus.DBusInfo {
-	return dbus.DBusInfo{
-		Dest:       "com.deepin.lastore",
-		ObjectPath: "/com/deepin/lastore/Job" + j.Id,
-		Interface:  "com.deepin.lastore.Job",
+	err := j.service.StopExport(j)
+	if err != nil {
+		log.Warnf("failed to stop export job %q: %v", j.Id, err)
 	}
 }
 
-func (u Updater) GetDBusInfo() dbus.DBusInfo {
-	return dbus.DBusInfo{
-		Dest:       "com.deepin.lastore",
-		ObjectPath: "/com/deepin/lastore",
-		Interface:  "com.deepin.lastore.Updater",
-	}
+func (j *Job) getPath() dbus.ObjectPath {
+	return dbus.ObjectPath("/com/deepin/lastore/Job" + j.Id)
 }
 
-func InstallDBus(j dbus.DBusObject) error {
-	if NotUseDBus {
-		return nil
-	}
-	return dbus.InstallOnSystem(j)
+func (*Job) GetInterfaceName() string {
+	return "com.deepin.lastore.Job"
+}
+
+func (*Updater) GetInterfaceName() string {
+	return "com.deepin.lastore.Updater"
 }
 
 func (j *Job) notifyAll() {
-	dbus.NotifyChange(j, "Type")
-	dbus.NotifyChange(j, "Status")
-	dbus.NotifyChange(j, "Progress")
-	dbus.NotifyChange(j, "Speed")
-	dbus.NotifyChange(j, "Cancelable")
+	j.emitPropChangedType(j.Type)
+	j.emitPropChangedStatus(j.Status)
+	j.emitPropChangedProgress(j.Progress)
+	j.emitPropChangedSpeed(j.Speed)
+	j.emitPropChangedCancelable(j.Cancelable)
 }

@@ -111,7 +111,7 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 }
 
 func (*testWrap) TestGuestJobType(c *C.C) {
-	jm := NewJobManager(apt.New(), nil)
+	jm := NewJobManager(nil, apt.New(), nil)
 
 	job, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil)
 	c.Check(err, C.Equals, nil)

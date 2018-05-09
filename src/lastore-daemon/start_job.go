@@ -22,7 +22,6 @@ import (
 	"internal/system"
 
 	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus"
 )
 
 // StartSystemJob start job
@@ -101,7 +100,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 
 func TransitionJobState(j *Job, to system.Status) error {
 	if !ValidTransitionJobState(j.Status, to) {
-		return fmt.Errorf("Can't transition the status of Job %v to %q", j, to)
+		return fmt.Errorf("can't transition the status of Job %v to %q", j, to)
 	}
 	log.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 
@@ -111,7 +110,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 		return nil
 	}
 
-	dbus.NotifyChange(j, "Status")
+	j.emitPropChangedStatus(to)
 
 	if j.Status == system.SucceedStatus {
 		return TransitionJobState(j, system.EndStatus)

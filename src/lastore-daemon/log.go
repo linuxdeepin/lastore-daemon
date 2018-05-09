@@ -19,9 +19,12 @@ package main
 
 import (
 	"flag"
-	log "github.com/cihub/seelog"
 	"os"
 	"path"
+
+	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbus1"
+	"pkg.deepin.io/lib/dbusutil"
 )
 
 func SetSeelogger(levels string, format string, output string) error {
@@ -54,6 +57,7 @@ const DefaultLogOutput = "/var/log/lastore/daemon.log"
 
 var baseLogDir = flag.String("log", "/var/log/lastore", "the directory to store logs")
 
-func (Manager) SetLogger(levels, format, output string) error {
-	return SetSeelogger(levels, format, output)
+func (Manager) SetLogger(levels, format, output string) *dbus.Error {
+	err := SetSeelogger(levels, format, output)
+	return dbusutil.ToError(err)
 }

@@ -101,7 +101,7 @@ func doCheckSource() bool {
 
 	lines, err := loadAptSource(aptSource)
 	if err != nil {
-		log.Warnf("failed to load apt source:", err)
+		log.Warnf("failed to load apt source: %v", err)
 		return false
 	}
 

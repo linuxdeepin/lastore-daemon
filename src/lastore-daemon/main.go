@@ -20,16 +20,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"internal/system/apt"
 	"os"
 	"path"
-	"pkg.deepin.io/lib"
-	"pkg.deepin.io/lib/dbus"
+
+	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/utils"
 )
+
+//go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,pkg.deepin.io/lib/dbus1 updater.go job.go manager.go
 
 func main() {
 	flag.Parse()
@@ -40,11 +42,22 @@ func main() {
 		return
 	}
 
+	service, err := dbusutil.NewSystemService()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 	log.Info("Starting lastore-daemon")
 	defer log.Flush()
 
-	if !lib.UniqueOnSystem("com.deepin.lastore") {
-		log.Infof("Can't obtain the com.deepin.lastore\n")
+	hasOwner, err := service.NameHasOwner("com.deepin.lastore")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if hasOwner {
+		fmt.Println("another lastore-daemon running")
 		return
 	}
 
@@ -63,23 +76,23 @@ func main() {
 	b := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 
-	manager := NewManager(b, config)
-	err = InstallDBus(manager)
+	manager := NewManager(service, b, config)
+	updater := NewUpdater(service, b, config)
+	err = service.Export("/com/deepin/lastore", manager, updater)
 	if err != nil {
-		log.Error("Install manager on system bus :", err)
+		log.Error("failed to export manager and updater:", err)
 		return
 	}
+
+	err = service.RequestName("com.deepin.lastore")
+	if err != nil {
+		log.Error("failed to request name:", err)
+		return
+	}
+
 	log.Info("Started service at system bus")
 
-	updater := NewUpdater(b, config)
-
-	err = InstallDBus(updater)
-	if err != nil {
-		log.Error("Start failed:", err)
-		return
-	}
-
-	update_handler := func() {
+	updateHandler := func() {
 		info, err := system.SystemUpgradeInfo()
 		if _, ok := err.(system.NotFoundErrorType); ok {
 			//temp fail
@@ -97,15 +110,12 @@ func main() {
 		}
 	}
 
-	RegisterMonitor(update_handler,
+	RegisterMonitor(updateHandler,
 		"update_infos.json", "package_icons.json", "applications.json")
 
-	update_handler()
+	updateHandler()
 
-	dbus.DealWithUnhandledMessage()
-	if err := dbus.Wait(); err != nil {
-		log.Warn("DBus Error:", err)
-	}
+	service.Wait()
 }
 
 func RegisterMonitor(handler func(), paths ...string) {

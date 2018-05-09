@@ -20,6 +20,9 @@ package main
 import (
 	"internal/system"
 	"path"
+
+	"pkg.deepin.io/lib/dbus1"
+	"pkg.deepin.io/lib/dbusutil"
 )
 
 type ApplicationInfo struct {
@@ -31,7 +34,7 @@ type ApplicationInfo struct {
 }
 
 func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
-	u.setPropUpdatablePackages(UpdatableNames(info))
+	u.setUpdatablePackages(UpdatableNames(info))
 
 	var apps []string
 	appInfos := applicationInfos()
@@ -40,10 +43,10 @@ func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 			apps = append(apps, id)
 		}
 	}
-	u.setPropUpdatableApps(apps)
+	u.setUpdatableApps(apps)
 }
 
-func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, error) {
+func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, *dbus.Error) {
 	if len(u.UpdatableApps) == 0 {
 		return nil, nil
 	}
@@ -52,7 +55,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, 
 	aInfos := applicationInfos()
 	uInfos, err := system.SystemUpgradeInfo()
 	if err != nil {
-		return nil, err
+		return nil, dbusutil.ToError(err)
 	}
 
 	var r []ApplicationUpdateInfo

@@ -23,15 +23,17 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/dbusutil"
 )
 
 type Job struct {
-	next   *Job
-	option map[string]string
+	service *dbusutil.Service
+	next    *Job
+	option  map[string]string
 
-	Id         string
-	Name       string
+	Id   string
+	Name string
+	// dbusutil-gen: equal=nil
 	Packages   []string
 	CreateTime int64
 
@@ -58,8 +60,9 @@ type Job struct {
 	environ map[string]string
 }
 
-func NewJob(id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
+func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
 	j := &Job{
+		service:    service,
 		Id:         id,
 		Name:       jobName,
 		CreateTime: time.Now().UnixNano(),
@@ -112,12 +115,12 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if info.Description != j.Description {
 		changed = true
 		j.Description = info.Description
-		dbus.NotifyChange(j, "Description")
+		j.emitPropChangedDescription(info.Description)
 	}
 	if info.Cancelable != j.Cancelable {
 		changed = true
 		j.Cancelable = info.Cancelable
-		dbus.NotifyChange(j, "Cancelable")
+		j.emitPropChangedCancelable(info.Cancelable)
 	}
 	log.Tracef("updateInfo %v <- %v\n", j, info)
 
@@ -125,7 +128,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if cProgress > j.Progress {
 		changed = true
 		j.Progress = cProgress
-		dbus.NotifyChange(j, "Progress")
+		j.emitPropChangedProgress(cProgress)
 	}
 
 	// see the apt.go, we scale download progress value range in [0,0.5
@@ -134,7 +137,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if speed != j.Speed {
 		changed = true
 		j.Speed = speed
-		dbus.NotifyChange(j, "Speed")
+		j.emitPropChangedSpeed(speed)
 	}
 
 	if info.Status != j.Status {

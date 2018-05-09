@@ -18,11 +18,12 @@
 package main
 
 import (
-	"dbus/org/freedesktop/login1"
-	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus"
-	"pkg.deepin.io/lib/gettext"
 	"syscall"
+
+	log "github.com/cihub/seelog"
+	"github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
+	"pkg.deepin.io/lib/dbus1"
+	"pkg.deepin.io/lib/gettext"
 )
 
 func (m *Manager) updateSystemOnChaning(onChanging bool) {
@@ -47,10 +48,10 @@ func (m *Manager) updateSystemOnChaning(onChanging bool) {
 }
 
 func Inhibitor(what, who, why string) (dbus.UnixFD, error) {
-	m, err := login1.NewManager("org.freedesktop.login1", "/org/freedesktop/login1")
+	systemConn, err := dbus.SystemBus()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
-	defer login1.DestroyManager(m)
-	return m.Inhibit(what, who, why, "block")
+	m := login1.NewManager(systemConn)
+	return m.Inhibit(0, what, who, why, "block")
 }
