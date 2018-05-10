@@ -6,7 +6,8 @@ GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
 ifndef USE_GCCGO
 	GOBUILD = go build
 else
-	GOBUILD = go build -compiler gccgo
+	GOLDFLAGS += $(shell pkg-config --libs gio-2.0 gdk-3.0)
+	GOBUILD = go build -compiler gccgo -gccgoflags "$(GOLDFLAGS)"
 endif
 
 all:  build
