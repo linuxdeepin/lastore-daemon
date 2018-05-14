@@ -1,3 +1,17 @@
+<a name="0.9.59"></a>
+### 0.9.59 (2018-05-14)
+
+
+#### Bug Fixes
+
+*   gccgo compile error ([28480ded](https://github.com/linuxdeepin/lastore-daemon/commit/28480dedd8137096dac7ce909ba2302a62673237))
+
+#### Features
+
+*   add bin backend-deb ([d67e2c4b](https://github.com/linuxdeepin/lastore-daemon/commit/d67e2c4b8247d9e04072b8425b2af99782b32ded))
+
+
+
 <a name="0.9.58"></a>
 ### 0.9.58 (2018-04-23)
 
