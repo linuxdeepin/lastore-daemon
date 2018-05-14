@@ -229,17 +229,6 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
-
-	installedN := 0
-	for _, pkg := range pList {
-		if system.QueryPackageInstalled(pkg) {
-			installedN++
-		}
-	}
-	if installedN == len(pList) {
-		return nil, system.ResourceExitError
-	}
-
 	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
 	if err != nil {
 		log.Warnf("installPackage %q error: %v\n", packages, err)
