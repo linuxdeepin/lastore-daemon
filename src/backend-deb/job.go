@@ -17,6 +17,7 @@ type Job struct {
 	backend *Backend
 	PropsMu sync.RWMutex
 
+	Type         string
 	Status       string
 	Progress     float64
 	Description  string
@@ -29,7 +30,6 @@ type Job struct {
 	Name       string
 	Packages   []string
 	CreateTime int64
-	Type       string
 }
 
 func (*Job) GetInterfaceName() string {
@@ -77,6 +77,11 @@ func newJob(backend *Backend, path dbus.ObjectPath) (*Job, error) {
 		for propName, variant := range changedProperties {
 			value := variant.Value()
 			switch propName {
+			case "Type":
+				type0, ok := value.(string)
+				if ok {
+					job.setPropType(type0)
+				}
 			case "Status":
 				status, ok := value.(string)
 				if ok {

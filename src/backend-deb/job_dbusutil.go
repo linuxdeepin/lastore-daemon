@@ -2,6 +2,19 @@
 
 package main
 
+func (v *Job) setPropType(value string) (changed bool) {
+	if v.Type != value {
+		v.Type = value
+		v.emitPropChangedType(value)
+		return true
+	}
+	return false
+}
+
+func (v *Job) emitPropChangedType(value string) error {
+	return v.service.EmitPropertyChanged(v, "Type", value)
+}
+
 func (v *Job) setPropStatus(value string) (changed bool) {
 	if v.Status != value {
 		v.Status = value
