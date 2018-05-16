@@ -38,11 +38,13 @@ func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 
 	var apps []string
 	appInfos := applicationInfos()
+	u.PropsMu.RLock()
 	for _, id := range u.UpdatablePackages {
 		if _, ok := appInfos[id]; ok {
 			apps = append(apps, id)
 		}
 	}
+	u.PropsMu.RUnlock()
 	u.setUpdatableApps(apps)
 }
 

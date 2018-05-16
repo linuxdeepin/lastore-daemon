@@ -41,6 +41,7 @@ type Manager struct {
 	b       system.System
 	config  *Config
 
+	PropsMu sync.RWMutex
 	// dbusutil-gen: equal=nil
 	JobList    []dbus.ObjectPath
 	jobList    []*Job

@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"sort"
 	"strings"
 	"sync"
+
+	log "github.com/cihub/seelog"
 )
 
 type JobList []*Job
@@ -92,7 +93,10 @@ func (l *JobQueue) DoneJobs() JobList {
 
 	var ret JobList
 	for _, j := range l.jobs {
-		if j.Status == system.EndStatus {
+		j.PropsMu.RLock()
+		jobStatus := j.Status
+		j.PropsMu.RUnlock()
+		if jobStatus == system.EndStatus {
 			ret = append(ret, j)
 		}
 	}
@@ -105,7 +109,10 @@ func (l *JobQueue) RunningJobs() JobList {
 
 	var r JobList
 	for _, job := range l.jobs {
-		if job.Status == system.EndStatus {
+		job.PropsMu.Lock()
+		status := job.Status
+		job.PropsMu.Unlock()
+		if status == system.EndStatus {
 			r = append(r, job)
 		}
 	}

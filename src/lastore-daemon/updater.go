@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -45,6 +46,7 @@ type ApplicationUpdateInfo struct {
 
 type Updater struct {
 	service             *dbusutil.Service
+	PropsMu             sync.RWMutex
 	AutoCheckUpdates    bool
 	AutoDownloadUpdates bool
 

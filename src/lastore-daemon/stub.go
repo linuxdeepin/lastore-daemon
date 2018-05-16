@@ -33,11 +33,18 @@ func (*Manager) GetInterfaceName() string {
 
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
+	m.PropsMu.Lock()
+	defer m.PropsMu.Unlock()
+
 	jobChanged := len(list) != len(m.jobList)
 	systemOnChanging := false
 
 	for i, j2 := range list {
-		if !j2.Cancelable {
+
+		j2.PropsMu.RLock()
+		j2Cancelable := j2.Cancelable
+		j2.PropsMu.RUnlock()
+		if !j2Cancelable {
 			systemOnChanging = true
 		}
 
@@ -50,6 +57,7 @@ func (m *Manager) updateJobList() {
 			break
 		}
 	}
+
 	if jobChanged {
 		m.jobList = list
 		var jobPaths []dbus.ObjectPath
@@ -69,6 +77,10 @@ func (m *Manager) updateJobList() {
 
 func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 	apps := UpdatableNames(info)
+
+	m.PropsMu.Lock()
+	defer m.PropsMu.Unlock()
+
 	changed := len(apps) != len(m.UpgradableApps)
 	if !changed {
 		for i, app := range apps {
@@ -85,6 +97,9 @@ func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 }
 
 func (u *Updater) setUpdatableApps(ids []string) {
+	u.PropsMu.Lock()
+	defer u.PropsMu.Unlock()
+
 	changed := len(ids) != len(u.UpdatableApps)
 	if !changed {
 		for i, id := range ids {
@@ -101,6 +116,9 @@ func (u *Updater) setUpdatableApps(ids []string) {
 }
 
 func (u *Updater) setUpdatablePackages(ids []string) {
+	u.PropsMu.Lock()
+	defer u.PropsMu.Unlock()
+
 	changed := len(ids) != len(u.UpdatablePackages)
 	if !changed {
 		for i, id := range ids {

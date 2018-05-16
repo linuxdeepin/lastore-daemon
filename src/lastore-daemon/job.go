@@ -20,6 +20,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -30,6 +31,7 @@ type Job struct {
 	service *dbusutil.Service
 	next    *Job
 	option  map[string]string
+	PropsMu sync.RWMutex
 
 	Id   string
 	Name string
@@ -94,11 +96,13 @@ func (j *Job) initDownloadSize() {
 		return
 	}
 	size := int64(s)
+	j.PropsMu.Lock()
 	if j.DownloadSize == 0 {
 		j.DownloadSize = size
 		j.emitPropChangedDownloadSize(size)
 	}
 	j.speedMeter.SetDownloadSize(size)
+	j.PropsMu.Unlock()
 }
 
 func (j *Job) changeType(jobType string) {
@@ -117,6 +121,9 @@ func (j Job) String() string {
 // whether the information changed.
 func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	var changed = false
+
+	j.PropsMu.Lock()
+	defer j.PropsMu.Unlock()
 
 	if info.Description != j.Description {
 		changed = true

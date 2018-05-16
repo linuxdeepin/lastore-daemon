@@ -51,7 +51,10 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 	timer := time.AfterFunc(timeout, func() {
 		cmd.Process.Kill()
 	})
-	cmd.Start()
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
 
 	buf := bytes.NewBuffer(nil)
 	buf.ReadFrom(r)
@@ -59,7 +62,6 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 	var lines []string
 	var line string
 	for ; err == nil; line, err = buf.ReadString('\n') {
-		errBuf.WriteString(line)
 		line = strings.TrimSpace(line)
 		if filter(line) {
 			lines = append(lines, line)
