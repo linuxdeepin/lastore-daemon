@@ -3,21 +3,27 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
 	"io/ioutil"
+	liburl "net/url"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
+	"sort"
+	"strings"
 
+	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbus"
 	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/xdg/basedir"
-
-	log "github.com/cihub/seelog"
 )
 
 const (
-	aptSource       = "/etc/apt/sources.list"
-	aptSourceOrigin = aptSource + ".origin"
-	aptSourceDir    = aptSource + ".d"
+	aptSourcesFile       = "/etc/apt/sources.list"
+	aptSourcesOriginFile = aptSourcesFile + ".origin"
+	aptSourcesDir        = aptSourcesFile + ".d"
 )
 
 var disableSourceCheckFile = filepath.Join(basedir.GetUserConfigDir(), "deepin",
@@ -93,23 +99,25 @@ func (l *Lastore) SetSourceCheckEnabled(val bool) error {
 
 // return is source ok?
 func doCheckSource() bool {
-	originLines, err := loadAptSource(aptSourceOrigin)
+	originSources, err := loadAptSources(aptSourcesOriginFile)
 	if err != nil {
-		// no origin
+		log.Warn("failed to load origin apt sources:", err)
 		return true
 	}
 
-	lines, err := loadAptSource(aptSource)
+	currentSources, err := loadAptSources(aptSourcesFile)
 	if err != nil {
-		log.Warnf("failed to load apt source: %v", err)
+		log.Warn("failed to load current apt sources:", err)
 		return false
 	}
 
-	if !linesEqual(originLines, lines) {
+	log.Debug("origin sources:", sourcesToString(originSources))
+	log.Debug("current sources:", sourcesToString(currentSources))
+	if !aptSourcesEqual(originSources, currentSources) {
 		return false
 	}
 
-	fileInfoList, err := ioutil.ReadDir(aptSourceDir)
+	fileInfoList, err := ioutil.ReadDir(aptSourcesDir)
 	if err != nil {
 		log.Warnf("read apt source dir err: %v", err)
 	}
@@ -127,38 +135,133 @@ func doCheckSource() bool {
 	return true
 }
 
-func linesEqual(a, b [][]byte) bool {
+func aptSourcesEqual(a, b []*sourceLineParsed) bool {
 	if len(a) != len(b) {
 		return false
 	}
 
 	for i := 0; i < len(a); i++ {
-		if !bytes.Equal(a[i], b[i]) {
+		if !a[i].equal(b[i]) {
 			return false
 		}
 	}
 	return true
 }
 
-func loadAptSource(filename string) ([][]byte, error) {
+var debReg = regexp.MustCompile(`deb\s+(\[(.*)])?(.+)`)
+
+type sourceLineParsed struct {
+	options    map[string]string
+	url        string
+	suite      string
+	components []string
+}
+
+func (s *sourceLineParsed) String() string {
+	var options string
+	if len(s.options) > 0 {
+		var optStrSlice []string
+		for key, value := range s.options {
+			optStrSlice = append(optStrSlice, key+"="+value)
+		}
+		options = "[" + strings.Join(optStrSlice, " ") + "] "
+	}
+	return fmt.Sprintf("deb %s%s %s %s", options, s.url, s.suite,
+		strings.Join(s.components, " "))
+}
+
+func sourcesToString(sources []*sourceLineParsed) string {
+	var stringSlice []string
+	for _, source := range sources {
+		stringSlice = append(stringSlice, source.String())
+	}
+	return strings.Join(stringSlice, ", ")
+}
+
+func (s *sourceLineParsed) equal(other *sourceLineParsed) bool {
+	return reflect.DeepEqual(s, other)
+}
+
+var errInvalidSourceLine = errors.New("invalid source line")
+
+func parseSourceLine(src []byte) (*sourceLineParsed, error) {
+	matchResult := debReg.FindSubmatch(src)
+	if matchResult == nil {
+		return nil, errInvalidSourceLine
+	}
+	var optionMap map[string]string
+	options := matchResult[2]
+	optionsFields := bytes.Fields(options)
+
+	if len(optionsFields) > 0 {
+		optionMap = make(map[string]string)
+	}
+
+	for _, option := range optionsFields {
+		optionParts := bytes.SplitN(option, []byte{'='}, 2)
+		if len(optionParts) != 2 {
+			return nil, errInvalidSourceLine
+		}
+		optionMap[string(optionParts[0])] = string(optionParts[1])
+	}
+
+	other := matchResult[3]
+	otherFields := bytes.Fields(other)
+	if len(otherFields) < 3 {
+		return nil, errInvalidSourceLine
+	}
+	url := string(otherFields[0])
+	u, err := liburl.Parse(url)
+	if err != nil {
+		return nil, err
+	}
+	switch u.Scheme {
+	case "file", "cdrom", "http", "https", "ftp", "copy", "rsh", "ssh":
+		// pass
+	default:
+		return nil, fmt.Errorf("invalid url scheme %q", u.Scheme)
+	}
+
+	suite := string(otherFields[1])
+	var components []string
+	for _, component := range otherFields[2:] {
+		components = append(components, string(component))
+	}
+	sort.Strings(components)
+
+	return &sourceLineParsed{
+		options:    optionMap,
+		url:        url,
+		suite:      suite,
+		components: components,
+	}, nil
+}
+
+func loadAptSources(filename string) ([]*sourceLineParsed, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 
 	defer f.Close()
-	var lines [][]byte
+	var result []*sourceLineParsed
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := bytes.TrimSpace(scanner.Bytes())
-		if bytes.HasPrefix(line, []byte{'#'}) || len(line) == 0 {
-			// ignore comment and empty line
+		if bytes.HasPrefix(line, []byte{'#'}) ||
+			bytes.HasPrefix(line, []byte("deb-src")) ||
+			len(line) == 0 {
+			// ignore comment, deb-src and empty line
 			continue
 		}
-		lines = append(lines, line)
+		parsed, err := parseSourceLine(line)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, parsed)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return lines, nil
+	return result, nil
 }
