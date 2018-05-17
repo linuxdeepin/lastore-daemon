@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"errors"
 	"log"
+	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 	"time"
 
 	debVersion "github.com/knqyf263/go-deb-version"
@@ -37,11 +39,12 @@ type Backend struct {
 	PropsMu          sync.RWMutex
 	JobList          []dbus.ObjectPath
 	methods          *struct {
-		Install           func() `in:"jobName,id" out:"job"`
-		Remove            func() `in:"jobName,id" out:"job"`
-		ListInstalled     func() `out:"installedInfoList"`
-		QueryVersion      func() `in:"idList" out:"versionInfoList"`
-		QueryDownloadSize func() `in:"id" out:"size"`
+		Install               func() `in:"jobName,id" out:"job"`
+		Remove                func() `in:"jobName,id" out:"job"`
+		ListInstalled         func() `out:"installedInfoList"`
+		QueryVersion          func() `in:"idList" out:"versionInfoList"`
+		QueryDownloadSize     func() `in:"id" out:"size"`
+		QueryInstallationTime func() `in:"idList" out:"installationTimeList"`
 	}
 }
 
@@ -328,6 +331,42 @@ type PackageVersionInfo struct {
 	LocalVersion  string
 	RemoteVersion string
 	Upgradable    bool
+}
+
+type PackageInstallationTimeInfo struct {
+	ID               string
+	InstallationTime int64
+}
+
+func (b *Backend) QueryInstallationTime(idList []string) (result []PackageInstallationTimeInfo,
+	busErr *dbus.Error) {
+	b.service.DelayAutoQuit()
+
+	for _, id := range idList {
+		t, err := getInstallationTime(id)
+		if err == nil {
+			result = append(result, PackageInstallationTimeInfo{
+				ID:               id,
+				InstallationTime: t,
+			})
+		} else {
+			log.Printf("warning: failed to get installation time of %q\n", id)
+		}
+	}
+	return
+}
+
+func getInstallationTime(id string) (int64, error) {
+	fileInfo, err := os.Stat("/var/lib/dpkg/info/" + id + ".md5sums")
+	if err != nil {
+		return 0, err
+	}
+	sysStat, ok := fileInfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, errors.New("type assert failed")
+	}
+	t := time.Unix(int64(sysStat.Ctim.Sec), int64(sysStat.Ctim.Nsec))
+	return t.Unix(), nil
 }
 
 func main() {
