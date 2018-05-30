@@ -1,3 +1,22 @@
+<a name="0.9.60"></a>
+### 0.9.60 (2018-05-30)
+
+
+#### Bug Fixes
+
+* **backend-deb:**  not listen the Status property of Job change ([4b79b9a6](https://github.com/linuxdeepin/lastore-daemon/commit/4b79b9a6522c4e65f396537cdabe6db5f28a3a89))
+* **daemon:**  some data race problem ([b4433ee2](https://github.com/linuxdeepin/lastore-daemon/commit/b4433ee2ded4f22659a033d7d716b7a083fd153d))
+
+#### Features
+
+*   InstallPackage do not return resource exist error ([67a4cc21](https://github.com/linuxdeepin/lastore-daemon/commit/67a4cc21c80d08169eb2fd4b9379c7e5ab026ec8))
+* **backend-deb:**  add method QueryInstallationTime ([cd6c3b27](https://github.com/linuxdeepin/lastore-daemon/commit/cd6c3b27d94c6633b12a1dc4e2ac830ed419d866))
+* **session-helper:**
+  *  check source not check sources.list.d ([03fac892](https://github.com/linuxdeepin/lastore-daemon/commit/03fac892c81a7bf026ce7223a016e061b2ff2498))
+  *  check source more loosely ([a3fe8eb9](https://github.com/linuxdeepin/lastore-daemon/commit/a3fe8eb9275549b243901b3840b546ac12214527))
+
+
+
 <a name="0.9.59"></a>
 ### 0.9.59 (2018-05-14)
 
