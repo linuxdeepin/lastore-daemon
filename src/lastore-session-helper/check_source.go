@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	liburl "net/url"
 	"os"
 	"path/filepath"
@@ -23,7 +22,6 @@ import (
 const (
 	aptSourcesFile       = "/etc/apt/sources.list"
 	aptSourcesOriginFile = aptSourcesFile + ".origin"
-	aptSourcesDir        = aptSourcesFile + ".d"
 )
 
 var disableSourceCheckFile = filepath.Join(basedir.GetUserConfigDir(), "deepin",
@@ -115,21 +113,6 @@ func doCheckSource() bool {
 	log.Debug("current sources:", sourcesToString(currentSources))
 	if !aptSourcesEqual(originSources, currentSources) {
 		return false
-	}
-
-	fileInfoList, err := ioutil.ReadDir(aptSourcesDir)
-	if err != nil {
-		log.Warnf("read apt source dir err: %v", err)
-	}
-	for _, fileInfo := range fileInfoList {
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		ext := filepath.Ext(fileInfo.Name())
-		if ext == ".list" || ext == ".sources" {
-			return false
-		}
 	}
 
 	return true
