@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -191,7 +192,7 @@ func (b *Backend) ListInstalled() (result []PackageInstalledInfo, busErr *dbus.E
 	b.service.DelayAutoQuit()
 
 	cmd := exec.Command("/usr/bin/dpkg-query", "--show", "-f",
-		"${binary:Package}\\t${db:Status-Abbrev}\\t${Version}\\n")
+		"${binary:Package}\\t${db:Status-Abbrev}\\t${Version}\\t${Installed-Size}\\n")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, dbusutil.ToError(err)
@@ -210,15 +211,20 @@ func (b *Backend) ListInstalled() (result []PackageInstalledInfo, busErr *dbus.E
 
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		parts := bytes.SplitN(scanner.Bytes(), []byte{'\t'}, 3)
-		if len(parts) != 3 {
+		parts := bytes.SplitN(scanner.Bytes(), []byte{'\t'}, 4)
+		if len(parts) != 4 {
 			continue
 		}
 
 		if bytes.HasPrefix(parts[1], []byte("ii")) {
+			sizeStr := string(parts[3])
+			size, _ := strconv.ParseInt(sizeStr, 10, 64)
+			// unit of size is KiB, 1KiB = 1024Bytes
+
 			result = append(result, PackageInstalledInfo{
-				ID:      string(parts[0]),
-				Version: string(parts[2]),
+				ID:            string(parts[0]),
+				Version:       string(parts[2]),
+				InstalledSize: size * 1024,
 			})
 		}
 	}
@@ -231,8 +237,9 @@ func (b *Backend) ListInstalled() (result []PackageInstalledInfo, busErr *dbus.E
 }
 
 type PackageInstalledInfo struct {
-	ID      string
-	Version string
+	ID            string
+	Version       string
+	InstalledSize int64 // unit byte
 }
 
 func (b *Backend) QueryVersion(idList []string) (result []PackageVersionInfo,
