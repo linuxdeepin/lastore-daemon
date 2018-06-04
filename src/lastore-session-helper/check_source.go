@@ -147,6 +147,7 @@ func (s *sourceLineParsed) String() string {
 		for key, value := range s.options {
 			optStrSlice = append(optStrSlice, key+"="+value)
 		}
+		sort.Strings(optStrSlice)
 		options = "[" + strings.Join(optStrSlice, " ") + "] "
 	}
 	return fmt.Sprintf("deb %s%s %s %s", options, s.url, s.suite,
