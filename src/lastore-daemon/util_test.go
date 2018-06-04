@@ -45,7 +45,7 @@ func (*testWrap) TestTranisition(c *C.C) {
 		{system.ReadyStatus, system.FailedStatus, false},
 		{system.ReadyStatus, system.SucceedStatus, false},
 		{system.ReadyStatus, system.PausedStatus, true},
-		{system.ReadyStatus, system.EndStatus, false},
+		{system.ReadyStatus, system.EndStatus, true},
 
 		{system.RunningStatus, system.ReadyStatus, false},
 		{system.RunningStatus, system.RunningStatus, false},

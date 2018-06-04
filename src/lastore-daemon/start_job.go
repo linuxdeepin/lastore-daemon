@@ -66,23 +66,24 @@ func StartSystemJob(sys system.System, j *Job) error {
 
 func ValidTransitionJobState(from system.Status, to system.Status) bool {
 	validtion := map[system.Status][]system.Status{
-		system.ReadyStatus: []system.Status{
+		system.ReadyStatus: {
 			system.RunningStatus,
 			system.PausedStatus,
+			system.EndStatus,
 		},
-		system.RunningStatus: []system.Status{
+		system.RunningStatus: {
 			system.FailedStatus,
 			system.SucceedStatus,
 			system.PausedStatus,
 		},
-		system.FailedStatus: []system.Status{
+		system.FailedStatus: {
 			system.ReadyStatus,
 			system.EndStatus,
 		},
-		system.SucceedStatus: []system.Status{
+		system.SucceedStatus: {
 			system.EndStatus,
 		},
-		system.PausedStatus: []system.Status{
+		system.PausedStatus: {
 			system.ReadyStatus,
 			system.EndStatus,
 		},
