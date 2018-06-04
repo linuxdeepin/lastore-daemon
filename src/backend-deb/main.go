@@ -376,6 +376,11 @@ func getInstallationTime(id string) (int64, error) {
 	return t.Unix(), nil
 }
 
+func (b *Backend) CleanArchives() *dbus.Error {
+	_, err := b.lastore.CleanArchives(0)
+	return dbusutil.ToError(err)
+}
+
 func main() {
 	service, err := dbusutil.NewSessionService()
 	if err != nil {
