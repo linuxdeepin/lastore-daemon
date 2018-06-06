@@ -11,7 +11,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-04-13 19:51+0000\n"
+"PO-Revision-Date: 2018-05-15 13:13+0000\n"
 "Last-Translator: Manuela Silva <manuela.silva@sky.com>\n"
 "Language-Team: Portuguese (http://www.transifex.com/linuxdeepin/deepin-store/language/pt/)\n"
 "MIME-Version: 1.0\n"
@@ -72,7 +72,7 @@ msgstr "%q falhou para transferir."
 #: ../src/lastore-session-helper/notify.go:97
 msgid ""
 "In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "A fim impedir o encerramento automático, por favor, ligue para a atualização normal."
+msgstr "Para impedir o encerramento automático, por favor, ligue para a atualização normal."
 
 #: ../src/lastore-session-helper/notify.go:105
 msgid "Some functions will take effect after rebooting."
@@ -107,7 +107,7 @@ msgstr "Transferir"
 
 #: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
-msgstr "Não foi possível transferir os pacotes atualizáveis"
+msgstr "Não foi possível transferir os pacotes atualizáveis."
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
@@ -117,4 +117,4 @@ msgstr "Cache dos pacotes limpa"
 msgid ""
 "Your system source has been modified, please restore to official source for "
 "your normal use"
-msgstr "O tipo de letra do sistema foi modificado, por favor, restaure para o oficial para utilização normal"
+msgstr "A fonte do seu sistema foi modificada, por favor, restaure para a fonte oficial para a sua utilização normal"

@@ -8,13 +8,14 @@
 # lexross <mais@techie.com>, 2015-2016
 # jeremy shields <jeremy.shields@orange.fr>, 2015
 # Lei Yan <yanleiberg@gmail.com>, 2018
+# lexross <mais@techie.com>, 2018
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-01-03 18:40+0000\n"
-"Last-Translator: Lei Yan <yanleiberg@gmail.com>\n"
+"PO-Revision-Date: 2018-05-21 17:07+0000\n"
+"Last-Translator: lexross <mais@techie.com>\n"
 "Language-Team: French (http://www.transifex.com/linuxdeepin/deepin-store/language/fr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -119,4 +120,4 @@ msgstr "Cache de paquets effacé"
 msgid ""
 "Your system source has been modified, please restore to official source for "
 "your normal use"
-msgstr "Votre source du système a été modifiée, veuillez restaurer la source officielle pour votre usage normal"
+msgstr "La source du système a été modifiée, veuillez restaurer la source officielle pour votre usage normal"

@@ -4,20 +4,21 @@
 # 
 # Translators:
 # Translators:
+# ali amiry <sector00256@gmail.com>, 2018
 # Alik Miankoli <alikmiankoliid@gmail.com>, 2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-06-09 23:53:17.714182225 +0800 HKT\n"
-"PO-Revision-Date: 2017-09-22 16:44+0000\n"
-"Last-Translator: Alik Miankoli <alikmiankoliid@gmail.com>\n"
+"PO-Revision-Date: 2018-05-15 12:27+0000\n"
+"Last-Translator: ali amiry <sector00256@gmail.com>\n"
 "Language-Team: Persian (http://www.transifex.com/linuxdeepin/deepin-store/language/fa/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: fa\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 msgid "Internet"
 msgstr "اینترنت"
@@ -29,7 +30,7 @@ msgid "Development"
 msgstr "توسعه"
 
 msgid "Reading"
-msgstr "در حال خواندن"
+msgstr "خواندن"
 
 msgid "Graphics"
 msgstr "گرافیک‌ها"
@@ -50,4 +51,4 @@ msgid "Chat"
 msgstr "چت"
 
 msgid "Others"
-msgstr "دیگران"
+msgstr "غیره"
