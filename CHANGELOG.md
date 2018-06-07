@@ -1,3 +1,20 @@
+<a name="0.9.61"></a>
+### 0.9.61 (2018-06-07)
+
+
+#### Features
+
+* **backend-deb:**
+  *  add method CleanArchives ([ad1ce52a](https://github.com/linuxdeepin/lastore-daemon/commit/ad1ce52acc594a82fc518d0c2e57ac450edb1a5f))
+  *  ListInstalled add installed size field ([8229d85a](https://github.com/linuxdeepin/lastore-daemon/commit/8229d85abf81eff477d97e5900a9bf83fb3244da))
+
+#### Bug Fixes
+
+*   can't transit the status of job from ready to end ([1e6239ba](https://github.com/linuxdeepin/lastore-daemon/commit/1e6239ba872e967ee8559d246aff87aa55dd8b57))
+*   TestSourceLineParsed_String test failed ([70893ac8](https://github.com/linuxdeepin/lastore-daemon/commit/70893ac87e056ad08e52b5d1b39dccd3446e5983))
+
+
+
 <a name="0.9.60"></a>
 ### 0.9.60 (2018-05-30)
 
