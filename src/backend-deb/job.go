@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"sync"
 
 	"github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore"
@@ -58,6 +59,7 @@ func newJob(backend *Backend, path dbus.ObjectPath) (*Job, error) {
 	}
 	job.Name, _ = core.Name().Get(0)
 	job.Packages, _ = core.Packages().Get(0)
+	log.Printf("newJob path %q, packages: %#v\n", path, job.Packages)
 	job.CreateTime, _ = core.CreateTime().Get(0)
 	job.Type, _ = core.Type().Get(0)
 	job.Status, _ = core.Status().Get(0)

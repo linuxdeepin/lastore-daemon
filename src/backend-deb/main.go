@@ -86,6 +86,8 @@ func (b *Backend) init() {
 		b.lastoreJobListMu.Lock()
 		defer b.lastoreJobListMu.Unlock()
 
+		log.Printf("lastore JobList changed %#v\n", value)
+
 		var removedJobPaths []dbus.ObjectPath
 		for _, jobPath := range b.lastoreJobList {
 			if !objectPathSliceContains(value, jobPath) {
@@ -103,6 +105,7 @@ func (b *Backend) init() {
 				b.updatePropJobList()
 				b.PropsMu.Unlock()
 
+				log.Println("destroy job", job.core.Path_())
 				job.destroy()
 
 				time.AfterFunc(1*time.Second, func() {
@@ -162,6 +165,7 @@ func (b *Backend) QueryDownloadSize(id string) (int64, *dbus.Error) {
 
 func (b *Backend) Install(jobName, id string) (dbus.ObjectPath, *dbus.Error) {
 	b.service.DelayAutoQuit()
+	log.Printf("install %q %q\n", jobName, id)
 	jobPath, err := b.lastore.InstallPackage(0, jobName, id)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -176,6 +180,7 @@ func (b *Backend) Install(jobName, id string) (dbus.ObjectPath, *dbus.Error) {
 
 func (b *Backend) Remove(jobName, id string) (dbus.ObjectPath, *dbus.Error) {
 	b.service.DelayAutoQuit()
+	log.Printf("remove %q %q\n", jobName, id)
 	jobPath, err := b.lastore.RemovePackage(0, jobName, id)
 	if err != nil {
 		return "/", dbusutil.ToError(err)

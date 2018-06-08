@@ -245,11 +245,15 @@ func (jm *JobManager) sendNotify() {
 	if jm.notify == nil {
 		return
 	}
-	jm.mux.RLock()
-	r := jm.changed
-	jm.mux.RUnlock()
-	if r {
-		jm.markDirty()
+
+	jm.mux.Lock()
+	changed := jm.changed
+	if changed {
+		jm.changed = false
+	}
+	jm.mux.Unlock()
+
+	if changed {
 		jm.notify()
 	}
 }
@@ -299,6 +303,7 @@ func (jm *JobManager) addJob(j *Job) error {
 		// use dbus
 		err = jm.service.Export(j.getPath(), j)
 		if err != nil {
+			log.Warn(err)
 			return err
 		}
 	}
@@ -330,7 +335,6 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	if j._UpdateInfo(info) {
 		jm.markDirty()
 	}
-	jm.dispatch()
 }
 
 func (jm *JobManager) findJobById(jobId string) *Job {
