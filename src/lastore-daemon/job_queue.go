@@ -53,7 +53,6 @@ func (l *JobQueue) AllJobs() JobList {
 // PendingJob get the workable ready Jobs and recoverable failed Jobs
 func (l *JobQueue) PendingJobs() JobList {
 	l.mux.RLock()
-	defer l.mux.RUnlock()
 
 	var numRunning int
 	var readyJobs []*Job
@@ -84,14 +83,14 @@ func (l *JobQueue) PendingJobs() JobList {
 	}
 	r := JobList(readyJobs[:n])
 	sort.Sort(r)
+
+	l.mux.RUnlock()
 	return r
 }
 
 func (l *JobQueue) DoneJobs() JobList {
-	l.mux.RLock()
-	defer l.mux.RUnlock()
-
 	var ret JobList
+	l.mux.RLock()
 	for _, j := range l.jobs {
 		j.PropsMu.RLock()
 		jobStatus := j.Status
@@ -100,13 +99,12 @@ func (l *JobQueue) DoneJobs() JobList {
 			ret = append(ret, j)
 		}
 	}
+	l.mux.RUnlock()
 	return ret
 }
 
 func (l *JobQueue) RunningJobs() JobList {
 	l.mux.RLock()
-	defer l.mux.RUnlock()
-
 	var r JobList
 	for _, job := range l.jobs {
 		job.PropsMu.Lock()
@@ -116,6 +114,7 @@ func (l *JobQueue) RunningJobs() JobList {
 			r = append(r, job)
 		}
 	}
+	l.mux.RUnlock()
 	return r
 }
 
