@@ -20,11 +20,13 @@ package apt
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"internal/system"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
 
 	log "github.com/cihub/seelog"
@@ -64,6 +66,7 @@ type aptCommand struct {
 	cmdSet CommandSet
 
 	apt      *exec.Cmd
+	aptMu    sync.Mutex
 	exitCode int
 
 	aptPipe *os.File
@@ -171,7 +174,9 @@ func (c *aptCommand) Start() error {
 
 	c.apt.ExtraFiles = append(c.apt.ExtraFiles, ww)
 
+	c.aptMu.Lock()
 	err = c.apt.Start()
+	c.aptMu.Unlock()
 	if err != nil {
 		rr.Close()
 		return err
@@ -257,6 +262,12 @@ func (c *aptCommand) indicateFailed(description string) {
 
 func (c *aptCommand) Abort() error {
 	if c.Cancelable {
+		c.aptMu.Lock()
+		defer c.aptMu.Unlock()
+		if c.apt.Process == nil {
+			return errors.New("the process has not yet started")
+		}
+
 		log.Tracef("Abort Command: %v\n", c)
 		c.exitCode = ExitPause
 		var err error

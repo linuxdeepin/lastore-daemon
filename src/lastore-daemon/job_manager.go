@@ -86,10 +86,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus, system.PausedStatus:
-			job.PropsMu.Lock()
-			err := jm.markStart(job)
-			job.PropsMu.Unlock()
-			return job, err
+			return job, jm.markStart(job)
 		default:
 			return job, nil
 		}
@@ -136,12 +133,16 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 
 func (jm *JobManager) markStart(job *Job) error {
 	jm.markDirty()
+
+	job.PropsMu.Lock()
 	if job.Status != system.ReadyStatus {
 		err := TransitionJobState(job, system.ReadyStatus)
 		if err != nil {
+			job.PropsMu.Unlock()
 			return err
 		}
 	}
+	job.PropsMu.Unlock()
 
 	queue, ok := jm.queues[job.queueName]
 	if !ok {
@@ -158,10 +159,7 @@ func (jm *JobManager) MarkStart(jobId string) error {
 		return system.NotFoundError("MarkStart " + jobId)
 	}
 
-	job.PropsMu.Lock()
-	err := jm.markStart(job)
-	job.PropsMu.Unlock()
-	return err
+	return jm.markStart(job)
 }
 
 // CleanJob transition the Job status to EndStatus,
@@ -233,10 +231,10 @@ func (jm *JobManager) dispatch() {
 
 			jm.addJob(job)
 
-			job.PropsMu.Lock()
 			jm.markStart(job)
+			job.PropsMu.RLock()
 			job.notifyAll()
-			job.PropsMu.Unlock()
+			job.PropsMu.RUnlock()
 		}
 	}
 
@@ -278,18 +276,23 @@ func (jm *JobManager) sendNotify() {
 func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 	jobs := queue.PendingJobs()
 	for _, job := range jobs {
-		job.PropsMu.Lock()
-		if job.Status == system.FailedStatus {
+		job.PropsMu.RLock()
+		jobStatus := job.Status
+		job.PropsMu.RUnlock()
+
+		if jobStatus == system.FailedStatus {
 			job.retry--
 			jm.markStart(job)
 			log.Infof("Retry failed Job %v\n", job)
 		}
+
 		err := StartSystemJob(jm.system, job)
 		if err != nil {
+			job.PropsMu.Lock()
 			TransitionJobState(job, system.FailedStatus)
+			job.PropsMu.Unlock()
 			log.Errorf("StartSystemJob failed %v :%v\n", job, err)
 		}
-		job.PropsMu.Unlock()
 	}
 }
 

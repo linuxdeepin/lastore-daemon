@@ -32,7 +32,10 @@ func StartSystemJob(sys system.System, j *Job) error {
 		panic("StartSystemJob with nil")
 	}
 
-	if err := TransitionJobState(j, system.RunningStatus); err != nil {
+	j.PropsMu.Lock()
+	err := TransitionJobState(j, system.RunningStatus)
+	j.PropsMu.Unlock()
+	if err != nil {
 		return err
 	}
 

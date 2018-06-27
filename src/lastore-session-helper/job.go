@@ -233,11 +233,12 @@ func (l *Lastore) updateCacheJobInfo(path dbus.ObjectPath, props map[string]dbus
 		}
 	}
 
-	if v, ok := TryFetchProperty(job.Status.GetValue, "Status", props); ok {
-		if rv, _ := v.(string); rv != "" {
+	if v, ok := props["Status"]; ok {
+		if rv, _ := v.Value().(string); rv != "" {
 			info.Status = system.Status(rv)
 		}
 	}
+
 	if v, ok := TryFetchProperty(job.Name.GetValue, "Name", props); ok {
 		name, _ := v.(string)
 		if name == "" {
