@@ -57,10 +57,13 @@ func (l *JobQueue) PendingJobs() JobList {
 	var numRunning int
 	var readyJobs []*Job
 	for _, job := range l.jobs {
-		switch job.Status {
+		job.PropsMu.RLock()
+		jobStatus := job.Status
+		job.PropsMu.RUnlock()
+
+		switch jobStatus {
 		case system.FailedStatus:
 			if job.retry > 0 {
-				job.retry--
 				readyJobs = append(readyJobs, job)
 			}
 		case system.RunningStatus:
