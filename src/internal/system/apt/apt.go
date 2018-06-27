@@ -80,7 +80,7 @@ func (c aptCommand) String() string {
 }
 
 func createCommandLine(cmdType string, packages []string) *exec.Cmd {
-	var args []string = []string{"-y"}
+	var args = []string{"-y"}
 
 	options := map[string]string{
 		"APT::Status-Fd": "3",
@@ -108,7 +108,7 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 		args = append(args, "dist-upgrade")
 	case system.RemoveJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "-f", "remove")
+		args = append(args, "-f", "autoremove")
 		args = append(args, "--")
 		args = append(args, packages...)
 	case system.DownloadJobType:
