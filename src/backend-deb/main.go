@@ -14,6 +14,7 @@ import (
 
 	debVersion "github.com/knqyf263/go-deb-version"
 	"github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore"
+	ofdbus "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.dbus"
 	"pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 )
@@ -34,6 +35,7 @@ type Backend struct {
 	service          *dbusutil.Service
 	sysSigLoop       *dbusutil.SignalLoop
 	lastore          *lastore.Lastore
+	dbusDaemon       *ofdbus.DBus
 	lastoreJobList   []dbus.ObjectPath
 	lastoreJobListMu sync.Mutex
 	jobs             map[dbus.ObjectPath]*Job
@@ -55,10 +57,12 @@ func newBackend(service *dbusutil.Service) (*Backend, error) {
 		return nil, err
 	}
 	lastoreObj := lastore.NewLastore(systemConn)
+	dbusDaemon := ofdbus.NewDBus(systemConn)
 	sysSigLoop := dbusutil.NewSignalLoop(systemConn, 50)
 	return &Backend{
 		service:    service,
 		lastore:    lastoreObj,
+		dbusDaemon: dbusDaemon,
 		sysSigLoop: sysSigLoop,
 		jobs:       make(map[dbus.ObjectPath]*Job),
 	}, nil
@@ -76,18 +80,55 @@ func (b *Backend) updatePropJobList() {
 	}
 }
 
+func (b *Backend) handleDaemonOnline() {
+	log.Println("lastore-daemon online")
+}
+
+func (b *Backend) handleDaemonOffline() {
+	log.Println("lastore-daemon offline")
+	b.lastoreJobListMu.Lock()
+	b.lastoreJobList = nil
+	b.lastoreJobListMu.Unlock()
+
+	b.PropsMu.Lock()
+	for jobPath, job := range b.jobs {
+		delete(b.jobs, jobPath)
+		job.destroy()
+		err := b.service.StopExport(job)
+		if err != nil {
+			log.Printf("failed to stop export job %s: %v", job.Id, err)
+		}
+	}
+
+	b.JobList = []dbus.ObjectPath{}
+	b.service.EmitPropertyChanged(b, "JobList", b.JobList)
+	b.PropsMu.Unlock()
+}
+
 func (b *Backend) init() {
 	b.sysSigLoop.Start()
+
+	b.dbusDaemon.InitSignalExt(b.sysSigLoop, true)
+	b.dbusDaemon.ConnectNameOwnerChanged(
+		func(name string, oldOwner string, newOwner string) {
+			if name == b.lastore.ServiceName_() {
+				if newOwner == "" {
+					b.handleDaemonOffline()
+				} else {
+					b.handleDaemonOnline()
+				}
+			}
+		})
+
 	b.lastore.InitSignalExt(b.sysSigLoop, true)
 	b.lastore.JobList().ConnectChanged(func(hasValue bool, value []dbus.ObjectPath) {
 		if !hasValue {
 			return
 		}
-		b.lastoreJobListMu.Lock()
-		defer b.lastoreJobListMu.Unlock()
 
 		log.Printf("lastore JobList changed %#v\n", value)
 
+		b.lastoreJobListMu.Lock()
 		var removedJobPaths []dbus.ObjectPath
 		for _, jobPath := range b.lastoreJobList {
 			if !objectPathSliceContains(value, jobPath) {
@@ -95,6 +136,8 @@ func (b *Backend) init() {
 			}
 		}
 		b.lastoreJobList = value
+		b.lastoreJobListMu.Unlock()
+
 		for _, jobPath := range removedJobPaths {
 			b.PropsMu.Lock()
 			job, ok := b.jobs[jobPath]
@@ -382,6 +425,8 @@ func getInstallationTime(id string) (int64, error) {
 }
 
 func (b *Backend) CleanArchives() *dbus.Error {
+	b.service.DelayAutoQuit()
+
 	_, err := b.lastore.CleanArchives(0)
 	return dbusutil.ToError(err)
 }
