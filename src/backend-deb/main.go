@@ -40,8 +40,8 @@ type Backend struct {
 	PropsMu          sync.RWMutex
 	JobList          []dbus.ObjectPath
 	methods          *struct {
-		Install               func() `in:"jobName,id" out:"job"`
-		Remove                func() `in:"jobName,id" out:"job"`
+		Install               func() `in:"localizedName,id" out:"job"`
+		Remove                func() `in:"localizedName,id" out:"job"`
 		ListInstalled         func() `out:"installedInfoList"`
 		QueryVersion          func() `in:"idList" out:"versionInfoList"`
 		QueryDownloadSize     func() `in:"id" out:"size"`
@@ -163,10 +163,10 @@ func (b *Backend) QueryDownloadSize(id string) (int64, *dbus.Error) {
 	return size, nil
 }
 
-func (b *Backend) Install(jobName, id string) (dbus.ObjectPath, *dbus.Error) {
+func (b *Backend) Install(localizedName, id string) (dbus.ObjectPath, *dbus.Error) {
 	b.service.DelayAutoQuit()
-	log.Printf("install %q %q\n", jobName, id)
-	jobPath, err := b.lastore.InstallPackage(0, jobName, id)
+	log.Printf("install %q %q\n", localizedName, id)
+	jobPath, err := b.lastore.InstallPackage(0, localizedName, id)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -178,10 +178,10 @@ func (b *Backend) Install(jobName, id string) (dbus.ObjectPath, *dbus.Error) {
 	return myJobPath, nil
 }
 
-func (b *Backend) Remove(jobName, id string) (dbus.ObjectPath, *dbus.Error) {
+func (b *Backend) Remove(localizedName, id string) (dbus.ObjectPath, *dbus.Error) {
 	b.service.DelayAutoQuit()
-	log.Printf("remove %q %q\n", jobName, id)
-	jobPath, err := b.lastore.RemovePackage(0, jobName, id)
+	log.Printf("remove %q %q\n", localizedName, id)
+	jobPath, err := b.lastore.RemovePackage(0, localizedName, id)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
