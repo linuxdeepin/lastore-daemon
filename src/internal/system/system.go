@@ -19,6 +19,7 @@ package system
 
 import (
 	"errors"
+	"fmt"
 )
 
 const VarLibDir = "/var/lib/lastore"
@@ -44,6 +45,13 @@ const (
 	PrepareDistUpgradeJobType = "prepare_dist_upgrade"
 	UpdateSourceJobType       = "update_source"
 	CleanJobType              = "clean"
+	FixErrorJobType           = "fix_error"
+)
+
+const (
+	ErrTypeDpkgInterrupted    = "dpkgInterrupted"
+	ErrTypeDependenciesBroken = "dependenciesBroken"
+	ErrTypeUnknown            = "unknown"
 )
 
 type JobProgressInfo struct {
@@ -84,13 +92,19 @@ type System interface {
 	Download(jobId string, packages []string) error
 	Install(jobId string, packages []string, environ map[string]string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
-
 	DistUpgrade(jobId string, environ map[string]string) error
-
 	UpdateSource(jobId string) error
 	Clean(jobId string) error
-
 	Abort(jobId string) error
-
 	AttachIndicator(Indicator)
+	FixError(jobId string, errType string, environ map[string]string) error
+}
+
+type PkgSystemError struct {
+	Type   string
+	Detail string
+}
+
+func (e PkgSystemError) Error() string {
+	return fmt.Sprintf("PkgSystemError Type:%s, Detail: %s", e.Type, e.Detail)
 }

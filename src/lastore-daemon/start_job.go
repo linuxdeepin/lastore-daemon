@@ -60,6 +60,10 @@ func StartSystemJob(sys system.System, j *Job) error {
 
 	case system.CleanJobType:
 		return sys.Clean(j.Id)
+
+	case system.FixErrorJobType:
+		errType := j.Packages[0]
+		return sys.FixError(j.Id, errType, j.environ)
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)
 	}

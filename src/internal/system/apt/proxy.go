@@ -41,7 +41,7 @@ func New() system.System {
 	p := &APTSystem{
 		cmdSet: make(map[string]*aptCommand),
 	}
-	PrepareRunApt()
+	WaitDpkgLockRelease()
 	exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
 	return p
 }
@@ -105,21 +105,15 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 	p.indicator = f
 }
 
-func (p *APTSystem) Download(jobId string, packages []string) error {
-	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packages)
-	return c.Start()
-}
-
-func PrepareRunApt() {
-	if msg, wait := checkLock("/var/lib/dpkg/lock"); !wait {
-		if checkDpkgDirtyJournal() {
-			tryFixDpkgDirtyStatus()
+func WaitDpkgLockRelease() {
+	for {
+		msg, wait := checkLock("/var/lib/dpkg/lock")
+		if !wait {
+			return
 		}
-	} else {
 		log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 			msg, time.Now())
-		<-time.After(time.Second * 5)
-		PrepareRunApt()
+		time.Sleep(time.Second * 5)
 	}
 }
 
@@ -243,6 +237,53 @@ func (c *rmPkgChecker) Write(data []byte) (n int, err error) {
 	return
 }
 
+func checkPkgSystemError(lock bool) error {
+	args := []string{"check"}
+	if !lock {
+		// without locking, it can only check for dependencies broken
+		args = append(args, "-o", "Debug::NoLocking=1")
+	}
+
+	cmd := exec.Command("apt-get", args...)
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case bytes.Contains(errBuf.Bytes(), []byte("dpkg was interrupted")):
+		return system.PkgSystemError{
+			Type: system.ErrTypeDpkgInterrupted,
+		}
+
+	case bytes.Contains(errBuf.Bytes(), []byte("Unmet dependencies")):
+		var detail string
+		idx := bytes.Index(outBuf.Bytes(),
+			[]byte("The following packages have unmet dependencies:"))
+		if idx == -1 {
+			// not found
+			detail = string(outBuf.Bytes())
+		} else {
+			detail = string(outBuf.Bytes()[idx:])
+		}
+
+		return system.PkgSystemError{
+			Type:   system.ErrTypeDependenciesBroken,
+			Detail: detail,
+		}
+
+	default:
+		return system.PkgSystemError{
+			Type:   system.ErrTypeUnknown,
+			Detail: string(errBuf.Bytes()),
+		}
+	}
+}
+
 func safeStart(c *aptCommand) error {
 	args := c.apt.Args
 	// add -s option
@@ -278,22 +319,44 @@ func safeStart(c *aptCommand) error {
 	return nil
 }
 
+func (p *APTSystem) Download(jobId string, packages []string) error {
+	err := checkPkgSystemError(false)
+	if err != nil {
+		return err
+	}
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packages)
+	return c.Start()
+}
+
 func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
-	PrepareRunApt()
+	WaitDpkgLockRelease()
+	err := checkPkgSystemError(true)
+	if err != nil {
+		return err
+	}
+
 	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
 	c.setEnv(environ)
 	return safeStart(c)
 }
 
 func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string) error {
-	PrepareRunApt()
+	WaitDpkgLockRelease()
+	err := checkPkgSystemError(true)
+	if err != nil {
+		return err
+	}
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
 	c.setEnv(environ)
 	return safeStart(c)
 }
 
 func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string) error {
-	PrepareRunApt()
+	WaitDpkgLockRelease()
+	err := checkPkgSystemError(true)
+	if err != nil {
+		return err
+	}
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
 	c.setEnv(environ)
 	return safeStart(c)
@@ -314,4 +377,13 @@ func (p *APTSystem) Abort(jobId string) error {
 		return c.Abort()
 	}
 	return system.NotFoundError("abort " + jobId)
+}
+
+func (p *APTSystem) FixError(jobId string, errType string,
+	environ map[string]string) error {
+
+	WaitDpkgLockRelease()
+	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, []string{errType})
+	c.setEnv(environ)
+	return c.Start()
 }

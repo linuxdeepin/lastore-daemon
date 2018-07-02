@@ -18,6 +18,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"internal/system"
 	"sync"
@@ -178,4 +179,19 @@ func (j *Job) _InitProgressRange(begin, end float64) {
 
 func buildProgress(p, begin, end float64) float64 {
 	return begin + p*(end-begin)
+}
+
+func (j *Job) setError(errType, detail string) {
+	errValue := struct {
+		ErrType   string
+		ErrDetail string
+	}{
+		errType, detail,
+	}
+	jsonBytes, err := json.Marshal(errValue)
+	if err != nil {
+		log.Warn(err)
+		return
+	}
+	j.setPropDescription(string(jsonBytes))
 }

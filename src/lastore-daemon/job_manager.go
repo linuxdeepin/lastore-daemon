@@ -120,6 +120,11 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 
 	case system.CleanJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
+	case system.FixErrorJobType:
+		errType := packages[0]
+		jobId := jobType + "_" + errType
+		job = NewJob(jm.service, jobId, jobName, packages, jobType,
+			LockQueue, environ)
 	default:
 		return nil, system.NotSupportError
 	}
@@ -292,6 +297,16 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			TransitionJobState(job, system.FailedStatus)
 			job.PropsMu.Unlock()
 			log.Errorf("StartSystemJob failed %v :%v\n", job, err)
+
+			pkgSysErr, ok := err.(system.PkgSystemError)
+			if ok {
+				// do not retry job
+				job.retry = 0
+				job.PropsMu.Lock()
+				job.setError("PkgSystemError::"+pkgSysErr.Type, pkgSysErr.Detail)
+				job.emitPropChangedStatus(job.Status)
+				job.PropsMu.Unlock()
+			}
 		}
 	}
 }

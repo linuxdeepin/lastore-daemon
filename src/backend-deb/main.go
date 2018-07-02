@@ -48,6 +48,7 @@ type Backend struct {
 		QueryVersion          func() `in:"idList" out:"versionInfoList"`
 		QueryDownloadSize     func() `in:"id" out:"size"`
 		QueryInstallationTime func() `in:"idList" out:"installationTimeList"`
+		FixError              func() `in:"errType" out:"job"`
 	}
 }
 
@@ -138,25 +139,19 @@ func (b *Backend) init() {
 		b.lastoreJobList = value
 		b.lastoreJobListMu.Unlock()
 
+		b.PropsMu.Lock()
 		for _, jobPath := range removedJobPaths {
-			b.PropsMu.Lock()
 			job, ok := b.jobs[jobPath]
-			b.PropsMu.Unlock()
 			if ok {
-				b.PropsMu.Lock()
 				delete(b.jobs, jobPath)
 				b.updatePropJobList()
-				b.PropsMu.Unlock()
 
 				log.Println("destroy job", job.core.Path_())
 				job.destroy()
-
-				time.AfterFunc(1*time.Second, func() {
-					log.Println("remove job", job.core.Path_())
-					b.service.StopExport(job)
-				})
+				b.service.StopExport(job)
 			}
 		}
+		b.PropsMu.Unlock()
 	})
 
 	b.lastoreJobListMu.Lock()
@@ -179,6 +174,15 @@ func (*Backend) GetInterfaceName() string {
 
 func (b *Backend) addJob(jobPath dbus.ObjectPath) (dbus.ObjectPath, error) {
 	log.Println("add job", jobPath)
+
+	b.PropsMu.Lock()
+	defer b.PropsMu.Unlock()
+	job, ok := b.jobs[jobPath]
+	if ok {
+		log.Printf("job %s exist", job.Id)
+		return job.getPath(), nil
+	}
+
 	job, err := newJob(b, jobPath)
 	if err != nil {
 		return "/", err
@@ -191,10 +195,8 @@ func (b *Backend) addJob(jobPath dbus.ObjectPath) (dbus.ObjectPath, error) {
 		return "/", err
 	}
 
-	b.PropsMu.Lock()
 	b.jobs[jobPath] = job
 	b.updatePropJobList()
-	b.PropsMu.Unlock()
 	return myJobPath, nil
 }
 
@@ -225,6 +227,21 @@ func (b *Backend) Remove(localizedName, id string) (dbus.ObjectPath, *dbus.Error
 	b.service.DelayAutoQuit()
 	log.Printf("remove %q %q\n", localizedName, id)
 	jobPath, err := b.lastore.RemovePackage(0, localizedName, id)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+
+	myJobPath, err := b.addJob(jobPath)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+	return myJobPath, nil
+}
+
+func (b *Backend) FixError(errType string) (dbus.ObjectPath, *dbus.Error) {
+	b.service.DelayAutoQuit()
+	log.Println("fixError", errType)
+	jobPath, err := b.lastore.FixError(0, errType)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}

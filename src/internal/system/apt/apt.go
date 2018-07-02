@@ -82,7 +82,7 @@ func (c aptCommand) String() string {
 		c.JobId, c.Cancelable, strings.Join(c.apt.Args, " "))
 }
 
-func createCommandLine(cmdType string, packages []string) *exec.Cmd {
+func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	var args = []string{"-y"}
 
 	options := map[string]string{
@@ -102,36 +102,50 @@ func createCommandLine(cmdType string, packages []string) *exec.Cmd {
 	switch cmdType {
 	case system.InstallJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "-f", "install")
+		args = append(args, "install")
 		args = append(args, "--")
-		args = append(args, packages...)
+		args = append(args, cmdArgs...)
 	case system.DistUpgradeJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "--allow-downgrades", "--allow-change-held-packages")
 		args = append(args, "dist-upgrade")
 	case system.RemoveJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
-		args = append(args, "-f", "autoremove")
+		args = append(args, "autoremove")
 		args = append(args, "--")
-		args = append(args, packages...)
+		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
 		args = append(args, "-c", "/var/lib/lastore/apt.conf")
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
-		args = append(args, packages...)
+		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
 		sh := "apt-get -y -o APT::Status-Fd=3 -o Dir::Etc::sourceparts=/var/lib/lastore/source.d update && /var/lib/lastore/scripts/build_system_info -now"
 		return exec.Command("/bin/sh", "-c", sh)
 
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
+
+	case system.FixErrorJobType:
+		errType := cmdArgs[0]
+		switch errType {
+		case system.ErrTypeDpkgInterrupted:
+			sh := "dpkg --force-confold --configure -a;" +
+				"apt-get -y -c /var/lib/lastore/apt.conf -f install;"
+			return exec.Command("/bin/sh", "-c", sh)
+		case system.ErrTypeDependenciesBroken:
+			args = append(args, "-c", "/var/lib/lastore/apt.conf")
+			args = append(args, "-f", "install")
+		default:
+			panic("invalid error type " + errType)
+		}
 	}
 
 	return exec.Command("apt-get", args...)
 }
 
-func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, packages []string) *aptCommand {
-	cmd := createCommandLine(cmdType, packages)
+func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, cmdArgs []string) *aptCommand {
+	cmd := createCommandLine(cmdType, cmdArgs)
 
 	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
