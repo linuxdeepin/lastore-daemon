@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Deepin Sysdev <sysdev@deepin.com>
 Build-Depends: debhelper (>= 9), pkg-config, golang-go | gccgo-5,
  deepin-gettext-tools, golang-dlib-dev(>= 1.2.2), dde-go-dbus-factory(>= 3.1.12),
- golang-github-linuxdeepin-go-dbus-factory-dev
+ golang-github-linuxdeepin-go-dbus-factory-dev (>= 0.0.4)
 Standards-Version: 0.1
 Homepage: http://github.com/linuxdeepin/lastore-daemon
 
