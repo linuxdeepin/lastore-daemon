@@ -1,3 +1,25 @@
+<a name="0.9.62"></a>
+### 0.9.62 (2018-07-05)
+
+
+#### Features
+
+*   handle package manager system error ([ace591d9](https://github.com/linuxdeepin/lastore-daemon/commit/ace591d938558c76a24bef84f9c90cd615feba49))
+* **backend-deb:**  watch lastore-daemon online/offline ([e750db42](https://github.com/linuxdeepin/lastore-daemon/commit/e750db42a0d7a3018ca492a430e5f06220faafca))
+
+#### Performance
+
+*   reduce CPU usage by remove defer function ([5e30c8aa](https://github.com/linuxdeepin/lastore-daemon/commit/5e30c8aa456c9721bc5f109c74dea1a02e3df093))
+
+#### Bug Fixes
+
+* **daemon:**
+  *  some failed jobs have not been retried ([33d435dd](https://github.com/linuxdeepin/lastore-daemon/commit/33d435dd9455f8b314315c47d80558f554bdb763))
+  *  property JobList occasionally lose job ([4b5f9131](https://github.com/linuxdeepin/lastore-daemon/commit/4b5f913113296d6f8aed7354b79729e3e2680ec1))
+* **session-helper:**  may send failed notification more than once ([d21c537f](https://github.com/linuxdeepin/lastore-daemon/commit/d21c537f3bef8b93a1cd2e323f5bc512aff9f613))
+
+
+
 <a name="0.9.61"></a>
 ### 0.9.61 (2018-06-07)
 
