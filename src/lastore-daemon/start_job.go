@@ -33,6 +33,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 	}
 
 	j.PropsMu.Lock()
+	j.setPropDescription("")
 	err := TransitionJobState(j, system.RunningStatus)
 	j.PropsMu.Unlock()
 	if err != nil {

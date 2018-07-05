@@ -52,6 +52,7 @@ const (
 	ErrTypeDpkgInterrupted    = "dpkgInterrupted"
 	ErrTypeDependenciesBroken = "dependenciesBroken"
 	ErrTypeUnknown            = "unknown"
+	ErrTypeInvalidSourcesList = "invalidSourceList"
 )
 
 type JobProgressInfo struct {
@@ -60,6 +61,8 @@ type JobProgressInfo struct {
 	Description string
 	Status      Status
 	Cancelable  bool
+	Error       *JobError
+	FatalError  bool
 }
 
 type UpgradeInfo struct {
@@ -105,6 +108,27 @@ type PkgSystemError struct {
 	Detail string
 }
 
-func (e PkgSystemError) Error() string {
+func (e *PkgSystemError) GetType() string {
+	return "PKgSystemErr::" + e.Type
+}
+
+func (e *PkgSystemError) GetDetail() string {
+	return e.Detail
+}
+
+func (e *PkgSystemError) Error() string {
 	return fmt.Sprintf("PkgSystemError Type:%s, Detail: %s", e.Type, e.Detail)
+}
+
+type JobError struct {
+	Type   string
+	Detail string
+}
+
+func (e *JobError) GetType() string {
+	return "JobError::" + e.Type
+}
+
+func (e *JobError) GetDetail() string {
+	return e.Detail
 }

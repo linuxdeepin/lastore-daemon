@@ -73,7 +73,7 @@ type aptCommand struct {
 
 	indicator system.Indicator
 
-	logger bytes.Buffer
+	stdout bytes.Buffer
 	stderr bytes.Buffer
 }
 
@@ -156,7 +156,7 @@ func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.In
 		apt:        cmd,
 		Cancelable: true,
 	}
-	cmd.Stdout = &r.logger
+	cmd.Stdout = &r.stdout
 	cmd.Stderr = &r.stderr
 
 	cmdSet.AddCMD(r)
@@ -176,8 +176,6 @@ func (c *aptCommand) setEnv(envVarMap map[string]string) {
 }
 
 func (c *aptCommand) Start() error {
-	c.logger.WriteString(fmt.Sprintf("Begin AptCommand:%v\n", c))
-
 	rr, ww, err := os.Pipe()
 	if err != nil {
 		return fmt.Errorf("aptCommand.Start pipe : %v", err)
@@ -228,9 +226,8 @@ const (
 func (c *aptCommand) atExit() {
 	c.aptPipe.Close()
 
-	c.logger.WriteString(fmt.Sprintf("End AptCommand: %s\n", c.JobId))
-	log.Info(c.logger.String())
-	log.Info(c.stderr.String())
+	log.Infof("job %s stdout: %s", c.JobId, c.stdout.Bytes())
+	log.Infof("job %s stderr: %s", c.JobId, c.stderr.Bytes())
 
 	c.cmdSet.RemoveCMD(c.JobId)
 
@@ -243,13 +240,13 @@ func (c *aptCommand) atExit() {
 			Cancelable: true,
 		})
 	case ExitFailure:
-		errStr := c.stderr.String()
+		err := parseJobError(c.stderr.String(), c.stdout.String())
 		c.indicator(system.JobProgressInfo{
-			JobId:       c.JobId,
-			Status:      system.FailedStatus,
-			Progress:    -1.0,
-			Cancelable:  true,
-			Description: errStr,
+			JobId:      c.JobId,
+			Status:     system.FailedStatus,
+			Progress:   -1.0,
+			Cancelable: true,
+			Error:      err,
 		})
 	case ExitPause:
 		c.indicator(system.JobProgressInfo{
@@ -261,14 +258,83 @@ func (c *aptCommand) atExit() {
 	}
 }
 
-func (c *aptCommand) indicateFailed(description string) {
-	log.Warn("AptCommand Failed: ", description)
+func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
+	switch {
+	case strings.Contains(stdErrStr, "Failed to fetch"):
+		return &system.JobError{
+			Type:   "fetchFailed",
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "Sub-process /usr/bin/dpkg"+
+		" returned an error code"):
+		idx := strings.Index(stdOutStr, "\ndpkg:")
+		var detail string
+		if idx == -1 {
+			detail = stdOutStr
+		} else {
+			detail = stdOutStr[idx+1:]
+		}
+
+		return &system.JobError{
+			Type:   "dpkgError",
+			Detail: detail,
+		}
+
+	case strings.Contains(stdErrStr, "Unable to locate package"):
+		return &system.JobError{
+			Type:   "pkgNotFound",
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "Unable to correct problems,"+
+		" you have held broken packages"):
+
+		idx := strings.Index(stdOutStr,
+			"The following packages have unmet dependencies:")
+		var detail string
+		if idx == -1 {
+			detail = stdOutStr
+		} else {
+			detail = stdOutStr[idx:]
+		}
+		return &system.JobError{
+			Type:   "unmetDependencies",
+			Detail: detail,
+		}
+
+	case strings.Contains(stdErrStr, "has no installation candidate"):
+		return &system.JobError{
+			Type:   "noInstallationCandidate",
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "You don't have enough free space"):
+		return &system.JobError{
+			Type:   "insufficientSpace",
+			Detail: stdErrStr,
+		}
+
+	default:
+		return &system.JobError{
+			Type:   "unknown",
+			Detail: stdErrStr,
+		}
+	}
+}
+
+func (c *aptCommand) indicateFailed(errType, errDetail string, isFatalErr bool) {
+	log.Warnf("indicateFailed: type: %s, detail: %s", errType, errDetail)
 	progressInfo := system.JobProgressInfo{
-		JobId:       c.JobId,
-		Progress:    -1.0,
-		Description: description,
-		Status:      system.FailedStatus,
-		Cancelable:  true,
+		JobId:      c.JobId,
+		Progress:   -1.0,
+		Status:     system.FailedStatus,
+		Cancelable: true,
+		Error: &system.JobError{
+			Type:   errType,
+			Detail: errDetail,
+		},
+		FatalError: isFatalErr,
 	}
 	c.cmdSet.RemoveCMD(c.JobId)
 	c.indicator(progressInfo)

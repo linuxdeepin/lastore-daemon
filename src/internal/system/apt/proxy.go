@@ -205,38 +205,6 @@ func tryFixDpkgDirtyStatus() {
 
 }
 
-// remove package checker
-type rmPkgChecker struct {
-	buf    bytes.Buffer // line buffer
-	remove bool
-}
-
-// impl io.Writer
-func (c *rmPkgChecker) Write(data []byte) (n int, err error) {
-	if c.remove {
-		return len(data), nil
-	}
-	for _, b := range data {
-		if b != '\n' {
-			err = c.buf.WriteByte(b)
-			if err != nil {
-				return
-			}
-		} else {
-			// b is newline
-			line := c.buf.Bytes()
-			// remove package dde?
-			if bytes.HasPrefix(line, []byte("Remv dde ")) {
-				c.remove = true
-				return len(data), nil
-			}
-			c.buf.Reset()
-		}
-		n++
-	}
-	return
-}
-
 func checkPkgSystemError(lock bool) error {
 	args := []string{"check"}
 	if !lock {
@@ -253,14 +221,15 @@ func checkPkgSystemError(lock bool) error {
 	if err == nil {
 		return nil
 	}
+	errStr := string(errBuf.Bytes())
 
 	switch {
-	case bytes.Contains(errBuf.Bytes(), []byte("dpkg was interrupted")):
-		return system.PkgSystemError{
+	case strings.Contains(errStr, "dpkg was interrupted"):
+		return &system.PkgSystemError{
 			Type: system.ErrTypeDpkgInterrupted,
 		}
 
-	case bytes.Contains(errBuf.Bytes(), []byte("Unmet dependencies")):
+	case strings.Contains(errStr, "Unmet dependencies"):
 		var detail string
 		idx := bytes.Index(outBuf.Bytes(),
 			[]byte("The following packages have unmet dependencies:"))
@@ -271,15 +240,21 @@ func checkPkgSystemError(lock bool) error {
 			detail = string(outBuf.Bytes()[idx:])
 		}
 
-		return system.PkgSystemError{
+		return &system.PkgSystemError{
 			Type:   system.ErrTypeDependenciesBroken,
 			Detail: detail,
 		}
 
+	case strings.Contains(errStr, "The list of sources could not be read"):
+		return &system.PkgSystemError{
+			Type:   system.ErrTypeInvalidSourcesList,
+			Detail: errStr,
+		}
+
 	default:
-		return system.PkgSystemError{
+		return &system.PkgSystemError{
 			Type:   system.ErrTypeUnknown,
-			Detail: string(errBuf.Bytes()),
+			Detail: errStr,
 		}
 	}
 }
@@ -289,8 +264,12 @@ func safeStart(c *aptCommand) error {
 	// add -s option
 	args = append([]string{"-s"}, args[1:]...)
 	cmd := exec.Command("apt-get", args...)
-	var checker rmPkgChecker
-	cmd.Stdout = &checker
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
 	// perform apt-get action simulate
 	err := cmd.Start()
 	if err != nil {
@@ -299,21 +278,23 @@ func safeStart(c *aptCommand) error {
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
-			c.indicateFailed("apt-get simulate failed " + err.Error())
+			jobErr := parseJobError(stderr.String(), stdout.String())
+			c.indicateFailed(jobErr.Type, jobErr.Detail, false)
 			return
 		}
 
 		// cmd run ok
 		// check rm dde?
-		if checker.remove {
-			c.indicateFailed("remove dde")
+		if bytes.Contains(stdout.Bytes(), []byte("Remv dde ")) {
+			c.indicateFailed("removeDDE", "", true)
 			return
 		}
 
 		// really perform apt-get action
 		err = c.Start()
 		if err != nil {
-			c.indicateFailed("apt-get start failed " + err.Error())
+			c.indicateFailed("unknown",
+				"apt-get start failed: "+err.Error(), false)
 		}
 	}()
 	return nil

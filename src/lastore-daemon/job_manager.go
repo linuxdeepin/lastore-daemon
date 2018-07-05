@@ -298,14 +298,19 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			job.PropsMu.Unlock()
 			log.Errorf("StartSystemJob failed %v :%v\n", job, err)
 
-			pkgSysErr, ok := err.(system.PkgSystemError)
+			pkgSysErr, ok := err.(*system.PkgSystemError)
 			if ok {
 				// do not retry job
 				job.retry = 0
 				job.PropsMu.Lock()
-				job.setError("PkgSystemError::"+pkgSysErr.Type, pkgSysErr.Detail)
+				job.setError(pkgSysErr)
 				job.emitPropChangedStatus(job.Status)
 				job.PropsMu.Unlock()
+			} else if job.retry == 0 {
+				job.setError(&system.JobError{
+					Type:   "unknown",
+					Detail: "failed to start system job: " + err.Error(),
+				})
 			}
 		}
 	}
