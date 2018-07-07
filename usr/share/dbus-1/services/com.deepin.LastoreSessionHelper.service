@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=com.deepin.LastoreSessionHelper
-Exec=/usr/bin/lastore-session-helper

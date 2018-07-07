@@ -17,7 +17,6 @@ bin/lastore-tools:
 
 build:  bin/lastore-tools
 	${GoPath} ${GOBUILD} -o bin/lastore-daemon lastore-daemon
-	${GoPath} ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
 	${GoPath} ${GOBUILD} -o bin/deepin-appstore-backend-deb backend-deb
@@ -37,7 +36,7 @@ test:
 	fi) \
 	${GoPath} go test -v internal/system internal/system/apt \
 	internal/utils	internal/querydesktop \
-	lastore-daemon  lastore-session-helper  lastore-smartmirror  lastore-tools
+	lastore-daemon  lastore-smartmirror  lastore-tools
 
 install: gen_mo bin/lastore-tools
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/

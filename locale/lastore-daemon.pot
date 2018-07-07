@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-26 15:55+0800\n"
+"POT-Creation-Date: 2018-07-20 12:00+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,101 +17,10 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lastore-daemon/inhibitor.go:30
+#: ../src/lastore-daemon/inhibitor.go:31
 msgid "Deepin Store"
 msgstr ""
 
-#: ../src/lastore-daemon/inhibitor.go:31
+#: ../src/lastore-daemon/inhibitor.go:32
 msgid "System is updating, please shut down or reboot later."
-msgstr ""
-
-#: ../src/lastore-session-helper/check_source.go:47
-msgid "Restore"
-msgstr ""
-
-#: ../src/lastore-session-helper/check_source.go:58
-#: ../src/lastore-session-helper/job.go:325
-msgid "Cancel"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:294
-msgid "Reboot Now"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:308
-msgid "Reboot Later"
-msgstr ""
-
-#: ../src/lastore-session-helper/job.go:317
-msgid "Retry"
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:70
-msgid "%q installed successfully."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:73
-msgid "%q failed to install."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:82
-msgid "%q removed successfully."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:84
-msgid "%q failed to remove."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:91
-msgid "%q failed to download."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:97
-msgid ""
-"In order to prevent automatic shutdown, please plug in for normal update."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:105
-msgid "Some functions will take effect after rebooting."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:105
-#: ../src/lastore-session-helper/notify.go:107
-msgid "Updated successfully!"
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:111
-msgid "Failed to update."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:121
-#, c-format
-msgid "%d software need to be updated."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:123
-msgid "Some patches need to be updated."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:125
-#, c-format
-msgid "Some patches and %d software need to be updated."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:133
-msgid "Download"
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:141
-msgid "Failed to download upgradeable packages."
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:146
-msgid "Package cache wiped"
-msgstr ""
-
-#: ../src/lastore-session-helper/notify.go:151
-msgid ""
-"Your system source has been modified, please restore to official source for "
-"your normal use"
 msgstr ""

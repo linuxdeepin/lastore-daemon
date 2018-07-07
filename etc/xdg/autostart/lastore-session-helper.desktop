@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=lastore-session-helper
-Exec=sh -c "sleep 30; exec /usr/bin/lastore-session-helper"
-TryExec=/usr/bin/lastore-daemon
-NoDisplay=true
