@@ -354,7 +354,8 @@ func (l *Lastore) notifyJob(path dbus.ObjectPath) {
 		}
 
 	case system.CleanJobType:
-		if status == system.SucceedStatus {
+		if status == system.SucceedStatus &&
+			strings.Contains(info.Name, "+notify") {
 			notifyAutoClean()
 		}
 	}
