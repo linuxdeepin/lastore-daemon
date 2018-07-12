@@ -109,7 +109,7 @@ type PkgSystemError struct {
 }
 
 func (e *PkgSystemError) GetType() string {
-	return "PKgSystemErr::" + e.Type
+	return "PkgSystemError::" + e.Type
 }
 
 func (e *PkgSystemError) GetDetail() string {
