@@ -1,3 +1,18 @@
+<a name="0.9.63"></a>
+### 0.9.63 (2018-07-19)
+
+
+#### Features
+
+*   clean archives from UI do not send notification ([8e642a1d](https://github.com/linuxdeepin/lastore-daemon/commit/8e642a1d499afe453450965a7229ff902669f8dc))
+* **daemon:**  handle more errors ([72660dbc](https://github.com/linuxdeepin/lastore-daemon/commit/72660dbc9eec8d567de8225b38f9a70a9c6f76fb))
+
+#### Bug Fixes
+
+*   PkgSystemError.GetType typo ([7353f307](https://github.com/linuxdeepin/lastore-daemon/commit/7353f307479f5b32867b9edbb50b5b7bfb535a07))
+
+
+
 <a name="0.9.62"></a>
 ### 0.9.62 (2018-07-05)
 
