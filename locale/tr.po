@@ -12,7 +12,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-04-11 06:39+0000\n"
+"PO-Revision-Date: 2018-07-12 12:51+0000\n"
 "Last-Translator: Kaya Zeren <kayazeren@gmail.com>\n"
 "Language-Team: Turkish (http://www.transifex.com/linuxdeepin/deepin-store/language/tr/)\n"
 "MIME-Version: 1.0\n"
@@ -23,7 +23,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:30
 msgid "Deepin Store"
-msgstr "Deepin Mağaza"
+msgstr "Deepin Mağazası"
 
 #: ../src/lastore-daemon/inhibitor.go:31
 msgid "System is updating, please shut down or reboot later."
