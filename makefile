@@ -5,9 +5,10 @@ GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
 
 ifndef USE_GCCGO
 	GOBUILD = go build
+	GOTEST = go test -v
 else
-	GOLDFLAGS += $(shell pkg-config --libs gio-2.0 gdk-3.0)
-	GOBUILD = go build -compiler gccgo -gccgoflags "$(GOLDFLAGS)"
+	GOBUILD = gccgo_build.pl -p "gio-2.0 gdk-3.0"
+	GOTEST = echo
 endif
 
 all:  build
@@ -34,7 +35,7 @@ test:
 			echo 1; \
 		fi; \
 	fi) \
-	${GoPath} go test -v internal/system internal/system/apt \
+	${GoPath} ${GOTEST} internal/system internal/system/apt \
 	internal/utils	internal/querydesktop \
 	lastore-daemon  lastore-smartmirror  lastore-tools
 
