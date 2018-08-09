@@ -20,7 +20,7 @@ build:  bin/lastore-tools
 	${GoPath} ${GOBUILD} -o bin/lastore-session-helper lastore-session-helper
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
-	${GoPath} ${GOBUILD} -o bin/deepin-appstore-backend-deb backend-deb
+	#${GoPath} ${GOBUILD} -o bin/deepin-appstore-backend-deb backend-deb
 
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
