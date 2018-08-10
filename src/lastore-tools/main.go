@@ -19,8 +19,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/codegangsta/cli"
+	"net/http"
 	"os"
+	"time"
+
+	"github.com/codegangsta/cli"
 	"pkg.deepin.io/lib/utils"
 )
 
@@ -89,6 +92,7 @@ func main() {
 	utils.UnsetEnv("LC_MESSAGES")
 	utils.UnsetEnv("LANG")
 
+	http.DefaultClient.Timeout = 60 * time.Second
 	app := cli.NewApp()
 	app.Name = "lastore-tools"
 	app.Usage = "help building dstore system."

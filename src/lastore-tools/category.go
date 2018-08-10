@@ -19,13 +19,22 @@ package main
 
 import (
 	"encoding/json"
-	log "github.com/cihub/seelog"
 	"internal/utils"
 	"io/ioutil"
 	"net/http"
+
+	log "github.com/cihub/seelog"
 )
 
 const appstoreURI = "http://api.appstore.deepin.org"
+
+type CategoryInfo struct {
+	Id      string `json:"id"`
+	Name    string `json:"name"`
+	Locales map[string]struct {
+		Name string `json:"name"`
+	}
+}
 
 func decodeData(wrap bool, url string, data interface{}) error {
 	resp, err := http.Get(url)
@@ -65,7 +74,7 @@ func writeData(fpath string, data interface{}) error {
 func GenerateCategory(repo, fpath string) error {
 	url := appstoreURI + "/" + "categories"
 
-	var d interface{}
+	var d []CategoryInfo
 	err := decodeData(true, url, &d)
 	if err != nil {
 		return log.Warnf("GenerateCategory failed %v\n", err)
