@@ -1,3 +1,14 @@
+<a name="0.9.66"></a>
+### 0.9.66 (2018-08-12)
+
+
+#### Bug Fixes
+
+*   `sw_64` gccgo720 build failed ([388d9199](https://github.com/linuxdeepin/lastore-daemon/commit/388d919910dd7bf8ddc8bf8f6640ba87a3ffddb9))
+* **lastore-tools:**  no check categories api return value structure ([31dbffd3](https://github.com/linuxdeepin/lastore-daemon/commit/31dbffd3a38e8d026f8e4b04b132dc070c0d1d55))
+
+
+
 <a name="0.9.65"></a>
 ### 0.9.65 (2018-07-20)
 
