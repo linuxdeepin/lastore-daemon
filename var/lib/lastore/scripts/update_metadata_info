@@ -39,6 +39,10 @@ function fix_remote_url()
 }
 
 
+if [ "$LASTORE_DAEMON_POSTINST" = 1 ]; then
+    update_metadata_info_now
+    exit
+fi
 dbus-send --system --print-reply --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.UpdateSource
 
 [ -x /usr/bin/ostree ] || exit 0
