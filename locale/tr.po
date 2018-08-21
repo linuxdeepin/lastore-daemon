@@ -6,7 +6,7 @@
 # Adem Çalışkan <ademcal@yahoo.com>, 2017
 # Hasan Eryilmaz <hasaneryilmaz0@gmail.com>, 2017
 # Kaya Zeren <kayazeren@gmail.com>, 2018
-# Murat Servan Kahraman <muratservan@outlook.com>, 2016
+# Murat Servan Kahraman, 2016
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"

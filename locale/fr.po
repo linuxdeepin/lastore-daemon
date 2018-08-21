@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Charles Monzat <superboa@hotmail.fr>, 2017
+# Charles Monzat <c.monzat@laposte.net>, 2017
 # FFXP <jeremy.pfenning@ironmail.fr>, 2015
 # lexross <mais@techie.com>, 2015-2016
 # jeremy shields <jeremy.shields@orange.fr>, 2015

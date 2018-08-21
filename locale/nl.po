@@ -4,14 +4,14 @@
 # 
 # Translators:
 # dragnadh <dragnadh@gmail.com>, 2016-2018
-# Heimen Stoffels <vistausss@outlook.com>, 2015
+# Heimen Stoffels <vistausss@outlook.com>, 2015,2018
 msgid ""
 msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-02-19 18:12+0000\n"
-"Last-Translator: dragnadh <dragnadh@gmail.com>\n"
+"PO-Revision-Date: 2018-07-30 10:12+0000\n"
+"Last-Translator: Heimen Stoffels <vistausss@outlook.com>\n"
 "Language-Team: Dutch (http://www.transifex.com/linuxdeepin/deepin-store/language/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -106,14 +106,14 @@ msgstr "Downloaden"
 
 #: ../src/lastore-session-helper/notify.go:141
 msgid "Failed to download upgradeable packages."
-msgstr "Mislukt om upgradeable pakketten te downloaden."
+msgstr "Het downloaden van op te waarderen pakketten is mislukt."
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr "Pakket cache uitgewist"
+msgstr "Pakketcache opgeschoond"
 
 #: ../src/lastore-session-helper/notify.go:151
 msgid ""
 "Your system source has been modified, please restore to official source for "
 "your normal use"
-msgstr "Uw systeembron is gewijzigd. Herstel de officiële bron voor normaal gebruik"
+msgstr "Je systeembron is gewijzigd. Herstel de officiële bron voor normaal gebruik."

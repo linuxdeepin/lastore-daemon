@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Deepin Store\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-04-14 12:13+0000\n"
+"PO-Revision-Date: 2018-08-06 19:49+0000\n"
 "Last-Translator: Jami K.\n"
 "Language-Team: Finnish (http://www.transifex.com/linuxdeepin/deepin-store/language/fi/)\n"
 "MIME-Version: 1.0\n"
@@ -109,7 +109,7 @@ msgstr ""
 
 #: ../src/lastore-session-helper/notify.go:146
 msgid "Package cache wiped"
-msgstr ""
+msgstr "Pakettien välimuisti tyhjennettiin"
 
 #: ../src/lastore-session-helper/notify.go:151
 msgid ""
