@@ -1,3 +1,13 @@
+<a name="0.9.66.2"></a>
+## 0.9.66.2 (2018-08-30)
+
+
+#### Features
+
+*   add Priority set ([ec4dc849](https://github.com/linuxdeepin/lastore-daemon/commit/ec4dc84968a79d805c304862d2bccc9b66461bc3))
+
+
+
 <a name="0.9.66.1"></a>
 ### 0.9.66.1 (2018-08-30)
 
