@@ -27,7 +27,7 @@ function fix_remote_url()
     config_url=$1
     if [ -f $repo_dir/config -a -n "$config_url" ]; then
         # repo config file exist and $config_url is not empty
-        if which ostree >/dev/null 2>&1; then
+        if which ostree >/dev/null; then
             # has ostree
             current_url=$(ostree --repo=$repo_dir config get 'remote "origin".url')
             if [ "$current_url" != "$config_url" ]; then
@@ -40,12 +40,14 @@ function fix_remote_url()
 
 
 if [ "$LASTORE_DAEMON_POSTINST" = 1 ]; then
-    update_metadata_info_now
+    if which ostree >/dev/null; then
+        update_metadata_info_now
+    fi
     exit
 fi
 dbus-send --system --print-reply --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.UpdateSource
 
-[ -x /usr/bin/ostree ] || exit 0
+which ostree >/dev/null || exit 0
 
 case "$1" in
     "-now")
