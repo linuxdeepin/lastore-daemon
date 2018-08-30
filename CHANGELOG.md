@@ -1,3 +1,13 @@
+<a name="0.9.66.1"></a>
+### 0.9.66.1 (2018-08-30)
+
+
+#### Bug Fixes
+
+*   after upgrade, click restart bring up an authorization dialog ([0b614b58](https://github.com/linuxdeepin/lastore-daemon/commit/0b614b5865d027d972046d27674e1e05bd9c4a2f))
+
+
+
 <a name="0.9.66"></a>
 ### 0.9.66 (2018-08-12)
 
