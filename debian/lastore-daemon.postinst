@@ -10,7 +10,6 @@ case "$1" in
             [ -e /lib/systemd/dbus-com.deepin.lastore.service ] && rm /lib/systemd/system/dbus-com.deepin.lastore.service || true
         fi
         systemctl daemon-reload || true
-        export LASTORE_DAEMON_POSTINST=1
         /var/lib/lastore/scripts/update_metadata_info || true
         /var/lib/lastore/scripts/build_system_info || true
         ;;
