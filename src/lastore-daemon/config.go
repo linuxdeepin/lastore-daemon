@@ -18,32 +18,35 @@
 package main
 
 import (
-	log "github.com/cihub/seelog"
 	"internal/system"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
 const MinCheckInterval = time.Minute
 
 var DefaultConfig = Config{
-	CheckInterval:       time.Minute * 180,
-	CleanInterval:       time.Hour * 48,
-	AutoCheckUpdates:    true,
-	AutoDownloadUpdates: false,
-	AutoClean:           true,
+	CheckInterval:         time.Minute * 180,
+	CleanInterval:         time.Hour * 48,
+	AutoCheckUpdates:      true,
+	DisableUpdateMetadata: false,
+	AutoDownloadUpdates:   false,
+	AutoClean:             true,
 }
 
 type Config struct {
-	AutoCheckUpdates    bool
-	AutoDownloadUpdates bool
-	AutoClean           bool
-	MirrorSource        string
-	CheckInterval       time.Duration
-	CleanInterval       time.Duration
-	AppstoreRegion      string
-	LastCheckTime       time.Time
-	LastCleanTime       time.Time
-	Repository          string
+	AutoCheckUpdates      bool
+	DisableUpdateMetadata bool
+	AutoDownloadUpdates   bool
+	AutoClean             bool
+	MirrorSource          string
+	CheckInterval         time.Duration
+	CleanInterval         time.Duration
+	AppstoreRegion        string
+	LastCheckTime         time.Time
+	LastCleanTime         time.Time
+	Repository            string
 
 	filePath string
 }

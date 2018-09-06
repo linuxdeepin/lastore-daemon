@@ -77,7 +77,7 @@ func main() {
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 
 	manager := NewManager(service, b, config)
-	updater := NewUpdater(service, b, config)
+	updater := NewUpdater(service, manager, config)
 	err = service.Export("/com/deepin/lastore", manager, updater)
 	if err != nil {
 		log.Error("failed to export manager and updater:", err)

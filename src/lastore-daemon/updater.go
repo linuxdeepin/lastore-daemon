@@ -45,6 +45,7 @@ type ApplicationUpdateInfo struct {
 }
 
 type Updater struct {
+	manager             *Manager
 	service             *dbusutil.Service
 	PropsMu             sync.RWMutex
 	AutoCheckUpdates    bool
@@ -68,8 +69,9 @@ type Updater struct {
 	}
 }
 
-func NewUpdater(service *dbusutil.Service, b system.System, config *Config) *Updater {
+func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
 	u := &Updater{
+		manager:             m,
 		service:             service,
 		config:              config,
 		AutoCheckUpdates:    config.AutoCheckUpdates,
@@ -81,12 +83,12 @@ func NewUpdater(service *dbusutil.Service, b system.System, config *Config) *Upd
 }
 
 func (u *Updater) loopCheck() {
-	doUpdate := func() {
+	startUpdateMetadataInfoService := func() {
+		log.Info("start update metadata info service")
 		err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
 		if err != nil {
 			log.Warnf("AutoCheck Update failed: %v", err)
 		}
-		u.config.UpdateLastCheckTime()
 	}
 
 	calcDelay := func() time.Duration {
@@ -102,15 +104,18 @@ func (u *Updater) loopCheck() {
 		// ensure delay at least have 10 seconds
 		delay := calcDelay() + time.Second*10
 
-		fmt.Println("HH", time.Now().Add(delay), u.AutoCheckUpdates)
+		log.Warnf("Next updater check will trigger at %v", time.Now().Add(delay))
+		time.Sleep(delay)
+
 		if u.AutoCheckUpdates {
-			log.Warnf("Next Check Updates will trigger at %v", time.Now().Add(delay))
+			u.manager.updateSource()
 		}
-		<-time.After(delay)
-		if !u.AutoCheckUpdates {
-			continue
+
+		if !u.config.DisableUpdateMetadata {
+			startUpdateMetadataInfoService()
 		}
-		doUpdate()
+
+		u.config.UpdateLastCheckTime()
 	}
 }
 
