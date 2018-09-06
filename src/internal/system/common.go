@@ -31,6 +31,7 @@ type MirrorSource struct {
 
 	NameLocale map[string]string `json:"name_locale"`
 	Weight     int               `json:"weight"`
+	Country    string            `json:"country"`
 }
 
 var RepoInfos []RepositoryInfo

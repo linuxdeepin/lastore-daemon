@@ -47,6 +47,11 @@ var CMDUpdater = cli.Command{
 			Value: "/dev/stdout",
 			Usage: "the file to write",
 		},
+		cli.StringFlag{
+			Name:  "mirrors-url",
+			Value: "",
+			Usage: "",
+		},
 	},
 }
 
@@ -76,6 +81,9 @@ func MainUpdater(c *cli.Context) {
 		GenerateUpdateInfos(fpath)
 	case "mirrors":
 		err = GenerateMirrors(repo, fpath)
+	case "unpublished-mirrors":
+		url := c.String("mirrors-url")
+		err = GenerateUnpublishedMirrors(url, fpath)
 	default:
 		cli.ShowCommandHelp(c, "update")
 		return

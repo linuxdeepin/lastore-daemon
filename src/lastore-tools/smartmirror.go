@@ -20,10 +20,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/codegangsta/cli"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/codegangsta/cli"
 )
 
 var CMDSmartMirror = cli.Command{
@@ -186,7 +187,8 @@ func appendSuffix(r string, suffix string) string {
 }
 
 func getMirrorList(p string) ([]string, error) {
-	if strings.HasPrefix(p, "http://") {
+	if strings.HasPrefix(p, "http://") ||
+		strings.HasPrefix(p, "https://") {
 		ms, err := LoadMirrorSources(p)
 		if err != nil {
 			return nil, err

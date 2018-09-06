@@ -33,6 +33,7 @@ var DefaultConfig = Config{
 	DisableUpdateMetadata: false,
 	AutoDownloadUpdates:   false,
 	AutoClean:             true,
+	MirrorsUrl:            system.DefaultMirrorsUrl,
 }
 
 type Config struct {
@@ -47,6 +48,7 @@ type Config struct {
 	LastCheckTime         time.Time
 	LastCleanTime         time.Time
 	Repository            string
+	MirrorsUrl            string
 
 	filePath string
 }
@@ -67,7 +69,6 @@ func NewConfig(fpath string) *Config {
 		c.Repository = info.Name
 		c.MirrorSource = "default" //info.Mirror
 	}
-
 	return &c
 }
 
