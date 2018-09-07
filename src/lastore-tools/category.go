@@ -20,8 +20,11 @@ package main
 import (
 	"encoding/json"
 	"internal/utils"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	log "github.com/cihub/seelog"
 )
@@ -89,19 +92,104 @@ type AppInfo struct {
 	LocaleName map[string]string `json:"locale_name"`
 }
 
-func GenerateApplications(repo, fpath string) error {
+type apiAppApps struct {
+	Apps []struct {
+		Name     string `json:"name"`
+		Category string `json:"category"`
+		Locale   map[string]struct {
+			Description struct {
+				Name string `json:"name"`
+			} `json:"description"`
+		} `json:"locale"`
+	} `json:"apps"`
+}
+
+func genApplications(v apiAppApps, fpath string) error {
 	apps := make(map[string]AppInfo)
-	err := decodeData(false, "http://api.appstore.deepin.org/info/all", &apps)
-	apps["deepin-appstore"] = AppInfo{
-		Id:       "deepin-appstore",
-		Category: "system",
-		Name:     "deepin store",
-		LocaleName: map[string]string{
-			"zh_CN": "深度商店",
-		},
+
+	const localeEnUS = "en_US"
+	for _, app := range v.Apps {
+		appInfo := AppInfo{
+			Id:       app.Name,
+			Category: app.Category,
+		}
+
+		// set Name
+		enDesc, ok := app.Locale[localeEnUS]
+		if ok {
+			appInfo.Name = enDesc.Description.Name
+		}
+		if appInfo.Name == "" {
+			appInfo.Name = app.Name
+		}
+
+		// set LocaleName
+		for localeCode, desc := range app.Locale {
+			localizedName := desc.Description.Name
+			if localizedName != appInfo.Name {
+				if appInfo.LocaleName == nil {
+					appInfo.LocaleName = make(map[string]string)
+				}
+				appInfo.LocaleName[localeCode] = localizedName
+			}
+		}
+
+		apps[app.Name] = appInfo
 	}
-	if err != nil {
-		return log.Warnf("GenerateApplication failed %v\n", err)
+
+	if _, hasAppstore := apps["deepin-appstore"]; !hasAppstore {
+		apps["deepin-appstore"] = AppInfo{
+			Id:       "deepin-appstore",
+			Category: "system",
+			Name:     "deepin store",
+			LocaleName: map[string]string{
+				"zh_CN": "深度商店",
+			},
+		}
 	}
+
 	return writeData(fpath, apps)
+}
+
+func GenerateApplications(repo, fpath string) error {
+	appJsonFile := filepath.Join(filepath.Dir(fpath), "app.json")
+
+	tempFile := appJsonFile + ".tmp"
+	output, err := os.Create(tempFile)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	apiAppUrl := "https://dstore-metadata.deepin.cn/api/app"
+
+	resp, err := http.Get(apiAppUrl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	err = output.Chmod(0644)
+	if err != nil {
+		return err
+	}
+
+	teeReader := io.TeeReader(resp.Body, output)
+	jsonDec := json.NewDecoder(teeReader)
+	var v apiAppApps
+	err = jsonDec.Decode(&v)
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(tempFile, appJsonFile)
+	if err != nil {
+		return err
+	}
+	err = genApplications(v, fpath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
