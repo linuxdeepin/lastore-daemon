@@ -1,3 +1,18 @@
+<a name="0.9.66.3"></a>
+## 0.9.66.3 (2018-09-13)
+
+
+#### Bug Fixes
+
+*   generate machine-id is same ([79e1b811](https://github.com/linuxdeepin/lastore-daemon/commit/79e1b811cc8811cbdc49c91462911fed9484c97c))
+* **lastore-tools:**  querydesktop deepin-fpapp-org.deepin.flatdeb.deepin-calendar no result ([ad88eec3](https://github.com/linuxdeepin/lastore-daemon/commit/ad88eec34e8da5f082265eab20694935103544ad))
+
+#### Features
+
+* **daemon:**  separate update source and update metadata ([abffdf2b](https://github.com/linuxdeepin/lastore-daemon/commit/abffdf2b079676497b42a57bdce010cd3448d821))
+
+
+
 <a name="0.9.66.2"></a>
 ## 0.9.66.2 (2018-08-30)
 
