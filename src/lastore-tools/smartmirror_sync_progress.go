@@ -93,7 +93,13 @@ func (u *URLChecker) SendAllRequest() {
 
 func CheckURLExists(url string) *URLCheckResult {
 	n := time.Now().UTC()
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return &URLCheckResult{url, false, 0, n, time.Since(n)}
+	}
+	req.Header.Set("User-Agent", "lastore-tools")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return &URLCheckResult{url, false, 0, n, time.Since(n)}
 	}
