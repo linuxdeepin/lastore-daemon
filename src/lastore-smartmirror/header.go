@@ -20,6 +20,7 @@ package main
 import (
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -46,11 +47,19 @@ func MachineID() string {
 	return strings.TrimSpace(string(bs))
 }
 
+func stripURLPath(u string) string {
+	v, err := url.Parse(u)
+	if err != nil {
+		return u
+	}
+	return v.Hostname()
+}
+
 func MakeHeader(mirrorURL string) map[string]string {
 	return map[string]string{
 		"User-Agent": UserAgent(),
 		"MID":        MachineID(),
-		"M":          mirrorURL,
+		"M":          stripURLPath(mirrorURL),
 	}
 }
 
