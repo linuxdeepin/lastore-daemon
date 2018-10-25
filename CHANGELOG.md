@@ -1,3 +1,25 @@
+<a name="0.10.0"></a>
+## 0.10.0 (2018-10-25)
+
+
+#### Features
+
+*   get app metadata from new api ([6962ee45](https://github.com/linuxdeepin/lastore-daemon/commit/6962ee45c57b70082307788005705d24df096e86))
+*   get mirror sources in a new way ([3dab5df5](https://github.com/linuxdeepin/lastore-daemon/commit/3dab5df5db96d664bf48616f10f917a00fcbad05))
+*   add Priority set ([59905303](https://github.com/linuxdeepin/lastore-daemon/commit/59905303b8f15701be68200366d5edcc09dc8e5f))
+* **daemon:**  separate update source and update metadata ([9019dc88](https://github.com/linuxdeepin/lastore-daemon/commit/9019dc88c76936b2e0bb0c92be338db8793889ae))
+
+#### Performance
+
+* **smartmirror:**  strip path string from mirror field ([20c9ca99](https://github.com/linuxdeepin/lastore-daemon/commit/20c9ca99c3128168dd6e47f2adff0efb0a291d5e))
+
+#### Bug Fixes
+
+*   generate machine-id is same ([d9c9469b](https://github.com/linuxdeepin/lastore-daemon/commit/d9c9469b627bc3357280ab152ce3f114fd1b0bf6))
+* **lastore-tools:**  querydesktop deepin-fpapp-org.deepin.flatdeb.deepin-calendar no result ([4b429d36](https://github.com/linuxdeepin/lastore-daemon/commit/4b429d36c65ea712b12fe92076d854464ce755ec))
+
+
+
 <a name="0.9.66.3"></a>
 ## 0.9.66.3 (2018-09-13)
 
