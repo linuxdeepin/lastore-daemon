@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"internal/utils"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -66,12 +65,7 @@ func decodeData(wrap bool, url string, data interface{}) error {
 }
 
 func writeData(fpath string, data interface{}) error {
-	content, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	utils.EnsureBaseDir(fpath)
-	return ioutil.WriteFile(fpath, content, 0644)
+	return utils.WriteData(fpath, data)
 }
 
 func GenerateCategory(repo, fpath string) error {

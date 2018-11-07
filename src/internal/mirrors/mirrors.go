@@ -15,12 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package main
+package mirrors
 
 import (
 	"encoding/json"
 	"fmt"
 	"internal/system"
+	"internal/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -33,7 +34,7 @@ func GenerateMirrors(repository string, fpath string) error {
 	if err != nil {
 		return err
 	}
-	return writeData(fpath, ms)
+	return utils.WriteData(fpath, ms)
 }
 
 func GenerateUnpublishedMirrors(url, fpath string) error {
@@ -41,7 +42,7 @@ func GenerateUnpublishedMirrors(url, fpath string) error {
 	if err != nil {
 		return err
 	}
-	return writeData(fpath, ms)
+	return utils.WriteData(fpath, ms)
 }
 
 type mirror struct {

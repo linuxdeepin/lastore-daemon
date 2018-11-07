@@ -20,8 +20,10 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -136,4 +138,13 @@ func RemoteCatLine(url string) (string, error) {
 		return line, fmt.Errorf("the line %q is too long", line)
 	}
 	return line, err
+}
+
+func WriteData(fpath string, data interface{}) error {
+	content, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	EnsureBaseDir(fpath)
+	return ioutil.WriteFile(fpath, content, 0644)
 }

@@ -25,6 +25,8 @@ import (
 
 	"github.com/codegangsta/cli"
 	"pkg.deepin.io/lib/utils"
+
+	"internal/mirrors"
 )
 
 var CMDUpdater = cli.Command{
@@ -80,10 +82,10 @@ func MainUpdater(c *cli.Context) {
 	case "update_infos":
 		GenerateUpdateInfos(fpath)
 	case "mirrors":
-		err = GenerateMirrors(repo, fpath)
+		err = mirrors.GenerateMirrors(repo, fpath)
 	case "unpublished-mirrors":
 		url := c.String("mirrors-url")
-		err = GenerateUnpublishedMirrors(url, fpath)
+		err = mirrors.GenerateUnpublishedMirrors(url, fpath)
 	default:
 		cli.ShowCommandHelp(c, "update")
 		return

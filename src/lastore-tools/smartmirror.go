@@ -20,6 +20,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"internal/mirrors"
 	"net/http"
 	"os"
 	"strings"
@@ -189,7 +190,7 @@ func appendSuffix(r string, suffix string) string {
 func getMirrorList(p string) ([]string, error) {
 	if strings.HasPrefix(p, "http://") ||
 		strings.HasPrefix(p, "https://") {
-		ms, err := LoadMirrorSources(p)
+		ms, err := mirrors.LoadMirrorSources(p)
 		if err != nil {
 			return nil, err
 		}
