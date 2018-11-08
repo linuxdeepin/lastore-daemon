@@ -26,7 +26,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"pkg.deepin.io/lib/dbus1"
 )
+
+// FIXME: move all to utils
+func validURL(url string) bool {
+	return strings.HasPrefix(url, "http")
+}
 
 func main() {
 	if len(os.Args) != 4 {
@@ -36,11 +44,23 @@ func main() {
 
 	rawURL := os.Args[1]
 	officialHost := os.Args[2]
-	mirrorHost := os.Args[3]
+	// mirrorHost := os.Args[3]
 
-	r := Route(rawURL, officialHost, mirrorHost)
-	if validURL(r) {
-		fmt.Print(r)
+	url := ""
+	sysBus, err := dbus.SystemBus()
+	if err != nil {
+		fmt.Print(rawURL)
+		return
+	}
+	smartmirror := sysBus.Object("com.deepin.lastore.Smartmirror", "/com/deepin/lastore/Smartmirror")
+	err = smartmirror.Call("com.deepin.lastore.Smartmirror.Query", dbus.FlagNoAutoStart, rawURL, officialHost).Store(&url)
+	if err != nil {
+		fmt.Print(rawURL)
+		return
+	}
+
+	if validURL(url) {
+		fmt.Print(url)
 		return
 	}
 

@@ -38,7 +38,8 @@ test:
 	fi) \
 	${GoPath} ${GOTEST} internal/system internal/system/apt \
 	internal/utils	internal/querydesktop \
-	lastore-daemon  lastore-smartmirror  lastore-tools
+	lastore-daemon  lastore-smartmirror  lastore-tools \
+	lastore-smartmirror-daemon
 
 install: gen_mo bin/lastore-tools
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
