@@ -19,6 +19,7 @@ bin/lastore-tools:
 build:  bin/lastore-tools
 	${GoPath} ${GOBUILD} -o bin/lastore-daemon lastore-daemon
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
+	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
 	${GoPath} ${GOBUILD} -o bin/deepin-appstore-backend-deb backend-deb
 

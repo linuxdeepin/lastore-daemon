@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package main
+package utils
 
 import (
 	"flag"
@@ -51,13 +51,13 @@ func SetSeelogger(levels string, format string, output string) error {
 	return err
 }
 
-const DefaultLogFomrat = "[%Level] [%Date %Time]@%File.%Line %Msg%n"
+const DefaultLogFormat = "[%Level] [%Date %Time]@%File.%Line %Msg%n"
 const DefaultLogLevel = "info,warn,error"
 const DefaultLogOutput = "/var/log/lastore/daemon.log"
 
 var baseLogDir = flag.String("log", "/var/log/lastore", "the directory to store logs")
 
-func (Manager) SetLogger(levels, format, output string) *dbus.Error {
+func SetLogger(levels, format, output string) *dbus.Error {
 	err := SetSeelogger(levels, format, output)
 	return dbusutil.ToError(err)
 }

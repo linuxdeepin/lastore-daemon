@@ -20,16 +20,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"internal/system"
-	"internal/system/apt"
 	la_utils "internal/utils"
-
 	"os"
-	"path"
 
 	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbusutil"
-	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/utils"
 )
 
@@ -50,16 +45,17 @@ func main() {
 		return
 	}
 
-	log.Info("Starting lastore-daemon")
+	log.Info("Starting lastore-smartmirror-daemon")
 	defer log.Flush()
 
-	hasOwner, err := service.NameHasOwner("com.deepin.lastore")
+	dbusName := "com.deepin.lastore.Smartmirror"
+	hasOwner, err := service.NameHasOwner(dbusName)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	if hasOwner {
-		fmt.Println("another lastore-daemon running")
+		fmt.Println("another lastore-smartmirror-daemon running")
 		return
 	}
 
@@ -68,25 +64,18 @@ func main() {
 	utils.UnsetEnv("LC_MESSAGES")
 	utils.UnsetEnv("LANG")
 
-	gettext.InitI18n()
-	gettext.Textdomain("lastore-daemon")
-
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
 
-	b := apt.New()
-	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-
-	manager := NewManager(service, b, config)
-	updater := NewUpdater(service, manager, config)
-	err = service.Export("/com/deepin/lastore", manager, updater)
+	smartmirror := NewSmartMirror(service)
+	err = service.Export("/com/deepin/lastore/Smartmirror", smartmirror)
 	if err != nil {
 		log.Error("failed to export manager and updater:", err)
 		return
 	}
 
-	err = service.RequestName("com.deepin.lastore")
+	err = service.RequestName(dbusName)
 	if err != nil {
 		log.Error("failed to request name:", err)
 		return
@@ -94,41 +83,5 @@ func main() {
 
 	log.Info("Started service at system bus")
 
-	updateHandler := func() {
-		info, err := system.SystemUpgradeInfo()
-		if _, ok := err.(system.NotFoundErrorType); ok {
-			//temp fail
-			return
-		}
-		if err != nil {
-			log.Errorf("updateableApps:%v\n", err)
-		}
-		updater.loadUpdateInfos(info)
-		manager.updatableApps(info)
-
-		if updater.AutoDownloadUpdates && len(updater.UpdatablePackages) > 0 {
-			log.Info("auto download updates")
-			manager.PrepareDistUpgrade()
-		}
-	}
-
-	RegisterMonitor(updateHandler,
-		"update_infos.json", "package_icons.json", "applications.json")
-
-	updateHandler()
-
 	service.Wait()
-}
-
-func RegisterMonitor(handler func(), paths ...string) {
-	dm := system.NewDirMonitor(system.VarLibDir)
-
-	dm.Add(func(fpath string) {
-		handler()
-	}, paths...)
-
-	err := dm.Start()
-	if err != nil {
-		log.Warnf("Can't create inotify on %s: %v\n", system.VarLibDir, err)
-	}
 }
