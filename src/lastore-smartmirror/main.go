@@ -26,15 +26,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
+
+	"internal/utils"
 
 	"pkg.deepin.io/lib/dbus1"
 )
-
-// FIXME: move all to utils
-func validURL(url string) bool {
-	return strings.HasPrefix(url, "http")
-}
 
 func main() {
 	if len(os.Args) != 4 {
@@ -59,7 +55,7 @@ func main() {
 		return
 	}
 
-	if validURL(url) {
+	if utils.ValidURL(url) {
 		fmt.Print(url)
 		return
 	}

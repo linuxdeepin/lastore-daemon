@@ -86,7 +86,7 @@ var _ = Describe("LastoreSmartmirrorDaemon", func() {
 	// })
 
 	It("SmartMirror init", func() {
-		s := NewSmartMirror(nil)
+		s := newSmartMirror(nil)
 		fmt.Println(s.mirrorQuality.sortSelectMirror(s.sourcesURL))
 	})
 })

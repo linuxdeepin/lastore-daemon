@@ -68,7 +68,7 @@ func main() {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
 
-	smartmirror := NewSmartMirror(service)
+	smartmirror := newSmartMirror(service)
 	err = service.Export("/com/deepin/lastore/Smartmirror", smartmirror)
 	if err != nil {
 		log.Error("failed to export manager and updater:", err)

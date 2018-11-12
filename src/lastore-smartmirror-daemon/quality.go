@@ -18,10 +18,11 @@ type Quality struct {
 
 // Report record mirror request status
 type Report struct {
-	Mirror string
-	URL    string
-	Delay  time.Duration
-	Failed bool
+	Mirror     string
+	URL        string
+	Delay      time.Duration
+	Failed     bool
+	StatusCode int // http status code
 }
 
 // QualityMap store all mirror quality status

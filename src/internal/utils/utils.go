@@ -148,3 +148,7 @@ func WriteData(fpath string, data interface{}) error {
 	EnsureBaseDir(fpath)
 	return ioutil.WriteFile(fpath, content, 0644)
 }
+
+func ValidURL(url string) bool {
+	return strings.HasPrefix(url, "http")
+}

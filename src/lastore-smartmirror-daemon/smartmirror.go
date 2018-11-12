@@ -48,8 +48,8 @@ func (s *SmartMirror) GetInterfaceName() string {
 	return "com.deepin.lastore.Smartmirror"
 }
 
-// NewSmartMirror return a object with dbus
-func NewSmartMirror(service *dbusutil.Service) *SmartMirror {
+// newSmartMirror return a object with dbus
+func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	s := &SmartMirror{
 		service: service,
 		mirrorQuality: MirrorQuality{
@@ -59,7 +59,6 @@ func NewSmartMirror(service *dbusutil.Service) *SmartMirror {
 	}
 	system.DecodeJson(path.Join(system.VarLibDir, "quality.json"), s.mirrorQuality.QualityMap)
 
-	// todo: get from remote server
 	var err error
 	s.sources, err = mirrors.LoadMirrorSources("")
 	if nil != err {
@@ -82,37 +81,36 @@ func NewSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 // Query the best source
 func (s *SmartMirror) Query(original, officialMirror string) (string, *dbus.Error) {
-	result := s.Route(original, officialMirror)
+	fmt.Print("query", original)
+	result := s.route(original, officialMirror)
 	s.mirrorQuality.mux.Lock()
 	utils.WriteData(path.Join(system.VarLibDir, "quality.json"), s.mirrorQuality.QualityMap)
 	s.mirrorQuality.mux.Unlock()
 	return result, nil
 }
-func validURL(url string) bool {
-	return strings.HasPrefix(url, "http")
-}
 
-// Route select new url by file path
-func (s *SmartMirror) Route(original, officialMirror string) string {
-	if !validURL(original) || !validURL(officialMirror) {
+// route select new url by file path
+func (s *SmartMirror) route(original, officialMirror string) string {
+	if !utils.ValidURL(original) || !utils.ValidURL(officialMirror) {
 		// Just return raw url if there has any invalid input
 		return original
 	}
 
 	if strings.HasPrefix(original, officialMirror+"/pool") {
-		return s.MakeChoice(original, officialMirror)
+		return s.makeChoice(original, officialMirror)
 	} else if strings.HasPrefix(original, officialMirror+"/dists") && strings.HasSuffix(original, "Release") {
 		// Get Release from Release
-		return HandleRequest(BuildRequest(MakeHeader(officialMirror), "HEAD", original))
+		url, _ := handleRequest(buildRequest(makeHeader(), "HEAD", original))
+		return url
 	} else if strings.HasPrefix(original, officialMirror+"/dists") && strings.Contains(original, "/by-hash/") {
-		return s.MakeChoice(original, officialMirror)
+		return s.makeChoice(original, officialMirror)
 	}
 	return original
 }
 
-// MakeChoice select best mirror by http request
-func (s *SmartMirror) MakeChoice(original, officialMirror string) string {
-	header := MakeHeader(officialMirror)
+// makeChoice select best mirror by http request
+func (s *SmartMirror) makeChoice(original, officialMirror string) string {
+	header := makeHeader()
 	detectReport := make(chan Report)
 	result := make(chan Report)
 
@@ -122,12 +120,13 @@ func (s *SmartMirror) MakeChoice(original, officialMirror string) string {
 		go func(mirror string) {
 			b := time.Now()
 			urlMirror := strings.Replace(original, officialMirror, mirror, 1)
-			v := HandleRequest(BuildRequest(header, "HEAD", urlMirror))
+			v, statusCode := handleRequest(buildRequest(header, "HEAD", urlMirror))
 			report := Report{
-				Mirror: mirror,
-				URL:    v,
-				Delay:  time.Now().Sub(b),
-				Failed: !validURL(v),
+				Mirror:     mirror,
+				URL:        v,
+				Delay:      time.Now().Sub(b),
+				Failed:     !utils.ValidURL(v),
+				StatusCode: statusCode,
 			}
 			detectReport <- report
 		}(mirrorHost)
@@ -172,8 +171,10 @@ func (s *SmartMirror) MakeChoice(original, officialMirror string) string {
 				fmt.Println("detect", v)
 			}
 		}
+		// TODO: send an report
 		fmt.Println("end -----------------------")
-
+		header := makeReportHeader(reportList)
+		handleRequest(buildRequest(header, "HEAD", original))
 		close(detectReport)
 	}()
 

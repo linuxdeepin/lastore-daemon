@@ -18,6 +18,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -32,8 +33,8 @@ var httpClient = http.Client{
 	Timeout: time.Second * 2,
 }
 
-// UserAgent fill local info to string
-func UserAgent() string {
+// userAgent fill local info to string
+func userAgent() string {
 	const DetectVersion = "detector/0.1.1 " + runtime.GOARCH
 
 	r, _ := exec.Command("lsb_release", "-ds").Output()
@@ -43,8 +44,8 @@ func UserAgent() string {
 	return DetectVersion + " " + strings.TrimSpace(string(r))
 }
 
-// MachineID return content of /etc/machine-id
-func MachineID() string {
+// machineID return content of /etc/machine-id
+func machineID() string {
 	bs, _ := ioutil.ReadFile("/etc/machine-id")
 	return strings.TrimSpace(string(bs))
 }
@@ -57,17 +58,31 @@ func stripURLPath(u string) string {
 	return v.Hostname()
 }
 
-// MakeHeader FIXME: use new format
-func MakeHeader(mirrorURL string) map[string]string {
+func makeHeader() map[string]string {
 	return map[string]string{
-		"User-Agent": UserAgent(),
-		"MID":        MachineID(),
-		"M":          stripURLPath(mirrorURL),
+		"User-Agent": userAgent(),
+		"MID":        machineID(),
 	}
 }
 
-// BuildRequest with header
-func BuildRequest(header map[string]string, method string, url string) *http.Request {
+func makeReportHeader(reports []Report) map[string]string {
+	m1 := []string{}
+	for _, r := range reports {
+		status := fmt.Sprintf("T%v", r.Delay)
+		if r.Failed {
+			status = fmt.Sprintf("E%v", r.StatusCode)
+		}
+		m1 = append(m1, stripURLPath(r.Mirror)+":"+status)
+	}
+	return map[string]string{
+		"User-Agent": userAgent(),
+		"MID":        machineID(),
+		"M1":         strings.Join(m1, ";"),
+	}
+}
+
+// buildRequest with header
+func buildRequest(header map[string]string, method string, url string) *http.Request {
 	r, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil
@@ -78,29 +93,29 @@ func BuildRequest(header map[string]string, method string, url string) *http.Req
 	return r
 }
 
-// HandleRequest wait request reply and close connection quickly
-func HandleRequest(r *http.Request) string {
+// handleRequest wait request reply and close connection quickly
+func handleRequest(r *http.Request) (string, int) {
 	if r == nil {
-		return ""
+		return "", -1
 	}
 	resp, err := httpClient.Do(r)
 	if err != nil {
-		return ""
+		return "", -2
 	}
 	resp.Body.Close()
 
 	switch resp.StatusCode / 100 {
 	case 4, 5:
-		return ""
+		return "", resp.StatusCode
 	case 3:
 		u, err := resp.Location()
 		if err != nil {
-			return r.URL.String()
+			return r.URL.String(), resp.StatusCode
 		}
-		return u.String()
+		return u.String(), resp.StatusCode
 	case 2, 1:
-		return r.URL.String()
+		return r.URL.String(), resp.StatusCode
 	default:
-		return ""
+		return "", -3
 	}
 }
