@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 
@@ -37,6 +38,7 @@ type SmartMirror struct {
 	mirrorQuality MirrorQuality
 	sources       []system.MirrorSource
 	sourcesURL    []string
+	taskCount     int // TODO: need a lock???
 
 	methods *struct {
 		Query func() `in:"origin, official" out:"url"`
@@ -51,28 +53,39 @@ func (s *SmartMirror) GetInterfaceName() string {
 // newSmartMirror return a object with dbus
 func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	s := &SmartMirror{
-		service: service,
+		service:   service,
+		taskCount: 0,
 		mirrorQuality: MirrorQuality{
-			QualityMap: make(QualityMap, 0),
-			report:     make(chan Report),
+			QualityMap:   make(QualityMap, 0),
+			adjustDelays: make(map[string]int, 0),
+			reportList:   make(chan []Report),
 		},
 	}
-	system.DecodeJson(path.Join(system.VarLibDir, "quality.json"), s.mirrorQuality.QualityMap)
+	err := system.DecodeJson(path.Join(system.VarLibDir, "quality.json"), &s.mirrorQuality.QualityMap)
+	if nil != err {
+		log.Info("load quality.json failed", err)
+	}
 
-	var err error
 	s.sources, err = mirrors.LoadMirrorSources("")
 	if nil != err {
 		panic(err)
 	}
+
 	for _, source := range s.sources {
 		s.sourcesURL = append(s.sourcesURL, source.Url)
+		s.mirrorQuality.adjustDelays[source.Url] = source.AdjustDelay
 	}
 
 	go func() {
 		for {
 			select {
-			case r := <-s.mirrorQuality.report:
-				s.mirrorQuality.updateQuality(r)
+			case reportList := <-s.mirrorQuality.reportList:
+				for _, r := range reportList {
+					s.mirrorQuality.updateQuality(r)
+					s.taskCount--
+				}
+				utils.WriteData(path.Join(system.VarLibDir, "quality.json"), s.mirrorQuality.QualityMap)
+				fmt.Println("task count", s.taskCount)
 			}
 		}
 	}()
@@ -81,12 +94,13 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 // Query the best source
 func (s *SmartMirror) Query(original, officialMirror string) (string, *dbus.Error) {
-	fmt.Print("query", original)
 	result := s.route(original, officialMirror)
-	s.mirrorQuality.mux.Lock()
-	utils.WriteData(path.Join(system.VarLibDir, "quality.json"), s.mirrorQuality.QualityMap)
-	s.mirrorQuality.mux.Unlock()
 	return result, nil
+}
+
+func (s *SmartMirror) canQuit() bool {
+	fmt.Println("canQuit", s.taskCount)
+	return s.taskCount <= 0
 }
 
 // route select new url by file path
@@ -117,6 +131,7 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 	mirrorHosts := s.mirrorQuality.detectSelectMirror(s.sourcesURL)
 
 	for _, mirrorHost := range mirrorHosts {
+		s.taskCount++
 		go func(mirror string) {
 			b := time.Now()
 			urlMirror := strings.Replace(original, officialMirror, mirror, 1)
@@ -140,13 +155,11 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 		for {
 			select {
 			case r := <-detectReport:
-				// fmt.Println("result", r)
 				reportList = append(reportList, r)
 				if !r.Failed && !send {
 					send = true
 					result <- r
 				}
-				s.mirrorQuality.report <- r
 				count++
 				if count >= len(mirrorHosts) {
 					end = true
@@ -164,15 +177,17 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 		}
 		// dump report
 		fmt.Println("\nbegin -----------------------")
+		fmt.Println("query", original)
 		for i, v := range reportList {
 			if 0 == i {
-				fmt.Println("select", v)
+				fmt.Println("select", v.String())
 			} else {
-				fmt.Println("detect", v)
+				fmt.Println("detect", v.String())
 			}
 		}
 		// TODO: send an report
 		fmt.Println("end -----------------------")
+		s.mirrorQuality.reportList <- reportList
 		header := makeReportHeader(reportList)
 		handleRequest(buildRequest(header, "HEAD", original))
 		close(detectReport)

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"math/rand"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -11,9 +11,10 @@ import (
 // If FailedCount >=3. that mirror in blacklist
 // If not in blacklist, sort by AverageDelay
 type Quality struct {
-	AccessCount  int
-	FailedCount  int
-	AverageDelay int // ms
+	DetectCount  int `json:"detect_count"`
+	AccessCount  int `json:"access_count"`
+	FailedCount  int `json:"failed_count"`
+	AverageDelay int `json:"average_delay"`
 }
 
 // Report record mirror request status
@@ -25,14 +26,19 @@ type Report struct {
 	StatusCode int // http status code
 }
 
+func (r *Report) String() string {
+	return fmt.Sprintf("%v %v %v %v", r.Mirror, r.Failed, r.Delay, r.StatusCode)
+}
+
 // QualityMap store all mirror quality status
 type QualityMap map[string]*Quality
 
 // MirrorQuality read mirror visit report and update QualityMap
 type MirrorQuality struct {
 	QualityMap
-	mux    sync.Mutex
-	report chan Report
+	adjustDelays map[string]int
+	mux          sync.Mutex
+	reportList   chan []Report
 }
 
 func (mq *MirrorQuality) updateQuality(r Report) {
@@ -71,44 +77,61 @@ func (mq *MirrorQuality) detectSelectMirror(originMirrorList []string) []string 
 	selectMirrorList := []string{}
 
 	sortList := mq.sortSelectMirror(originMirrorList)
-	randomList := mq.randomSelectMirror(originMirrorList)
-	for _, v := range sortList {
-		if _, ok := randomList[v]; ok {
-			delete(randomList, v)
-		}
-	}
+	lessAccessList := mq.lessAccessSelectMirror(originMirrorList)
 	selectMirrorList = append(selectMirrorList, sortList...)
-	for _, v := range randomList {
+
+	// query map
+	sortMap := make(map[string]string, 0)
+	for _, v := range sortList {
+		sortMap[v] = v
+	}
+	for _, v := range lessAccessList {
+		if _, ok := sortMap[v]; ok {
+			continue
+		}
 		selectMirrorList = append(selectMirrorList, v)
 		if len(selectMirrorList) >= 5 {
 			break
 		}
+	}
+	for _, v := range selectMirrorList {
+		mq.QualityMap[v].DetectCount++
 	}
 
 	mq.mux.Unlock()
 	return selectMirrorList
 }
 
-func (mq *MirrorQuality) randomSelectMirror(originMirrorList []string) map[string]string {
-	randomList := make(map[string]string, 0)
-	num := len(originMirrorList)
-	for i := 0; i < 5; i++ {
-		mirror := originMirrorList[rand.Intn(num)]
-		randomList[mirror] = mirror
-	}
-	return randomList
+func (mq *MirrorQuality) lessAccessSelectMirror(originMirrorList []string) []string {
+	lessAccessList := mq.mergeSort(originMirrorList, mq.selectLessAccess)
+	return lessAccessList[0:5]
 }
 
 func (mq *MirrorQuality) sortSelectMirror(originMirrorList []string) []string {
-	sorted := mq.mergeSort(originMirrorList)
+	sorted := mq.mergeSort(originMirrorList, mq.compare)
 	return sorted[0:2]
+}
+
+type compareHandler func(left, right string) bool
+
+func (mq *MirrorQuality) selectLessAccess(left, right string) bool {
+	lq := mq.getQuality(left)
+	rq := mq.getQuality(right)
+	if lq.DetectCount <= rq.DetectCount {
+		return true
+	}
+	return false
 }
 
 // return true if left good than right
 func (mq *MirrorQuality) compare(left, right string) bool {
 	lq := mq.getQuality(left)
 	rq := mq.getQuality(right)
+	// WARNING: default value must be zero
+	lAdjust, _ := mq.adjustDelays[left]
+	rAdjust, _ := mq.adjustDelays[right]
 
+	// TODO: 修复错误容限
 	// equal (lq.FailedCount/lq.AccessCount < rq.FailedCount/rq.AccessCount)
 	if lq.FailedCount*rq.AccessCount < rq.FailedCount*lq.AccessCount {
 		return true
@@ -118,13 +141,13 @@ func (mq *MirrorQuality) compare(left, right string) bool {
 	}
 
 	// lq.FailedCount/lq.AccessCount == rq.FailedCount/rq.AccessCount
-	if lq.AverageDelay <= rq.AverageDelay {
+	if (lq.AverageDelay + lAdjust) <= (rq.AverageDelay + rAdjust) {
 		return true
 	}
 	return false
 }
 
-func (mq *MirrorQuality) mergeSort(originMirrorList []string) []string {
+func (mq *MirrorQuality) mergeSort(originMirrorList []string, handler compareHandler) []string {
 	if len(originMirrorList) < 2 {
 		return originMirrorList
 	}
@@ -132,15 +155,15 @@ func (mq *MirrorQuality) mergeSort(originMirrorList []string) []string {
 	mid := len(originMirrorList) / 2
 	left := originMirrorList[:mid]
 	right := originMirrorList[mid:]
-	return mq.merge(mq.mergeSort(left), mq.mergeSort(right))
+	return mq.merge(mq.mergeSort(left, handler), mq.mergeSort(right, handler), handler)
 }
 
 // good quality on left
-func (mq *MirrorQuality) merge(left, right []string) []string {
+func (mq *MirrorQuality) merge(left, right []string, handler compareHandler) []string {
 	mergeList := []string{}
 
 	for len(left) > 0 && len(right) > 0 {
-		if mq.compare(left[0], right[0]) {
+		if handler(left[0], right[0]) {
 			mergeList = append(mergeList, left[0])
 			left = left[1:]
 		} else {

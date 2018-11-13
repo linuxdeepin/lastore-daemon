@@ -22,6 +22,7 @@ import (
 	"fmt"
 	la_utils "internal/utils"
 	"os"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbusutil"
@@ -83,5 +84,7 @@ func main() {
 
 	log.Info("Started service at system bus")
 
+	service.SetAutoQuitHandler(time.Second*5, smartmirror.canQuit)
+	service.DelayAutoQuit()
 	service.Wait()
 }

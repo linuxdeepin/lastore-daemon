@@ -46,14 +46,15 @@ func GenerateUnpublishedMirrors(url, fpath string) error {
 }
 
 type mirror struct {
-	Id       string                       `json:"id"`
-	Weight   int                          `json:"weight"`
-	Name     string                       `json:"name"`
-	UrlHttp  string                       `json:"urlHttp"`
-	UrlHttps string                       `json:"urlHttps"`
-	UrlFtp   string                       `json:"urlFtp"`
-	Country  string                       `json:"country"`
-	Locale   map[string]map[string]string `json:"locale"`
+	Id          string                       `json:"id"`
+	Weight      int                          `json:"weight"`
+	AdjustDelay int                          `json:"adjustDelay"`
+	Name        string                       `json:"name"`
+	UrlHttp     string                       `json:"urlHttp"`
+	UrlHttps    string                       `json:"urlHttps"`
+	UrlFtp      string                       `json:"urlFtp"`
+	Country     string                       `json:"country"`
+	Locale      map[string]map[string]string `json:"locale"`
 }
 
 type unpublishedMirrors struct {
@@ -161,11 +162,12 @@ func toMirrorsSourceList(v mirrors) []system.MirrorSource {
 	sort.Sort(v)
 	for _, raw := range v {
 		s := system.MirrorSource{
-			Id:         raw.Id,
-			Name:       raw.Name,
-			Weight:     raw.Weight,
-			NameLocale: make(map[string]string),
-			Country:    raw.Country,
+			Id:          raw.Id,
+			Name:        raw.Name,
+			Weight:      raw.Weight,
+			NameLocale:  make(map[string]string),
+			Country:     raw.Country,
+			AdjustDelay: raw.AdjustDelay,
 		}
 		for k, v := range raw.Locale {
 			s.NameLocale[k] = v["name"]

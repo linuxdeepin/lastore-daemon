@@ -29,9 +29,10 @@ type MirrorSource struct {
 	Name string `json:"name"`
 	Url  string `json:"url"`
 
-	NameLocale map[string]string `json:"name_locale"`
-	Weight     int               `json:"weight"`
-	Country    string            `json:"country"`
+	NameLocale  map[string]string `json:"name_locale"`
+	Weight      int               `json:"weight"`
+	Country     string            `json:"country"`
+	AdjustDelay int               `json:"adjust_delay"` // ms
 }
 
 var RepoInfos []RepositoryInfo
