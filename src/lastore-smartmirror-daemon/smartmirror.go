@@ -34,6 +34,9 @@ import (
 
 // SmartMirror handle core smart mirror data
 type SmartMirror struct {
+	Enable bool
+
+	config        *config
 	service       *dbusutil.Service
 	mirrorQuality MirrorQuality
 	sources       []system.MirrorSource
@@ -41,7 +44,8 @@ type SmartMirror struct {
 	taskCount     int // TODO: need a lock???
 
 	methods *struct {
-		Query func() `in:"origin, official" out:"url"`
+		Query     func() `in:"origin, official" out:"url"`
+		SetEnable func() `in:"enable"`
 	}
 }
 
@@ -55,13 +59,17 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	s := &SmartMirror{
 		service:   service,
 		taskCount: 0,
+		config:    newConfig(path.Join(system.VarLibDir, "smartmirror_config.json")),
 		mirrorQuality: MirrorQuality{
 			QualityMap:   make(QualityMap, 0),
 			adjustDelays: make(map[string]int, 0),
 			reportList:   make(chan []Report),
 		},
 	}
-	err := system.DecodeJson(path.Join(system.VarLibDir, "quality.json"), &s.mirrorQuality.QualityMap)
+
+	s.Enable = s.config.Enable
+
+	err := system.DecodeJson(path.Join(system.VarLibDir, "smartmirror_quality.json"), &s.mirrorQuality.QualityMap)
 	if nil != err {
 		log.Info("load quality.json failed", err)
 	}
@@ -92,8 +100,18 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	return s
 }
 
+// SetEnable the best source
+func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
+	s.Enable = enable
+	s.config.setEnable(enable)
+	return nil
+}
+
 // Query the best source
 func (s *SmartMirror) Query(original, officialMirror string) (string, *dbus.Error) {
+	if !s.Enable {
+		return original, nil
+	}
 	result := s.route(original, officialMirror)
 	return result, nil
 }
