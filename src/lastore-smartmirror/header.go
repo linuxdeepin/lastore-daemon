@@ -52,7 +52,23 @@ func stripURLPath(u string) string {
 	if err != nil {
 		return u
 	}
-	return v.Hostname()
+	return getUrlHostname(v)
+}
+
+func getUrlHostname(u *url.URL) string {
+	return stripPort(u.Host)
+}
+
+// copy from go source net/url/url.go
+func stripPort(hostport string) string {
+	colon := strings.IndexByte(hostport, ':')
+	if colon == -1 {
+		return hostport
+	}
+	if i := strings.IndexByte(hostport, ']'); i != -1 {
+		return strings.TrimPrefix(hostport[:i], "[")
+	}
+	return hostport[:colon]
 }
 
 func MakeHeader(mirrorURL string) map[string]string {
