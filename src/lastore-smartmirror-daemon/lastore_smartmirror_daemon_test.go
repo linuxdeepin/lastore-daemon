@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -99,9 +97,9 @@ var _ = Describe("LastoreSmartmirrorDaemon", func() {
 	// 	Expect(mq.detectSelectMirror(list)).To(Equal(result))
 	// })
 
-	It("SmartMirror init", func() {
-		s := newSmartMirror(nil)
-		// fmt.Println(s.mirrorQuality.sortSelectMirror(s.sourcesURL))
-		fmt.Println(s.mirrorQuality.lessAccessSelectMirror(s.sourcesURL))
-	})
+	// It("SmartMirror init", func() {
+	// 	s := newSmartMirror(nil)
+	// 	// fmt.Println(s.mirrorQuality.sortSelectMirror(s.sourcesURL))
+	// 	// fmt.Println(s.mirrorQuality.lessAccessSelectMirror(s.sourcesURL))
+	// })
 })
