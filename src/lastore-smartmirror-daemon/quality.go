@@ -104,12 +104,20 @@ func (mq *MirrorQuality) detectSelectMirror(originMirrorList []string) []string 
 
 func (mq *MirrorQuality) lessAccessSelectMirror(originMirrorList []string) []string {
 	lessAccessList := mq.mergeSort(originMirrorList, mq.selectLessAccess)
-	return lessAccessList[0:5]
+	max := 5
+	if len(lessAccessList) < 5 {
+		max = len(lessAccessList)
+	}
+	return lessAccessList[0:max]
 }
 
 func (mq *MirrorQuality) sortSelectMirror(originMirrorList []string) []string {
 	sorted := mq.mergeSort(originMirrorList, mq.compare)
-	return sorted[0:2]
+	max := 2
+	if len(sorted) < 2 {
+		max = len(sorted)
+	}
+	return sorted[0:max]
 }
 
 type compareHandler func(left, right string) bool

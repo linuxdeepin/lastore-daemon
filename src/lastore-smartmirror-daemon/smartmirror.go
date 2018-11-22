@@ -76,8 +76,9 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 	s.sources, err = mirrors.LoadMirrorSources("")
 	if nil != err {
-		panic(err)
+		log.Error(err)
 	}
+	log.Info(s.sourcesURL)
 
 	for _, source := range s.sources {
 		s.sourcesURL = append(s.sourcesURL, source.Url)
@@ -147,6 +148,10 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 	result := make(chan Report)
 
 	mirrorHosts := s.mirrorQuality.detectSelectMirror(s.sourcesURL)
+
+	if 0 == len(mirrorHosts) {
+		return original
+	}
 
 	for _, mirrorHost := range mirrorHosts {
 		s.taskCount++
