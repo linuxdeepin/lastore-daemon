@@ -18,13 +18,11 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"internal/utils"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	log "github.com/cihub/seelog"
 )
@@ -86,9 +84,7 @@ func GenerateCategory(repo, fpath string) error {
 }
 
 type AppInfo struct {
-	Id         string            `json:"id"`
 	Category   string            `json:"category"`
-	Name       string            `json:"name"`
 	LocaleName map[string]string `json:"locale_name"`
 }
 
@@ -107,85 +103,49 @@ type apiAppApps struct {
 func genApplications(v apiAppApps, fpath string) error {
 	apps := make(map[string]AppInfo)
 
-	const localeEnUS = "en_US"
 	for _, app := range v.Apps {
 		appInfo := AppInfo{
-			Id:       app.Name,
 			Category: app.Category,
 		}
 
-		// set Name
-		enDesc, ok := app.Locale[localeEnUS]
-		if ok {
-			appInfo.Name = enDesc.Description.Name
-		}
-		if appInfo.Name == "" {
-			appInfo.Name = app.Name
-		}
-
 		// set LocaleName
+		appInfo.LocaleName = make(map[string]string)
 		for localeCode, desc := range app.Locale {
 			localizedName := desc.Description.Name
-			if localizedName != appInfo.Name {
-				if appInfo.LocaleName == nil {
-					appInfo.LocaleName = make(map[string]string)
-				}
-				appInfo.LocaleName[localeCode] = localizedName
-			}
+			appInfo.LocaleName[localeCode] = localizedName
 		}
 
 		apps[app.Name] = appInfo
-	}
-
-	if _, hasAppstore := apps["deepin-appstore"]; !hasAppstore {
-		apps["deepin-appstore"] = AppInfo{
-			Id:       "deepin-appstore",
-			Category: "system",
-			Name:     "deepin store",
-			LocaleName: map[string]string{
-				"zh_CN": "深度商店",
-			},
-		}
 	}
 
 	return writeData(fpath, apps)
 }
 
 func GenerateApplications(repo, fpath string) error {
-	appJsonFile := filepath.Join(filepath.Dir(fpath), "app.json")
+	apiAppUrl := "https://dstore-metadata.deepin.cn/api/app?query={apps{name,category,locale{en_US{description{name}},zh_CN{description{name}}}}}"
+	client := http.DefaultClient
+	request, err := http.NewRequest("GET", apiAppUrl, nil)
+	request.Header.Add("Accept-Encoding", "gzip")
 
-	tempFile := appJsonFile + ".tmp"
-	output, err := os.Create(tempFile)
-	if err != nil {
-		return err
-	}
-	defer output.Close()
+	resp, err := client.Do(request)
 
-	apiAppUrl := "https://dstore-metadata.deepin.cn/api/app"
-
-	resp, err := http.Get(apiAppUrl)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	err = output.Chmod(0644)
+	gzipReader, err := gzip.NewReader(resp.Body)
 	if err != nil {
 		return err
 	}
 
-	teeReader := io.TeeReader(resp.Body, output)
-	jsonDec := json.NewDecoder(teeReader)
+	jsonDec := json.NewDecoder(gzipReader)
 	var v apiAppApps
 	err = jsonDec.Decode(&v)
 	if err != nil {
 		return err
 	}
 
-	err = os.Rename(tempFile, appJsonFile)
-	if err != nil {
-		return err
-	}
 	err = genApplications(v, fpath)
 	if err != nil {
 		return err
