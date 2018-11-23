@@ -1,3 +1,14 @@
+<a name="0.11.1"></a>
+## 0.11.1 (2018-11-23)
+
+
+#### Bug Fixes
+
+*   reduce query data size ([b993e837](https://github.com/linuxdeepin/lastore-daemon/commit/b993e83793d69f75a4ee3026c8f214e73514df3c))
+*   build failed with go 1.7 ([1b397639](https://github.com/linuxdeepin/lastore-daemon/commit/1b3976398e4c2317c5a073d2b9c475aeee16fa77))
+
+
+
 <a name="0.11.0"></a>
 ## 0.11.0 (2018-11-01)
 
