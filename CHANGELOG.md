@@ -1,3 +1,13 @@
+<a name="0.11.2"></a>
+## 0.11.2 (2018-11-28)
+
+
+#### Bug Fixes
+
+*   ostree metadata not updated ([0d16bd8a](https://github.com/linuxdeepin/lastore-daemon/commit/0d16bd8a7868fa3d2a028f188aa917362a2bbbd3))
+
+
+
 <a name="0.11.1"></a>
 ## 0.11.1 (2018-11-23)
 
