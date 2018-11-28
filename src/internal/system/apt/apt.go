@@ -237,7 +237,7 @@ func (c *aptCommand) atExit() {
 			JobId:      c.JobId,
 			Status:     system.SucceedStatus,
 			Progress:   1.0,
-			Cancelable: true,
+			Cancelable: false,
 		})
 	case ExitFailure:
 		err := parseJobError(c.stderr.String(), c.stdout.String())
