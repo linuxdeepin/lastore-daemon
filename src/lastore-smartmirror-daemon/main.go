@@ -29,12 +29,14 @@ import (
 	"pkg.deepin.io/lib/utils"
 )
 
+const DefaultLogOutput = "/var/log/lastore/smartmirror_daemon.log"
+
 //go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,pkg.deepin.io/lib/dbus1 updater.go job.go manager.go
 
 func main() {
 	flag.Parse()
 
-	err := la_utils.SetSeelogger(la_utils.DefaultLogLevel, la_utils.DefaultLogFormat, la_utils.DefaultLogOutput)
+	err := la_utils.SetSeelogger(la_utils.DefaultLogLevel, la_utils.DefaultLogFormat, DefaultLogOutput)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

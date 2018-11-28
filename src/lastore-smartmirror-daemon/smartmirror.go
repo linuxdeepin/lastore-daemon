@@ -32,6 +32,11 @@ import (
 	"internal/utils"
 )
 
+var (
+	qualityDataFilepath = "smartmirror_quality.json"
+	configDataFilepath  = "smartmirror_config.json"
+)
+
 // SmartMirror handle core smart mirror data
 type SmartMirror struct {
 	Enable bool
@@ -59,7 +64,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	s := &SmartMirror{
 		service:   service,
 		taskCount: 0,
-		config:    newConfig(path.Join(system.VarLibDir, "smartmirror_config.json")),
+		config:    newConfig(path.Join(system.VarLibDir, configDataFilepath)),
 		mirrorQuality: MirrorQuality{
 			QualityMap:   make(QualityMap, 0),
 			adjustDelays: make(map[string]int, 0),
@@ -69,7 +74,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 	s.Enable = s.config.Enable
 
-	err := system.DecodeJson(path.Join(system.VarLibDir, "smartmirror_quality.json"), &s.mirrorQuality.QualityMap)
+	err := system.DecodeJson(path.Join(system.VarLibDir, qualityDataFilepath), &s.mirrorQuality.QualityMap)
 	if nil != err {
 		log.Info("load quality.json failed", err)
 	}
@@ -93,8 +98,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 					s.mirrorQuality.updateQuality(r)
 					s.taskCount--
 				}
-				utils.WriteData(path.Join(system.VarLibDir, "quality.json"), s.mirrorQuality.QualityMap)
-				fmt.Println("task count", s.taskCount)
+				utils.WriteData(path.Join(system.VarLibDir, qualityDataFilepath), s.mirrorQuality.QualityMap)
 			}
 		}
 	}()
@@ -199,17 +203,17 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 			}
 		}
 		// dump report
-		fmt.Println("\nbegin -----------------------")
-		fmt.Println("query", original)
+		log.Info("begin -----------------------")
+		log.Info("query", original)
 		for i, v := range reportList {
 			if 0 == i {
-				fmt.Println("select", v.String())
+				log.Info("select", v.String())
 			} else {
-				fmt.Println("detect", v.String())
+				log.Info("detect", v.String())
 			}
 		}
 		// TODO: send an report
-		fmt.Println("end -----------------------")
+		log.Info("end -----------------------\n")
 		s.mirrorQuality.reportList <- reportList
 		header := makeReportHeader(reportList)
 		handleRequest(buildRequest(header, "HEAD", original))
