@@ -49,7 +49,7 @@ func main() {
 		return
 	}
 	smartmirror := sysBus.Object("com.deepin.lastore.Smartmirror", "/com/deepin/lastore/Smartmirror")
-	err = smartmirror.Call("com.deepin.lastore.Smartmirror.Query", dbus.FlagNoAutoStart, rawURL, officialHost).Store(&url)
+	err = smartmirror.Call("com.deepin.lastore.Smartmirror.Query", 0, rawURL, officialHost).Store(&url)
 	if err != nil {
 		fmt.Print(rawURL)
 		return
