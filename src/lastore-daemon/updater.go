@@ -21,10 +21,8 @@ import (
 	"fmt"
 	"internal/system"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -241,36 +239,34 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 const (
 	aptSource       = "/etc/apt/sources.list"
 	aptSourceOrigin = aptSource + ".origin"
-	aptSourceDir    = aptSource + ".d"
 )
 
-func (u *Updater) RestoreSystemSource() *dbus.Error {
-	fileInfoList, err := ioutil.ReadDir(aptSourceDir)
-	if err != nil {
-		log.Warn(err)
-	}
-	for _, fileInfo := range fileInfoList {
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		ext := filepath.Ext(fileInfo.Name())
-		if ext == ".list" || ext == ".sources" {
-			err := os.Remove(filepath.Join(aptSourceDir, fileInfo.Name()))
-			if err != nil {
-				log.Warn(err)
-			}
-		}
-	}
-
-	content, err := ioutil.ReadFile(aptSourceOrigin)
+func (u *Updater) restoreSystemSource() error {
+	// write backup file
+	current, err := ioutil.ReadFile(aptSource)
 	if err == nil {
-		err = ioutil.WriteFile(aptSource, content, 0644)
+		err = ioutil.WriteFile(aptSource+".bak", current, 0644)
 		if err != nil {
 			log.Warn(err)
 		}
 	} else {
 		log.Warn(err)
+	}
+
+	origin, err := ioutil.ReadFile(aptSourceOrigin)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(aptSource, origin, 0644)
+	return err
+}
+
+func (u *Updater) RestoreSystemSource() *dbus.Error {
+	err := u.restoreSystemSource()
+	if err != nil {
+		log.Warn("failed to restore system source:", err)
+		return dbusutil.ToError(err)
 	}
 	return nil
 }
