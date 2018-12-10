@@ -24,10 +24,9 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus1"
+	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 
-	"internal/mirrors"
 	"internal/system"
 	"internal/utils"
 )
@@ -79,11 +78,10 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 		log.Info("load quality.json failed", err)
 	}
 
-	s.sources, err = mirrors.LoadMirrorSources("")
+	err = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &s.sources)
 	if nil != err {
 		log.Error(err)
 	}
-	log.Info(s.sourcesURL)
 
 	for _, source := range s.sources {
 		s.sourcesURL = append(s.sourcesURL, source.Url)
