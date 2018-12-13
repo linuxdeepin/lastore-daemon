@@ -1,3 +1,29 @@
+<a name="0.12.0"></a>
+## 0.12.0 (2018-12-13)
+
+
+#### Features
+
+*   save log to file ([a838246d](https://github.com/linuxdeepin/lastore-daemon/commit/a838246dd2068ecaa3b34da2267dacc7501ad721))
+*   support enable config ([5676a538](https://github.com/linuxdeepin/lastore-daemon/commit/5676a5388b940e99e1f24efeb283fe88ccd808fa))
+*   add adjust delay ([358506dc](https://github.com/linuxdeepin/lastore-daemon/commit/358506dc256b81be4c3becb6ab8bd7bd7b29989f))
+*   add status report ([5fac1677](https://github.com/linuxdeepin/lastore-daemon/commit/5fac1677bcb21fda2c304e6e743f32aeb6d3a991))
+*   support multi url dectect ([8ec08671](https://github.com/linuxdeepin/lastore-daemon/commit/8ec086711aba0c7f636829642340fc0a15b7fcd0))
+*   add com.deepin.lastore.Smartmirror ([031e2d97](https://github.com/linuxdeepin/lastore-daemon/commit/031e2d97e0143dad807c11a2830e9b9d2c3f6c9f))
+
+#### Bug Fixes
+
+*   load mirrors.json from locale ([6e646ec2](https://github.com/linuxdeepin/lastore-daemon/commit/6e646ec2995ee2ba9facec277877b87f63eb1211))
+*   dbus not auto start ([d384bd1a](https://github.com/linuxdeepin/lastore-daemon/commit/d384bd1a6be0dd9a17696c47fb211dff9943be39))
+*   its Cancelable property becomes true at the end of the job ([0c0e2f91](https://github.com/linuxdeepin/lastore-daemon/commit/0c0e2f9199bf05f66586af32d419996ead1fa908))
+*   ostree metadata not updated ([494aad22](https://github.com/linuxdeepin/lastore-daemon/commit/494aad22861c1f94ba73fef6273ceb66524028a3))
+*   reduce query data size ([99e163b9](https://github.com/linuxdeepin/lastore-daemon/commit/99e163b9ab05b711bb0742c3279cd979efe66e77))
+*   build failed with go 1.7 ([1ce7e828](https://github.com/linuxdeepin/lastore-daemon/commit/1ce7e828605a103138005ab34bc0d52b34530a5f))
+*   crash on no network ([910a7989](https://github.com/linuxdeepin/lastore-daemon/commit/910a7989bdf65ba3814b32e6930391f90e421f56))
+*   remove network test ([6f283108](https://github.com/linuxdeepin/lastore-daemon/commit/6f2831081d9e52ba852c0fd741eec050e914990d))
+
+
+
 <a name="0.11.0"></a>
 ## 0.11.0 (2018-11-01)
 
