@@ -3,13 +3,8 @@ PBUILDER_PKG = pbuilder-satisfydepends-dummy
 pwd := ${shell pwd}
 GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
 
-ifndef USE_GCCGO
-	GOBUILD = go build
-	GOTEST = go test -v
-else
-	GOBUILD = gccgo_build.pl -p "gio-2.0 gdk-3.0"
-	GOTEST = echo
-endif
+GOBUILD = go build
+GOTEST = go test -v
 
 all:  build
 
