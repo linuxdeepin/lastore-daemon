@@ -105,8 +105,21 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 // SetEnable the best source
 func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
+	changed := (s.Enable != enable)
+
 	s.Enable = enable
-	s.config.setEnable(enable)
+	err := s.config.setEnable(enable)
+	if nil != err {
+		log.Errorf("save config failed: %v", err)
+		return dbus.NewError(err.Error(), nil)
+	}
+
+	if changed {
+		err := s.service.EmitPropertyChanged(s, "Enable", enable)
+		if nil != err {
+			return dbus.NewError(err.Error(), nil)
+		}
+	}
 	return nil
 }
 

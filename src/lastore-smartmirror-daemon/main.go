@@ -34,6 +34,7 @@ const DefaultLogOutput = "/var/log/lastore/smartmirror_daemon.log"
 //go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,pkg.deepin.io/lib/dbus1 updater.go job.go manager.go
 
 func main() {
+	runDaemon := flag.Bool("daemon", false, "run as daemon and not exit")
 	flag.Parse()
 
 	err := la_utils.SetSeelogger(la_utils.DefaultLogLevel, la_utils.DefaultLogFormat, DefaultLogOutput)
@@ -86,7 +87,14 @@ func main() {
 
 	log.Info("Started service at system bus")
 
-	service.SetAutoQuitHandler(time.Second*5, smartmirror.canQuit)
+	if *runDaemon {
+		log.Info("Run as daemon and not exist")
+		service.SetAutoQuitHandler(time.Second*5, func() bool {
+			return false
+		})
+	} else {
+		service.SetAutoQuitHandler(time.Second*5, smartmirror.canQuit)
+	}
 	service.DelayAutoQuit()
 	service.Wait()
 }
