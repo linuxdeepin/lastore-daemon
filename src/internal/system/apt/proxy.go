@@ -205,6 +205,49 @@ func tryFixDpkgDirtyStatus() {
 
 }
 
+func ParsePkgSystemError(out, err []byte) error {
+	return parsePkgSystemError(out, err)
+}
+
+func parsePkgSystemError(out, err []byte) error {
+	switch {
+	case bytes.Contains(err, []byte("dpkg was interrupted")):
+		return &system.PkgSystemError{
+			Type: system.ErrTypeDpkgInterrupted,
+		}
+
+	case bytes.Contains(err, []byte("Unmet dependencies")):
+		var detail string
+		idx := bytes.Index(out,
+			[]byte("The following packages have unmet dependencies:"))
+		if idx == -1 {
+			// not found
+			detail = string(out)
+		} else {
+			detail = string(out[idx:])
+		}
+
+		return &system.PkgSystemError{
+			Type:   system.ErrTypeDependenciesBroken,
+			Detail: detail,
+		}
+
+	case bytes.Contains(err, []byte("The list of sources could not be read")):
+		detail := string(err)
+		return &system.PkgSystemError{
+			Type:   system.ErrTypeInvalidSourcesList,
+			Detail: detail,
+		}
+
+	default:
+		detail := string(err)
+		return &system.PkgSystemError{
+			Type:   system.ErrTypeUnknown,
+			Detail: detail,
+		}
+	}
+}
+
 func checkPkgSystemError(lock bool) error {
 	args := []string{"check"}
 	if !lock {
@@ -221,42 +264,7 @@ func checkPkgSystemError(lock bool) error {
 	if err == nil {
 		return nil
 	}
-	errStr := string(errBuf.Bytes())
-
-	switch {
-	case strings.Contains(errStr, "dpkg was interrupted"):
-		return &system.PkgSystemError{
-			Type: system.ErrTypeDpkgInterrupted,
-		}
-
-	case strings.Contains(errStr, "Unmet dependencies"):
-		var detail string
-		idx := bytes.Index(outBuf.Bytes(),
-			[]byte("The following packages have unmet dependencies:"))
-		if idx == -1 {
-			// not found
-			detail = string(outBuf.Bytes())
-		} else {
-			detail = string(outBuf.Bytes()[idx:])
-		}
-
-		return &system.PkgSystemError{
-			Type:   system.ErrTypeDependenciesBroken,
-			Detail: detail,
-		}
-
-	case strings.Contains(errStr, "The list of sources could not be read"):
-		return &system.PkgSystemError{
-			Type:   system.ErrTypeInvalidSourcesList,
-			Detail: errStr,
-		}
-
-	default:
-		return &system.PkgSystemError{
-			Type:   system.ErrTypeUnknown,
-			Detail: errStr,
-		}
-	}
+	return parsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
 }
 
 func safeStart(c *aptCommand) error {

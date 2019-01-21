@@ -49,14 +49,14 @@ func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 }
 
 func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, *dbus.Error) {
-	if len(u.UpdatableApps) == 0 {
-		return nil, nil
-	}
-
 	iInfos := packageIconInfos()
 	aInfos := applicationInfos()
 	uInfos, err := system.SystemUpgradeInfo()
 	if err != nil {
+		updateInfoErr, ok := err.(*system.UpdateInfoError)
+		if ok {
+			return nil, dbusutil.MakeErrorJSON(u, "UpdateInfoError", updateInfoErr)
+		}
 		return nil, dbusutil.ToError(err)
 	}
 

@@ -73,6 +73,16 @@ type UpgradeInfo struct {
 	ChangeLog      string
 }
 
+type UpdateInfoError struct {
+	Type   string
+	Detail string
+}
+
+func (err *UpdateInfoError) Error() string {
+	return fmt.Sprintf("UpdateInfoError type: %s, detail: %s",
+		err.Type, err.Detail)
+}
+
 type Architecture string
 
 var NotImplementError = errors.New("not implement")

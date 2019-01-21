@@ -20,14 +20,16 @@ package main
 import (
 	"bufio"
 	"bytes"
-	log "github.com/cihub/seelog"
 	"internal/system"
+	"internal/system/apt"
 	"io"
 	"os/exec"
 	"regexp"
 	"strings"
 	"syscall"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
 func buildUpgradeInfoRegex(archs []system.Architecture) *regexp.Regexp {
@@ -64,16 +66,29 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 	return infos
 }
 
-// distupgradeList return the pkgs from apt dist-upgrade
+// return the pkgs from apt dist-upgrade
 // NOTE: the result strim the arch suffix
-func distupgradList() []string {
+func listDistUpgradePackages() ([]string, error) {
 	cmd := exec.Command("apt-get", "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
-	bs, _ := cmd.Output()
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	// NOTE: 这里不能使用命令的退出码来判断，因为 --assume-no 会让命令的退出码为 1
+	_ = cmd.Run()
+
 	const upgraded = "The following packages will be upgraded:"
 	const newInstalled = "The following NEW packages will be installed:"
-	p := parseAptShowList(bytes.NewBuffer(bs), upgraded)
-	p = append(p, parseAptShowList(bytes.NewBuffer(bs), newInstalled)...)
-	return p
+	if bytes.Contains(outBuf.Bytes(), []byte(upgraded)) ||
+		bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) {
+
+		p := parseAptShowList(bytes.NewReader(outBuf.Bytes()), upgraded)
+		p = append(p, parseAptShowList(bytes.NewReader(outBuf.Bytes()), newInstalled)...)
+		return p, nil
+	}
+
+	err := apt.ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+	return nil, err
 }
 
 func parseAptShowList(r io.Reader, title string) []string {
@@ -108,16 +123,20 @@ func parseAptShowList(r io.Reader, title string) []string {
 	return p
 }
 
-func queryDpkgUpgradeInfoByAptList() []string {
-	ps := distupgradList()
-	if len(ps) == 0 {
-		return nil
+func queryDpkgUpgradeInfoByAptList() ([]string, error) {
+	ps, err := listDistUpgradePackages()
+	if err != nil {
+		return nil, err
 	}
+	if len(ps) == 0 {
+		return nil, nil
+	}
+
 	cmd := exec.Command("apt", append([]string{"list", "--upgradable"}, ps...)...)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	err = cmd.Start()
 	if err != nil {
@@ -129,16 +148,22 @@ func queryDpkgUpgradeInfoByAptList() []string {
 
 	buf := bytes.NewBuffer(nil)
 
-	buf.ReadFrom(r)
+	_, err = buf.ReadFrom(r)
+	if err != nil {
+		return nil, err
+	}
 
 	var lines []string
 	var line string
 	for ; err == nil; line, err = buf.ReadString('\n') {
 		lines = append(lines, strings.TrimSpace(line))
 	}
-	cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		return nil, err
+	}
 	timer.Stop()
-	return lines
+	return lines, nil
 }
 
 func getSystemArchitectures() []system.Architecture {
@@ -165,8 +190,21 @@ func getSystemArchitectures() []system.Architecture {
 }
 
 func GenerateUpdateInfos(fpath string) error {
+	lines, err := queryDpkgUpgradeInfoByAptList()
+	if err != nil {
+		var updateInfoErr system.UpdateInfoError
+		pkgSysErr, ok := err.(*system.PkgSystemError)
+		if ok {
+			updateInfoErr.Type = pkgSysErr.GetType()
+			updateInfoErr.Detail = pkgSysErr.GetDetail()
+		} else {
+			updateInfoErr.Type = "unknown"
+			updateInfoErr.Detail = err.Error()
+		}
+		return writeData(fpath, updateInfoErr)
+	}
 	data := mapUpgradeInfo(
-		queryDpkgUpgradeInfoByAptList(),
+		lines,
 		buildUpgradeInfoRegex(getSystemArchitectures()),
 		buildUpgradeInfo)
 	return writeData(fpath, data)

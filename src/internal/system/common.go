@@ -82,6 +82,11 @@ func SystemUpgradeInfo() ([]UpgradeInfo, error) {
 	var r []UpgradeInfo
 	err := DecodeJson(info_path, &r)
 	if err != nil {
+		var updateInfoErr UpdateInfoError
+		err2 := DecodeJson(info_path, &updateInfoErr)
+		if err2 == nil {
+			return nil, &updateInfoErr
+		}
 		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
 	}
 	return r, nil
