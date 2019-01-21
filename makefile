@@ -8,11 +8,9 @@ GOTEST = go test -v
 
 all:  build
 
-bin/lastore-tools:
-	${GoPath} ${GOBUILD} -o bin/lastore-tools lastore-tools
-
-build:  bin/lastore-tools
+build:
 	${GoPath} ${GOBUILD} -o bin/lastore-daemon lastore-daemon
+	${GoPath} ${GOBUILD} -o bin/lastore-tools lastore-tools
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
@@ -36,7 +34,7 @@ test:
 	lastore-daemon  lastore-smartmirror  lastore-tools \
 	lastore-smartmirror-daemon
 
-install: gen_mo bin/lastore-tools
+install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
 	cp -rf etc ${DESTDIR}${PREFIX}/etc
