@@ -4,13 +4,7 @@ export GOPATH := /usr/share/gocode
 
 SYSTYPE=$(shell grep Type= /etc/deepin-version|cut -d= -f 2)
 
-ifeq ($(DEB_BUILD_ARCH), amd64)
-	depend_ostree = true
-endif
-
-ifeq ($(DEB_BUILD_ARCH), i386)
-	depend_ostree = true
-endif
+depend_ostree = true
 
 ifdef depend_ostree
 	DistDepends += ostree,
