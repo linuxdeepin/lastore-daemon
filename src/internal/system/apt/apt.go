@@ -315,6 +315,12 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Detail: stdErrStr,
 		}
 
+	case strings.Contains(stdErrStr, "There were unauthenticated packages"):
+		return &system.JobError{
+			Type:   "unauthenticatedPackages",
+			Detail: stdErrStr,
+		}
+
 	default:
 		return &system.JobError{
 			Type:   "unknown",
