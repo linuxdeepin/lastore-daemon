@@ -210,6 +210,9 @@ func ParsePkgSystemError(out, err []byte) error {
 }
 
 func parsePkgSystemError(out, err []byte) error {
+	if len(err) == 0 {
+		return nil
+	}
 	switch {
 	case bytes.Contains(err, []byte("dpkg was interrupted")):
 		return &system.PkgSystemError{
