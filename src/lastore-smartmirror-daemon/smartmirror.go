@@ -48,7 +48,7 @@ type SmartMirror struct {
 	taskCount     int // TODO: need a lock???
 
 	methods *struct {
-		Query     func() `in:"origin, official" out:"url"`
+		Query     func() `in:"origin, official, mirror" out:"url"`
 		SetEnable func() `in:"enable"`
 	}
 }
@@ -124,9 +124,13 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 }
 
 // Query the best source
-func (s *SmartMirror) Query(original, officialMirror string) (string, *dbus.Error) {
+func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (string, *dbus.Error) {
 	if !s.Enable {
-		return original, nil
+		source := strings.Replace(original, officialMirror, mirrorHost, 1)
+		if utils.ValidURL(source) {
+			return source, nil
+		}
+		return source, nil
 	}
 	result := s.route(original, officialMirror)
 	return result, nil
