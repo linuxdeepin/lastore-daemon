@@ -1,3 +1,19 @@
+<a name="0.14.0"></a>
+## 0.14.0 (2019-02-25)
+
+
+#### Bug Fixes
+
+*   update was not found, but prompted to check for updates failed ([3a4a0385](https://github.com/linuxdeepin/lastore-daemon/commit/3a4a03852b4de80cbff79bd1028c6b0eb76113d4))
+
+#### Features
+
+*   add job error type unauthenticatedPackages ([0e31cf25](https://github.com/linuxdeepin/lastore-daemon/commit/0e31cf251aa53c98bc269912f4635fbe0ef1bb5d))
+*   handle errors encountered when listing updateable packages ([38d41760](https://github.com/linuxdeepin/lastore-daemon/commit/38d41760de392f392fa80b1ed12f6cdffcc069b8))
+*   add signal and daemon mode ([2f90113f](https://github.com/linuxdeepin/lastore-daemon/commit/2f90113f2f98d71b91c23d51cbd9fd00a9b8d171))
+
+
+
 <a name="0.13.0"></a>
 ## 0.13.0 (2018-12-18)
 
