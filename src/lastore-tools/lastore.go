@@ -17,16 +17,19 @@
 
 package main
 
-import "dbus/com/deepin/lastore"
-import "pkg.deepin.io/lib/dbus"
-import "net/http"
-import "encoding/json"
-import "fmt"
-import "time"
-import "internal/system"
-import "strings"
-import "github.com/codegangsta/cli"
-import "os"
+import (
+	"encoding/json"
+	"fmt"
+	"internal/system"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/codegangsta/cli"
+	"github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore"
+	"pkg.deepin.io/lib/dbus1"
+)
 
 var CMDTester = cli.Command{
 	Name: "test",
@@ -79,7 +82,7 @@ func LastoreUpdate() error {
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try updating source")
-	j, err := m.UpdateSource()
+	j, err := m.UpdateSource(0)
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,7 @@ func LastoreRemove(p string) error {
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try removing", p)
-	j, err := m.RemovePackage("RemoveForTesing "+p, p)
+	j, err := m.RemovePackage(0, "RemoveForTesing "+p, p)
 	if err != nil {
 		return err
 	}
@@ -111,7 +114,7 @@ func LastoreInstall(p string) error {
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try installing", p)
-	j, err := m.InstallPackage("InstallForTesing "+p, p)
+	j, err := m.InstallPackage(0, "InstallForTesing "+p, p)
 	if err != nil {
 		return err
 	}
@@ -126,7 +129,7 @@ func LastorePrepareUpgrade() error {
 	m := getLastore()
 	fmt.Println("Connected lastore-daemon..")
 
-	j, err := m.PrepareDistUpgrade()
+	j, err := m.PrepareDistUpgrade(0)
 	if err != nil {
 		return err
 	}
@@ -167,7 +170,7 @@ func LastoreUpgrade() error {
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try updating /var/lib/apt/lists .....")
-	j, err := m.UpdateSource()
+	j, err := m.UpdateSource(0)
 
 	if err != nil {
 		fmt.Printf("Created Job: %v failed\n", err)
@@ -180,14 +183,17 @@ func LastoreUpgrade() error {
 
 	fmt.Println()
 
-	list := m.UpgradableApps.Get()
+	list, err := m.UpgradableApps().Get(0)
+	if err != nil {
+		return err
+	}
 	if len(list) == 0 {
 		fmt.Println("There hasn't any packages need be upgrade.")
 		return nil
 	}
 
 	fmt.Printf("Try upgrading %v\n", list)
-	j, err = m.DistUpgrade()
+	j, err = m.DistUpgrade(0)
 	if err != nil {
 		return err
 	}
@@ -196,50 +202,61 @@ func LastoreUpgrade() error {
 	return waitJob(j)
 }
 
-func getLastore() *lastore.Manager {
-	m, err := lastore.NewManager("com.deepin.lastore", "/com/deepin/lastore")
+func getLastore() *lastore.Lastore {
+	sysBus, err := dbus.SystemBus()
 	if err != nil {
 		panic(err)
 	}
-	return m
+
+	return lastore.NewLastore(sysBus)
 }
 
 func showLine(j *lastore.Job) string {
+	id, _ := j.Id().Get(0)
+	type0, _ := j.Type().Get(0)
+	status, _ := j.Status().Get(0)
+	progress, _ := j.Progress().Get(0)
+	description, _ := j.Description().Get(0)
+
 	return fmt.Sprintf("id:%v(%v)\tProgress:%v:%v%%\tDesc:%q",
-		j.Id.Get(), j.Type.Get(), j.Status.Get(), j.Progress.Get()*100,
-		j.Description.Get())
+		id, type0, status, progress*100, description)
 }
 
 func waitJob(p dbus.ObjectPath) error {
-	j, err := lastore.NewJob("com.deepin.lastore", p)
+	sysBus, err := dbus.SystemBus()
 	if err != nil {
 		return err
 	}
 
-	s := j.Status.Get()
-	if s != "" {
+	j, err := lastore.NewJob(sysBus, p)
+	if err != nil {
+		return err
+	}
+
+	status, _ := j.Status().Get(0)
+	if status != "" {
 		fmt.Println(showLine(j))
 	}
 
-	for l := showLine(j); s != ""; {
+	for l := showLine(j); status != ""; {
 		t := showLine(j)
 		if t != l {
 			l = t
 			fmt.Println(t)
 		}
-		switch system.Status(s) {
+		switch system.Status(status) {
 		case system.ReadyStatus, system.RunningStatus:
 		case system.PausedStatus:
-			return fmt.Errorf("Job be paused.")
+			return fmt.Errorf("job be paused")
 		case system.SucceedStatus:
-			fmt.Println("Succeeful finished.")
+			fmt.Println("succeeful finished")
 			return nil
 		case system.FailedStatus:
-			return fmt.Errorf("Job %v failed %v", p, j)
+			return fmt.Errorf("job %v failed %v", p, j)
 		}
 
 		time.Sleep(time.Millisecond * 50)
-		s = j.Status.Get()
+		status, _ = j.Status().Get(0)
 	}
 	return err
 }
