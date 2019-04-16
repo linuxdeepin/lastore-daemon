@@ -1,3 +1,14 @@
+<a name="0.14.2"></a>
+### 0.14.2 (2019-04-16)
+
+
+#### Bug Fixes
+
+*   SystemUpgradeInfo return error ([040652aa](https://github.com/linuxdeepin/lastore-daemon/commit/040652aae699ab435c93e1e816a9fec39e6b681b))
+*   use custom mirror failed ([5710d6f8](https://github.com/linuxdeepin/lastore-daemon/commit/5710d6f8d4765f16f65305a0316b9065a6b02085))
+
+
+
 <a name="0.14.1"></a>
 ### 0.14.1 (2019-03-01)
 
