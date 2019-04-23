@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -117,12 +118,20 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	return m
 }
 
+var pkgNameRegexp = regexp.MustCompile(`^[a-z]`)
+
 func NormalizePackageNames(s string) ([]string, error) {
-	r := strings.Fields(s)
-	if s == "" || len(r) == 0 {
+	pkgNames := strings.Fields(s)
+	for _, pkgName := range pkgNames {
+		if !pkgNameRegexp.MatchString(pkgName) {
+			return nil, fmt.Errorf("invalid package name %q", pkgName)
+		}
+	}
+
+	if s == "" || len(pkgNames) == 0 {
 		return nil, fmt.Errorf("Empty value")
 	}
-	return r, nil
+	return pkgNames, nil
 }
 
 func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[string]string, error) {
@@ -216,7 +225,8 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
 
-	return m.installPkg(jobName, strings.Join(append(strings.Fields(packages), localePkgs...), " "), environ)
+	pkgs = append(pkgs, localePkgs...)
+	return m.installPkg(jobName, strings.Join(pkgs, " "), environ)
 }
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
