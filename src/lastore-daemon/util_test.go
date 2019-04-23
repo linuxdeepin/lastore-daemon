@@ -123,9 +123,9 @@ func (*testWrap) TestGuestJobType(c *C.C) {
 }
 
 func (*testWrap) TestNormalizePackageNames(c *C.C) {
-	s, err := NormalizePackageNames("a b c")
+	s, err := NormalizePackageNames("ab bc cd")
 	c.Check(err, C.Equals, nil)
-	c.Check(strings.Join(s, "_"), C.Equals, "a_b_c")
+	c.Check(strings.Join(s, "_"), C.Equals, "ab_bc_cd")
 
 	s, err = NormalizePackageNames("")
 	c.Check(err, C.Not(C.Equals), nil)
