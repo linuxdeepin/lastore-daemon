@@ -80,6 +80,7 @@ func main() {
 
 	manager := NewManager(service, b, config)
 	updater := NewUpdater(service, manager, config)
+	manager.updater = updater
 	err = service.Export("/com/deepin/lastore", manager, updater)
 	if err != nil {
 		log.Error("failed to export manager and updater:", err)
@@ -94,29 +95,8 @@ func main() {
 
 	log.Info("Started service at system bus")
 
-	updateHandler := func() {
-		info, err := system.SystemUpgradeInfo()
-		if _, ok := err.(system.NotFoundErrorType); ok {
-			//temp fail
-			return
-		}
-		if err != nil {
-			log.Errorf("updateableApps:%v\n", err)
-		}
-		updater.loadUpdateInfos(info)
-		manager.updatableApps(info)
-
-		if updater.AutoDownloadUpdates && len(updater.UpdatablePackages) > 0 {
-			log.Info("auto download updates")
-			manager.PrepareDistUpgrade()
-		}
-	}
-
-	RegisterMonitor(updateHandler,
-		"update_infos.json", "package_icons.json", "applications.json")
-
-	updateHandler()
-
+	RegisterMonitor(manager.handleUpdateInfosChanged, "update_infos.json")
+	manager.handleUpdateInfosChanged()
 	service.Wait()
 }
 

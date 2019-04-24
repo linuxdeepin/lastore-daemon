@@ -62,6 +62,8 @@ type Job struct {
 	progressRangeEnd   float64
 
 	environ map[string]string
+
+	hooks map[string]func()
 }
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {

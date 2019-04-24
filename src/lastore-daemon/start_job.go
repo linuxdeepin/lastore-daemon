@@ -119,6 +119,11 @@ func TransitionJobState(j *Job, to system.Status) error {
 		return nil
 	}
 
+	hookFn := j.hooks[string(to)]
+	if hookFn != nil {
+		hookFn()
+	}
+
 	j.emitPropChangedStatus(to)
 
 	if j.Status == system.SucceedStatus {
