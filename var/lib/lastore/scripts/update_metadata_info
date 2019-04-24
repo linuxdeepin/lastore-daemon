@@ -44,6 +44,7 @@ which ostree >/dev/null || exit 0
 case "$1" in
     "-now")
         update_metadata_info_now
+        exit 0
         ;;
     *)
         if [[ -S /var/run/systemd/notify ]]; then
