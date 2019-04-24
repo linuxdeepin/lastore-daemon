@@ -47,6 +47,7 @@ type Manager struct {
 	JobList    []dbus.ObjectPath
 	jobList    []*Job
 	jobManager *JobManager
+	updater    *Updater
 
 	// dbusutil-gen: ignore
 	SystemArchitectures []system.Architecture
@@ -284,6 +285,25 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
+func (m *Manager) handleUpdateInfosChanged() {
+	log.Info("handleUpdateInfosChanged")
+	info, err := system.SystemUpgradeInfo()
+	if err != nil {
+		log.Error("failed to get upgrade info:", err)
+	}
+	m.updater.loadUpdateInfos(info)
+	m.updatableApps(info)
+	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 {
+		log.Info("auto download updates")
+		go func() {
+			_, err := m.PrepareDistUpgrade()
+			if err != nil {
+				log.Error("failed to prepare dist-upgrade:", err)
+			}
+		}()
+	}
+}
+
 func (m *Manager) updateSource() (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
@@ -292,6 +312,9 @@ func (m *Manager) updateSource() (*Job, error) {
 	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil, nil)
 	if err != nil {
 		log.Warnf("UpdateSource error: %v\n", err)
+	}
+	job.hooks = map[string]func(){
+		string(system.EndStatus): m.handleUpdateInfosChanged,
 	}
 	return job, err
 }
