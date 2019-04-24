@@ -1,3 +1,18 @@
+<a name="0.14.3"></a>
+### 0.14.3 (2019-04-24)
+
+
+#### Bug Fixes
+
+*   update_metadata_info exit with failure ([ab8dd917](https://github.com/linuxdeepin/lastore-daemon/commit/ab8dd9176bbec7292c9de9149c6e6ce6aee5c8c2))
+*   can not get upgradeable packages after update source job is end ([20b3c930](https://github.com/linuxdeepin/lastore-daemon/commit/20b3c93062da7e7f5d7e6725a7108a38deec1328))
+
+#### Features
+
+*   check package name ([96ac96f9](https://github.com/linuxdeepin/lastore-daemon/commit/96ac96f9a04321f36c3c6b377b657f7b870135ab))
+
+
+
 <a name="0.14.2"></a>
 ### 0.14.2 (2019-04-16)
 
