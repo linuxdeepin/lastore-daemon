@@ -119,7 +119,7 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	return m
 }
 
-var pkgNameRegexp = regexp.MustCompile(`^[a-z]`)
+var pkgNameRegexp = regexp.MustCompile(`^[a-z0-9]`)
 
 func NormalizePackageNames(s string) ([]string, error) {
 	pkgNames := strings.Fields(s)
