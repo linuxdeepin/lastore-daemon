@@ -1,3 +1,13 @@
+<a name="0.14.6"></a>
+### 0.14.6 (2019-05-27)
+
+
+#### Bug Fixes
+
+*   pkgNameRegexp ([40393956](https://github.com/linuxdeepin/lastore-daemon/commit/40393956abe70d4d6133d1e90a0f444a721b6534))
+
+
+
 <a name="0.14.5"></a>
 ### 0.14.5 (2019-05-09)
 
