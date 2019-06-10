@@ -18,6 +18,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -29,6 +30,7 @@ import (
 	"internal/system"
 	"internal/utils"
 
+	ue "github.com/linuxdeepin/go-dbus-factory/com.deepin.userexperience.daemon"
 	"pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/procfs"
@@ -61,6 +63,7 @@ type Manager struct {
 
 	inhibitFd         dbus.UnixFD
 	sourceUpdatedOnce bool
+	ueDaemon          *ue.Daemon
 
 	methods *struct {
 		FixError             func() `in:"errType" out:"job"`
@@ -104,6 +107,13 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
 	}
+
+	sysBus, err := dbus.SystemBus()
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	m.ueDaemon = ue.NewDaemon(sysBus)
 
 	m.jobManager = NewJobManager(service, b, m.updateJobList)
 	go m.jobManager.Dispatch()
@@ -374,7 +384,30 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 		return nil, err
 	}
 
-	m.cancelAllJob()
+	job.hooks = map[string]func(){
+		string(system.SucceedStatus): func() {
+			msg := &struct {
+				Type string
+			}{
+				Type: "system-upgraded",
+			}
+			msgJson, err := json.Marshal(msg)
+			if err != nil {
+				log.Warn("failed to marshal msg:", err)
+				return
+			}
+			go func() {
+				err := m.ueDaemon.PostMessage(0, string(msgJson))
+				if err != nil {
+					log.Warn("failed to post msg:", err)
+				}
+			}()
+		},
+	}
+	err = m.cancelAllJob()
+	if err != nil {
+		log.Warn("failed to cancel all job:", err)
+	}
 	return job, err
 }
 
