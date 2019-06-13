@@ -274,6 +274,7 @@ func (b *Backend) ListInstalled() (result []PackageInstalledInfo, busErr *dbus.E
 		}
 	}()
 
+	// loda appinfo from /var/lib/lastore/applications.json
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		parts := bytes.SplitN(scanner.Bytes(), []byte{'\t'}, 4)
