@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-var cacheFolder string
-var configFolder string
-var iconFolder string
-
 // Check file in cache
 func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Duration) error {
 	decodeFile := func() error {
@@ -33,6 +29,9 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 	client := http.DefaultClient
 	request, err := http.NewRequest("GET", url, nil)
 	request.Header.Add("Accept-Encoding", "gzip")
+	if fi != nil {
+		request.Header.Add("If-Modified-Since", fi.ModTime().Format(time.RFC1123))
+	}
 	resp, err := client.Do(request)
 	if err != nil {
 		return err

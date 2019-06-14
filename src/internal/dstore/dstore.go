@@ -33,7 +33,7 @@ func NewStore() *Store {
 }
 
 func (s *Store) GetMetadataServer() string {
-	metadataServer := s.sysCfg.Section("General").Key("metadataServer").String()
+	metadataServer := s.sysCfg.Section("General").Key("MetadataServer").String()
 	if metadataServer == "" {
 		metadataServer = "https://dstore-metadata.deepin.cn"
 	}
