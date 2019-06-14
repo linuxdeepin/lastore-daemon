@@ -103,7 +103,7 @@ func genApplications(v []*dstore.PackageInfo, fpath string) error {
 func GenerateApplications(repo, fpath string) error {
 	s := dstore.NewStore()
 
-	list, err := s.GetPackageApplication()
+	list, err := s.GetPackageApplication(fpath)
 	if err != nil {
 		return err
 	}

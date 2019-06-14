@@ -1,11 +1,8 @@
 package dstore
 
 import (
-	"path/filepath"
 	"strings"
 	"time"
-
-	"internal/system"
 
 	log "github.com/cihub/seelog"
 	"github.com/go-ini/ini"
@@ -66,12 +63,13 @@ var expireDelay = time.Hour * 24
 type packageApps map[string]*PackageInfo
 
 // 获取上架的apt应用信息
-func (s *Store) GetPackageApplication() (v []*PackageInfo, err error) {
-	path := filepath.Join(system.VarLibDir, "packages.cache.json")
+func (s *Store) GetPackageApplication(path string) (v []*PackageInfo, err error) {
+	// cachePath := filepath.Join(system.VarLibDir, "packages.cache.json")
+	cachePath := path + ".cache.json"
 	apiAppURL := s.GetMetadataServer() + "/api/v3/packages"
 
 	packages := make(packageApps)
-	err = cacheFetchJSON(&packages, apiAppURL, path, expireDelay)
+	err = cacheFetchJSON(&packages, apiAppURL, cachePath, expireDelay)
 
 	for dpk, app := range packages {
 		app.PackageURI = dpk
