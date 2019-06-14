@@ -1,8 +1,11 @@
-package main
+package dstore
 
 import (
+	"path/filepath"
 	"strings"
 	"time"
+
+	"internal/system"
 
 	log "github.com/cihub/seelog"
 	"github.com/go-ini/ini"
@@ -33,10 +36,20 @@ func NewStore() *Store {
 }
 
 func (s *Store) GetMetadataServer() string {
-	return s.sysCfg.Section("General").Key("metadataServer").String()
+	metadataServer := s.sysCfg.Section("General").Key("metadataServer").String()
+	if metadataServer == "" {
+		metadataServer = "https://dstore-metadata.deepin.cn"
+	}
+	return metadataServer
 }
 
-type packageInfo struct {
+type AppInfo struct {
+	Category    string            `json:"category"`
+	PackageName string            `json:"package_name"`
+	LocaleName  map[string]string `json:"locale_name"`
+}
+
+type PackageInfo struct {
 	Name        string `json:"name"`
 	Category    string `json:"category"`
 	PackageURI  string `json:"packageURI"`
@@ -48,19 +61,22 @@ type packageInfo struct {
 	} `json:"locale"`
 }
 
-type packageApps map[string]*packageInfo
+var expireDelay = time.Hour * 24
+
+type packageApps map[string]*PackageInfo
 
 // 获取上架的apt应用信息
-func (s *Store) GetPackageApplication(path string) (v apiAppApps, err error) {
-	apiAppUrl := s.GetMetadataServer() + "/api/v3/packages"
+func (s *Store) GetPackageApplication() (v []*PackageInfo, err error) {
+	path := filepath.Join(system.VarLibDir, "packages.cache.json")
+	apiAppURL := s.GetMetadataServer() + "/api/v3/packages"
 
 	packages := make(packageApps)
-	err = cacheFetchJSON(&packages, apiAppUrl, path, time.Second*10)
+	err = cacheFetchJSON(&packages, apiAppURL, path, expireDelay)
 
 	for dpk, app := range packages {
 		app.PackageURI = dpk
 		app.PackageName = strings.Replace(dpk, "dpk://deb/", "", -1)
-		v.Apps = append(v.Apps, app)
+		v = append(v, app)
 	}
 	return
 }

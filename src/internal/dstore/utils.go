@@ -1,4 +1,4 @@
-package main
+package dstore
 
 import (
 	"compress/gzip"

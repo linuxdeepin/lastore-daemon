@@ -19,6 +19,7 @@ package main
 
 import (
 	"encoding/json"
+	"internal/dstore"
 	"internal/utils"
 	"net/http"
 
@@ -77,21 +78,11 @@ func GenerateCategory(repo, fpath string) error {
 	// return writeData(fpath, d)
 }
 
-type AppInfo struct {
-	Category    string            `json:"category"`
-	PackageName string            `json:"package_name"`
-	LocaleName  map[string]string `json:"locale_name"`
-}
+func genApplications(v []*dstore.PackageInfo, fpath string) error {
+	apps := make(map[string]*dstore.AppInfo)
 
-type apiAppApps struct {
-	Apps []*packageInfo
-}
-
-func genApplications(v apiAppApps, fpath string) error {
-	apps := make(map[string]AppInfo)
-
-	for _, app := range v.Apps {
-		appInfo := AppInfo{
+	for _, app := range v {
+		appInfo := &dstore.AppInfo{
 			Category:    app.Category,
 			PackageName: app.PackageName,
 		}
@@ -110,15 +101,14 @@ func genApplications(v apiAppApps, fpath string) error {
 }
 
 func GenerateApplications(repo, fpath string) error {
-	s := NewStore()
+	s := dstore.NewStore()
 
-	packageFile := fpath + ".cache"
-	v, err := s.GetPackageApplication(packageFile)
+	list, err := s.GetPackageApplication()
 	if err != nil {
 		return err
 	}
 
-	err = genApplications(v, fpath)
+	err = genApplications(list, fpath)
 	if err != nil {
 		return err
 	}
