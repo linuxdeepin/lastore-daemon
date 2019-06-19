@@ -18,23 +18,21 @@
 package main
 
 import (
-	"compress/gzip"
 	"encoding/json"
+	"internal/dstore"
 	"internal/utils"
 	"net/http"
 
 	log "github.com/cihub/seelog"
 )
 
-const appstoreURI = "http://api.appstore.deepin.org"
-
-type CategoryInfo struct {
-	Id      string `json:"id"`
-	Name    string `json:"name"`
-	Locales map[string]struct {
-		Name string `json:"name"`
-	}
-}
+// type CategoryInfo struct {
+// 	Id      string `json:"id"`
+// 	Name    string `json:"name"`
+// 	Locales map[string]struct {
+// 		Name string `json:"name"`
+// 	}
+// }
 
 func decodeData(wrap bool, url string, data interface{}) error {
 	resp, err := http.Get(url)
@@ -67,39 +65,26 @@ func writeData(fpath string, data interface{}) error {
 }
 
 func GenerateCategory(repo, fpath string) error {
-	url := appstoreURI + "/" + "categories"
+	log.Warnf("this method has deprecated")
+	return nil
+	// appstoreURI := "http://api.appstore.deepin.org"
+	// url := appstoreURI + "/" + "categories"
 
-	var d []CategoryInfo
-	err := decodeData(true, url, &d)
-	if err != nil {
-		return log.Warnf("GenerateCategory failed %v\n", err)
-	}
-	return writeData(fpath, d)
+	// var d []CategoryInfo
+	// err := decodeData(true, url, &d)
+	// if err != nil {
+	// 	return log.Warnf("GenerateCategory failed %v\n", err)
+	// }
+	// return writeData(fpath, d)
 }
 
-type AppInfo struct {
-	Category   string            `json:"category"`
-	LocaleName map[string]string `json:"locale_name"`
-}
+func genApplications(v []*dstore.PackageInfo, fpath string) error {
+	apps := make(map[string]*dstore.AppInfo)
 
-type apiAppApps struct {
-	Apps []struct {
-		Name     string `json:"name"`
-		Category string `json:"category"`
-		Locale   map[string]struct {
-			Description struct {
-				Name string `json:"name"`
-			} `json:"description"`
-		} `json:"locale"`
-	} `json:"apps"`
-}
-
-func genApplications(v apiAppApps, fpath string) error {
-	apps := make(map[string]AppInfo)
-
-	for _, app := range v.Apps {
-		appInfo := AppInfo{
-			Category: app.Category,
+	for _, app := range v {
+		appInfo := &dstore.AppInfo{
+			Category:    app.Category,
+			PackageName: app.PackageName,
 		}
 
 		// set LocaleName
@@ -116,31 +101,14 @@ func genApplications(v apiAppApps, fpath string) error {
 }
 
 func GenerateApplications(repo, fpath string) error {
-	apiAppUrl := "https://dstore-metadata.deepin.cn/api/app?query={apps{name,category,locale{en_US{description{name}},zh_CN{description{name}}}}}"
-	client := http.DefaultClient
-	request, err := http.NewRequest("GET", apiAppUrl, nil)
-	request.Header.Add("Accept-Encoding", "gzip")
+	s := dstore.NewStore()
 
-	resp, err := client.Do(request)
-
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	gzipReader, err := gzip.NewReader(resp.Body)
+	list, err := s.GetPackageApplication(fpath)
 	if err != nil {
 		return err
 	}
 
-	jsonDec := json.NewDecoder(gzipReader)
-	var v apiAppApps
-	err = jsonDec.Decode(&v)
-	if err != nil {
-		return err
-	}
-
-	err = genApplications(v, fpath)
+	err = genApplications(list, fpath)
 	if err != nil {
 		return err
 	}
