@@ -1,3 +1,20 @@
+<a name="0.14.7"></a>
+## 0.14.7 (2019-06-19)
+
+
+#### Features
+
+*   check server Last-Modified ([08b7bc04](https://github.com/linuxdeepin/lastore-daemon/commit/08b7bc049039a564d5364a759deb3a28a83c9880))
+*   remove appstore backend ([b564308c](https://github.com/linuxdeepin/lastore-daemon/commit/b564308c9ab116944338845e56a3e1cbd8bf4b12))
+*   get deb app list from metadata ([14ed19ae](https://github.com/linuxdeepin/lastore-daemon/commit/14ed19aee47dfd770d330e8ca7260b5fb152dfb0))
+
+#### Bug Fixes
+
+*   add missing depends golang-github-go-ini-ini-dev ([f8458690](https://github.com/linuxdeepin/lastore-daemon/commit/f8458690e1a3c7bf3ca940d83490054803086e2f))
+*   add If-Modified-Since ([80cf8013](https://github.com/linuxdeepin/lastore-daemon/commit/80cf8013d7edecadb1d07343ce809103988124fc))
+
+
+
 <a name="0.14.6"></a>
 ### 0.14.6 (2019-05-27)
 
