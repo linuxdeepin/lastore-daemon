@@ -15,6 +15,7 @@ The project is mainly support Linux Application Store. Currently it power deepin
 - pkg-config
 - make
 - glib-2.0
+- libgtk-3-dev
 
 ### Runtime dependencies
 - apt-get
@@ -30,7 +31,8 @@ Install prerequisites
 $ sudo apt-get install make \
                        golang-go \
                        pkg-config \
-                       libglib2.0-dev
+                       libglib2.0-dev \
+                       libgtk-3-dev
 ```
 
 Build
