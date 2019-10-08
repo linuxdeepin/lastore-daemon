@@ -150,7 +150,7 @@ func init() {
 	if err != nil {
 		RepoInfos = []RepositoryInfo{defaultRepoInfo}
 	}
-	os.Setenv("DEBIAN_FRONTEND", "gnome")
+	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
 	os.Setenv("DEBIAN_PRIORITY", "critical")
 	os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
 }
