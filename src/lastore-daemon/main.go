@@ -20,18 +20,27 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"path"
+
 	"internal/system"
 	"internal/system/apt"
 	la_utils "internal/utils"
 
-	"os"
-	"path"
-
 	log "github.com/cihub/seelog"
+	"pkg.deepin.io/dde/api/inhibit_hint"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/utils"
 )
+
+const (
+	dbusServiceName = "com.deepin.lastore"
+)
+
+func Tr(text string) string {
+	return text
+}
 
 //go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,pkg.deepin.io/lib/dbus1 updater.go job.go manager.go
 
@@ -53,7 +62,7 @@ func main() {
 	log.Info("Starting lastore-daemon")
 	defer log.Flush()
 
-	hasOwner, err := service.NameHasOwner("com.deepin.lastore")
+	hasOwner, err := service.NameHasOwner(dbusServiceName)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -87,7 +96,15 @@ func main() {
 		return
 	}
 
-	err = service.RequestName("com.deepin.lastore")
+	ihObj := inhibit_hint.New("lastore-daemon")
+	ihObj.SetIcon("dde-control-center")
+	ihObj.SetName(Tr("Control Center"))
+	err = ihObj.Export(service)
+	if err != nil {
+		log.Warn("failed to export inhibit hint:", err)
+	}
+
+	err = service.RequestName(dbusServiceName)
 	if err != nil {
 		log.Error("failed to request name:", err)
 		return

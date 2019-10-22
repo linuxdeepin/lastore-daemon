@@ -23,13 +23,12 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"pkg.deepin.io/lib/dbus1"
-	"pkg.deepin.io/lib/gettext"
 )
 
 func (m *Manager) updateSystemOnChaning(onChanging bool) {
 	if onChanging && m.inhibitFd == -1 {
-		fd, err := Inhibitor("shutdown", gettext.Tr("Deepin Store"),
-			gettext.Tr("System is updating, please shut down or reboot later."))
+		fd, err := Inhibitor("shutdown", dbusServiceName,
+			Tr("System is updating, please shut down or reboot later."))
 		log.Infof("Prevent shutdown...: fd:%v\n", fd)
 		if err != nil {
 			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)

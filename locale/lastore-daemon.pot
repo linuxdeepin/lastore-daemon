@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-07-20 12:00+0800\n"
+"POT-Creation-Date: 2019-10-22 20:50+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,9 +18,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: ../src/lastore-daemon/inhibitor.go:31
-msgid "Deepin Store"
+msgid "System is updating, please shut down or reboot later."
 msgstr ""
 
-#: ../src/lastore-daemon/inhibitor.go:32
-msgid "System is updating, please shut down or reboot later."
+#: ../src/lastore-daemon/main.go:101
+msgid "Control Center"
 msgstr ""
