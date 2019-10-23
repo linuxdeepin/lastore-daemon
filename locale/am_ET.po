@@ -1,118 +1,31 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# samson <sambelet@yahoo.com>, 2017
+# samson <sambelet@yahoo.com>, 2019
+# Maggie Liu <maggie.liufei@gmail.com>, 2019
+# 
+#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Deepin Store\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2017-12-26 09:10+0000\n"
-"Last-Translator: deepin_transifex <xiabin@linuxdeepin.com>\n"
-"Language-Team: Amharic (Ethiopia) (http://www.transifex.com/linuxdeepin/deepin-store/language/am_ET/)\n"
+"POT-Creation-Date: 2019-10-22 20:50+0800\n"
+"PO-Revision-Date: 2019-10-23 02:33+0000\n"
+"Last-Translator: Maggie Liu <maggie.liufei@gmail.com>, 2019\n"
+"Language-Team: Amharic (Ethiopia) (https://www.transifex.com/linuxdeepin/teams/3617/am_ET/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: am_ET\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:30
-msgid "Deepin Store"
-msgstr "የ ዲፕኢን ሱቅ"
-
 #: ../src/lastore-daemon/inhibitor.go:31
 msgid "System is updating, please shut down or reboot later."
 msgstr "ስርአቱ እየተሻሻለ ነው: እባክዎን ሲጨርስ አጥፍተው እንደገና ያብሩ"
 
-#: ../src/lastore-session-helper/check_source.go:47
-msgid "Restore"
-msgstr ""
-
-#: ../src/lastore-session-helper/check_source.go:58
-#: ../src/lastore-session-helper/job.go:325
-msgid "Cancel"
-msgstr "መሰረዣ"
-
-#: ../src/lastore-session-helper/job.go:294
-msgid "Reboot Now"
-msgstr "አሁን እነደገና ማስነሻ"
-
-#: ../src/lastore-session-helper/job.go:308
-msgid "Reboot Later"
-msgstr "በኋላ እንደገና ማስነሻ"
-
-#: ../src/lastore-session-helper/job.go:317
-msgid "Retry"
-msgstr "እንደገና መሞከሪያ"
-
-#: ../src/lastore-session-helper/notify.go:70
-msgid "%q installed successfully."
-msgstr "%q ተሳክቶ ተገጥሟል"
-
-#: ../src/lastore-session-helper/notify.go:73
-msgid "%q failed to install."
-msgstr "%q መግጠም አልተቻለም"
-
-#: ../src/lastore-session-helper/notify.go:82
-msgid "%q removed successfully."
-msgstr "%q ማስወገዱ ተሳክቷል."
-
-#: ../src/lastore-session-helper/notify.go:84
-msgid "%q failed to remove."
-msgstr "%q ማስወገድ አልተቻለም"
-
-#: ../src/lastore-session-helper/notify.go:91
-msgid "%q failed to download."
-msgstr "%q ማውረድ አልተቻለም"
-
-#: ../src/lastore-session-helper/notify.go:97
-msgid ""
-"In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "ራሱ በራሱ እንዳያጠፋ ለ መከልከል: እባክዎን መደበኛ ማሻሻያ ይጠቀሙ"
-
-#: ../src/lastore-session-helper/notify.go:105
-msgid "Some functions will take effect after rebooting."
-msgstr "አንዳንድ ተግባሮች ተግባራዊ የሚሆኑት እንደገና ካስነሱ በኋላ ነው"
-
-#: ../src/lastore-session-helper/notify.go:105
-#: ../src/lastore-session-helper/notify.go:107
-msgid "Updated successfully!"
-msgstr "ተሳክቶ ተሻሽሏል "
-
-#: ../src/lastore-session-helper/notify.go:111
-msgid "Failed to update."
-msgstr "ማሻሻል አልተቻለም"
-
-#: ../src/lastore-session-helper/notify.go:121
-#, c-format
-msgid "%d software need to be updated."
-msgstr "%d ሶፍትዌር ማሻሻል ይፈልጋል"
-
-#: ../src/lastore-session-helper/notify.go:123
-msgid "Some patches need to be updated."
-msgstr "አንዳንድ መጠገኛዎች ማሻሻል ይፈልጋሉ"
-
-#: ../src/lastore-session-helper/notify.go:125
-#, c-format
-msgid "Some patches and %d software need to be updated."
-msgstr "አንዳንድ መጠገኛዎች እና %d ሶፍትዌሮች ማሻሻል ይፈልጋሉ"
-
-#: ../src/lastore-session-helper/notify.go:133
-msgid "Download"
-msgstr "የወረዱ"
-
-#: ../src/lastore-session-helper/notify.go:141
-msgid "Failed to download upgradeable packages."
-msgstr "የሚሻሻሉ ጥቅሎችን ማውረድ አልተቻለም"
-
-#: ../src/lastore-session-helper/notify.go:146
-msgid "Package cache wiped"
-msgstr "የ ጥቅል cache ተጠርጓል"
-
-#: ../src/lastore-session-helper/notify.go:151
-msgid ""
-"Your system source has been modified, please restore to official source for "
-"your normal use"
-msgstr ""
+#: ../src/lastore-daemon/main.go:101
+msgid "Control Center"
+msgstr "መቆጣጠሪያ ማእከል"

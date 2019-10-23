@@ -1,121 +1,31 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Adem Çalışkan <ademcal@yahoo.com>, 2017
-# Hasan Eryilmaz <hasaneryilmaz0@gmail.com>, 2017
-# Kaya Zeren <kayazeren@gmail.com>, 2018
-# Murat Servan Kahraman, 2016
+# Kaya Zeren <kayazeren@gmail.com>, 2019
+# 
+#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Deepin Store\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-07-12 12:51+0000\n"
-"Last-Translator: Kaya Zeren <kayazeren@gmail.com>\n"
-"Language-Team: Turkish (http://www.transifex.com/linuxdeepin/deepin-store/language/tr/)\n"
+"POT-Creation-Date: 2019-10-22 20:50+0800\n"
+"PO-Revision-Date: 2019-10-23 02:33+0000\n"
+"Last-Translator: Kaya Zeren <kayazeren@gmail.com>, 2019\n"
+"Language-Team: Turkish (https://www.transifex.com/linuxdeepin/teams/3617/tr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: tr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:30
-msgid "Deepin Store"
-msgstr "Deepin Mağazası"
-
 #: ../src/lastore-daemon/inhibitor.go:31
 msgid "System is updating, please shut down or reboot later."
-msgstr "Sistem güncelleniyor, lütfen kapatın ya da daha sonra yeniden başlatın."
+msgstr ""
+"Sistem güncelleniyor, lütfen kapatın ya da daha sonra yeniden başlatın."
 
-#: ../src/lastore-session-helper/check_source.go:47
-msgid "Restore"
-msgstr "Geri Yükle"
-
-#: ../src/lastore-session-helper/check_source.go:58
-#: ../src/lastore-session-helper/job.go:325
-msgid "Cancel"
-msgstr "İptal"
-
-#: ../src/lastore-session-helper/job.go:294
-msgid "Reboot Now"
-msgstr "Şimdi Yeniden Başlat"
-
-#: ../src/lastore-session-helper/job.go:308
-msgid "Reboot Later"
-msgstr "Sonra Yeniden Başlat"
-
-#: ../src/lastore-session-helper/job.go:317
-msgid "Retry"
-msgstr "Yeniden Dene"
-
-#: ../src/lastore-session-helper/notify.go:70
-msgid "%q installed successfully."
-msgstr "%q kuruldu."
-
-#: ../src/lastore-session-helper/notify.go:73
-msgid "%q failed to install."
-msgstr "%q kurulamadı."
-
-#: ../src/lastore-session-helper/notify.go:82
-msgid "%q removed successfully."
-msgstr "%q kaldırıldı."
-
-#: ../src/lastore-session-helper/notify.go:84
-msgid "%q failed to remove."
-msgstr "%q kaldırılamadı."
-
-#: ../src/lastore-session-helper/notify.go:91
-msgid "%q failed to download."
-msgstr "%q indirilemedi."
-
-#: ../src/lastore-session-helper/notify.go:97
-msgid ""
-"In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "Otomatik kapatmayı engellemek için. Lütfen normal güncelleme için fişe takın."
-
-#: ../src/lastore-session-helper/notify.go:105
-msgid "Some functions will take effect after rebooting."
-msgstr "Bazı özellikler, yeniden başlatıldıktan sonra etkin olacak."
-
-#: ../src/lastore-session-helper/notify.go:105
-#: ../src/lastore-session-helper/notify.go:107
-msgid "Updated successfully!"
-msgstr "Güncellendi!"
-
-#: ../src/lastore-session-helper/notify.go:111
-msgid "Failed to update."
-msgstr "Güncellenemedi."
-
-#: ../src/lastore-session-helper/notify.go:121
-#, c-format
-msgid "%d software need to be updated."
-msgstr "%d yazılımının güncellenmesi gerekiyor."
-
-#: ../src/lastore-session-helper/notify.go:123
-msgid "Some patches need to be updated."
-msgstr "Bazı yamaların güncellenmesi gerekiyor."
-
-#: ../src/lastore-session-helper/notify.go:125
-#, c-format
-msgid "Some patches and %d software need to be updated."
-msgstr "Bazı yamalar ve %d yazılımının güncellenmesi gerekiyor."
-
-#: ../src/lastore-session-helper/notify.go:133
-msgid "Download"
-msgstr "İndir"
-
-#: ../src/lastore-session-helper/notify.go:141
-msgid "Failed to download upgradeable packages."
-msgstr "Yükseltilebilir paketler indirilemedi."
-
-#: ../src/lastore-session-helper/notify.go:146
-msgid "Package cache wiped"
-msgstr "Paket ön belleği silindi"
-
-#: ../src/lastore-session-helper/notify.go:151
-msgid ""
-"Your system source has been modified, please restore to official source for "
-"your normal use"
-msgstr "Sistem kaynağınız değiştirilmiş, lütfen normal kullanımınız için resmi kaynağı geri yükleyin"
+#: ../src/lastore-daemon/main.go:101
+msgid "Control Center"
+msgstr "Kontrol Merkezi"

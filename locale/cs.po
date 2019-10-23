@@ -1,121 +1,33 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# LiberteCzech <liberte.czech@gmail.com>, 2018
-# op6464 <op64@seznam.cz>, 2016
-# fri, 2015
-# Tomáš Kratochvíl <kratochvil.tomas.dev@gmail.com>, 2018
+# fri, 2019
+# Tomáš Kratochvíl <kratochvil.tomas.dev@gmail.com>, 2019
+# 
+#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Deepin Store\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-12-26 15:55+0800\n"
-"PO-Revision-Date: 2018-07-03 15:05+0000\n"
-"Last-Translator: Tomáš Kratochvíl <kratochvil.tomas.dev@gmail.com>\n"
-"Language-Team: Czech (http://www.transifex.com/linuxdeepin/deepin-store/language/cs/)\n"
+"POT-Creation-Date: 2019-10-22 20:50+0800\n"
+"PO-Revision-Date: 2019-10-23 02:33+0000\n"
+"Last-Translator: Tomáš Kratochvíl <kratochvil.tomas.dev@gmail.com>, 2019\n"
+"Language-Team: Czech (https://www.transifex.com/linuxdeepin/teams/3617/cs/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: cs\n"
 "Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:30
-msgid "Deepin Store"
-msgstr "Deepin Store"
-
 #: ../src/lastore-daemon/inhibitor.go:31
 msgid "System is updating, please shut down or reboot later."
-msgstr "Systém se aktualizuje. Vypněte, prosím, počítač nebo ho restartujte později..."
+msgstr ""
+"Systém se aktualizuje. Vypněte, prosím, počítač nebo ho restartujte "
+"později..."
 
-#: ../src/lastore-session-helper/check_source.go:47
-msgid "Restore"
-msgstr "Obnovit"
-
-#: ../src/lastore-session-helper/check_source.go:58
-#: ../src/lastore-session-helper/job.go:325
-msgid "Cancel"
-msgstr "Zrušit"
-
-#: ../src/lastore-session-helper/job.go:294
-msgid "Reboot Now"
-msgstr "Restartovat nyní"
-
-#: ../src/lastore-session-helper/job.go:308
-msgid "Reboot Later"
-msgstr "Restartovat později"
-
-#: ../src/lastore-session-helper/job.go:317
-msgid "Retry"
-msgstr "Zkusit znovu"
-
-#: ../src/lastore-session-helper/notify.go:70
-msgid "%q installed successfully."
-msgstr "%q nainstalováno úspěšně."
-
-#: ../src/lastore-session-helper/notify.go:73
-msgid "%q failed to install."
-msgstr "%q se nepodařilo nainstalovat."
-
-#: ../src/lastore-session-helper/notify.go:82
-msgid "%q removed successfully."
-msgstr "%q odstraněno úspěšně."
-
-#: ../src/lastore-session-helper/notify.go:84
-msgid "%q failed to remove."
-msgstr "%q se nepodařilo odstranit."
-
-#: ../src/lastore-session-helper/notify.go:91
-msgid "%q failed to download."
-msgstr "%q se nepodařilo stáhnout"
-
-#: ../src/lastore-session-helper/notify.go:97
-msgid ""
-"In order to prevent automatic shutdown, please plug in for normal update."
-msgstr "Kvůli zabránění automatického vypnutí zapněte, prosím, normální aktualizaci."
-
-#: ../src/lastore-session-helper/notify.go:105
-msgid "Some functions will take effect after rebooting."
-msgstr "Některé funkce začnou pracovat po restartu."
-
-#: ../src/lastore-session-helper/notify.go:105
-#: ../src/lastore-session-helper/notify.go:107
-msgid "Updated successfully!"
-msgstr "Aktualizováno úspěšně!"
-
-#: ../src/lastore-session-helper/notify.go:111
-msgid "Failed to update."
-msgstr "Nepodařilo se aktualizovat"
-
-#: ../src/lastore-session-helper/notify.go:121
-#, c-format
-msgid "%d software need to be updated."
-msgstr "%d program je třeba aktualizovat."
-
-#: ../src/lastore-session-helper/notify.go:123
-msgid "Some patches need to be updated."
-msgstr "Některé záplaty je třeba aktualizovat."
-
-#: ../src/lastore-session-helper/notify.go:125
-#, c-format
-msgid "Some patches and %d software need to be updated."
-msgstr "Některé záplaty a %d program je třeba aktualizovat."
-
-#: ../src/lastore-session-helper/notify.go:133
-msgid "Download"
-msgstr "Stáhnout"
-
-#: ../src/lastore-session-helper/notify.go:141
-msgid "Failed to download upgradeable packages."
-msgstr "Nepodařilo se stáhnout povyšovací balíčky"
-
-#: ../src/lastore-session-helper/notify.go:146
-msgid "Package cache wiped"
-msgstr "Vymazání balíčku v mezipaměti"
-
-#: ../src/lastore-session-helper/notify.go:151
-msgid ""
-"Your system source has been modified, please restore to official source for "
-"your normal use"
-msgstr "Váš systémový zdroj byl upraven, obnovte prosím oficiální zdroj pro vaše normální použití"
+#: ../src/lastore-daemon/main.go:101
+msgid "Control Center"
+msgstr "Ovládací středisko"
