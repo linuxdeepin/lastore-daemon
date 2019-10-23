@@ -4,7 +4,6 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Maggie Liu <maggie.liufei@gmail.com>, 2019
 # Cindy0514, 2019
 # 
 #, fuzzy
@@ -12,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 20:50+0800\n"
+"POT-Creation-Date: 2019-10-23 13:26+0800\n"
 "PO-Revision-Date: 2019-10-23 02:33+0000\n"
 "Last-Translator: Cindy0514, 2019\n"
 "Language-Team: Chinese (China) (https://www.transifex.com/linuxdeepin/teams/3617/zh_CN/)\n"
@@ -23,7 +22,7 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: ../src/lastore-daemon/inhibitor.go:31
-msgid "System is updating, please shut down or reboot later."
+msgid "Updating the system, please shut down or reboot later."
 msgstr "系统正在更新，请稍后关机或重启。"
 
 #: ../src/lastore-daemon/main.go:101
