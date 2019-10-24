@@ -29,7 +29,7 @@ func init() {
 
 func (*testWrap) TestPackageDownloadSize(c *C.C) {
 	// TODO: using debootstrap to build test environment
-	return
+	c.Skip("TODO: using debootstrap to build test environment")
 
 	var packages = []string{"abiword", "0ad", "acl2"}
 	for _, p := range packages {

@@ -112,7 +112,7 @@ func (j *Job) changeType(jobType string) {
 	j.Type = jobType
 }
 
-func (j Job) String() string {
+func (j *Job) String() string {
 	return fmt.Sprintf("Job{Id:%q:%q,Type:%q(%v,%v), %q(%.2f)}@%q",
 		j.Id, j.Packages,
 		j.Type, j.Cancelable, j.Status,

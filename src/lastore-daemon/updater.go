@@ -165,11 +165,11 @@ type LocaleMirrorSource struct {
 
 // ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
 // 其中Name会根据传递进来的lang进行本地化
-func (u Updater) ListMirrorSources(lang string) ([]LocaleMirrorSource, *dbus.Error) {
+func (u *Updater) ListMirrorSources(lang string) ([]LocaleMirrorSource, *dbus.Error) {
 	return u.listMirrorSources(lang), nil
 }
 
-func (u Updater) listMirrorSources(lang string) []LocaleMirrorSource {
+func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	var raws []system.MirrorSource
 	system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
 

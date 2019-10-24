@@ -77,7 +77,7 @@ type aptCommand struct {
 	stderr bytes.Buffer
 }
 
-func (c aptCommand) String() string {
+func (c *aptCommand) String() string {
 	return fmt.Sprintf("AptCommand{id:%q, Cancelable:%v, CMD:%q}",
 		c.JobId, c.Cancelable, strings.Join(c.apt.Args, " "))
 }
