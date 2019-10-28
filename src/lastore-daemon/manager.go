@@ -59,8 +59,8 @@ type Manager struct {
 	AutoClean          bool
 	autoCleanCfgChange chan struct{}
 
-	inhibitFd         dbus.UnixFD
-	sourceUpdatedOnce bool
+	inhibitFd        dbus.UnixFD
+	updateSourceOnce bool
 
 	methods *struct {
 		FixError             func() `in:"errType" out:"job"`
@@ -109,11 +109,6 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	go m.jobManager.Dispatch()
 
 	m.updateJobList()
-
-	// Force notify changed at the first time
-	m.emitPropChangedSystemOnChanging(m.SystemOnChanging)
-	m.emitPropChangedJobList(m.JobList)
-	m.emitPropChangedUpgradableApps(m.UpgradableApps)
 
 	go m.loopCheck()
 	return m
@@ -182,9 +177,9 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	defer m.do.Unlock()
-
 	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("UpdatePackage %q error: %v\n", packages, err)
 	}
@@ -212,9 +207,6 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		return nil, err
 	}
 
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	lang := getUsedLang(environ)
 	if lang == "" {
 		log.Warn("failed to get lang")
@@ -241,7 +233,11 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
+
+	m.do.Lock()
 	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("installPackage %q error: %v\n", packages, err)
 	}
@@ -261,9 +257,9 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	defer m.do.Unlock()
-
 	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("removePackage %q error: %v\n", packages, err)
 	}
@@ -280,8 +276,19 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 }
 
 func (m *Manager) ensureUpdateSourceOnce() {
-	if !m.sourceUpdatedOnce {
-		m.UpdateSource()
+	m.do.Lock()
+	updateOnce := m.updateSourceOnce
+	m.do.Unlock()
+
+	if updateOnce {
+		return
+	}
+
+	if updateOnce {
+		_, err := m.updateSource()
+		if err != nil {
+			log.Warn(err)
+		}
 	}
 }
 
@@ -306,13 +313,14 @@ func (m *Manager) handleUpdateInfosChanged() {
 
 func (m *Manager) updateSource() (*Job, error) {
 	m.do.Lock()
-	defer m.do.Unlock()
-	m.sourceUpdatedOnce = true
-
+	m.updateSourceOnce = true
 	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil, nil)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("UpdateSource error: %v\n", err)
 	}
+
 	job.setHooks(map[string]func(){
 		string(system.EndStatus): m.handleUpdateInfosChanged,
 	})
@@ -360,21 +368,29 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 		return nil, err
 	}
 
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	m.updateJobList()
-	if len(m.UpgradableApps) == 0 {
+
+	m.PropsMu.RLock()
+	upgradableApps := m.UpgradableApps
+	m.PropsMu.RUnlock()
+	if len(upgradableApps) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, m.UpgradableApps, environ)
+	m.do.Lock()
+	defer m.do.Unlock()
+
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
 	if err != nil {
 		log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
 	}
 
-	m.cancelAllJob()
+	cancelErr := m.cancelAllJob()
+	if cancelErr != nil {
+		log.Warn(cancelErr)
+	}
+
 	return job, err
 }
 
@@ -388,20 +404,23 @@ func (m *Manager) PrepareDistUpgrade() (dbus.ObjectPath, *dbus.Error) {
 
 func (m *Manager) prepareDistUpgrade() (*Job, error) {
 	m.ensureUpdateSourceOnce()
-
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	m.updateJobList()
 
-	if len(m.UpgradableApps) == 0 {
+	m.PropsMu.RLock()
+	upgradableApps := m.UpgradableApps
+	m.PropsMu.RUnlock()
+
+	if len(upgradableApps) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
-	if s, err := system.QueryPackageDownloadSize(m.UpgradableApps...); err == nil && s == 0 {
+	if s, err := system.QueryPackageDownloadSize(upgradableApps...); err == nil && s == 0 {
 		return nil, system.NotFoundError("no need download")
 	}
 
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, m.UpgradableApps, nil)
+	m.do.Lock()
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("PrepareDistUpgrade error: %v\n", err)
 		return nil, err
@@ -411,9 +430,9 @@ func (m *Manager) prepareDistUpgrade() (*Job, error) {
 
 func (m *Manager) StartJob(jobId string) *dbus.Error {
 	m.do.Lock()
-	defer m.do.Unlock()
-
 	err := m.jobManager.MarkStart(jobId)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("StartJob %q error: %v\n", jobId, err)
 	}
@@ -422,9 +441,9 @@ func (m *Manager) StartJob(jobId string) *dbus.Error {
 
 func (m *Manager) PauseJob(jobId string) *dbus.Error {
 	m.do.Lock()
-	defer m.do.Unlock()
-
 	err := m.jobManager.PauseJob(jobId)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("PauseJob %q error: %v\n", jobId, err)
 	}
@@ -433,9 +452,9 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 
 func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	m.do.Lock()
-	defer m.do.Unlock()
-
 	err := m.jobManager.CleanJob(jobId)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("CleanJob %q error: %v\n", jobId, err)
 	}
@@ -444,9 +463,6 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 
 func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	m.ensureUpdateSourceOnce()
-
-	m.do.Lock()
-	defer m.do.Unlock()
 
 	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil || s == system.SizeUnknown {
@@ -491,7 +507,10 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 
 	m.AutoClean = enable
 	m.autoCleanCfgChange <- struct{}{}
-	m.emitPropChangedAutoClean(enable)
+	err = m.emitPropChangedAutoClean(enable)
+	if err != nil {
+		log.Warn(err)
+	}
 	return nil
 }
 
@@ -506,9 +525,6 @@ func (m *Manager) CleanArchives() (dbus.ObjectPath, *dbus.Error) {
 }
 
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	aptRunning, err := isAptRunning()
 	if err != nil {
 		return nil, err
@@ -524,12 +540,20 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 		jobName = "+notify"
 	}
 
+	m.do.Lock()
 	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("CleanArchives error: %v", err)
 		return nil, err
 	}
-	m.config.UpdateLastCleanTime()
+
+	err = m.config.UpdateLastCleanTime()
+	if err != nil {
+		return nil, err
+	}
+
 	return job, err
 }
 
@@ -605,9 +629,6 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 		return nil, err
 	}
 
-	m.do.Lock()
-	defer m.do.Unlock()
-
 	switch errType {
 	case system.ErrTypeDpkgInterrupted, system.ErrTypeDependenciesBroken:
 		// good error type
@@ -615,8 +636,11 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 		return nil, errors.New("invalid error type")
 	}
 
+	m.do.Lock()
 	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
 		[]string{errType}, environ)
+	m.do.Unlock()
+
 	if err != nil {
 		log.Warnf("fixError error: %v", err)
 		return nil, err

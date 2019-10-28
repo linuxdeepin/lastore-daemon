@@ -92,7 +92,10 @@ func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 	}
 	if changed {
 		m.UpgradableApps = apps
-		m.emitPropChangedUpgradableApps(apps)
+		err := m.emitPropChangedUpgradableApps(apps)
+		if err != nil {
+			log.Warn(err)
+		}
 	}
 }
 

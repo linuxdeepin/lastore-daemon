@@ -110,6 +110,18 @@ func main() {
 		return
 	}
 
+	// Force notify changed at the first time
+	manager.PropsMu.RLock()
+	err = manager.emitPropChangedJobList(manager.JobList)
+	if err != nil {
+		log.Warn(err)
+	}
+	err = manager.emitPropChangedUpgradableApps(manager.UpgradableApps)
+	if err != nil {
+		log.Warn(err)
+	}
+	manager.PropsMu.RUnlock()
+
 	log.Info("Started service at system bus")
 
 	RegisterMonitor(manager.handleUpdateInfosChanged, "update_infos.json")
