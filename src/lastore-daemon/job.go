@@ -63,7 +63,8 @@ type Job struct {
 
 	environ map[string]string
 
-	hooks map[string]func()
+	hooks   map[string]func()
+	hooksMu sync.Mutex
 }
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
@@ -212,4 +213,17 @@ func (j *Job) setError(e Error) {
 		return
 	}
 	j.setPropDescription(string(jsonBytes))
+}
+
+func (j *Job) getHook(name string) func() {
+	j.hooksMu.Lock()
+	fn := j.hooks[name]
+	j.hooksMu.Unlock()
+	return fn
+}
+
+func (j *Job) setHooks(hooks map[string]func()) {
+	j.hooksMu.Lock()
+	j.hooks = hooks
+	j.hooksMu.Unlock()
 }

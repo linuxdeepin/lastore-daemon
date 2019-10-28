@@ -313,9 +313,9 @@ func (m *Manager) updateSource() (*Job, error) {
 	if err != nil {
 		log.Warnf("UpdateSource error: %v\n", err)
 	}
-	job.hooks = map[string]func(){
+	job.setHooks(map[string]func(){
 		string(system.EndStatus): m.handleUpdateInfosChanged,
-	}
+	})
 	return job, err
 }
 
