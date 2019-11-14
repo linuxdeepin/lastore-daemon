@@ -97,7 +97,7 @@ func main() {
 	}
 
 	ihObj := inhibit_hint.New("lastore-daemon")
-	ihObj.SetIcon("dde-control-center")
+	ihObj.SetIcon("preferences-system")
 	ihObj.SetName(Tr("Control Center"))
 	err = ihObj.Export(service)
 	if err != nil {
