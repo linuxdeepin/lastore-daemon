@@ -120,7 +120,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
-		sh := "apt-get -y -o APT::Status-Fd=3 -o Dir::Etc::sourceparts=/var/lib/lastore/source.d update && /var/lib/lastore/scripts/build_system_info -now"
+		sh := "apt-get -y -o APT::Status-Fd=3 update && /var/lib/lastore/scripts/build_system_info -now"
 		return exec.Command("/bin/sh", "-c", sh)
 
 	case system.CleanJobType:
