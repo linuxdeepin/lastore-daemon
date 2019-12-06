@@ -73,8 +73,9 @@ type aptCommand struct {
 
 	indicator system.Indicator
 
-	stdout bytes.Buffer
-	stderr bytes.Buffer
+	stdout   bytes.Buffer
+	stderr   bytes.Buffer
+	atExitFn func() bool
 }
 
 func (c *aptCommand) String() string {
@@ -224,12 +225,22 @@ const (
 )
 
 func (c *aptCommand) atExit() {
-	c.aptPipe.Close()
+	err := c.aptPipe.Close()
+	if err != nil {
+		log.Warn("failed to close pipe:", err)
+	}
 
 	log.Infof("job %s stdout: %s", c.JobId, c.stdout.Bytes())
 	log.Infof("job %s stderr: %s", c.JobId, c.stderr.Bytes())
 
 	c.cmdSet.RemoveCMD(c.JobId)
+
+	if c.atExitFn != nil {
+		shouldReturn := c.atExitFn()
+		if shouldReturn {
+			return
+		}
+	}
 
 	switch c.exitCode {
 	case ExitSuccess:

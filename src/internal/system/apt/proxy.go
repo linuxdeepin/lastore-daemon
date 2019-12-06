@@ -356,6 +356,15 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string) error {
 
 func (p *APTSystem) UpdateSource(jobId string) error {
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
+	c.atExitFn = func() bool {
+		if c.exitCode == ExitSuccess &&
+			bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
+
+			c.indicateFailed("IndexDownloadFailed", c.stderr.String(), false)
+			return true
+		}
+		return false
+	}
 	return c.Start()
 }
 
