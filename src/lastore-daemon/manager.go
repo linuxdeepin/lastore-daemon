@@ -20,11 +20,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
+
+	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 
 	"internal/system"
 	"internal/utils"
@@ -61,6 +65,8 @@ type Manager struct {
 
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
+
+	apps *apps.Apps
 
 	methods *struct {
 		FixError             func() `in:"errType" out:"job"`
@@ -104,6 +110,8 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
 	}
+	sysBus := service.Conn()
+	m.apps = apps.NewApps(sysBus)
 
 	m.jobManager = NewJobManager(service, b, m.updateJobList)
 	go m.jobManager.Dispatch()
@@ -244,13 +252,50 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	return job, err
 }
 
+func listPackageDesktopFiles(pkg string) []string {
+	var result []string
+	filenames := system.ListPackageFile(pkg)
+	for _, filename := range filenames {
+		if strings.HasPrefix(filename, "/usr/") {
+			// len /usr/ is 5
+			if strings.HasSuffix(filename, ".desktop") &&
+				(strings.HasPrefix(filename[5:], "share/applications") ||
+					strings.HasPrefix(filename[5:], "local/share/applications")) {
+
+				fileInfo, err := os.Stat(filename)
+				if err != nil {
+					continue
+				}
+				if fileInfo.IsDir() {
+					continue
+				}
+				if !utf8.ValidString(filename) {
+					continue
+				}
+				result = append(result, filename)
+			}
+		}
+	}
+	return result
+}
+
 func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	m.ensureUpdateSourceOnce()
+	if len(pkgs) == 1 {
+		desktopFiles := listPackageDesktopFiles(pkgs[0])
+		if len(desktopFiles) > 0 {
+			err = m.apps.UninstallHints(0, desktopFiles)
+			if err != nil {
+				log.Warnf("call UninstallHints(desktopFiles: %v) error: %v",
+					desktopFiles, err)
+			}
+		}
+	}
+
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
