@@ -31,7 +31,7 @@ var DefaultConfig = Config{
 	CleanInterval:         time.Hour * 48,
 	AutoCheckUpdates:      true,
 	DisableUpdateMetadata: false,
-	AutoDownloadUpdates:   false,
+	AutoDownloadUpdates:   true,
 	AutoClean:             true,
 	MirrorsUrl:            system.DefaultMirrorsUrl,
 }
