@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-23 13:30+0800\n"
+"POT-Creation-Date: 2019-12-12 18:42+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: ../src/lastore-daemon/inhibitor.go:31
-msgid "Updating the system, please shut down or reboot later."
+msgid "Updating the system, please do not shut down or reboot now."
 msgstr ""
 
 #: ../src/lastore-daemon/main.go:101

@@ -28,7 +28,7 @@ import (
 func (m *Manager) updateSystemOnChaning(onChanging bool) {
 	if onChanging && m.inhibitFd == -1 {
 		fd, err := Inhibitor("shutdown", dbusServiceName,
-			Tr("Updating the system, please shut down or reboot later."))
+			Tr("Updating the system, please do not shut down or reboot now."))
 		log.Infof("Prevent shutdown...: fd:%v\n", fd)
 		if err != nil {
 			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
