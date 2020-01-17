@@ -113,7 +113,7 @@ func (l *JobQueue) RunningJobs() JobList {
 		job.PropsMu.Lock()
 		status := job.Status
 		job.PropsMu.Unlock()
-		if status == system.EndStatus {
+		if status == system.ReadyStatus || status == system.RunningStatus {
 			r = append(r, job)
 		}
 	}

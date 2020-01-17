@@ -329,11 +329,9 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	if updateOnce {
-		_, err := m.updateSource()
-		if err != nil {
-			log.Warn(err)
-		}
+	_, err := m.updateSource()
+	if err != nil {
+		log.Warn(err)
 	}
 }
 
