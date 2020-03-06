@@ -33,11 +33,22 @@ import (
 	"internal/system"
 	"internal/utils"
 
-	"pkg.deepin.io/lib/dbus1"
+	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/procfs"
+	"pkg.deepin.io/lib/strv"
 
 	log "github.com/cihub/seelog"
+)
+
+var (
+	allowInstallPackageExecPaths = strv.Strv{
+		"/usr/bin/deepin-app-store-daemon",
+	}
+	allowRemovePackageExecPaths = strv.Strv{
+		"/usr/bin/deepin-app-store-daemon",
+		"/usr/lib/deepin-daemon/dde-session-daemon",
+	}
 )
 
 type Manager struct {
@@ -172,6 +183,20 @@ func getLang(envVars procfs.EnvVars) string {
 	return ""
 }
 
+func (m *Manager) getExecutablePath(sender dbus.Sender) (string, error) {
+	pid, err := m.service.GetConnPID(string(sender))
+	if err != nil {
+		return "", err
+	}
+
+	execPath, err := procfs.Process(pid).Exe()
+	if err != nil {
+		return "", err
+	}
+
+	return execPath, nil
+}
+
 func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
@@ -232,6 +257,18 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
 	*dbus.Error) {
+	execPath, err := m.getExecutablePath(sender)
+	if err != nil {
+		log.Warn(err)
+		return "/", dbusutil.ToError(err)
+	}
+
+	if !allowInstallPackageExecPaths.Contains(execPath) {
+		err = fmt.Errorf("%q is not allowed to install packages", execPath)
+		log.Warn(err)
+		return "/", dbusutil.ToError(err)
+	}
+
 	job, err := m.installPackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -313,6 +350,18 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 
 func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
 	*dbus.Error) {
+	execPath, err := m.getExecutablePath(sender)
+	if err != nil {
+		log.Warn(err)
+		return "/", dbusutil.ToError(err)
+	}
+
+	if !allowRemovePackageExecPaths.Contains(execPath) {
+		err = fmt.Errorf("%q is not allowed to remove packages", execPath)
+		log.Warn(err)
+		return "/", dbusutil.ToError(err)
+	}
+
 	job, err := m.removePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
