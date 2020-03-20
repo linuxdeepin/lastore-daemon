@@ -12,13 +12,13 @@ function systemd_update_metadata_info()
 
 function update_metadata_info_now()
 {
-    remote=$(cat /var/lib/lastore/scripts/metadata_remote)
-    fix_remote_url $remote
-    /usr/bin/lastore-tools metadata -u --remote=$remote
+    #remote=$(cat /var/lib/lastore/scripts/metadata_remote)
+    #fix_remote_url $remote
+    #/usr/bin/lastore-tools metadata -u --remote=$remote
     /usr/bin/lastore-tools update -r desktop -j applications -o /var/lib/lastore/applications.json
-    /usr/bin/lastore-tools update -r desktop -j categories -o /var/lib/lastore/categories.json
-    /usr/bin/lastore-tools update -r desktop -j xcategories -o /var/lib/lastore/xcategories.json
-    /usr/bin/lastore-tools update -r desktop -j mirrors -o /var/lib/lastore/mirrors.json
+    #/usr/bin/lastore-tools update -r desktop -j categories -o /var/lib/lastore/categories.json
+    #/usr/bin/lastore-tools update -r desktop -j xcategories -o /var/lib/lastore/xcategories.json
+    #/usr/bin/lastore-tools update -r desktop -j mirrors -o /var/lib/lastore/mirrors.json
 }
 
 function fix_remote_url()
