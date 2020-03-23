@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	appstoreConfPath        = "/usr/share/deepin-appstore/settings.ini"
-	appstoreConfPathDefault = "/usr/share/deepin-appstore/settings.ini.default"
+	appstoreConfPath        = "/usr/share/deepin-app-store/settings.ini"
+	appstoreConfPathDefault = "/usr/share/deepin-app-store/settings.ini.default"
 )
 
 type Store struct {
@@ -33,9 +33,9 @@ func NewStore() *Store {
 }
 
 func (s *Store) GetMetadataServer() string {
-	metadataServer := s.sysCfg.Section("General").Key("MetadataServer").String()
+	metadataServer := s.sysCfg.Section("General").Key("Server").String()
 	if metadataServer == "" {
-		metadataServer = "https://dstore-metadata.deepin.cn"
+		metadataServer = "https://store.chinauos.com"
 	}
 	return metadataServer
 }
@@ -66,7 +66,7 @@ type packageApps map[string]*PackageInfo
 func (s *Store) GetPackageApplication(path string) (v []*PackageInfo, err error) {
 	// cachePath := filepath.Join(system.VarLibDir, "packages.cache.json")
 	cachePath := path + ".cache.json"
-	apiAppURL := s.GetMetadataServer() + "/api/v3/packages"
+	apiAppURL := s.GetMetadataServer() + "/api/public/packages"
 
 	packages := make(packageApps)
 	err = cacheFetchJSON(&packages, apiAppURL, cachePath, expireDelay)

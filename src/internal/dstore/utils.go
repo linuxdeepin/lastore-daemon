@@ -28,6 +28,7 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 
 	client := http.DefaultClient
 	request, err := http.NewRequest("GET", url, nil)
+	request.Header.Set("User-Agent", "lastore-tools")
 	request.Header.Add("Accept-Encoding", "gzip")
 	if fi != nil {
 		request.Header.Add("If-Modified-Since", fi.ModTime().Format(time.RFC1123))
