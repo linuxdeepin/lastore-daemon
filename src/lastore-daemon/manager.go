@@ -44,6 +44,7 @@ import (
 var (
 	allowInstallPackageExecPaths = strv.Strv{
 		"/usr/bin/deepin-app-store-daemon",
+		"/usr/bin/dde-printer",
 	}
 	allowRemovePackageExecPaths = strv.Strv{
 		"/usr/bin/deepin-app-store-daemon",
