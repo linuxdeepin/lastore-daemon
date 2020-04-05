@@ -23,6 +23,7 @@ package system
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"internal/utils"
 	"os"
@@ -89,17 +90,12 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 
 // QueryPackageInstalled query whether the pkgId installed
 func QueryPackageInstalled(pkgId string) bool {
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", "--", pkgId).CombinedOutput()
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${db:Status-Status}", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return false
 	}
-	if strings.Contains(string(out), "ok not-installed") {
-		return false
-	} else if strings.Contains(string(out), "install ok installed") {
-		return true
-	}
-	return false
-
+	status := string(bytes.TrimSpace(out))
+	return status == "installed"
 }
 
 // QueryPackageInstallable query whether the pkgId can be installed
