@@ -41,6 +41,17 @@ import (
 	log "github.com/cihub/seelog"
 )
 
+const (
+	UserExperServiceName = "com.deepin.userexperience.Daemon"
+	UserExperPath = "/com/deepin/userexperience/Daemon"
+	UserLogonMsg = "logon"
+	UserLogoutMsg = "logout"
+	UserShutdownMsg = "shutdown"
+
+	UserExperInstallApp = "installapp"
+	UserExperUninstallApp = "uninstallapp"
+)
+
 var (
 	allowInstallPackageExecPaths = strv.Strv{
 		"/usr/bin/deepin-app-store-daemon",
@@ -279,6 +290,22 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	return job.getPath(), nil
 }
 
+
+func sendInstallMsgToUserExperModule(msg, path, name, id string) {
+	bus, err := dbus.SystemBus()
+	if err == nil {
+		userexp := bus.Object(UserExperServiceName, UserExperPath)
+		err = userexp.Call(UserExperServiceName + ".SendAppInstallData", 0, msg, path, name, id).Err
+		if err != nil {
+			log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
+		} else {
+			log.Debugf("send %s message to ue module", msg)
+		}
+	} else {
+		log.Warn(err)
+	}
+}
+
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
 
@@ -289,6 +316,18 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	if err != nil {
 		log.Warnf("installPackage %q error: %v\n", packages, err)
 	}
+
+	if job != nil {
+		job.setHooks(map[string]func(){
+			string(system.SucceedStatus): func() {
+				for _, pkg := range job.Packages {
+					log.Debugf("install app %s success, notify ue module", pkg)
+					sendInstallMsgToUserExperModule(UserExperInstallApp, "", jobName, pkg)
+				}
+			},
+		})
+	}
+
 	return job, err
 }
 
@@ -344,6 +383,17 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	m.do.Lock()
 	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	m.do.Unlock()
+
+	if job != nil {
+		job.setHooks(map[string]func(){
+			string(system.SucceedStatus): func() {
+				for _, pkg := range job.Packages {
+					log.Debugf("uninstall app %s success, notify ue module", pkg)
+					sendInstallMsgToUserExperModule(UserExperUninstallApp, "",jobName, pkg)
+				}
+			},
+		})
+	}
 
 	if err != nil {
 		log.Warnf("removePackage %q error: %v\n", packages, err)
