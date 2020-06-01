@@ -25,23 +25,26 @@ import (
 )
 
 const MinCheckInterval = time.Minute
-
+const ConfigVersion = "0.1"
 var DefaultConfig = Config{
-	CheckInterval:         time.Minute * 180,
-	CleanInterval:         time.Hour * 48,
+	CheckInterval:         time.Hour * 24 * 7,
+	CleanInterval:         time.Hour * 24 * 7,
 	AutoCheckUpdates:      true,
 	DisableUpdateMetadata: false,
 	AutoDownloadUpdates:   false,
+	UpdateNotify:          false,
 	AutoClean:             true,
 	MirrorsUrl:            system.DefaultMirrorsUrl,
 }
 
 type Config struct {
+	Version               string
 	AutoCheckUpdates      bool
 	DisableUpdateMetadata bool
 	AutoDownloadUpdates   bool
 	AutoClean             bool
 	MirrorSource          string
+	UpdateNotify          bool
 	CheckInterval         time.Duration
 	CleanInterval         time.Duration
 	AppstoreRegion        string
@@ -69,7 +72,18 @@ func NewConfig(fpath string) *Config {
 		c.Repository = info.Name
 		c.MirrorSource = "default" //info.Mirror
 	}
+	if c.Version == "" {
+		c.UpdateCheckAndCleanInterval(time.Hour * 24 * 7, time.Hour * 24 * 7)
+	}
+
 	return &c
+}
+
+func (c *Config) UpdateCheckAndCleanInterval(checkInterval time.Duration, cleanInterval time.Duration) error {
+	c.Version = ConfigVersion
+	c.CheckInterval = checkInterval
+	c.CleanInterval = cleanInterval
+	return c.save()
 }
 
 func (c *Config) UpdateLastCheckTime() error {
@@ -84,6 +98,11 @@ func (c *Config) UpdateLastCleanTime() error {
 
 func (c *Config) SetAutoCheckUpdates(enable bool) error {
 	c.AutoCheckUpdates = enable
+	return c.save()
+}
+
+func (c *Config) SetUpdateNotify(enable bool) error {
+	c.UpdateNotify = enable
 	return c.save()
 }
 

@@ -65,6 +65,8 @@ var (
 	}
 )
 
+const MaxCacheSize = 500.0 //size MB
+
 type Manager struct {
 	service *dbusutil.Service
 	do      sync.Mutex
@@ -162,6 +164,8 @@ func NormalizePackageNames(s string) ([]string, error) {
 	}
 	return pkgNames, nil
 }
+
+
 
 func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[string]string, error) {
 	environ := make(map[string]string)
@@ -717,7 +721,7 @@ func isAptRunning() (bool, error) {
 
 func (m *Manager) loopCheck() {
 	m.autoCleanCfgChange = make(chan struct{})
-	const checkInterval = time.Second * 100
+	const checkInterval = time.Second * 600
 
 	doClean := func() {
 		log.Debug("call doClean")
@@ -747,9 +751,12 @@ func (m *Manager) loopCheck() {
 			continue
 		case <-time.After(checkInterval):
 			if m.AutoClean {
+				cachePath, _ := system.GetArchivesDir()
+				cacheSize, _ := system.QueryFileCacheSize(cachePath)
+				cacheSize = cacheSize / 1024.0 // kb to mb
 				remaining := calcRemainingDuration()
 				log.Debugf("auto clean remaining duration: %v", remaining)
-				if remaining < 0 {
+				if remaining < 0  || cacheSize > MaxCacheSize {
 					doClean()
 				}
 			} else {

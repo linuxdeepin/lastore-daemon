@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"internal/system"
 	"io/ioutil"
 	"log"
 	"os"
@@ -43,7 +44,7 @@ func main() {
 
 	os.Setenv("LC_ALL", "C")
 
-	archivesDir, err := getArchivesDir()
+	archivesDir, err := system.GetArchivesDir()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,53 +83,6 @@ func main() {
 			log.Println("keep")
 		}
 	}
-}
-
-/*
-$ apt-config --format '%f=%v%n' dump  Dir
-Dir=/
-Dir::Cache=var/cache/apt
-Dir::Cache::archives=archives/
-Dir::Cache::srcpkgcache=srcpkgcache.bin
-Dir::Cache::pkgcache=pkgcache.bin
-*/
-func getArchivesDir() (string, error) {
-	output, err := exec.Command(binAptConfig, "--format", "%f=%v%n", "dump", "Dir").Output()
-	if err != nil {
-		return "", err
-	}
-	lines := strings.Split(string(output), "\n")
-	tempMap := make(map[string]string)
-	fieldsCount := 0
-loop:
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			switch parts[0] {
-			case "Dir", "Dir::Cache", "Dir::Cache::archives":
-				tempMap[parts[0]] = parts[1]
-				fieldsCount++
-				if fieldsCount == 3 {
-					break loop
-				}
-			}
-		}
-	}
-	dir := tempMap["Dir"]
-	if dir == "" {
-		return "", errors.New("apt-config Dir is empty")
-	}
-
-	dirCache := tempMap["Dir::Cache"]
-	if dirCache == "" {
-		return "", errors.New("apt-config Dir::Cache is empty")
-	}
-	dirCacheArchives := tempMap["Dir::Cache::archives"]
-	if dirCacheArchives == "" {
-		return "", errors.New("apt-config Dir::Cache::Archives is empty")
-	}
-
-	return filepath.Join(dir, dirCache, dirCacheArchives), nil
 }
 
 type DeletePolicy uint
