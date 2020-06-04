@@ -481,6 +481,7 @@ func (m *Manager) UpdateSource() (dbus.ObjectPath, *dbus.Error) {
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
+	m.config.UpdateLastCheckTime()
 	return job.getPath(), nil
 }
 
