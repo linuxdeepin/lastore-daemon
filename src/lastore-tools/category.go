@@ -84,6 +84,7 @@ func genApplications(v []*dstore.PackageInfo, fpath string) error {
 	for _, app := range v {
 		appInfo := &dstore.AppInfo{
 			Category:    app.Category,
+			Name:        app.Name,
 			PackageName: app.PackageName,
 		}
 
@@ -94,7 +95,7 @@ func genApplications(v []*dstore.PackageInfo, fpath string) error {
 			appInfo.LocaleName[localeCode] = localizedName
 		}
 
-		apps[app.Name] = appInfo
+		apps[app.PackageName] = appInfo
 	}
 
 	return writeData(fpath, apps)

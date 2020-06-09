@@ -42,6 +42,7 @@ func (s *Store) GetMetadataServer() string {
 
 type AppInfo struct {
 	Category    string            `json:"category"`
+	Name        string            `json:"name"`
 	PackageName string            `json:"package_name"`
 	LocaleName  map[string]string `json:"locale_name"`
 }
