@@ -23,6 +23,8 @@ import (
 
 	"pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
+
+	log "github.com/cihub/seelog"
 )
 
 type ApplicationInfo struct {
@@ -84,6 +86,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, 
 		}
 		r = append(r, info)
 	}
+	log.Info("ApplicationUpdateInfos: ", r)
 	return r, nil
 }
 
