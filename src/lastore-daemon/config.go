@@ -31,8 +31,8 @@ var DefaultConfig = Config{
 	CleanInterval:         time.Hour * 24 * 7,
 	AutoCheckUpdates:      true,
 	DisableUpdateMetadata: false,
-	AutoDownloadUpdates:   false,
-	UpdateNotify:          false,
+	AutoDownloadUpdates:   true,
+	UpdateNotify:          true,
 	AutoClean:             true,
 	MirrorsUrl:            system.DefaultMirrorsUrl,
 }
@@ -73,17 +73,12 @@ func NewConfig(fpath string) *Config {
 		c.MirrorSource = "default" //info.Mirror
 	}
 	if c.Version == "" {
-		c.UpdateCheckAndCleanInterval(time.Hour * 24 * 7, time.Hour * 24 * 7)
+		c.Version = ConfigVersion
+		c.CheckInterval = time.Hour * 24 * 7
+		c.CleanInterval = time.Hour * 24 * 7
+		c.save()
 	}
-
 	return &c
-}
-
-func (c *Config) UpdateCheckAndCleanInterval(checkInterval time.Duration, cleanInterval time.Duration) error {
-	c.Version = ConfigVersion
-	c.CheckInterval = checkInterval
-	c.CleanInterval = cleanInterval
-	return c.save()
 }
 
 func (c *Config) UpdateLastCheckTime() error {
