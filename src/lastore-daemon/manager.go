@@ -43,12 +43,12 @@ import (
 
 const (
 	UserExperServiceName = "com.deepin.userexperience.Daemon"
-	UserExperPath = "/com/deepin/userexperience/Daemon"
-	UserLogonMsg = "logon"
-	UserLogoutMsg = "logout"
-	UserShutdownMsg = "shutdown"
+	UserExperPath        = "/com/deepin/userexperience/Daemon"
+	UserLogonMsg         = "logon"
+	UserLogoutMsg        = "logout"
+	UserShutdownMsg      = "shutdown"
 
-	UserExperInstallApp = "installapp"
+	UserExperInstallApp   = "installapp"
 	UserExperUninstallApp = "uninstallapp"
 )
 
@@ -164,8 +164,6 @@ func NormalizePackageNames(s string) ([]string, error) {
 	}
 	return pkgNames, nil
 }
-
-
 
 func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[string]string, error) {
 	environ := make(map[string]string)
@@ -294,12 +292,11 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	return job.getPath(), nil
 }
 
-
 func sendInstallMsgToUserExperModule(msg, path, name, id string) {
 	bus, err := dbus.SystemBus()
 	if err == nil {
 		userexp := bus.Object(UserExperServiceName, UserExperPath)
-		err = userexp.Call(UserExperServiceName + ".SendAppInstallData", 0, msg, path, name, id).Err
+		err = userexp.Call(UserExperServiceName+".SendAppInstallData", 0, msg, path, name, id).Err
 		if err != nil {
 			log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
 		} else {
@@ -393,7 +390,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 			string(system.SucceedStatus): func() {
 				for _, pkg := range job.Packages {
 					log.Debugf("uninstall app %s success, notify ue module", pkg)
-					sendInstallMsgToUserExperModule(UserExperUninstallApp, "",jobName, pkg)
+					sendInstallMsgToUserExperModule(UserExperUninstallApp, "", jobName, pkg)
 				}
 			},
 		})
@@ -703,6 +700,10 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = m.config.UpdateLastCheckCacheSizeTime()
+	if err != nil {
+		return nil, err
+	}
 
 	return job, err
 }
@@ -745,6 +746,15 @@ func (m *Manager) loopCheck() {
 		return m.config.CleanInterval - elapsed
 	}
 
+	calcRemainingCheckCacheSizeDuration := func() time.Duration {
+		elapsed := time.Since(m.config.LastCheckCacheSizeTime)
+		if elapsed < 0 {
+			// now time < last check cache size time : last check cache size time (from config) is invalid
+			return -1
+		}
+		return m.config.CheckCacheSizeInterval - elapsed
+	}
+
 	for {
 		select {
 		case <-m.autoCleanCfgChange:
@@ -756,8 +766,9 @@ func (m *Manager) loopCheck() {
 				cacheSize, _ := system.QueryFileCacheSize(cachePath)
 				cacheSize = cacheSize / 1024.0 // kb to mb
 				remaining := calcRemainingDuration()
+				remainingCheckCacheSize := calcRemainingCheckCacheSizeDuration()
 				log.Debugf("auto clean remaining duration: %v", remaining)
-				if remaining < 0  || cacheSize > MaxCacheSize {
+				if remaining < 0 || (remainingCheckCacheSize < 0 && cacheSize > MaxCacheSize) {
 					doClean()
 				}
 			} else {

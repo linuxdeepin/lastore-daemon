@@ -26,32 +26,36 @@ import (
 
 const MinCheckInterval = time.Minute
 const ConfigVersion = "0.1"
+
 var DefaultConfig = Config{
-	CheckInterval:         time.Hour * 24 * 7,
-	CleanInterval:         time.Hour * 24 * 7,
-	AutoCheckUpdates:      true,
-	DisableUpdateMetadata: false,
-	AutoDownloadUpdates:   true,
-	UpdateNotify:          true,
-	AutoClean:             true,
-	MirrorsUrl:            system.DefaultMirrorsUrl,
+	CheckInterval:           time.Hour * 24 * 7,
+	CleanInterval:           time.Hour * 24 * 7,
+	CheckCacheSizeInterval:  time.Hour * 24,
+	AutoCheckUpdates:        true,
+	DisableUpdateMetadata:   false,
+	AutoDownloadUpdates:     true,
+	UpdateNotify:            true,
+	AutoClean:               true,
+	MirrorsUrl:              system.DefaultMirrorsUrl,
 }
 
 type Config struct {
-	Version               string
-	AutoCheckUpdates      bool
-	DisableUpdateMetadata bool
-	AutoDownloadUpdates   bool
-	AutoClean             bool
-	MirrorSource          string
-	UpdateNotify          bool
-	CheckInterval         time.Duration
-	CleanInterval         time.Duration
-	AppstoreRegion        string
-	LastCheckTime         time.Time
-	LastCleanTime         time.Time
-	Repository            string
-	MirrorsUrl            string
+	Version                 string
+	AutoCheckUpdates        bool
+	DisableUpdateMetadata   bool
+	AutoDownloadUpdates     bool
+	AutoClean               bool
+	MirrorSource            string
+	UpdateNotify            bool
+	CheckInterval           time.Duration
+	CleanInterval           time.Duration
+	CheckCacheSizeInterval  time.Duration
+	AppstoreRegion          string
+	LastCheckTime           time.Time
+	LastCleanTime           time.Time
+	LastCheckCacheSizeTime  time.Time
+	Repository              string
+	MirrorsUrl              string
 
 	filePath string
 }
@@ -88,6 +92,11 @@ func (c *Config) UpdateLastCheckTime() error {
 
 func (c *Config) UpdateLastCleanTime() error {
 	c.LastCleanTime = time.Now()
+	return c.save()
+}
+
+func (c *Config) UpdateLastCheckCacheSizeTime() error {
+	c.LastCheckCacheSizeTime = time.Now()
 	return c.save()
 }
 
