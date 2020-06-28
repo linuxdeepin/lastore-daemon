@@ -746,13 +746,13 @@ func (m *Manager) loopCheck() {
 		return m.config.CleanInterval - elapsed
 	}
 
-	calcRemainingCheckCacheSizeDuration := func() time.Duration {
+	calcRemainingCleanCacheOverLimitDuration := func() time.Duration {
 		elapsed := time.Since(m.config.LastCheckCacheSizeTime)
 		if elapsed < 0 {
 			// now time < last check cache size time : last check cache size time (from config) is invalid
 			return -1
 		}
-		return m.config.CheckCacheSizeInterval - elapsed
+		return m.config.CleanIntervalCacheOverLimit - elapsed
 	}
 
 	for {
@@ -762,14 +762,22 @@ func (m *Manager) loopCheck() {
 			continue
 		case <-time.After(checkInterval):
 			if m.AutoClean {
+				remaining := calcRemainingDuration()
+				log.Debugf("auto clean remaining duration: %v", remaining)
+				if remaining < 0 {
+					doClean()
+					continue
+				}
+
 				cachePath, _ := system.GetArchivesDir()
 				cacheSize, _ := system.QueryFileCacheSize(cachePath)
 				cacheSize = cacheSize / 1024.0 // kb to mb
-				remaining := calcRemainingDuration()
-				remainingCheckCacheSize := calcRemainingCheckCacheSizeDuration()
-				log.Debugf("auto clean remaining duration: %v", remaining)
-				if remaining < 0 || (remainingCheckCacheSize < 0 && cacheSize > MaxCacheSize) {
-					doClean()
+				if cacheSize > MaxCacheSize {
+					remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
+					log.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
+					if remainingCleanCacheOverLimitDuration < 0 {
+						doClean()
+					}
 				}
 			} else {
 				log.Debug("auto clean disabled")

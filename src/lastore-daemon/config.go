@@ -28,9 +28,9 @@ const MinCheckInterval = time.Minute
 const ConfigVersion = "0.1"
 
 var DefaultConfig = Config{
-	CheckInterval:           time.Hour * 24 * 7,
-	CleanInterval:           time.Hour * 24 * 7,
-	CheckCacheSizeInterval:  time.Hour * 24,
+	CheckInterval:                time.Hour * 24 * 7,
+	CleanInterval:                time.Hour * 24 * 7,
+	CleanIntervalCacheOverLimit:  time.Hour * 24,
 	AutoCheckUpdates:        true,
 	DisableUpdateMetadata:   false,
 	AutoDownloadUpdates:     true,
@@ -47,9 +47,11 @@ type Config struct {
 	AutoClean               bool
 	MirrorSource            string
 	UpdateNotify            bool
-	CheckInterval           time.Duration
-	CleanInterval           time.Duration
-	CheckCacheSizeInterval  time.Duration
+	CheckInterval                time.Duration
+	CleanInterval                time.Duration
+	
+	// 缓存大小超出限制时的清理时间间隔
+	CleanIntervalCacheOverLimit  time.Duration
 	AppstoreRegion          string
 	LastCheckTime           time.Time
 	LastCleanTime           time.Time

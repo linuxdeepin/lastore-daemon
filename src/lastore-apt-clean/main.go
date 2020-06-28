@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"internal/system"
 	"io/ioutil"
@@ -34,7 +35,16 @@ func mustGetBin(name string) string {
 	return file
 }
 
+var options struct {
+	forceDelete bool
+}
+
+func init() {
+	flag.BoolVar(&options.forceDelete, "force-delete", false, "force delete deb files")
+}
+
 func main() {
+	flag.Parse()
 	log.SetFlags(log.Lshortfile)
 	binDpkg = mustGetBin("dpkg")
 	binDpkgQuery = mustGetBin("dpkg-query")
@@ -73,14 +83,22 @@ func main() {
 		case DeleteImmediately:
 			deleteDeb(archivesDir, fileInfo.Name())
 		case DeleteExpired:
-			debChangeTime := getChangeTime(fileInfo)
-			if time.Since(debChangeTime) > maxElapsed {
+		    if options.forceDelete {
+		        deleteDeb(archivesDir, fileInfo.Name())
+		    } else {
+    			debChangeTime := getChangeTime(fileInfo)
+    			if time.Since(debChangeTime) > maxElapsed {
+    				deleteDeb(archivesDir, fileInfo.Name())
+    			} else {
+    				log.Println("delete later")
+    			}
+		    }
+		case Keep:
+			if options.forceDelete {
 				deleteDeb(archivesDir, fileInfo.Name())
 			} else {
-				log.Println("delete later")
+				log.Println("keep")
 			}
-		case Keep:
-			log.Println("keep")
 		}
 	}
 }
