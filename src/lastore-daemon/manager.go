@@ -432,7 +432,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	_, err := m.updateSource()
+	_, err := m.updateSource(true)
 	if err != nil {
 		log.Warn(err)
 	}
@@ -457,10 +457,14 @@ func (m *Manager) handleUpdateInfosChanged() {
 	}
 }
 
-func (m *Manager) updateSource() (*Job, error) {
+func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	m.do.Lock()
 	m.updateSourceOnce = true
-	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil, nil)
+	var jobName string
+	if needNotify {
+		jobName = "+notify"
+	}
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -474,7 +478,7 @@ func (m *Manager) updateSource() (*Job, error) {
 }
 
 func (m *Manager) UpdateSource() (dbus.ObjectPath, *dbus.Error) {
-	job, err := m.updateSource()
+	job, err := m.updateSource(false)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}

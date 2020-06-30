@@ -79,9 +79,23 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		UpdateNotify:        config.UpdateNotify,
 	}
 
+	go u.waitOnlineCheck()
 	go u.loopCheck()
 	return u
 }
+
+func (u *Updater) waitOnlineCheck() {
+	if u.AutoCheckUpdates {
+		err := exec.Command("nm-online", "-t", "3600").Run()
+		if err == nil {
+			_, err = u.manager.updateSource(true)
+			if err != nil {
+				log.Warn(err)
+			}
+		}
+	}
+}
+
 
 func (u *Updater) loopCheck() {
 	startUpdateMetadataInfoService := func() {
@@ -109,7 +123,10 @@ func (u *Updater) loopCheck() {
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
-			u.manager.updateSource()
+			_, err := u.manager.updateSource(true)
+			if err != nil {
+				log.Warn(err)
+			}
 		}
 
 		if !u.config.DisableUpdateMetadata {
