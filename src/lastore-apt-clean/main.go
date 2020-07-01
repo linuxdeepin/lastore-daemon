@@ -114,7 +114,7 @@ const (
 func shouldDelete(dir string, fileInfo os.FileInfo) (DeletePolicy, error) {
 	debInfo, err := getDebInfo(filepath.Join(dir, fileInfo.Name()))
 	if err != nil {
-		return DeleteExpired, err
+		return DeleteImmediately, err
 	}
 	log.Printf("%#v\n", debInfo)
 
