@@ -58,13 +58,13 @@ type Updater struct {
 	UpdatablePackages []string
 
 	methods *struct {
-		ListMirrorSources          func() `in:"lang" out:"mirrorSources"`
-		SetMirrorSource            func() `in:"id"`
-		SetAutoCheckUpdates        func() `in:"enable"`
-		SetAutoDownloadUpdates     func() `in:"enable"`
-		ApplicationUpdateInfos     func() `in:"lang" out:"updateInfos"`
-		GetCheckIntervalAndTime    func() `out:"interval,checkTime"`
-		SetUpdateNotify            func() `in:"enable"`
+		ListMirrorSources       func() `in:"lang" out:"mirrorSources"`
+		SetMirrorSource         func() `in:"id"`
+		SetAutoCheckUpdates     func() `in:"enable"`
+		SetAutoDownloadUpdates  func() `in:"enable"`
+		ApplicationUpdateInfos  func() `in:"lang" out:"updateInfos"`
+		GetCheckIntervalAndTime func() `out:"interval,checkTime"`
+		SetUpdateNotify         func() `in:"enable"`
 	}
 }
 
@@ -95,7 +95,6 @@ func (u *Updater) waitOnlineCheck() {
 		}
 	}
 }
-
 
 func (u *Updater) loopCheck() {
 	startUpdateMetadataInfoService := func() {
@@ -150,15 +149,16 @@ func (u *Updater) SetMirrorSource(id string) *dbus.Error {
 }
 
 func (u *Updater) setMirrorSource(id string) error {
-	if u.MirrorSource == id {
+	if id == "" || u.MirrorSource == id {
 		return nil
 	}
 
+	found := false
 	for _, m := range u.listMirrorSources("") {
 		if m.Id != id {
 			continue
 		}
-
+		found = true
 		if m.Url == "" {
 			return system.NotFoundError("empty url")
 		}
@@ -167,7 +167,9 @@ func (u *Updater) setMirrorSource(id string) error {
 			return err
 		}
 	}
-
+	if !found {
+		return system.NotFoundError("invalid mirror source id")
+	}
 	err := u.config.SetMirrorSource(id)
 	if err != nil {
 		return err
@@ -230,8 +232,8 @@ func (u *Updater) GetCheckIntervalAndTime() (float64, string, *dbus.Error) {
 	return interval, checkTime, nil
 }
 
-func (u *Updater) SetUpdateNotify(enable bool)  *dbus.Error {
-	if  u.UpdateNotify == enable {
+func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
+	if u.UpdateNotify == enable {
 		return nil
 	}
 	err := u.config.SetUpdateNotify(enable)
