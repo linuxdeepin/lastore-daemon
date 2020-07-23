@@ -18,17 +18,23 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"strings"
+	"sync"
+	"time"
 
+	log "github.com/cihub/seelog"
 	"internal/system"
 	"internal/system/apt"
 	la_utils "internal/utils"
-
-	log "github.com/cihub/seelog"
 	"pkg.deepin.io/dde/api/inhibit_hint"
+	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/utils"
@@ -36,6 +42,12 @@ import (
 
 const (
 	dbusServiceName = "com.deepin.lastore"
+)
+const (
+	etcDir            = "/etc"
+	osVersionFileName = "os-version"
+	aptConfDir        = "/etc/apt/apt.conf.d"
+	tokenConfFileName = "99lastore-token.conf"
 )
 
 func Tr(text string) string {
@@ -123,21 +135,167 @@ func main() {
 	manager.PropsMu.RUnlock()
 
 	log.Info("Started service at system bus")
-
-	RegisterMonitor(manager.handleUpdateInfosChanged, "update_infos.json")
+	RegisterMonitor(manager.handleUpdateInfosChanged, system.VarLibDir, "update_infos.json")
+	RegisterMonitor(updateTokenConfigFile, etcDir, osVersionFileName)
 	manager.handleUpdateInfosChanged()
+	time.AfterFunc(60*time.Second, func() {
+		updateTokenConfigFile()
+	})
 	service.Wait()
 }
 
-func RegisterMonitor(handler func(), paths ...string) {
-	dm := system.NewDirMonitor(system.VarLibDir)
-
-	dm.Add(func(fpath string) {
+func RegisterMonitor(handler func(), dir string, paths ...string) {
+	dm := system.NewDirMonitor(dir)
+	err := dm.Add(func(filePath string) {
 		handler()
 	}, paths...)
-
-	err := dm.Start()
 	if err != nil {
-		log.Warnf("Can't create inotify on %s: %v\n", system.VarLibDir, err)
+		_ = log.Warnf("Can't add monitor on %s: %v\n", dir, err)
 	}
+	err = dm.Start()
+	if err != nil {
+		_ = log.Warnf("Can't create monitor on %s: %v\n", dir, err)
+	}
+}
+
+var _tokenUpdateMu sync.Mutex
+
+// 更新 99lastore-token.conf 文件的内容
+func updateTokenConfigFile() {
+	_tokenUpdateMu.Lock()
+	defer _tokenUpdateMu.Unlock()
+	systemInfo, err := getSystemInfo()
+	tokenPath := path.Join(aptConfDir, tokenConfFileName)
+	if err != nil {
+		_ = log.Warn("failed to update 99lastore-token.conf content:", err)
+		return
+	}
+	var tokenSlice []string
+	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
+	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
+	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
+	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
+	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
+	token := strings.Join(tokenSlice, ";")
+	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
+	err = ioutil.WriteFile(tokenPath, tokenContent, 0644)
+	if err != nil {
+		_ = log.Warn(err)
+	}
+}
+
+type SystemInfo struct {
+	SystemName  string
+	ProductType string
+	EditionName string
+	Version     string
+	HardwareId  string
+}
+
+func loadFile(filepath string) ([]string, error) {
+	f, err := os.Open(filepath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	var lines []string
+	scanner := bufio.NewScanner(bufio.NewReader(f))
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+	if scanner.Err() != nil {
+		return nil, scanner.Err()
+	}
+
+	return lines, nil
+}
+
+func getSystemInfo() (SystemInfo, error) {
+	versionPath := path.Join(etcDir, osVersionFileName)
+	versionLines, err := loadFile(versionPath)
+	if err != nil {
+		_ = log.Warn("failed to load os-version file:", err)
+		return SystemInfo{}, err
+	}
+	mapOsVersion := make(map[string]string)
+	for _, item := range versionLines {
+		itemSlice := strings.SplitN(item, "=", 2)
+		if len(itemSlice) < 2 {
+			continue
+		}
+		key := strings.TrimSpace(itemSlice[0])
+		value := strings.TrimSpace(itemSlice[1])
+		mapOsVersion[key] = value
+	}
+	// 判断必要内容是否存在
+	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
+	for _, key := range necessaryKey {
+		if value := mapOsVersion[key]; value == "" {
+			return SystemInfo{}, errors.New("os-version lack necessary content")
+		}
+	}
+	systemInfo := SystemInfo{}
+	systemInfo.SystemName = mapOsVersion["SystemName"]
+	systemInfo.ProductType = mapOsVersion["ProductType"]
+	systemInfo.EditionName = mapOsVersion["EditionName"]
+	systemInfo.Version = strings.Join([]string{
+		mapOsVersion["MajorVersion"],
+		mapOsVersion["MinorVersion"],
+		mapOsVersion["OsBuild"]},
+		".")
+	systemInfo.HardwareId, err = getHardwareId()
+	if err != nil {
+		_ = log.Warn("failed to get hardwareId:", err)
+		return SystemInfo{}, err
+	}
+	return systemInfo, nil
+}
+
+func getHardwareId() (string, error) {
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		_ = log.Warn(err)
+		return "", err
+	}
+	obj := conn.Object("com.deepin.sync.Helper", "/com/deepin/sync/Helper")
+	var ret Hardware
+	err = obj.Call("com.deepin.sync.Helper.GetHardware", 0).Store(&ret)
+	if err != nil {
+		_ = log.Warn(err)
+		return "", err
+	}
+	return ret.ID, nil
+}
+
+type Hardware struct {
+	ID              string `json:"id"`
+	Hostname        string `json:"hostname"`
+	Username        string `json:"username"`
+	OS              string `json:"os"`
+	CPU             string `json:"cpu"`
+	Laptop          bool   `json:"laptop"`
+	Memory          int64  `json:"memory"`
+	DiskTotal       int64  `json:"disk_total"`
+	NetworkCardList string `json:"network_cards"`
+	DiskList        string `json:"disk_list"`
+	DMI             DMI    `json:"dmi"`
+}
+
+type DMI struct {
+	BiosVendor     string `json:"bios_vendor"`
+	BiosVersion    string `json:"bios_version"`
+	BiosDate       string `json:"bios_date"`
+	BoardName      string `json:"board_name"`
+	BoardSerial    string `json:"board_serial"`
+	BoardVendor    string `json:"board_vendor"`
+	BoardVersion   string `json:"board_version"`
+	ProductName    string `json:"product_name"`
+	ProductFamily  string `json:"product_family"`
+	ProductSerial  string `json:"product_serial"`
+	ProductUUID    string `json:"product_uuid"`
+	ProductVersion string `json:"product_version"`
 }
