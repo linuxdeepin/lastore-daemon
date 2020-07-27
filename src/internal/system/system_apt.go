@@ -163,8 +163,12 @@ func QueryPackageInstalled(pkgId string) bool {
 
 // QueryPackageInstallable query whether the pkgId can be installed
 func QueryPackageInstallable(pkgId string) bool {
-	out, err := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("/usr/bin/apt-cache show -- %s && /usr/bin/apt-cache policy -- %s", pkgId, pkgId)).CombinedOutput()
+	err := exec.Command("/usr/bin/apt-cache", "show", "--", pkgId).Run()
+	if err != nil {
+		return false
+	}
+
+	out, err := exec.Command("/usr/bin/apt-cache", "policy", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return false
 	}
