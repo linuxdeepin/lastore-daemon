@@ -30,11 +30,11 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	hhardware "github.com/jouyouyun/hardware"
 	"internal/system"
 	"internal/system/apt"
 	la_utils "internal/utils"
 	"pkg.deepin.io/dde/api/inhibit_hint"
-	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
 	"pkg.deepin.io/lib/utils"
@@ -256,46 +256,10 @@ func getSystemInfo() (SystemInfo, error) {
 }
 
 func getHardwareId() (string, error) {
-	conn, err := dbus.SystemBus()
+	hhardware.IncludeDiskInfo = true
+	machineID, err := hhardware.GenMachineID()
 	if err != nil {
-		_ = log.Warn(err)
 		return "", err
 	}
-	obj := conn.Object("com.deepin.sync.Helper", "/com/deepin/sync/Helper")
-	var ret Hardware
-	err = obj.Call("com.deepin.sync.Helper.GetHardware", 0).Store(&ret)
-	if err != nil {
-		_ = log.Warn(err)
-		return "", err
-	}
-	return ret.ID, nil
-}
-
-type Hardware struct {
-	ID              string `json:"id"`
-	Hostname        string `json:"hostname"`
-	Username        string `json:"username"`
-	OS              string `json:"os"`
-	CPU             string `json:"cpu"`
-	Laptop          bool   `json:"laptop"`
-	Memory          int64  `json:"memory"`
-	DiskTotal       int64  `json:"disk_total"`
-	NetworkCardList string `json:"network_cards"`
-	DiskList        string `json:"disk_list"`
-	DMI             DMI    `json:"dmi"`
-}
-
-type DMI struct {
-	BiosVendor     string `json:"bios_vendor"`
-	BiosVersion    string `json:"bios_version"`
-	BiosDate       string `json:"bios_date"`
-	BoardName      string `json:"board_name"`
-	BoardSerial    string `json:"board_serial"`
-	BoardVendor    string `json:"board_vendor"`
-	BoardVersion   string `json:"board_version"`
-	ProductName    string `json:"product_name"`
-	ProductFamily  string `json:"product_family"`
-	ProductSerial  string `json:"product_serial"`
-	ProductUUID    string `json:"product_uuid"`
-	ProductVersion string `json:"product_version"`
+	return machineID, nil
 }
