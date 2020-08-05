@@ -126,7 +126,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 
 	err := j.emitPropChangedStatus(to)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 
 	if j.Status == system.SucceedStatus {

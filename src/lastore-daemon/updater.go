@@ -27,7 +27,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus1"
+	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 )
 
@@ -37,9 +37,6 @@ type ApplicationUpdateInfo struct {
 	Icon           string
 	CurrentVersion string
 	LastVersion    string
-
-	// There  hasn't support
-	changeLog string
 }
 
 type Updater struct {
@@ -57,7 +54,7 @@ type Updater struct {
 	// dbusutil-gen: equal=nil
 	UpdatablePackages []string
 
-	methods *struct {
+	methods *struct { //nolint
 		ListMirrorSources       func() `in:"lang" out:"mirrorSources"`
 		SetMirrorSource         func() `in:"id"`
 		SetAutoCheckUpdates     func() `in:"enable"`
@@ -90,7 +87,8 @@ func (u *Updater) waitOnlineCheck() {
 		if err == nil {
 			_, err = u.manager.updateSource(true)
 			if err != nil {
-				log.Warn(err)
+
+				_ = log.Warn(err)
 			}
 		}
 	}
@@ -101,30 +99,30 @@ func (u *Updater) loopCheck() {
 		log.Info("start update metadata info service")
 		err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
 		if err != nil {
-			log.Warnf("AutoCheck Update failed: %v", err)
+			_ = log.Warnf("AutoCheck Update failed: %v", err)
 		}
 	}
 
 	calcDelay := func() time.Duration {
-		elapsed := time.Now().Sub(u.config.LastCheckTime)
-		remaind := u.config.CheckInterval - elapsed
-		if remaind < 0 {
+		elapsed := time.Since(u.config.LastCheckTime)
+		remained := u.config.CheckInterval - elapsed
+		if remained < 0 {
 			return 0
 		}
-		return remaind
+		return remained
 	}
 
 	for {
 		// ensure delay at least have 10 seconds
 		delay := calcDelay() + time.Second*10
 
-		log.Warnf("Next updater check will trigger at %v", time.Now().Add(delay))
+		_ = log.Warnf("Next updater check will trigger at %v", time.Now().Add(delay))
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
 			_, err := u.manager.updateSource(true)
 			if err != nil {
-				log.Warn(err)
+				_ = log.Warn(err)
 			}
 		}
 
@@ -132,7 +130,7 @@ func (u *Updater) loopCheck() {
 			startUpdateMetadataInfoService()
 		}
 
-		u.config.UpdateLastCheckTime()
+		_ = u.config.UpdateLastCheckTime()
 	}
 }
 
@@ -163,7 +161,7 @@ func (u *Updater) setMirrorSource(id string) error {
 			return system.NotFoundError("empty url")
 		}
 		if err := SetAPTSmartMirror(m.Url); err != nil {
-			log.Warnf("SetMirrorSource(%q) failed:%v\n", id, err)
+			_ = log.Warnf("SetMirrorSource(%q) failed:%v\n", id, err)
 			return err
 		}
 	}
@@ -175,7 +173,7 @@ func (u *Updater) setMirrorSource(id string) error {
 		return err
 	}
 	u.MirrorSource = u.config.MirrorSource
-	u.emitPropChangedMirrorSource(u.MirrorSource)
+	_ = u.emitPropChangedMirrorSource(u.MirrorSource)
 	return nil
 }
 
@@ -193,7 +191,7 @@ func (u *Updater) ListMirrorSources(lang string) ([]LocaleMirrorSource, *dbus.Er
 
 func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	var raws []system.MirrorSource
-	system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
+	_ = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
 
 	makeLocaleMirror := func(lang string, m system.MirrorSource) LocaleMirrorSource {
 		ms := LocaleMirrorSource{
@@ -241,7 +239,9 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 		return dbusutil.ToError(err)
 	}
 	u.UpdateNotify = enable
-	u.emitPropChangedUpdateNotify(enable)
+
+	_ = u.emitPropChangedUpdateNotify(enable)
+
 	return nil
 }
 
@@ -257,7 +257,7 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
 	}
 
 	u.AutoCheckUpdates = enable
-	u.emitPropChangedAutoCheckUpdates(enable)
+	_ = u.emitPropChangedAutoCheckUpdates(enable)
 	return nil
 }
 
@@ -273,7 +273,7 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 	}
 
 	u.AutoDownloadUpdates = enable
-	u.emitPropChangedAutoDownloadUpdates(enable)
+	_ = u.emitPropChangedAutoDownloadUpdates(enable)
 	return nil
 }
 
@@ -288,10 +288,10 @@ func (u *Updater) restoreSystemSource() error {
 	if err == nil {
 		err = ioutil.WriteFile(aptSource+".bak", current, 0644)
 		if err != nil {
-			log.Warn(err)
+			_ = log.Warn(err)
 		}
 	} else {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 
 	origin, err := ioutil.ReadFile(aptSourceOrigin)
@@ -306,7 +306,7 @@ func (u *Updater) restoreSystemSource() error {
 func (u *Updater) RestoreSystemSource() *dbus.Error {
 	err := u.restoreSystemSource()
 	if err != nil {
-		log.Warn("failed to restore system source:", err)
+		_ = log.Warn("failed to restore system source:", err)
 		return dbusutil.ToError(err)
 	}
 	return nil

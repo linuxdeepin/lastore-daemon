@@ -47,7 +47,7 @@ type SmartMirror struct {
 	sourcesURL    []string
 	taskCount     int // TODO: need a lock???
 
-	methods *struct {
+	methods *struct { //nolint
 		Query     func() `in:"origin, official, mirror" out:"url"`
 		SetEnable func() `in:"enable"`
 	}
@@ -65,8 +65,8 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 		taskCount: 0,
 		config:    newConfig(path.Join(system.VarLibDir, configDataFilepath)),
 		mirrorQuality: MirrorQuality{
-			QualityMap:   make(QualityMap, 0),
-			adjustDelays: make(map[string]int, 0),
+			QualityMap:   make(QualityMap),
+			adjustDelays: make(map[string]int),
 			reportList:   make(chan []Report),
 		},
 	}
@@ -80,7 +80,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 	err = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &s.sources)
 	if nil != err {
-		log.Error(err)
+		_ = log.Error(err)
 	}
 
 	for _, source := range s.sources {
@@ -89,15 +89,12 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	}
 
 	go func() {
-		for {
-			select {
-			case reportList := <-s.mirrorQuality.reportList:
-				for _, r := range reportList {
-					s.mirrorQuality.updateQuality(r)
-					s.taskCount--
-				}
-				utils.WriteData(path.Join(system.VarLibDir, qualityDataFilepath), s.mirrorQuality.QualityMap)
+		for reportList := range s.mirrorQuality.reportList {
+			for _, r := range reportList {
+				s.mirrorQuality.updateQuality(r)
+				s.taskCount--
 			}
+			_ = utils.WriteData(path.Join(system.VarLibDir, qualityDataFilepath), s.mirrorQuality.QualityMap)
 		}
 	}()
 	return s
@@ -110,7 +107,7 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 	s.Enable = enable
 	err := s.config.setEnable(enable)
 	if nil != err {
-		log.Errorf("save config failed: %v", err)
+		_ = log.Errorf("save config failed: %v", err)
 		return dbus.NewError(err.Error(), nil)
 	}
 
@@ -181,7 +178,7 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 			report := Report{
 				Mirror:     mirror,
 				URL:        v,
-				Delay:      time.Now().Sub(b),
+				Delay:      time.Since(b),
 				Failed:     !utils.ValidURL(v),
 				StatusCode: statusCode,
 			}
@@ -195,18 +192,17 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 		end := false
 		reportList := []Report{}
 		for {
-			select {
-			case r := <-detectReport:
-				reportList = append(reportList, r)
-				if !r.Failed && !send {
-					send = true
-					result <- r
-				}
-				count++
-				if count >= len(mirrorHosts) {
-					end = true
-				}
+			r := <-detectReport
+			reportList = append(reportList, r)
+			if !r.Failed && !send {
+				send = true
+				result <- r
 			}
+			count++
+			if count >= len(mirrorHosts) {
+				end = true
+			}
+
 			if end {
 				break
 			}
@@ -235,13 +231,12 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 		close(detectReport)
 	}()
 
-	select {
-	case r := <-result:
-		close(result)
-		if r.URL != "" {
-			return r.URL
-		}
+	r := <-result
+	close(result)
+	if r.URL != "" {
+		return r.URL
 	}
+
 	fmt.Println("error", "fallback", original)
 	return original
 }

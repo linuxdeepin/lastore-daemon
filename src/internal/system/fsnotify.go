@@ -18,10 +18,11 @@
 package system
 
 import (
-	log "github.com/cihub/seelog"
-	"github.com/howeyc/fsnotify"
 	"path"
 	"sync"
+
+	log "github.com/cihub/seelog"
+	"github.com/howeyc/fsnotify"
 )
 
 type DirMonitorChangeType string
@@ -82,7 +83,7 @@ func (f *DirMonitor) Start() error {
 			case event := <-f.watcher.Event:
 				f.tryNotify(event)
 			case err := <-f.watcher.Error:
-				log.Warn(err)
+				_ = log.Warn(err)
 			case <-f.done:
 				goto end
 			}

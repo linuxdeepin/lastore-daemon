@@ -18,6 +18,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -76,11 +77,12 @@ func MainUpdater(c *cli.Context) {
 		}
 	case "desktop":
 		if fpath == "" {
-			err = fmt.Errorf("which directory to save  desktop index files?")
+			err = errors.New("which directory to save  desktop index files?")
+			break
 		}
 		err = GenerateDesktopIndexes(fpath)
 	case "update_infos":
-		GenerateUpdateInfos(fpath)
+		_ = GenerateUpdateInfos(fpath)
 	case "mirrors":
 		err = mirrors.GenerateMirrors(repo, fpath)
 	case "unpublished-mirrors":
@@ -97,10 +99,10 @@ func MainUpdater(c *cli.Context) {
 }
 
 func main() {
-	utils.UnsetEnv("LC_ALL")
-	utils.UnsetEnv("LANGUAGE")
-	utils.UnsetEnv("LC_MESSAGES")
-	utils.UnsetEnv("LANG")
+	_ = utils.UnsetEnv("LC_ALL")
+	_ = utils.UnsetEnv("LANGUAGE")
+	_ = utils.UnsetEnv("LC_MESSAGES")
+	_ = utils.UnsetEnv("LANG")
 
 	http.DefaultClient.Timeout = 60 * time.Second
 	app := cli.NewApp()
@@ -121,8 +123,4 @@ func main() {
 	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop}
 
 	app.RunAndExitOnError()
-}
-
-func debugPrint(fmtStr string, args ...interface{}) {
-	os.Stderr.WriteString(fmt.Sprintf(fmtStr, args...))
 }

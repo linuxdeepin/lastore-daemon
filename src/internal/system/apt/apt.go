@@ -40,7 +40,7 @@ type CommandSet interface {
 
 func (p *APTSystem) AddCMD(cmd *aptCommand) {
 	if _, ok := p.cmdSet[cmd.JobId]; ok {
-		log.Warnf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
+		_ = log.Warnf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
 		return
 	}
 	log.Infof("APTSystem AddCMD: %v\n", cmd)
@@ -49,7 +49,7 @@ func (p *APTSystem) AddCMD(cmd *aptCommand) {
 func (p *APTSystem) RemoveCMD(id string) {
 	c, ok := p.cmdSet[id]
 	if !ok {
-		log.Warnf("APTSystem RemoveCMD with invalid Id=%q\n", id)
+		_ = log.Warnf("APTSystem RemoveCMD with invalid Id=%q\n", id)
 		return
 	}
 	log.Infof("APTSystem RemoveCMD: %v (exitCode:%d)\n", c, c.exitCode)
@@ -199,7 +199,9 @@ func (c *aptCommand) Start() error {
 
 	go c.updateProgress()
 
-	go c.Wait()
+	go func() {
+		_ = c.Wait()
+	}()
 
 	return nil
 }
@@ -227,7 +229,7 @@ const (
 func (c *aptCommand) atExit() {
 	err := c.aptPipe.Close()
 	if err != nil {
-		log.Warn("failed to close pipe:", err)
+		_ = log.Warn("failed to close pipe:", err)
 	}
 
 	log.Infof("job %s stdout: %s", c.JobId, c.stdout.Bytes())
@@ -341,7 +343,7 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 }
 
 func (c *aptCommand) indicateFailed(errType, errDetail string, isFatalErr bool) {
-	log.Warnf("indicateFailed: type: %s, detail: %s", errType, errDetail)
+	_ = log.Warnf("indicateFailed: type: %s, detail: %s", errType, errDetail)
 	progressInfo := system.JobProgressInfo{
 		JobId:      c.JobId,
 		Progress:   -1.0,
@@ -387,7 +389,7 @@ func (c *aptCommand) updateProgress() {
 
 		info, err := ParseProgressInfo(c.JobId, line)
 		if err != nil {
-			log.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
+			_ = log.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
 			continue
 		}
 

@@ -28,45 +28,44 @@ const MinCheckInterval = time.Minute
 const ConfigVersion = "0.1"
 
 var DefaultConfig = Config{
-	CheckInterval:                time.Hour * 24 * 7,
-	CleanInterval:                time.Hour * 24 * 7,
-	CleanIntervalCacheOverLimit:  time.Hour * 24,
-	AutoCheckUpdates:        true,
-	DisableUpdateMetadata:   false,
-	AutoDownloadUpdates:     true,
-	UpdateNotify:            true,
-	AutoClean:               true,
-	MirrorsUrl:              system.DefaultMirrorsUrl,
+	CheckInterval:               time.Hour * 24 * 7,
+	CleanInterval:               time.Hour * 24 * 7,
+	CleanIntervalCacheOverLimit: time.Hour * 24,
+	AutoCheckUpdates:            true,
+	DisableUpdateMetadata:       false,
+	AutoDownloadUpdates:         true,
+	UpdateNotify:                true,
+	AutoClean:                   true,
+	MirrorsUrl:                  system.DefaultMirrorsUrl,
 }
 
 type Config struct {
-	Version                 string
-	AutoCheckUpdates        bool
-	DisableUpdateMetadata   bool
-	AutoDownloadUpdates     bool
-	AutoClean               bool
-	MirrorSource            string
-	UpdateNotify            bool
-	CheckInterval                time.Duration
-	CleanInterval                time.Duration
-	
-	// 缓存大小超出限制时的清理时间间隔
-	CleanIntervalCacheOverLimit  time.Duration
-	AppstoreRegion          string
-	LastCheckTime           time.Time
-	LastCleanTime           time.Time
-	LastCheckCacheSizeTime  time.Time
-	Repository              string
-	MirrorsUrl              string
+	Version               string
+	AutoCheckUpdates      bool
+	DisableUpdateMetadata bool
+	AutoDownloadUpdates   bool
+	AutoClean             bool
+	MirrorSource          string
+	UpdateNotify          bool
+	CheckInterval         time.Duration
+	CleanInterval         time.Duration
 
-	filePath string
+	// 缓存大小超出限制时的清理时间间隔
+	CleanIntervalCacheOverLimit time.Duration
+	AppstoreRegion              string
+	LastCheckTime               time.Time
+	LastCleanTime               time.Time
+	LastCheckCacheSizeTime      time.Time
+	Repository                  string
+	MirrorsUrl                  string
+	filePath                    string
 }
 
 func NewConfig(fpath string) *Config {
 	c := DefaultConfig
 	err := system.DecodeJson(fpath, &c)
 	if err != nil {
-		log.Warnf("Can't load config file: %v\n", err)
+		_ = log.Warnf("Can't load config file: %v\n", err)
 	}
 	c.filePath = fpath
 
@@ -82,7 +81,7 @@ func NewConfig(fpath string) *Config {
 		c.Version = ConfigVersion
 		c.CheckInterval = time.Hour * 24 * 7
 		c.CleanInterval = time.Hour * 24 * 7
-		c.save()
+		_ = c.save()
 	}
 	return &c
 }

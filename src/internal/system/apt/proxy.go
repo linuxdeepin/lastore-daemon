@@ -22,12 +22,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"internal/system"
-	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	log "github.com/cihub/seelog"
 )
@@ -42,7 +40,7 @@ func New() system.System {
 		cmdSet: make(map[string]*aptCommand),
 	}
 	WaitDpkgLockRelease()
-	exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
+	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
 	return p
 }
 
@@ -111,7 +109,7 @@ func WaitDpkgLockRelease() {
 		if !wait {
 			return
 		}
-		log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
+		_ = log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 			msg, time.Now())
 		time.Sleep(time.Second * 5)
 	}
@@ -123,14 +121,14 @@ func checkLock(p string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	cmd.Start()
+	_ = cmd.Start()
 
 	d := json.NewDecoder(f)
 	var data = struct {
 		Locks []map[string]string `json:"locks"`
 	}{}
-	d.Decode(&data)
-	cmd.Wait()
+	_ = d.Decode(&data)
+	_ = cmd.Wait()
 	for _, line := range data.Locks {
 		if line["path"] == p {
 			bs, err := exec.Command("ps",
@@ -146,63 +144,6 @@ func checkLock(p string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-// CheckDpkgDirtyJournal check if the dpkg in dirty status
-// Return true if dirty. Dirty status should be fix
-// by FixDpkgDirtyJournal().
-// See also debsystem.cc:CheckUpdates in apt project
-func checkDpkgDirtyJournal() bool {
-	const updateDir = "/var/lib/dpkg/updates"
-	fs, err := ioutil.ReadDir(updateDir)
-	if err != nil {
-		return false
-	}
-	for _, finfo := range fs {
-		dirty := true
-		for _, c := range finfo.Name() {
-			if !unicode.IsDigit(rune(c)) {
-				dirty = false
-				break
-			}
-		}
-		if dirty {
-			return true
-		}
-	}
-	return false
-}
-
-func tryFixDpkgDirtyStatus() {
-	cmd := exec.Command("dpkg", "--force-confold", "--configure", "-a")
-	buf := new(bytes.Buffer)
-	cmd.Stdout = buf
-	cmd.Stderr = buf
-	cmd.Start()
-
-	err := cmd.Wait()
-	errStr := ""
-	if err != nil {
-		errStr = err.Error()
-	}
-	log.Warn(fmt.Sprintf("Dpkg in dirty status, try fixing. %s\n", errStr))
-	log.Warnf("%s\n", buf.String())
-	log.Warn(fmt.Sprintf("Stage one: FixDpkg: %v\n", err))
-
-	cmd = exec.Command("apt-get", "-f", "install", "-c", "/var/lib/lastore/apt.conf")
-	cmd.Stdout = buf
-	cmd.Stderr = buf
-	cmd.Start()
-
-	err = cmd.Wait()
-	errStr = ""
-	if err != nil {
-		errStr = err.Error()
-	}
-	log.Warn(fmt.Sprintf("Stage two: fixing apt-get -f install. %s\n", errStr))
-	log.Warnf("%s\n", buf.String())
-	log.Warn(fmt.Sprintf("End of FixDpkg: %v\n", err))
-
 }
 
 func ParsePkgSystemError(out, err []byte) error {

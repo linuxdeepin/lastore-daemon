@@ -36,7 +36,7 @@ func newConfig(fpath string) *config {
 	c := defaultConfig
 	err := system.DecodeJson(fpath, &c)
 	if err != nil {
-		log.Warnf("Can't load config file: %v\n", err)
+		_ = log.Warnf("Can't load config file: %v\n", err)
 	}
 	c.filePath = fpath
 	return &c

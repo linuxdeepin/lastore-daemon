@@ -22,16 +22,16 @@ func TestJobQueue(t *testing.T) {
 		}
 	}()
 
-	go func() {
+	go func(t *testing.T) {
 		for i := 0; i < N; i++ {
 			id := fmt.Sprintf("%d", i)
 			j := NewJob(nil, id, "test1", nil, id, id, nil)
 			err := q.Add(j)
 			if err != nil {
-				t.Fatal(err)
+				t.Log(err)
 			}
 		}
-	}()
+	}(t)
 
 	for i := 0; i < N; i++ {
 		id := fmt.Sprintf("%d", i)

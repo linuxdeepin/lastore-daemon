@@ -24,7 +24,6 @@ var (
 	binDpkgQuery string
 	binDpkgDeb   string
 	binAptCache  string
-	binAptConfig string
 )
 
 func mustGetBin(name string) string {
@@ -50,9 +49,8 @@ func main() {
 	binDpkgQuery = mustGetBin("dpkg-query")
 	binDpkgDeb = mustGetBin("dpkg-deb")
 	binAptCache = mustGetBin("apt-cache")
-	binAptConfig = mustGetBin("apt-config")
 
-	os.Setenv("LC_ALL", "C")
+	_ = os.Setenv("LC_ALL", "C")
 
 	archivesDir, err := system.GetArchivesDir()
 	if err != nil {
@@ -83,16 +81,16 @@ func main() {
 		case DeleteImmediately:
 			deleteDeb(archivesDir, fileInfo.Name())
 		case DeleteExpired:
-		    if options.forceDelete {
-		        deleteDeb(archivesDir, fileInfo.Name())
-		    } else {
-    			debChangeTime := getChangeTime(fileInfo)
-    			if time.Since(debChangeTime) > maxElapsed {
-    				deleteDeb(archivesDir, fileInfo.Name())
-    			} else {
-    				log.Println("delete later")
-    			}
-		    }
+			if options.forceDelete {
+				deleteDeb(archivesDir, fileInfo.Name())
+			} else {
+				debChangeTime := getChangeTime(fileInfo)
+				if time.Since(debChangeTime) > maxElapsed {
+					deleteDeb(archivesDir, fileInfo.Name())
+				} else {
+					log.Println("delete later")
+				}
+			}
 		case Keep:
 			if options.forceDelete {
 				deleteDeb(archivesDir, fileInfo.Name())

@@ -18,10 +18,8 @@
 package main
 
 import (
-	"encoding/json"
 	"internal/dstore"
 	"internal/utils"
-	"net/http"
 
 	log "github.com/cihub/seelog"
 )
@@ -34,38 +32,12 @@ import (
 // 	}
 // }
 
-func decodeData(wrap bool, url string, data interface{}) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return log.Warnf("can't get %q \n", url)
-	}
-	defer resp.Body.Close()
-	d := json.NewDecoder(resp.Body)
-
-	if wrap {
-		var wrap struct {
-			StatusCode    int         `json:"status_code"`
-			StatusMessage string      `json:"status_message"`
-			Data          interface{} `json:"data"`
-		}
-		wrap.Data = data
-		err = d.Decode(&wrap)
-	} else {
-		err = d.Decode(&data)
-	}
-
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func writeData(fpath string, data interface{}) error {
 	return utils.WriteData(fpath, data)
 }
 
 func GenerateCategory(repo, fpath string) error {
-	log.Warnf("this method has deprecated")
+	_ = log.Warnf("this method has deprecated")
 	return nil
 	// appstoreURI := "http://api.appstore.deepin.org"
 	// url := appstoreURI + "/" + "categories"

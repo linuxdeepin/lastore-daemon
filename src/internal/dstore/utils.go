@@ -23,12 +23,12 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 	}
 
 	fi, _ := os.Stat(cacheFilepath)
-	if (fi != nil) && (time.Now().Sub(fi.ModTime()) < expire) {
+	if (fi != nil) && (time.Since(fi.ModTime()) < expire) {
 		return decodeFile()
 	}
 
 	client := http.DefaultClient
-	request, err := http.NewRequest("GET", url, nil)
+	request, _ := http.NewRequest("GET", url, nil)
 	request.Header.Set("User-Agent", "lastore-tools")
 	request.Header.Add("Accept-Encoding", "gzip")
 	if fi != nil {
@@ -44,7 +44,7 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 	if (fi != nil) && lastModified.Sub(fi.ModTime()) <= 0 {
 		// update modify time
 		now := time.Now()
-		os.Chtimes(cacheFilepath, now, now)
+		_ = os.Chtimes(cacheFilepath, now, now)
 		return decodeFile()
 	}
 
@@ -73,13 +73,13 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 
 	f, err := os.OpenFile(cacheFilepath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		_,_ = fmt.Fprintln(os.Stderr, "failed to open cache file:", err)
+		_, _ = fmt.Fprintln(os.Stderr, "failed to open cache file:", err)
 		return nil
 	}
 	defer f.Close()
 	_, err = f.Write(data)
 	if err != nil {
-		_,_ = fmt.Fprintln(os.Stderr, "failed to write data to cache file:", err)
+		_, _ = fmt.Fprintln(os.Stderr, "failed to write data to cache file:", err)
 	}
 	return nil
 }

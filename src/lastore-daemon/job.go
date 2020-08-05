@@ -96,21 +96,17 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 func (j *Job) initDownloadSize() {
 	s, err := system.QueryPackageDownloadSize(j.Packages...)
 	if err != nil {
-		log.Warnf("initDownloadSize failed: %v", err)
+		_ = log.Warnf("initDownloadSize failed: %v", err)
 		return
 	}
 	size := int64(s)
 	j.PropsMu.Lock()
 	if j.DownloadSize == 0 {
 		j.DownloadSize = size
-		j.emitPropChangedDownloadSize(size)
+		_ = j.emitPropChangedDownloadSize(size)
 	}
 	j.speedMeter.SetDownloadSize(size)
 	j.PropsMu.Unlock()
-}
-
-func (j *Job) changeType(jobType string) {
-	j.Type = jobType
 }
 
 func (j *Job) String() string {
@@ -133,7 +129,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 		if info.Description != j.Description {
 			changed = true
 			j.Description = info.Description
-			j.emitPropChangedDescription(info.Description)
+			_ = j.emitPropChangedDescription(info.Description)
 		}
 	} else {
 		changed = true
@@ -143,7 +139,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if info.Cancelable != j.Cancelable {
 		changed = true
 		j.Cancelable = info.Cancelable
-		j.emitPropChangedCancelable(info.Cancelable)
+		_ = j.emitPropChangedCancelable(info.Cancelable)
 	}
 	log.Tracef("updateInfo %v <- %v\n", j, info)
 
@@ -151,7 +147,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if cProgress > j.Progress {
 		changed = true
 		j.Progress = cProgress
-		j.emitPropChangedProgress(cProgress)
+		_ = j.emitPropChangedProgress(cProgress)
 	}
 
 	// see the apt.go, we scale download progress value range in [0,0.5
@@ -160,7 +156,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if speed != j.Speed {
 		changed = true
 		j.Speed = speed
-		j.emitPropChangedSpeed(speed)
+		_ = j.emitPropChangedSpeed(speed)
 	}
 
 	if info.FatalError {
@@ -170,7 +166,7 @@ func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
 	if info.Status != j.Status {
 		err := TransitionJobState(j, info.Status)
 		if err != nil {
-			log.Warnf("_UpdateInfo: %v\n", err)
+			_ = log.Warnf("_UpdateInfo: %v\n", err)
 			return false
 		}
 		changed = true
@@ -209,7 +205,7 @@ func (j *Job) setError(e Error) {
 	}
 	jsonBytes, err := json.Marshal(errValue)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 		return
 	}
 	j.setPropDescription(string(jsonBytes))

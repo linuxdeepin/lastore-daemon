@@ -44,9 +44,6 @@ import (
 const (
 	UserExperServiceName = "com.deepin.userexperience.Daemon"
 	UserExperPath        = "/com/deepin/userexperience/Daemon"
-	UserLogonMsg         = "logon"
-	UserLogoutMsg        = "logout"
-	UserShutdownMsg      = "shutdown"
 
 	UserExperInstallApp   = "installapp"
 	UserExperUninstallApp = "uninstallapp"
@@ -95,7 +92,7 @@ type Manager struct {
 
 	apps *apps.Apps
 
-	methods *struct {
+	methods *struct { //nolint
 		FixError             func() `in:"errType" out:"job"`
 		CleanArchives        func() `out:"job"`
 		CleanJob             func() `in:"jobId"`
@@ -125,7 +122,7 @@ so don't invoke they in inner functions
 func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager {
 	archs, err := system.SystemArchitectures()
 	if err != nil {
-		log.Errorf("Can't detect system supported architectures %v\n", err)
+		_ = log.Errorf("Can't detect system supported architectures %v\n", err)
 		return nil
 	}
 
@@ -176,7 +173,7 @@ func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[s
 	p := procfs.Process(pid)
 	envVars, err := p.Environ()
 	if err != nil {
-		log.Warnf("failed to get process %d environ: %v", p, err)
+		_ = log.Warnf("failed to get process %d environ: %v", p, err)
 	} else {
 		environ["DISPLAY"] = envVars.Get("DISPLAY")
 		environ["XAUTHORITY"] = envVars.Get("XAUTHORITY")
@@ -230,7 +227,7 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("UpdatePackage %q error: %v\n", packages, err)
+		_ = log.Warnf("UpdatePackage %q error: %v\n", packages, err)
 	}
 	return job, err
 }
@@ -258,7 +255,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 
 	lang := getUsedLang(environ)
 	if lang == "" {
-		log.Warn("failed to get lang")
+		_ = log.Warn("failed to get lang")
 		return m.installPkg(jobName, packages, environ)
 	}
 
@@ -275,13 +272,13 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	*dbus.Error) {
 	execPath, err := m.getExecutablePath(sender)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
 
 	if !allowInstallPackageExecPaths.Contains(execPath) {
 		err = fmt.Errorf("%q is not allowed to install packages", execPath)
-		log.Warn(err)
+		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
 
@@ -298,12 +295,12 @@ func sendInstallMsgToUserExperModule(msg, path, name, id string) {
 		userexp := bus.Object(UserExperServiceName, UserExperPath)
 		err = userexp.Call(UserExperServiceName+".SendAppInstallData", 0, msg, path, name, id).Err
 		if err != nil {
-			log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
+			_ = log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
 		} else {
 			log.Debugf("send %s message to ue module", msg)
 		}
 	} else {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 }
 
@@ -315,7 +312,7 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("installPackage %q error: %v\n", packages, err)
+		_ = log.Warnf("installPackage %q error: %v\n", packages, err)
 	}
 
 	if job != nil {
@@ -370,7 +367,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 		if len(desktopFiles) > 0 {
 			err = m.apps.UninstallHints(0, desktopFiles)
 			if err != nil {
-				log.Warnf("call UninstallHints(desktopFiles: %v) error: %v",
+				_ = log.Warnf("call UninstallHints(desktopFiles: %v) error: %v",
 					desktopFiles, err)
 			}
 		}
@@ -397,7 +394,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	if err != nil {
-		log.Warnf("removePackage %q error: %v\n", packages, err)
+		_ = log.Warnf("removePackage %q error: %v\n", packages, err)
 	}
 	return job, err
 }
@@ -406,13 +403,13 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 	*dbus.Error) {
 	execPath, err := m.getExecutablePath(sender)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
 
 	if !allowRemovePackageExecPaths.Contains(execPath) {
 		err = fmt.Errorf("%q is not allowed to remove packages", execPath)
-		log.Warn(err)
+		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
 
@@ -434,7 +431,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 
 	_, err := m.updateSource(true)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 }
 
@@ -442,7 +439,7 @@ func (m *Manager) handleUpdateInfosChanged() {
 	log.Info("handleUpdateInfosChanged")
 	info, err := system.SystemUpgradeInfo()
 	if err != nil {
-		log.Error("failed to get upgrade info:", err)
+		_ = log.Error("failed to get upgrade info:", err)
 	}
 	m.updater.loadUpdateInfos(info)
 	m.updatableApps(info)
@@ -451,7 +448,7 @@ func (m *Manager) handleUpdateInfosChanged() {
 		go func() {
 			_, err := m.PrepareDistUpgrade()
 			if err != nil {
-				log.Error("failed to prepare dist-upgrade:", err)
+				_ = log.Error("failed to prepare dist-upgrade:", err)
 			}
 		}()
 	}
@@ -468,7 +465,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("UpdateSource error: %v\n", err)
+		_ = log.Warnf("UpdateSource error: %v\n", err)
 	}
 
 	job.setHooks(map[string]func(){
@@ -482,7 +479,9 @@ func (m *Manager) UpdateSource() (dbus.ObjectPath, *dbus.Error) {
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	m.config.UpdateLastCheckTime()
+
+	_ = m.config.UpdateLastCheckTime()
+
 	return job.getPath(), nil
 }
 
@@ -497,9 +496,8 @@ func (m *Manager) cancelAllJob() error {
 	for _, jobId := range updateJobIds {
 		err := m.jobManager.CleanJob(jobId)
 		if err != nil {
-			log.Warnf("CleanJob %q error: %v\n", jobId, err)
+			_ = log.Warnf("CleanJob %q error: %v\n", jobId, err)
 		}
-		return err
 	}
 	return nil
 }
@@ -533,13 +531,13 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 
 	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
 	if err != nil {
-		log.Warnf("DistUpgrade error: %v\n", err)
+		_ = log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
 	}
 
 	cancelErr := m.cancelAllJob()
 	if cancelErr != nil {
-		log.Warn(cancelErr)
+		_ = log.Warn(cancelErr)
 	}
 
 	return job, err
@@ -573,7 +571,7 @@ func (m *Manager) prepareDistUpgrade() (*Job, error) {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("PrepareDistUpgrade error: %v\n", err)
+		_ = log.Warnf("PrepareDistUpgrade error: %v\n", err)
 		return nil, err
 	}
 	return job, err
@@ -585,7 +583,7 @@ func (m *Manager) StartJob(jobId string) *dbus.Error {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("StartJob %q error: %v\n", jobId, err)
+		_ = log.Warnf("StartJob %q error: %v\n", jobId, err)
 	}
 	return dbusutil.ToError(err)
 }
@@ -596,7 +594,7 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("PauseJob %q error: %v\n", jobId, err)
+		_ = log.Warnf("PauseJob %q error: %v\n", jobId, err)
 	}
 	return dbusutil.ToError(err)
 }
@@ -607,7 +605,7 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("CleanJob %q error: %v\n", jobId, err)
+		_ = log.Warnf("CleanJob %q error: %v\n", jobId, err)
 	}
 	return dbusutil.ToError(err)
 }
@@ -617,7 +615,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 
 	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil || s == system.SizeUnknown {
-		log.Warnf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
+		_ = log.Warnf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
 	}
 	return int64(s), dbusutil.ToError(err)
 }
@@ -634,7 +632,7 @@ func (m *Manager) PackageExists(pkgId string) (bool, *dbus.Error) {
 func (m *Manager) PackageDesktopPath(pkgId string) (string, *dbus.Error) {
 	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
 	if err != nil {
-		log.Warnf("QueryDesktopPath failed: %q\n", err)
+		_ = log.Warnf("QueryDesktopPath failed: %q\n", err)
 		return "", dbusutil.ToError(err)
 	}
 	return p, nil
@@ -660,7 +658,7 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	m.autoCleanCfgChange <- struct{}{}
 	err = m.emitPropChangedAutoClean(enable)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 	return nil
 }
@@ -696,7 +694,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("CleanArchives error: %v", err)
+		_ = log.Warnf("CleanArchives error: %v", err)
 		return nil, err
 	}
 
@@ -737,7 +735,7 @@ func (m *Manager) loopCheck() {
 			log.Info("apt is running, waiting for the next chance")
 			return
 		} else if err != nil {
-			log.Warnf("CleanArchives failed: %v", err)
+			_ = log.Warnf("CleanArchives failed: %v", err)
 		}
 	}
 
@@ -818,7 +816,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 	m.do.Unlock()
 
 	if err != nil {
-		log.Warnf("fixError error: %v", err)
+		_ = log.Warnf("fixError error: %v", err)
 		return nil, err
 	}
 	return job, err

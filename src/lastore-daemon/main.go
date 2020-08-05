@@ -29,11 +29,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
-	hhardware "github.com/jouyouyun/hardware"
 	"internal/system"
 	"internal/system/apt"
 	la_utils "internal/utils"
+
+	log "github.com/cihub/seelog"
+	hhardware "github.com/jouyouyun/hardware"
+
 	"pkg.deepin.io/dde/api/inhibit_hint"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
@@ -84,16 +86,16 @@ func main() {
 		return
 	}
 
-	utils.UnsetEnv("LC_ALL")
-	utils.UnsetEnv("LANGUAGE")
-	utils.UnsetEnv("LC_MESSAGES")
-	utils.UnsetEnv("LANG")
+	_ = utils.UnsetEnv("LC_ALL")
+	_ = utils.UnsetEnv("LANGUAGE")
+	_ = utils.UnsetEnv("LC_MESSAGES")
+	_ = utils.UnsetEnv("LANG")
 
 	gettext.InitI18n()
 	gettext.Textdomain("lastore-daemon")
 
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
-		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
+		_ = os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
 
 	b := apt.New()
@@ -104,7 +106,7 @@ func main() {
 	manager.updater = updater
 	err = service.Export("/com/deepin/lastore", manager, updater)
 	if err != nil {
-		log.Error("failed to export manager and updater:", err)
+		_ = log.Error("failed to export manager and updater:", err)
 		return
 	}
 
@@ -113,12 +115,12 @@ func main() {
 	ihObj.SetName(Tr("Control Center"))
 	err = ihObj.Export(service)
 	if err != nil {
-		log.Warn("failed to export inhibit hint:", err)
+		_ = log.Warn("failed to export inhibit hint:", err)
 	}
 
 	err = service.RequestName(dbusServiceName)
 	if err != nil {
-		log.Error("failed to request name:", err)
+		_ = log.Error("failed to request name:", err)
 		return
 	}
 
@@ -126,11 +128,11 @@ func main() {
 	manager.PropsMu.RLock()
 	err = manager.emitPropChangedJobList(manager.JobList)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 	err = manager.emitPropChangedUpgradableApps(manager.UpgradableApps)
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 	}
 	manager.PropsMu.RUnlock()
 

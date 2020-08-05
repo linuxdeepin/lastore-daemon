@@ -63,10 +63,10 @@ func main() {
 		return
 	}
 
-	utils.UnsetEnv("LC_ALL")
-	utils.UnsetEnv("LANGUAGE")
-	utils.UnsetEnv("LC_MESSAGES")
-	utils.UnsetEnv("LANG")
+	_ = utils.UnsetEnv("LC_ALL")
+	_ = utils.UnsetEnv("LANGUAGE")
+	_ = utils.UnsetEnv("LC_MESSAGES")
+	_ = utils.UnsetEnv("LANG")
 
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
@@ -75,13 +75,13 @@ func main() {
 	smartmirror := newSmartMirror(service)
 	err = service.Export("/com/deepin/lastore/Smartmirror", smartmirror)
 	if err != nil {
-		log.Error("failed to export manager and updater:", err)
+		_ = log.Error("failed to export manager and updater:", err)
 		return
 	}
 
 	err = service.RequestName(dbusName)
 	if err != nil {
-		log.Error("failed to request name:", err)
+		_ = log.Error("failed to request name:", err)
 		return
 	}
 

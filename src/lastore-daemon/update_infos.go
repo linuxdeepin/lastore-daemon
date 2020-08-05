@@ -21,7 +21,7 @@ import (
 	"internal/system"
 	"path"
 
-	"pkg.deepin.io/lib/dbus1"
+	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 
 	log "github.com/cihub/seelog"
@@ -92,12 +92,12 @@ func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, 
 
 func applicationInfos() map[string]ApplicationInfo {
 	r := make(map[string]ApplicationInfo)
-	system.DecodeJson(path.Join(system.VarLibDir, "applications.json"), &r)
+	_ = system.DecodeJson(path.Join(system.VarLibDir, "applications.json"), &r)
 	return r
 }
 
 func packageIconInfos() map[string]string {
 	r := make(map[string]string)
-	system.DecodeJson(path.Join(system.VarLibDir, "package_icon.json"), &r)
+	_ = system.DecodeJson(path.Join(system.VarLibDir, "package_icon.json"), &r)
 	return r
 }

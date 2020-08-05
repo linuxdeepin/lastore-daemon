@@ -38,7 +38,7 @@ func NewOSTree(repo string, remote string) (*OSTree, error) {
 	if err := EnsureBaseDir(repo); err != nil {
 		return nil, err
 	}
-	tree.do("init")
+	_, _ = tree.do("init")
 	_, err := tree.do("remote", "--no-gpg-verify", "add", "origin", remote)
 	if err != nil {
 		return nil, err

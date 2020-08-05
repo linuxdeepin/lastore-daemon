@@ -140,10 +140,10 @@ func queryDpkgUpgradeInfoByAptList() ([]string, error) {
 	}
 	err = cmd.Start()
 	if err != nil {
-		log.Errorf("LockDo: %v\n", err)
+		_ = log.Errorf("LockDo: %v\n", err)
 	}
 	timer := time.AfterFunc(time.Second*10, func() {
-		cmd.Process.Signal(syscall.SIGINT)
+		_ = cmd.Process.Signal(syscall.SIGINT)
 	})
 
 	buf := bytes.NewBuffer(nil)
@@ -169,12 +169,12 @@ func queryDpkgUpgradeInfoByAptList() ([]string, error) {
 func getSystemArchitectures() []system.Architecture {
 	foreignArchs, err := exec.Command("dpkg", "--print-foreign-architectures").Output()
 	if err != nil {
-		log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
+		_ = log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
 	}
 
 	arch, err := exec.Command("dpkg", "--print-architecture").Output()
 	if err != nil {
-		log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
+		_ = log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
 	}
 
 	var r []system.Architecture

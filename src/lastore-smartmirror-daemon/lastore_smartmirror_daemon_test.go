@@ -16,7 +16,7 @@ var list = []string{
 }
 
 var mq = MirrorQuality{
-	QualityMap: make(QualityMap, 0),
+	QualityMap: make(QualityMap),
 	reportList: make(chan []Report),
 }
 

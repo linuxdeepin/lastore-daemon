@@ -28,9 +28,7 @@ type SpeedMeter struct {
 	updateTime time.Time
 	startTime  time.Time
 
-	inited   int
 	progress float64
-	count    int
 }
 
 func (s *SpeedMeter) SetDownloadSize(size int64) {

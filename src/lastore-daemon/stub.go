@@ -22,7 +22,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus1"
+	dbus "pkg.deepin.io/lib/dbus1"
 )
 
 var NotUseDBus = false
@@ -65,13 +65,13 @@ func (m *Manager) updateJobList() {
 			jobPaths = append(jobPaths, j.getPath())
 		}
 		m.JobList = jobPaths
-		m.emitPropChangedJobList(jobPaths)
+		_ = m.emitPropChangedJobList(jobPaths)
 	}
 
 	if systemOnChanging != m.SystemOnChanging {
 		m.SystemOnChanging = systemOnChanging
 		m.updateSystemOnChaning(systemOnChanging)
-		m.emitPropChangedSystemOnChanging(systemOnChanging)
+		_ = m.emitPropChangedSystemOnChanging(systemOnChanging)
 	}
 }
 
@@ -94,7 +94,7 @@ func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 		m.UpgradableApps = apps
 		err := m.emitPropChangedUpgradableApps(apps)
 		if err != nil {
-			log.Warn(err)
+			_ = log.Warn(err)
 		}
 	}
 }
@@ -114,7 +114,7 @@ func (u *Updater) setUpdatableApps(ids []string) {
 	}
 	if changed {
 		u.UpdatableApps = ids
-		u.emitPropChangedUpdatableApps(ids)
+		_ = u.emitPropChangedUpdatableApps(ids)
 	}
 }
 
@@ -133,7 +133,7 @@ func (u *Updater) setUpdatablePackages(ids []string) {
 	}
 	if changed {
 		u.UpdatablePackages = ids
-		u.emitPropChangedUpdatablePackages(ids)
+		_ = u.emitPropChangedUpdatablePackages(ids)
 	}
 }
 
@@ -145,7 +145,7 @@ func DestroyJobDBus(j *Job) {
 	<-time.After(time.Millisecond * 100)
 	err := j.service.StopExport(j)
 	if err != nil {
-		log.Warnf("failed to stop export job %q: %v", j.Id, err)
+		_ = log.Warnf("failed to stop export job %q: %v", j.Id, err)
 	}
 }
 
@@ -162,9 +162,9 @@ func (*Updater) GetInterfaceName() string {
 }
 
 func (j *Job) notifyAll() {
-	j.emitPropChangedType(j.Type)
-	j.emitPropChangedStatus(j.Status)
-	j.emitPropChangedProgress(j.Progress)
-	j.emitPropChangedSpeed(j.Speed)
-	j.emitPropChangedCancelable(j.Cancelable)
+	_ = j.emitPropChangedType(j.Type)
+	_ = j.emitPropChangedStatus(j.Status)
+	_ = j.emitPropChangedProgress(j.Progress)
+	_ = j.emitPropChangedSpeed(j.Speed)
+	_ = j.emitPropChangedCancelable(j.Cancelable)
 }

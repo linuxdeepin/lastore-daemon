@@ -194,7 +194,7 @@ func (jm *JobManager) CleanJob(jobId string) error {
 func (jm *JobManager) pauseJob(job *Job) error {
 	switch job.Status {
 	case system.PausedStatus:
-		log.Warnf("Try pausing a pasued Job %v\n", job)
+		_ = log.Warnf("Try pausing a pasued Job %v\n", job)
 		return nil
 	case system.RunningStatus:
 		err := jm.system.Abort(job.Id)
@@ -229,14 +229,14 @@ func (jm *JobManager) dispatch() {
 	}
 
 	for _, job := range pendingDeleteJobs {
-		jm.removeJob(job.Id, job.queueName)
+		_ = jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
 			log.Debugf("Job(%q).next is %v\n", job.Id, job.next)
 			job = job.next
 
-			jm.addJob(job)
+			_ = jm.addJob(job)
 
-			jm.markStart(job)
+			_ = jm.markStart(job)
 			job.PropsMu.RLock()
 			job.notifyAll()
 			job.PropsMu.RUnlock()
@@ -287,16 +287,16 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 
 		if jobStatus == system.FailedStatus {
 			job.retry--
-			jm.markStart(job)
+			_ = jm.markStart(job)
 			log.Infof("Retry failed Job %v\n", job)
 		}
 
 		err := StartSystemJob(jm.system, job)
 		if err != nil {
 			job.PropsMu.Lock()
-			TransitionJobState(job, system.FailedStatus)
+			_ = TransitionJobState(job, system.FailedStatus)
 			job.PropsMu.Unlock()
-			log.Errorf("StartSystemJob failed %v :%v\n", job, err)
+			_ = log.Errorf("StartSystemJob failed %v :%v\n", job, err)
 
 			pkgSysErr, ok := err.(*system.PkgSystemError)
 			if ok {
@@ -304,7 +304,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 				job.retry = 0
 				job.PropsMu.Lock()
 				job.setError(pkgSysErr)
-				job.emitPropChangedStatus(job.Status)
+				_ = job.emitPropChangedStatus(job.Status)
 				job.PropsMu.Unlock()
 			} else if job.retry == 0 {
 				job.setError(&system.JobError{
@@ -346,7 +346,7 @@ func (jm *JobManager) addJob(j *Job) error {
 		// use dbus
 		err = jm.service.Export(j.getPath(), j)
 		if err != nil {
-			log.Warn(err)
+			_ = log.Warn(err)
 			return err
 		}
 	}
@@ -371,7 +371,7 @@ func (jm *JobManager) removeJob(jobId string, queueName string) error {
 func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	j := jm.findJobById(info.JobId)
 	if j == nil {
-		log.Warnf("Can't find Job %q when update info %v\n", info.JobId, info)
+		_ = log.Warnf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
 

@@ -81,7 +81,7 @@ func (mq *MirrorQuality) detectSelectMirror(originMirrorList []string) []string 
 	selectMirrorList = append(selectMirrorList, sortList...)
 
 	// query map
-	sortMap := make(map[string]string, 0)
+	sortMap := make(map[string]string)
 	for _, v := range sortList {
 		sortMap[v] = v
 	}
@@ -125,10 +125,7 @@ type compareHandler func(left, right string) bool
 func (mq *MirrorQuality) selectLessAccess(left, right string) bool {
 	lq := mq.getQuality(left)
 	rq := mq.getQuality(right)
-	if lq.DetectCount <= rq.DetectCount {
-		return true
-	}
-	return false
+	return lq.DetectCount <= rq.DetectCount
 }
 
 // return true if left good than right
@@ -136,8 +133,8 @@ func (mq *MirrorQuality) compare(left, right string) bool {
 	lq := mq.getQuality(left)
 	rq := mq.getQuality(right)
 	// WARNING: default value must be zero
-	lAdjust, _ := mq.adjustDelays[left]
-	rAdjust, _ := mq.adjustDelays[right]
+	lAdjust := mq.adjustDelays[left]
+	rAdjust := mq.adjustDelays[right]
 
 	// TODO: 修复错误容限
 	// equal (lq.FailedCount/lq.AccessCount < rq.FailedCount/rq.AccessCount)

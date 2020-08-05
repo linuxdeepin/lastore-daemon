@@ -26,7 +26,7 @@ func NewStore() *Store {
 		log.Infof("fail to read file: %v", err)
 		s.sysCfg, err = ini.Load(appstoreConfPathDefault)
 		if err != nil {
-			log.Errorf("fail to read file:", err)
+			_ = log.Errorf("fail to read file:", err)
 		}
 	}
 	return s

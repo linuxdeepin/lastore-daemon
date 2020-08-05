@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"internal/mirrors"
-	"net/http"
 	"os"
 	"strings"
 
@@ -128,55 +127,6 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	err = SaveMirrorInfos(infos, f)
 	if err != nil {
 		fmt.Println("E:", err)
-	}
-}
-
-func ShowBest(url string) {
-	fmt.Println(url)
-}
-func ShowBestOnError(url string, err error) {
-	ShowBest(url)
-	fmt.Printf("E:%v\n", err)
-	os.Exit(-1)
-}
-
-func buildRequest(header map[string]string, method string, url string) *http.Request {
-	r, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil
-	}
-	for k, v := range header {
-		r.Header.Set(k, v)
-	}
-	return r
-}
-
-func handleRequest(c *http.Client, r *http.Request) (string, bool) {
-	if c == nil {
-		c = &http.Client{}
-	}
-	if r == nil {
-		return "", false
-	}
-	resp, err := c.Do(r)
-	if err != nil {
-		return "", false
-	}
-	resp.Body.Close()
-
-	switch resp.StatusCode / 100 {
-	case 4, 5:
-		return "", false
-	case 3:
-		u, err := resp.Location()
-		if err != nil {
-			return r.URL.String(), true
-		}
-		return u.String(), true
-	case 2, 1:
-		return r.URL.String(), true
-	default:
-		return "", true
 	}
 }
 

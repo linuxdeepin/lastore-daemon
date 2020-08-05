@@ -49,7 +49,7 @@ func TestDesktopQuery(t *testing.T) {
 	}
 }
 
-func ListAppStore(t *testing.T) []string {
+func ListAppStore(t *testing.T) []string { //nolint
 	apps, err := utils.RunCommand("lastore-tools", "test", "-j", "search")
 	if err != nil {
 		t.Fatal(err)
@@ -57,7 +57,7 @@ func ListAppStore(t *testing.T) []string {
 	return strings.Split(apps, "\n")
 }
 
-func ListInstalled(t *testing.T) []string {
+func ListInstalled(t *testing.T) []string { // nolint
 	s, err := utils.RunCommand("bash", "-c", `dpkg -l | awk '{print $2}'`)
 	if err != nil {
 		t.Fatal(err)

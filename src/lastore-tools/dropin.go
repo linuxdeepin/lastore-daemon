@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 )
 
-var CacheDir = "/var/lib/lastore/cache"
 var BaseDir = "/lastore"
 
 func BuildDesktop2uaid() (map[string]string, error) {
@@ -39,6 +38,9 @@ func BuildCategories() (map[string]string, error) {
 
 func handleDropinDir(dirPath string, handle func(f io.Reader) error) error {
 	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if path == dirPath {
 			return nil
 		}

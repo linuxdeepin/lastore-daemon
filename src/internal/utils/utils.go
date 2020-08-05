@@ -51,7 +51,7 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 	errBuf := new(bytes.Buffer)
 	cmd.Stderr = errBuf
 	timer := time.AfterFunc(timeout, func() {
-		cmd.Process.Kill()
+		_ = cmd.Process.Kill()
 	})
 	err = cmd.Start()
 	if err != nil {
@@ -59,7 +59,7 @@ func FilterExecOutput(cmd *exec.Cmd, timeout time.Duration, filter func(line str
 	}
 
 	buf := bytes.NewBuffer(nil)
-	buf.ReadFrom(r)
+	_, _ = buf.ReadFrom(r)
 
 	var lines []string
 	var line string
@@ -145,7 +145,7 @@ func WriteData(fpath string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	EnsureBaseDir(fpath)
+	_ = EnsureBaseDir(fpath)
 	return ioutil.WriteFile(fpath, content, 0644)
 }
 

@@ -27,7 +27,6 @@ import "io"
 import "internal/utils"
 
 type URLChecker struct {
-	workQueue   chan string
 	workerQueue chan chan string
 	result      map[string]chan *URLCheckResult
 	nDone       int
@@ -69,16 +68,15 @@ func NewURLChecker(thread int) *URLChecker {
 			worker := make(chan string)
 			for {
 				c.workerQueue <- worker
-				select {
-				case url := <-worker:
-					r := CheckURLExists(url)
-					c.nDone = c.nDone + 1
-					c.result[url] <- r
-					fmt.Printf("\r\n%0.1f%%  %q --> %v %v",
-						float64(c.nDone)/float64(len(c.result))*100,
-						url, r.Latency, r.Result)
-					<-time.After(time.Millisecond * 100)
-				}
+
+				url := <-worker
+				r := CheckURLExists(url)
+				c.nDone = c.nDone + 1
+				c.result[url] <- r
+				fmt.Printf("\r\n%0.1f%%  %q --> %v %v",
+					float64(c.nDone)/float64(len(c.result))*100,
+					url, r.Latency, r.Result)
+				<-time.After(time.Millisecond * 100)
 			}
 		}()
 	}

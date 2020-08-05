@@ -18,17 +18,16 @@
 package utils
 
 import (
-	"flag"
 	"os"
 	"path"
 
 	log "github.com/cihub/seelog"
-	"pkg.deepin.io/lib/dbus1"
+	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 )
 
 func SetSeelogger(levels string, format string, output string) error {
-	os.MkdirAll(path.Dir(output), 0755)
+	_ = os.MkdirAll(path.Dir(output), 0755)
 
 	config := `
 <seelog type="sync">
@@ -54,8 +53,6 @@ func SetSeelogger(levels string, format string, output string) error {
 const DefaultLogFormat = "[%Level] [%Date %Time]@%File.%Line %Msg%n"
 const DefaultLogLevel = "info,warn,error"
 const DefaultLogOutput = "/var/log/lastore/daemon.log"
-
-var baseLogDir = flag.String("log", "/var/log/lastore", "the directory to store logs")
 
 func SetLogger(levels, format, output string) *dbus.Error {
 	err := SetSeelogger(levels, format, output)

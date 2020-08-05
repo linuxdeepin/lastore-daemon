@@ -21,12 +21,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	log "github.com/cihub/seelog"
 	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
 	"strings"
+
+	log "github.com/cihub/seelog"
 )
 
 type DesktopInfo struct {
@@ -82,7 +83,7 @@ func GetDesktopFiles(dirs []string) []string {
 // 2. desktop --> exec
 // 3. desktop --> package
 func GenerateDesktopIndexes(baseDir string) error {
-	os.MkdirAll(baseDir, 0755)
+	_ = os.MkdirAll(baseDir, 0755)
 
 	packageIndex, installTimeIndex := ParsePackageInfos()
 	if err := writeData(path.Join(baseDir, "pacakge_installedTime.json"), installTimeIndex); err != nil {
@@ -203,7 +204,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 
 	fs, err := ioutil.ReadDir("/var/lib/dpkg/info")
 	if err != nil {
-		log.Warnf("ParsePackageInfos :%v\n", err)
+		_ = log.Warnf("ParsePackageInfos :%v\n", err)
 		return r, t
 	}
 
@@ -229,7 +230,7 @@ func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string 
 	var old = make(map[string]string)
 	if content, err := ioutil.ReadFile(fpath); err == nil {
 		if err := json.Unmarshal(content, &old); err != nil {
-			log.Warnf("mergeDesktopIndex:%q %v\n", fpath, err)
+			_ = log.Warnf("mergeDesktopIndex:%q %v\n", fpath, err)
 		}
 
 	}
@@ -238,6 +239,6 @@ func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string 
 			old[key] = value
 		}
 	}
-	writeData(fpath, old)
+	_ = writeData(fpath, old)
 	return old
 }
