@@ -35,7 +35,7 @@ func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
 	m.PropsMu.Lock()
 	defer m.PropsMu.Unlock()
-
+	var caller methodCaller
 	jobChanged := len(list) != len(m.jobList)
 	systemOnChanging := false
 
@@ -46,6 +46,7 @@ func (m *Manager) updateJobList() {
 		j2.PropsMu.RUnlock()
 		if !j2Cancelable {
 			systemOnChanging = true
+			caller = j2.caller
 		}
 
 		if jobChanged || (i < len(m.jobList) && j2 == m.jobList[i]) {
@@ -70,7 +71,7 @@ func (m *Manager) updateJobList() {
 
 	if systemOnChanging != m.SystemOnChanging {
 		m.SystemOnChanging = systemOnChanging
-		m.updateSystemOnChaning(systemOnChanging)
+		m.updateSystemOnChanging(systemOnChanging, caller)
 		_ = m.emitPropChangedSystemOnChanging(systemOnChanging)
 	}
 }

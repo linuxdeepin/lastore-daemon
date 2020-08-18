@@ -44,6 +44,7 @@ type Job struct {
 	Type string
 
 	Status system.Status
+	caller methodCaller
 
 	Progress    float64
 	Description string

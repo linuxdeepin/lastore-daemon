@@ -111,8 +111,26 @@ func main() {
 	}
 
 	ihObj := inhibit_hint.New("lastore-daemon")
-	ihObj.SetIcon("preferences-system")
-	ihObj.SetName(Tr("Control Center"))
+	ihObj.SetIconFunc(func(why string) string {
+		switch why {
+		case "Updating the system, please do not shut down or reboot now.":
+			return "preferences-system"
+		case "Tasks are running...":
+			return "deepin-app-store"
+		default:
+			return "preferences-system" // TODO
+		}
+	})
+	ihObj.SetNameFunc(func(why string) string {
+		switch why {
+		case "Updating the system, please do not shut down or reboot now.":
+			return Tr("Control Center")
+		case "Tasks are running...":
+			return Tr("App Store")
+		default:
+			return Tr("Control Center") // TODO
+		}
+	})
 	err = ihObj.Export(service)
 	if err != nil {
 		_ = log.Warn("failed to export inhibit hint:", err)

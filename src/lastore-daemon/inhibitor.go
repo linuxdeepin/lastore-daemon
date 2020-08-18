@@ -21,14 +21,41 @@ import (
 	"syscall"
 
 	log "github.com/cihub/seelog"
-	"github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/godbus/dbus"
+	"github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 )
 
-func (m *Manager) updateSystemOnChaning(onChanging bool) {
+type methodCaller uint
+
+const (
+	methodCallerOtherCaller methodCaller = iota
+	methodCallerControlCenter
+	methodCallerAppStore
+)
+
+func mapMethodCaller(execPath string) methodCaller {
+	switch execPath {
+	case "/usr/bin/deepin-app-store-daemon", "/usr/bin/deepin-appstore-daemon":
+		return methodCallerAppStore
+	case "/usr/bin/dde-control-center":
+		return methodCallerControlCenter
+	default:
+		return methodCallerOtherCaller
+	}
+}
+
+func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 	if onChanging && m.inhibitFd == -1 {
-		fd, err := Inhibitor("shutdown", dbusServiceName,
-			Tr("Updating the system, please do not shut down or reboot now."))
+		var why string
+		switch caller {
+		case methodCallerControlCenter:
+			why = Tr("Updating the system, please do not shut down or reboot now.")
+		case methodCallerAppStore:
+			why = Tr("Tasks are running...")
+		default:
+			why = Tr("Prevent shutdown...")
+		}
+		fd, err := Inhibitor("shutdown", dbusServiceName, why)
 		log.Infof("Prevent shutdown...: fd:%v\n", fd)
 		if err != nil {
 			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
