@@ -22,7 +22,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
-	"pkg.deepin.io/lib/dbus1"
+	"github.com/godbus/dbus"
 )
 
 func (m *Manager) updateSystemOnChaning(onChanging bool) {

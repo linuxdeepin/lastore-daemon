@@ -29,11 +29,11 @@ import (
 	"unicode/utf8"
 
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
+	"github.com/godbus/dbus"
 
 	"internal/system"
 	"internal/utils"
 
-	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/procfs"
 	"pkg.deepin.io/lib/strv"

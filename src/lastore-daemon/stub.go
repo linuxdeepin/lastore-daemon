@@ -22,7 +22,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	dbus "pkg.deepin.io/lib/dbus1"
+	"github.com/godbus/dbus"
 )
 
 var NotUseDBus = false

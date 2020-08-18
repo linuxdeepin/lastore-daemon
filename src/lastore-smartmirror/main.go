@@ -29,7 +29,7 @@ import (
 
 	"internal/utils"
 
-	"pkg.deepin.io/lib/dbus1"
+	"github.com/godbus/dbus"
 )
 
 func main() {

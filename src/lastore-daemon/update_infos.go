@@ -21,10 +21,10 @@ import (
 	"internal/system"
 	"path"
 
-	dbus "pkg.deepin.io/lib/dbus1"
 	"pkg.deepin.io/lib/dbusutil"
 
 	log "github.com/cihub/seelog"
+	"github.com/godbus/dbus"
 )
 
 type ApplicationInfo struct {

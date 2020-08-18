@@ -56,7 +56,7 @@ func Tr(text string) string {
 	return text
 }
 
-//go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,pkg.deepin.io/lib/dbus1 updater.go job.go manager.go
+//go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,github.com/godbus/dbus updater.go job.go manager.go
 
 func main() {
 	flag.Parse()
