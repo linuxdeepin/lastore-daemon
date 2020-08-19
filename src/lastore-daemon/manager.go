@@ -477,7 +477,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	}
 
 	job.setHooks(map[string]func(){
-		string(system.EndStatus): m.handleUpdateInfosChanged,
+		string(system.EndStatus): m.installUOSReleaseNote,
 	})
 	return job, err
 }
@@ -834,4 +834,13 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 		return nil, err
 	}
 	return job, err
+}
+
+func (m *Manager) installUOSReleaseNote() {
+	log.Info("installUOSReleaseNote begin")
+	m.handleUpdateInfosChanged()
+	_, err := m.installPkg("", "uos-release-note", nil)
+	if err != nil {
+		_ = log.Warn(err)
+	}
 }
