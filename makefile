@@ -33,6 +33,9 @@ test:
 	lastore-daemon  lastore-smartmirror  lastore-tools \
 	lastore-smartmirror-daemon
 
+print_gopath:
+	GOPATH="${CURDIR}/${GOPATH_DIR}:${GOPATH}"
+
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
