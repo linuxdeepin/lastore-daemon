@@ -53,7 +53,7 @@ func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 		case methodCallerAppStore:
 			why = Tr("Tasks are running...")
 		default:
-			why = Tr("Prevent shutdown...")
+			why = Tr("Preventing from shutting down")
 		}
 		fd, err := Inhibitor("shutdown", dbusServiceName, why)
 		log.Infof("Prevent shutdown...: fd:%v\n", fd)

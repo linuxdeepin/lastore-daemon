@@ -4,17 +4,16 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# fri, 2019
-# Tomáš Kratochvíl <kratochvil.tomas.dev@gmail.com>, 2019
+# Pavel Borecki <pavel.borecki@gmail.com>, 2020
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 20:50+0800\n"
-"PO-Revision-Date: 2019-10-23 02:33+0000\n"
-"Last-Translator: Tomáš Kratochvíl <kratochvil.tomas.dev@gmail.com>, 2019\n"
+"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"PO-Revision-Date: 2020-08-24 10:36+0000\n"
+"Last-Translator: Pavel Borecki <pavel.borecki@gmail.com>, 2020\n"
 "Language-Team: Czech (https://www.transifex.com/linuxdeepin/teams/3617/cs/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -22,12 +21,23 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:31
-msgid "System is updating, please shut down or reboot later."
+#: ../src/lastore-daemon/inhibitor.go:52
+msgid "Updating the system, please do not shut down or reboot now."
 msgstr ""
-"Systém se aktualizuje. Vypněte, prosím, počítač nebo ho restartujte "
-"později..."
+"Systém se aktualizuje. Počítač prosím nyní nevypínejte ani nerestartujte."
 
-#: ../src/lastore-daemon/main.go:101
+#: ../src/lastore-daemon/inhibitor.go:54
+msgid "Tasks are running..."
+msgstr "Probíhají úlohy…"
+
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing from shutting down"
+msgstr ""
+
+#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"
-msgstr "Ovládací středisko"
+msgstr "Ovládací panely"
+
+#: ../src/lastore-daemon/main.go:129
+msgid "App Store"
+msgstr "Katalog aplikací"

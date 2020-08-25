@@ -2,25 +2,37 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-12-12 18:42+0800\n"
+"POT-Creation-Date: 2020-08-25 09:25+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: \n"
 
-#: ../src/lastore-daemon/inhibitor.go:31
+#: ../src/lastore-daemon/inhibitor.go:52
 msgid "Updating the system, please do not shut down or reboot now."
-msgstr ""
+msgstr "Updating the system, please do not shut down or reboot now."
 
-#: ../src/lastore-daemon/main.go:101
+#: ../src/lastore-daemon/inhibitor.go:54
+msgid "Tasks are running..."
+msgstr "Tasks are running..."
+
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing from shutting down"
+msgstr "Preventing from shutting down"
+
+#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"
-msgstr ""
+msgstr "Control Center"
+
+#: ../src/lastore-daemon/main.go:129
+msgid "App Store"
+msgstr "App Store"

@@ -4,17 +4,17 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Maggie Liu <maggie.liufei@gmail.com>, 2019
-# Paulo Schopf, 2019
+# Paulo Schopf, 2020
+# Alex, 2020
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 20:50+0800\n"
-"PO-Revision-Date: 2019-10-23 02:33+0000\n"
-"Last-Translator: Paulo Schopf, 2019\n"
+"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"PO-Revision-Date: 2020-08-24 10:36+0000\n"
+"Last-Translator: Alex, 2020\n"
 "Language-Team: Portuguese (Brazil) (https://www.transifex.com/linuxdeepin/teams/3617/pt_BR/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -22,11 +22,22 @@ msgstr ""
 "Language: pt_BR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:31
-msgid "System is updating, please shut down or reboot later."
-msgstr ""
-"O sistema está sendo atualizado, por favor desligue ou reinicie mais tarde."
+#: ../src/lastore-daemon/inhibitor.go:52
+msgid "Updating the system, please do not shut down or reboot now."
+msgstr "Atualizando o sistema; não desligue ou reinicie o computador."
 
-#: ../src/lastore-daemon/main.go:101
+#: ../src/lastore-daemon/inhibitor.go:54
+msgid "Tasks are running..."
+msgstr "As tarefas estão em execução..."
+
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing from shutting down"
+msgstr ""
+
+#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"
 msgstr "Central de Controle"
+
+#: ../src/lastore-daemon/main.go:129
+msgid "App Store"
+msgstr "Loja de Aplicativos"
