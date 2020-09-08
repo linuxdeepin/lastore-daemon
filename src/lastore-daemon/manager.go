@@ -460,7 +460,7 @@ func (m *Manager) handleUpdateInfosChanged() {
 			}
 		}()
 	}
-	m.installUOSReleaseNote()
+	go m.installUOSReleaseNote()
 }
 
 func (m *Manager) updateSource(needNotify bool) (*Job, error) {
@@ -839,14 +839,26 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 func (m *Manager) installUOSReleaseNote() {
 	log.Info("installUOSReleaseNote begin")
+	pkgId := "uos-release-note"
 
-	for _, v := range m.updater.UpdatablePackages {
-		if v == "uos-release-note" {
-			_, err := m.installPkg("", "uos-release-note", nil, false)
+	bExists, _ := m.PackageExists(pkgId)
+	if bExists {
+		for _, v := range m.updater.UpdatablePackages {
+			if v == pkgId {
+				_, err := m.installPkg("", pkgId, nil, false)
+				if err != nil {
+					_ = log.Warn(err)
+				}
+				break
+			}
+		}
+	} else {
+		bInstalled, _ := m.PackageInstallable(pkgId)
+		if bInstalled {
+			_, err := m.installPkg("", pkgId, nil, false)
 			if err != nil {
 				_ = log.Warn(err)
 			}
-			break
 		}
 	}
 }
