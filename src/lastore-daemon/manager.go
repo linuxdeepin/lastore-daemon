@@ -18,6 +18,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -298,16 +299,19 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 
 func sendInstallMsgToUserExperModule(msg, path, name, id string) {
 	bus, err := dbus.SystemBus()
-	if err == nil {
-		userexp := bus.Object(UserExperServiceName, UserExperPath)
-		err = userexp.Call(UserExperServiceName+".SendAppInstallData", 0, msg, path, name, id).Err
-		if err != nil {
-			_ = log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
-		} else {
-			log.Debugf("send %s message to ue module", msg)
-		}
+	if err != nil {
+		log.Warn(err)
+		return
+	}
+	userexp := bus.Object(UserExperServiceName, UserExperPath)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancelFn()
+	// 设置两秒的超时，如果两秒内函数没处理完，则返回err，并且不会阻塞
+	err = userexp.CallWithContext(ctx, UserExperServiceName+".SendAppInstallData", 0, msg, path, name, id).Err
+	if err != nil {
+		_ = log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
 	} else {
-		_ = log.Warn(err)
+		log.Debugf("send %s message to ue module", msg)
 	}
 }
 
