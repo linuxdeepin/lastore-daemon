@@ -34,7 +34,7 @@ test:
 	lastore-smartmirror-daemon
 
 print_gopath:
-	GOPATH="${CURDIR}/${GOPATH_DIR}:${GOPATH}"
+	GOPATH="${pwd}:${pwd}/vendor:${GOPATH}"
 
 install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
