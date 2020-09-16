@@ -124,11 +124,12 @@ func TransitionJobState(j *Job, to system.Status) error {
 		hookFn()
 	}
 
-	err := j.emitPropChangedStatus(to)
-	if err != nil {
-		_ = log.Warn(err)
+	if !j.exportDBus {
+		err := j.emitPropChangedStatus(to)
+		if err != nil {
+			_ = log.Warn(err)
+		}
 	}
-
 	if j.Status == system.SucceedStatus {
 		return TransitionJobState(j, system.EndStatus)
 	}
