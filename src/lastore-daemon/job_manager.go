@@ -130,7 +130,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	}
 	job.exportDBus = exportDBus
 
-	log.Infof("CreateJob with %q %q %q %+v %b\n", jobName, jobType, packages, environ, exportDBus)
+	log.Infof("CreateJob with %q %q %q %+v %v\n", jobName, jobType, packages, environ, exportDBus)
 	if err := jm.addJob(job); err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 		return
 	}
 
-	if j._UpdateInfo(info) {
+	if j.updateInfo(info) {
 		jm.markDirty()
 	}
 }

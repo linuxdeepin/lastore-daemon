@@ -120,9 +120,9 @@ func (j *Job) String() string {
 	)
 }
 
-// _UpdateInfo update Job information from info and return
+// updateInfo update Job information from info and return
 // whether the information changed.
-func (j *Job) _UpdateInfo(info system.JobProgressInfo) bool {
+func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	var changed = false
 
 	j.PropsMu.Lock()

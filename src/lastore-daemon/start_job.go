@@ -107,6 +107,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 	return false
 }
 
+// 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
 func TransitionJobState(j *Job, to system.Status) error {
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job %v to %q", j, to)
@@ -121,7 +122,9 @@ func TransitionJobState(j *Job, to system.Status) error {
 
 	hookFn := j.getHook(string(to))
 	if hookFn != nil {
+		j.PropsMu.Unlock()
 		hookFn()
+		j.PropsMu.Lock()
 	}
 
 	if !j.exportDBus {

@@ -33,8 +33,7 @@ const (
 	FailedStatus  Status = "failed"
 	SucceedStatus Status = "succeed"
 	PausedStatus  Status = "paused"
-
-	EndStatus = "end"
+	EndStatus     Status = "end"
 )
 
 const (

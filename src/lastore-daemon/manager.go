@@ -458,7 +458,7 @@ func (m *Manager) handleUpdateInfosChanged() {
 	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 {
 		log.Info("auto download updates")
 		go func() {
-			_, err := m.PrepareDistUpgrade()
+			_, err := m.prepareDistUpgrade()
 			if err != nil {
 				_ = log.Error("failed to prepare dist-upgrade:", err)
 			}
