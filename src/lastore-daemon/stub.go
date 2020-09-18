@@ -33,10 +33,11 @@ func (*Manager) GetInterfaceName() string {
 
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
-	m.PropsMu.Lock()
-	defer m.PropsMu.Unlock()
 
+	m.PropsMu.RLock()
 	jobChanged := len(list) != len(m.jobList)
+	m.PropsMu.RUnlock()
+
 	systemOnChanging := false
 
 	for i, j2 := range list {
@@ -48,9 +49,18 @@ func (m *Manager) updateJobList() {
 			systemOnChanging = true
 		}
 
-		if jobChanged || (i < len(m.jobList) && j2 == m.jobList[i]) {
+		if jobChanged {
 			continue
 		}
+
+		m.PropsMu.RLock()
+		shouldContinue := i < len(m.jobList) && j2 == m.jobList[i]
+		m.PropsMu.RUnlock()
+		if shouldContinue {
+			// j2 （新）和 jobList[i] （旧）是相同的
+			continue
+		}
+
 		jobChanged = true
 
 		if jobChanged && systemOnChanging {
@@ -64,8 +74,10 @@ func (m *Manager) updateJobList() {
 		for _, j := range list {
 			jobPaths = append(jobPaths, j.getPath())
 		}
+		m.PropsMu.Lock()
 		m.JobList = jobPaths
-		m.emitPropChangedJobList(jobPaths)
+		_ = m.emitPropChangedJobList(jobPaths)
+		m.PropsMu.Unlock()
 	}
 
 	if systemOnChanging != m.SystemOnChanging {

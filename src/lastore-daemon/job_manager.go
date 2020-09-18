@@ -375,7 +375,7 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 		return
 	}
 
-	if j._UpdateInfo(info) {
+	if j.updateInfo(info) {
 		jm.markDirty()
 	}
 }
