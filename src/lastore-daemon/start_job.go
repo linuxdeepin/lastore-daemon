@@ -127,7 +127,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.PropsMu.Lock()
 	}
 
-	if !j.exportDBus {
+	if j.exportDBus {
 		err := j.emitPropChangedStatus(to)
 		if err != nil {
 			_ = log.Warn(err)
