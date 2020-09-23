@@ -127,10 +127,12 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.PropsMu.Lock()
 	}
 
-	if j.exportDBus {
-		err := j.emitPropChangedStatus(to)
-		if err != nil {
-			_ = log.Warn(err)
+	if j.Packages != nil {
+		if j.Packages[0] != uosReleaseNotePkgName {
+			err := j.emitPropChangedStatus(to)
+			if err != nil {
+				_ = log.Warn(err)
+			}
 		}
 	}
 	if j.Status == system.SucceedStatus {

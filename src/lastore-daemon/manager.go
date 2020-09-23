@@ -48,6 +48,8 @@ const (
 
 	UserExperInstallApp   = "installapp"
 	UserExperUninstallApp = "uninstallapp"
+
+	uosReleaseNotePkgName = "uos-release-note"
 )
 
 var (
@@ -224,7 +226,7 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ, true)
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
 	m.do.Unlock()
 
 	if err != nil {
@@ -263,7 +265,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	lang := getUsedLang(environ)
 	if lang == "" {
 		_ = log.Warn("failed to get lang")
-		return m.installPkg(jobName, packages, environ, true)
+		return m.installPkg(jobName, packages, environ)
 	}
 
 	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, lang, pkgs...)
@@ -272,7 +274,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	}
 
 	pkgs = append(pkgs, localePkgs...)
-	return m.installPkg(jobName, strings.Join(pkgs, " "), environ, true)
+	return m.installPkg(jobName, strings.Join(pkgs, " "), environ)
 }
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
@@ -315,11 +317,11 @@ func sendInstallMsgToUserExperModule(msg, path, name, id string) {
 	}
 }
 
-func (m *Manager) installPkg(jobName, packages string, environ map[string]string, exportDBus bool) (*Job, error) {
+func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, exportDBus)
+	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
 	m.do.Unlock()
 
 	if err != nil {
@@ -390,7 +392,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ, true)
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	m.do.Unlock()
 
 	if job != nil {
@@ -474,7 +476,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	if needNotify {
 		jobName = "+notify"
 	}
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil, true)
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -548,7 +550,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ, true)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
 	if err != nil {
 		_ = log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
@@ -586,7 +588,7 @@ func (m *Manager) prepareDistUpgrade() (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil, true)
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -709,7 +711,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil, true)
+	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -831,7 +833,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 	m.do.Lock()
 	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
-		[]string{errType}, environ, true)
+		[]string{errType}, environ)
 	m.do.Unlock()
 
 	if err != nil {
@@ -843,13 +845,11 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 func (m *Manager) installUOSReleaseNote() {
 	log.Info("installUOSReleaseNote begin")
-	pkgId := "uos-release-note"
-
-	bExists, _ := m.PackageExists(pkgId)
+	bExists, _ := m.PackageExists(uosReleaseNotePkgName)
 	if bExists {
 		for _, v := range m.updater.UpdatablePackages {
-			if v == pkgId {
-				_, err := m.installPkg("", pkgId, nil, false)
+			if v == uosReleaseNotePkgName {
+				_, err := m.installPkg("", uosReleaseNotePkgName, nil)
 				if err != nil {
 					_ = log.Warn(err)
 				}
@@ -857,9 +857,9 @@ func (m *Manager) installUOSReleaseNote() {
 			}
 		}
 	} else {
-		bInstalled, _ := m.PackageInstallable(pkgId)
+		bInstalled, _ := m.PackageInstallable(uosReleaseNotePkgName)
 		if bInstalled {
-			_, err := m.installPkg("", pkgId, nil, false)
+			_, err := m.installPkg("", uosReleaseNotePkgName, nil)
 			if err != nil {
 				_ = log.Warn(err)
 			}
