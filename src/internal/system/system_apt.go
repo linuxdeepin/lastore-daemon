@@ -23,11 +23,14 @@ package system
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"internal/utils"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -64,6 +67,67 @@ func QueryPackageDependencies(pkgId string) []string {
 	return r
 }
 
+/*
+$ apt-config --format '%f=%v%n' dump  Dir
+Dir=/
+Dir::Cache=var/cache/apt
+Dir::Cache::archives=archives/
+Dir::Cache::srcpkgcache=srcpkgcache.bin
+Dir::Cache::pkgcache=pkgcache.bin
+*/
+func GetArchivesDir() (string, error) {
+	binAptConfig, _ := exec.LookPath("apt-config")
+	output, err := exec.Command(binAptConfig, "--format", "%f=%v%n", "dump", "Dir").Output()
+	if err != nil {
+		return "", err
+	}
+	lines := strings.Split(string(output), "\n")
+	tempMap := make(map[string]string)
+	fieldsCount := 0
+loop:
+	for _, line := range lines {
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			switch parts[0] {
+			case "Dir", "Dir::Cache", "Dir::Cache::archives":
+				tempMap[parts[0]] = parts[1]
+				fieldsCount++
+				if fieldsCount == 3 {
+					break loop
+				}
+			}
+		}
+	}
+	dir := tempMap["Dir"]
+	if dir == "" {
+		return "", errors.New("apt-config Dir is empty")
+	}
+
+	dirCache := tempMap["Dir::Cache"]
+	if dirCache == "" {
+		return "", errors.New("apt-config Dir::Cache is empty")
+	}
+	dirCacheArchives := tempMap["Dir::Cache::archives"]
+	if dirCacheArchives == "" {
+		return "", errors.New("apt-config Dir::Cache::Archives is empty")
+	}
+
+	return filepath.Join(dir, dirCache, dirCacheArchives), nil
+}
+
+// QueryFileCacheSize parsing the file total size(kb) of the path
+func QueryFileCacheSize(path string) (float64, error) {
+	output, err := exec.Command("/usr/bin/du", "-s", path).Output()
+	if err != nil {
+		return 0, err
+	}
+	lines := strings.Split(string(output), "\t")
+	if len(lines) != 0 {
+		return strconv.ParseFloat(lines[0], 64)
+	}
+	return 0, nil
+}
+
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
 func QueryPackageDownloadSize(packages ...string) (float64, error) {
@@ -89,17 +153,12 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 
 // QueryPackageInstalled query whether the pkgId installed
 func QueryPackageInstalled(pkgId string) bool {
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Status}", "--", pkgId).CombinedOutput()
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${db:Status-Status}", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return false
 	}
-	if strings.Contains(string(out), "ok not-installed") {
-		return false
-	} else if strings.Contains(string(out), "install ok installed") {
-		return true
-	}
-	return false
-
+	status := string(bytes.TrimSpace(out))
+	return status == "installed"
 }
 
 // QueryPackageInstallable query whether the pkgId can be installed

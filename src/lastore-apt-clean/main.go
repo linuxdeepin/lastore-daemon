@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
+	"internal/system"
 	"io/ioutil"
 	"log"
 	"os"
@@ -33,7 +35,16 @@ func mustGetBin(name string) string {
 	return file
 }
 
+var options struct {
+	forceDelete bool
+}
+
+func init() {
+	flag.BoolVar(&options.forceDelete, "force-delete", false, "force delete deb files")
+}
+
 func main() {
+	flag.Parse()
 	log.SetFlags(log.Lshortfile)
 	binDpkg = mustGetBin("dpkg")
 	binDpkgQuery = mustGetBin("dpkg-query")
@@ -43,7 +54,7 @@ func main() {
 
 	os.Setenv("LC_ALL", "C")
 
-	archivesDir, err := getArchivesDir()
+	archivesDir, err := system.GetArchivesDir()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,63 +83,24 @@ func main() {
 		case DeleteImmediately:
 			deleteDeb(archivesDir, fileInfo.Name())
 		case DeleteExpired:
-			debChangeTime := getChangeTime(fileInfo)
-			if time.Since(debChangeTime) > maxElapsed {
+		    if options.forceDelete {
+		        deleteDeb(archivesDir, fileInfo.Name())
+		    } else {
+    			debChangeTime := getChangeTime(fileInfo)
+    			if time.Since(debChangeTime) > maxElapsed {
+    				deleteDeb(archivesDir, fileInfo.Name())
+    			} else {
+    				log.Println("delete later")
+    			}
+		    }
+		case Keep:
+			if options.forceDelete {
 				deleteDeb(archivesDir, fileInfo.Name())
 			} else {
-				log.Println("delete later")
-			}
-		case Keep:
-			log.Println("keep")
-		}
-	}
-}
-
-/*
-$ apt-config --format '%f=%v%n' dump  Dir
-Dir=/
-Dir::Cache=var/cache/apt
-Dir::Cache::archives=archives/
-Dir::Cache::srcpkgcache=srcpkgcache.bin
-Dir::Cache::pkgcache=pkgcache.bin
-*/
-func getArchivesDir() (string, error) {
-	output, err := exec.Command(binAptConfig, "--format", "%f=%v%n", "dump", "Dir").Output()
-	if err != nil {
-		return "", err
-	}
-	lines := strings.Split(string(output), "\n")
-	tempMap := make(map[string]string)
-	fieldsCount := 0
-loop:
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			switch parts[0] {
-			case "Dir", "Dir::Cache", "Dir::Cache::archives":
-				tempMap[parts[0]] = parts[1]
-				fieldsCount++
-				if fieldsCount == 3 {
-					break loop
-				}
+				log.Println("keep")
 			}
 		}
 	}
-	dir := tempMap["Dir"]
-	if dir == "" {
-		return "", errors.New("apt-config Dir is empty")
-	}
-
-	dirCache := tempMap["Dir::Cache"]
-	if dirCache == "" {
-		return "", errors.New("apt-config Dir::Cache is empty")
-	}
-	dirCacheArchives := tempMap["Dir::Cache::archives"]
-	if dirCacheArchives == "" {
-		return "", errors.New("apt-config Dir::Cache::Archives is empty")
-	}
-
-	return filepath.Join(dir, dirCache, dirCacheArchives), nil
 }
 
 type DeletePolicy uint
@@ -142,7 +114,7 @@ const (
 func shouldDelete(dir string, fileInfo os.FileInfo) (DeletePolicy, error) {
 	debInfo, err := getDebInfo(filepath.Join(dir, fileInfo.Name()))
 	if err != nil {
-		return DeleteExpired, err
+		return DeleteImmediately, err
 	}
 	log.Printf("%#v\n", debInfo)
 
