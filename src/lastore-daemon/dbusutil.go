@@ -20,10 +20,6 @@ func (v *Updater) emitPropChangedAutoCheckUpdates(value bool) error {
 	return v.service.EmitPropertyChanged(v, "AutoCheckUpdates", value)
 }
 
-func (v *Updater) emitPropChangedUpdateNotify(value bool) error {
-	return v.service.EmitPropertyChanged(v, "UpdateNotify", value)
-}
-
 func (v *Updater) setPropAutoDownloadUpdates(value bool) (changed bool) {
 	if v.AutoDownloadUpdates != value {
 		v.AutoDownloadUpdates = value

@@ -18,9 +18,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"internal/system"
-	"internal/dstore"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -64,7 +65,7 @@ func MainTester(c *cli.Context) {
 	case "update":
 		err = LastoreUpdate()
 	case "search":
-		err = LastoreSearch("", c.Args().First(), c.GlobalBool("debug"))
+		err = LastoreSearch(c.GlobalString("dstoreapi"), c.Args().First(), c.GlobalBool("debug"))
 	case "prepare_upgrade":
 		err = LastorePrepareUpgrade()
 	default:
@@ -140,17 +141,24 @@ func LastorePrepareUpgrade() error {
 }
 
 func LastoreSearch(server string, p string, debug bool) error {
-	store := dstore.NewStore()
-	pkgInfos, err := store.GetPackageApplication("/var/lib/lastore/applications.json")
+	resp, err := http.Get(server + "/info/all")
 	if err != nil {
 		return err
 	}
-	for _, info := range pkgInfos {
-		if p == "" || strings.Contains(info.PackageName, p) {
+	defer resp.Body.Close()
+	apps := make(map[string]interface{})
+	d := json.NewDecoder(resp.Body)
+	err = d.Decode(&apps)
+	if err != nil {
+		return err
+	}
+
+	for app, info := range apps {
+		if p == "" || strings.Contains(app, p) {
 			if debug {
-				fmt.Printf("-%s %v\n", info.PackageName, info)
+				fmt.Printf("-%s %v\n", app, info)
 			} else {
-				fmt.Println(info.PackageName)
+				fmt.Println(app)
 			}
 		}
 	}

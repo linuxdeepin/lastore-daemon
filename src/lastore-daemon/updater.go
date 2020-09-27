@@ -48,23 +48,22 @@ type Updater struct {
 	PropsMu             sync.RWMutex
 	AutoCheckUpdates    bool
 	AutoDownloadUpdates bool
-	UpdateNotify        bool
-	MirrorSource        string
+
+	MirrorSource string
 
 	config *Config
+
 	// dbusutil-gen: equal=nil
 	UpdatableApps []string
 	// dbusutil-gen: equal=nil
 	UpdatablePackages []string
 
 	methods *struct {
-		ListMirrorSources          func() `in:"lang" out:"mirrorSources"`
-		SetMirrorSource            func() `in:"id"`
-		SetAutoCheckUpdates        func() `in:"enable"`
-		SetAutoDownloadUpdates     func() `in:"enable"`
-		ApplicationUpdateInfos     func() `in:"lang" out:"updateInfos"`
-		GetCheckIntervalAndTime    func() `out:"interval,checkTime"`
-		SetUpdateNotify            func() `in:"enable"`
+		ListMirrorSources      func() `in:"lang" out:"mirrorSources"`
+		SetMirrorSource        func() `in:"id"`
+		SetAutoCheckUpdates    func() `in:"enable"`
+		SetAutoDownloadUpdates func() `in:"enable"`
+		ApplicationUpdateInfos func() `in:"lang" out:"updateInfos"`
 	}
 }
 
@@ -76,26 +75,10 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		AutoCheckUpdates:    config.AutoCheckUpdates,
 		AutoDownloadUpdates: config.AutoDownloadUpdates,
 		MirrorSource:        config.MirrorSource,
-		UpdateNotify:        config.UpdateNotify,
 	}
-
-	go u.waitOnlineCheck()
 	go u.loopCheck()
 	return u
 }
-
-func (u *Updater) waitOnlineCheck() {
-	if u.AutoCheckUpdates {
-		err := exec.Command("nm-online", "-t", "3600").Run()
-		if err == nil {
-			_, err = u.manager.updateSource(true)
-			if err != nil {
-				log.Warn(err)
-			}
-		}
-	}
-}
-
 
 func (u *Updater) loopCheck() {
 	startUpdateMetadataInfoService := func() {
@@ -123,10 +106,7 @@ func (u *Updater) loopCheck() {
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
-			_, err := u.manager.updateSource(true)
-			if err != nil {
-				log.Warn(err)
-			}
+			u.manager.updateSource()
 		}
 
 		if !u.config.DisableUpdateMetadata {
@@ -222,25 +202,6 @@ func UpdatableNames(infos []system.UpgradeInfo) []string {
 		apps = append(apps, info.Package)
 	}
 	return apps
-}
-
-func (u *Updater) GetCheckIntervalAndTime() (float64, string, *dbus.Error) {
-	interval := u.config.CheckInterval.Hours()
-	checkTime := u.config.LastCheckTime.String()
-	return interval, checkTime, nil
-}
-
-func (u *Updater) SetUpdateNotify(enable bool)  *dbus.Error {
-	if  u.UpdateNotify == enable {
-		return nil
-	}
-	err := u.config.SetUpdateNotify(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-	u.UpdateNotify = enable
-	u.emitPropChangedUpdateNotify(enable)
-	return nil
 }
 
 func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {

@@ -3,7 +3,6 @@ package dstore
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -73,13 +72,11 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 
 	f, err := os.OpenFile(cacheFilepath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		_,_ = fmt.Fprintln(os.Stderr, "failed to open cache file:", err)
-		return nil
+		return err
 	}
-	defer f.Close()
 	_, err = f.Write(data)
 	if err != nil {
-		_,_ = fmt.Fprintln(os.Stderr, "failed to write data to cache file:", err)
+		return err
 	}
-	return nil
+	return err
 }

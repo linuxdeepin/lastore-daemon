@@ -41,31 +41,16 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const (
-	UserExperServiceName = "com.deepin.userexperience.Daemon"
-	UserExperPath        = "/com/deepin/userexperience/Daemon"
-	UserLogonMsg         = "logon"
-	UserLogoutMsg        = "logout"
-	UserShutdownMsg      = "shutdown"
-
-	UserExperInstallApp   = "installapp"
-	UserExperUninstallApp = "uninstallapp"
-)
-
 var (
 	allowInstallPackageExecPaths = strv.Strv{
 		"/usr/bin/deepin-app-store-daemon",
-		"/usr/bin/deepin-appstore-daemon",
 		"/usr/bin/dde-printer",
 	}
 	allowRemovePackageExecPaths = strv.Strv{
 		"/usr/bin/deepin-app-store-daemon",
-		"/usr/bin/deepin-appstore-daemon",
 		"/usr/lib/deepin-daemon/dde-session-daemon",
 	}
 )
-
-const MaxCacheSize = 500.0 //size MB
 
 type Manager struct {
 	service *dbusutil.Service
@@ -292,21 +277,6 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	return job.getPath(), nil
 }
 
-func sendInstallMsgToUserExperModule(msg, path, name, id string) {
-	bus, err := dbus.SystemBus()
-	if err == nil {
-		userexp := bus.Object(UserExperServiceName, UserExperPath)
-		err = userexp.Call(UserExperServiceName+".SendAppInstallData", 0, msg, path, name, id).Err
-		if err != nil {
-			log.Warnf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
-		} else {
-			log.Debugf("send %s message to ue module", msg)
-		}
-	} else {
-		log.Warn(err)
-	}
-}
-
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
 
@@ -317,18 +287,6 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	if err != nil {
 		log.Warnf("installPackage %q error: %v\n", packages, err)
 	}
-
-	if job != nil {
-		job.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				for _, pkg := range job.Packages {
-					log.Debugf("install app %s success, notify ue module", pkg)
-					sendInstallMsgToUserExperModule(UserExperInstallApp, "", jobName, pkg)
-				}
-			},
-		})
-	}
-
 	return job, err
 }
 
@@ -385,17 +343,6 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	m.do.Unlock()
 
-	if job != nil {
-		job.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				for _, pkg := range job.Packages {
-					log.Debugf("uninstall app %s success, notify ue module", pkg)
-					sendInstallMsgToUserExperModule(UserExperUninstallApp, "", jobName, pkg)
-				}
-			},
-		})
-	}
-
 	if err != nil {
 		log.Warnf("removePackage %q error: %v\n", packages, err)
 	}
@@ -432,7 +379,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	_, err := m.updateSource(true)
+	_, err := m.updateSource()
 	if err != nil {
 		log.Warn(err)
 	}
@@ -457,14 +404,10 @@ func (m *Manager) handleUpdateInfosChanged() {
 	}
 }
 
-func (m *Manager) updateSource(needNotify bool) (*Job, error) {
+func (m *Manager) updateSource() (*Job, error) {
 	m.do.Lock()
 	m.updateSourceOnce = true
-	var jobName string
-	if needNotify {
-		jobName = "+notify"
-	}
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
+	job, err := m.jobManager.CreateJob("", system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -478,11 +421,10 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 }
 
 func (m *Manager) UpdateSource() (dbus.ObjectPath, *dbus.Error) {
-	job, err := m.updateSource(false)
+	job, err := m.updateSource()
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	m.config.UpdateLastCheckTime()
 	return job.getPath(), nil
 }
 
@@ -704,10 +646,6 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = m.config.UpdateLastCheckCacheSizeTime()
-	if err != nil {
-		return nil, err
-	}
 
 	return job, err
 }
@@ -727,7 +665,7 @@ func isAptRunning() (bool, error) {
 
 func (m *Manager) loopCheck() {
 	m.autoCleanCfgChange = make(chan struct{})
-	const checkInterval = time.Second * 600
+	const checkInterval = time.Second * 100
 
 	doClean := func() {
 		log.Debug("call doClean")
@@ -750,15 +688,6 @@ func (m *Manager) loopCheck() {
 		return m.config.CleanInterval - elapsed
 	}
 
-	calcRemainingCleanCacheOverLimitDuration := func() time.Duration {
-		elapsed := time.Since(m.config.LastCheckCacheSizeTime)
-		if elapsed < 0 {
-			// now time < last check cache size time : last check cache size time (from config) is invalid
-			return -1
-		}
-		return m.config.CleanIntervalCacheOverLimit - elapsed
-	}
-
 	for {
 		select {
 		case <-m.autoCleanCfgChange:
@@ -770,18 +699,6 @@ func (m *Manager) loopCheck() {
 				log.Debugf("auto clean remaining duration: %v", remaining)
 				if remaining < 0 {
 					doClean()
-					continue
-				}
-
-				cachePath, _ := system.GetArchivesDir()
-				cacheSize, _ := system.QueryFileCacheSize(cachePath)
-				cacheSize = cacheSize / 1024.0 // kb to mb
-				if cacheSize > MaxCacheSize {
-					remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
-					log.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
-					if remainingCleanCacheOverLimitDuration < 0 {
-						doClean()
-					}
 				}
 			} else {
 				log.Debug("auto clean disabled")

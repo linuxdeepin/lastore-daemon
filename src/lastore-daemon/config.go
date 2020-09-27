@@ -25,39 +25,30 @@ import (
 )
 
 const MinCheckInterval = time.Minute
-const ConfigVersion = "0.1"
 
 var DefaultConfig = Config{
-	CheckInterval:                time.Hour * 24 * 7,
-	CleanInterval:                time.Hour * 24 * 7,
-	CleanIntervalCacheOverLimit:  time.Hour * 24,
-	AutoCheckUpdates:        true,
-	DisableUpdateMetadata:   false,
-	AutoDownloadUpdates:     true,
-	UpdateNotify:            true,
-	AutoClean:               true,
-	MirrorsUrl:              system.DefaultMirrorsUrl,
+	CheckInterval:         time.Minute * 180,
+	CleanInterval:         time.Hour * 48,
+	AutoCheckUpdates:      true,
+	DisableUpdateMetadata: false,
+	AutoDownloadUpdates:   true,
+	AutoClean:             true,
+	MirrorsUrl:            system.DefaultMirrorsUrl,
 }
 
 type Config struct {
-	Version                 string
-	AutoCheckUpdates        bool
-	DisableUpdateMetadata   bool
-	AutoDownloadUpdates     bool
-	AutoClean               bool
-	MirrorSource            string
-	UpdateNotify            bool
-	CheckInterval                time.Duration
-	CleanInterval                time.Duration
-	
-	// 缓存大小超出限制时的清理时间间隔
-	CleanIntervalCacheOverLimit  time.Duration
-	AppstoreRegion          string
-	LastCheckTime           time.Time
-	LastCleanTime           time.Time
-	LastCheckCacheSizeTime  time.Time
-	Repository              string
-	MirrorsUrl              string
+	AutoCheckUpdates      bool
+	DisableUpdateMetadata bool
+	AutoDownloadUpdates   bool
+	AutoClean             bool
+	MirrorSource          string
+	CheckInterval         time.Duration
+	CleanInterval         time.Duration
+	AppstoreRegion        string
+	LastCheckTime         time.Time
+	LastCleanTime         time.Time
+	Repository            string
+	MirrorsUrl            string
 
 	filePath string
 }
@@ -78,12 +69,6 @@ func NewConfig(fpath string) *Config {
 		c.Repository = info.Name
 		c.MirrorSource = "default" //info.Mirror
 	}
-	if c.Version == "" {
-		c.Version = ConfigVersion
-		c.CheckInterval = time.Hour * 24 * 7
-		c.CleanInterval = time.Hour * 24 * 7
-		c.save()
-	}
 	return &c
 }
 
@@ -97,18 +82,8 @@ func (c *Config) UpdateLastCleanTime() error {
 	return c.save()
 }
 
-func (c *Config) UpdateLastCheckCacheSizeTime() error {
-	c.LastCheckCacheSizeTime = time.Now()
-	return c.save()
-}
-
 func (c *Config) SetAutoCheckUpdates(enable bool) error {
 	c.AutoCheckUpdates = enable
-	return c.save()
-}
-
-func (c *Config) SetUpdateNotify(enable bool) error {
-	c.UpdateNotify = enable
 	return c.save()
 }
 
