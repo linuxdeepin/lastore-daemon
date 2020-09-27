@@ -64,8 +64,9 @@ type Job struct {
 
 	environ map[string]string
 
-	hooks   map[string]func()
-	hooksMu sync.Mutex
+	hooks      map[string]func()
+	hooksMu    sync.Mutex
+	exportDBus bool
 }
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
@@ -87,6 +88,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
 		environ:            environ,
+		exportDBus:         true,
 	}
 	if jobType == system.DownloadJobType {
 		go j.initDownloadSize()

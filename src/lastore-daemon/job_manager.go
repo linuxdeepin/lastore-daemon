@@ -82,7 +82,7 @@ func (jm *JobManager) List() JobList {
 }
 
 // CreateJob create the job and try starting it
-func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (*Job, error) {
+func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string, exportDBus bool) (*Job, error) {
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus, system.PausedStatus:
@@ -128,8 +128,9 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	default:
 		return nil, system.NotSupportError
 	}
+	job.exportDBus = exportDBus
 
-	log.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
+	log.Infof("CreateJob with %q %q %q %+v %v\n", jobName, jobType, packages, environ, exportDBus)
 	if err := jm.addJob(job); err != nil {
 		return nil, err
 	}
@@ -342,7 +343,7 @@ func (jm *JobManager) addJob(j *Job) error {
 	if err != nil {
 		return err
 	}
-	if !NotUseDBus {
+	if !NotUseDBus && j.exportDBus {
 		// use dbus
 		err = jm.service.Export(j.getPath(), j)
 		if err != nil {
@@ -363,7 +364,9 @@ func (jm *JobManager) removeJob(jobId string, queueName string) error {
 	if err != nil {
 		return err
 	}
-	DestroyJobDBus(job)
+	if job.exportDBus {
+		DestroyJobDBus(job)
+	}
 	jm.markDirty()
 	return nil
 }
