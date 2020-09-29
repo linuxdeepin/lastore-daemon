@@ -466,7 +466,6 @@ func (m *Manager) handleUpdateInfosChanged() {
 			}
 		}()
 	}
-	go m.installUOSReleaseNote()
 }
 
 func (m *Manager) updateSource(needNotify bool) (*Job, error) {
@@ -484,6 +483,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	}
 
 	job.setHooks(map[string]func(){
+		string(system.SucceedStatus): func() { go m.installUOSReleaseNote() },
 		string(system.EndStatus): m.handleUpdateInfosChanged,
 	})
 	return job, err
