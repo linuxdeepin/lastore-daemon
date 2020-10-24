@@ -19,13 +19,15 @@ package apt
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"internal/system"
+	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 
@@ -108,43 +110,50 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 func WaitDpkgLockRelease() {
 	for {
 		msg, wait := checkLock("/var/lib/dpkg/lock")
-		if !wait {
-			return
+		if wait {
+			log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
+				msg, time.Now())
+			time.Sleep(time.Second * 5)
+			continue
 		}
-		log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
-			msg, time.Now())
-		time.Sleep(time.Second * 5)
+
+		msg, wait = checkLock("/var/lib/dpkg/lock-frontend")
+		if wait {
+			log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
+				msg, time.Now())
+			time.Sleep(time.Second * 5)
+			continue
+		}
+
+		return
 	}
 }
 
 func checkLock(p string) (string, bool) {
-	cmd := exec.Command("lslocks", "-J")
-	f, err := cmd.StdoutPipe()
+	file, err := os.Open(p)
 	if err != nil {
+		log.Warn("error opening %q: %s", err)
 		return "", false
 	}
-	cmd.Start()
+	defer file.Close()
 
-	d := json.NewDecoder(f)
-	var data = struct {
-		Locks []map[string]string `json:"locks"`
-	}{}
-	d.Decode(&data)
-	cmd.Wait()
-	for _, line := range data.Locks {
-		if line["path"] == p {
-			bs, err := exec.Command("ps",
-				"-p",
-				line["pid"],
-				"-o",
-				"pid,ppid,tty,cmd",
-			).Output()
-			if err != nil {
-				return "", false
-			}
-			return string(bs), true
-		}
+	flockT := syscall.Flock_t{
+		Type:   syscall.F_WRLCK,
+		Whence: io.SeekStart,
+		Start:  0,
+		Len:    0,
+		Pid:    0,
 	}
+	err = syscall.FcntlFlock(file.Fd(), syscall.F_GETLK, &flockT)
+	if err != nil {
+		log.Warnf("unable to check file %q lock status: %s", p, err)
+		return p, true
+	}
+
+	if flockT.Type == syscall.F_WRLCK {
+		return p, true
+	}
+
 	return "", false
 }
 

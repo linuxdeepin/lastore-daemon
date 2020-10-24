@@ -4,6 +4,7 @@ package main
 
 import (
 	"internal/system"
+
 	"pkg.deepin.io/lib/dbus1"
 )
 
