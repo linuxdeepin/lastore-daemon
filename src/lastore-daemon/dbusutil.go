@@ -4,6 +4,7 @@ package main
 
 import (
 	"internal/system"
+
 	"github.com/godbus/dbus"
 )
 
