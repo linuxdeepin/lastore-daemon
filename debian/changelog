@@ -246,4 +246,5 @@ lastore-daemon (0.1) UNRELEASED; urgency=medium
   * refine internal logical
   * sort JobList
   * add SystemArchitecture
- -- MAINTAINER <snyh@snyh-pc>  Thu, 20 Aug 2015 15:02:24 +0800
+
+ -- TagBuilder <tabbuilder@linuxdeepin.com>  Thu, 20 Aug 2015 15:02:24 +0800

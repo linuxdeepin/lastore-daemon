@@ -1,5 +1,5 @@
+/etc
 /usr/bin
 /usr/share
-/etc
 /var/lib/lastore
 lib/systemd/system
