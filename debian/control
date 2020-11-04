@@ -1,25 +1,40 @@
 Source: lastore-daemon
 Section: admin
-Priority: extra
+Priority: optional
 Maintainer: Deepin Sysdev <sysdev@deepin.com>
-Build-Depends: debhelper (>= 9), pkg-config, golang-go | gccgo-5,
- deepin-gettext-tools, golang-dlib-dev(>= 1.2.2), dde-api-dev (>= 5.0.2),
+Build-Depends:
+ dde-api-dev (>= 5.0.2),
+ debhelper-compat (= 11),
+ deepin-gettext-tools,
+ golang-dlib-dev(>= 1.2.2),
+ golang-github-go-ini-ini-dev,
  golang-github-linuxdeepin-go-dbus-factory-dev (>= 0.0.4),
- golang-github-go-ini-ini-dev
-Standards-Version: 0.1
+ golang-go | gccgo-5,
+ pkg-config,
+Standards-Version: 4.1.3
 Homepage: http://github.com/linuxdeepin/lastore-daemon
 
 Package: lastore-daemon
 Architecture: any
-Provides: update-notifier
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, dbus, procps, util-linux, libgtk2-perl
-Recommends: deepin-default-settings
+Provides:
+ update-notifier,
+Depends:
+ dbus,
+ libgtk2-perl,
+ procps,
+ ${dist:Depends},
+ ${misc:Depends},
+ ${shlibs:Depends},
+Recommends:
+ deepin-default-settings,
 Description: daemon of lastore
  daemon of lastore - support dbus interface
 
 Package: lastore-daemon-dev
 Architecture: all
-Depends: ${misc:Depends},
- lastore-daemon (= ${binary:Version})
+Depends:
+ lastore-daemon  (>= ${source:Version}),
+ lastore-daemon (<< ${source:Version}.1~),
+ ${misc:Depends},
 Description: daemon of lastore - development files.
  daemon of lastore - support dbus interface - development files.
