@@ -18,8 +18,6 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -34,8 +32,6 @@ import (
 	la_utils "internal/utils"
 
 	log "github.com/cihub/seelog"
-	hhardware "github.com/jouyouyun/hardware"
-
 	"pkg.deepin.io/dde/api/inhibit_hint"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
@@ -196,90 +192,11 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
 	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
 	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
+	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
 	token := strings.Join(tokenSlice, ";")
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
 	err = ioutil.WriteFile(tokenPath, tokenContent, 0644)
 	if err != nil {
 		_ = log.Warn(err)
 	}
-}
-
-type SystemInfo struct {
-	SystemName  string
-	ProductType string
-	EditionName string
-	Version     string
-	HardwareId  string
-}
-
-func loadFile(filepath string) ([]string, error) {
-	f, err := os.Open(filepath)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	var lines []string
-	scanner := bufio.NewScanner(bufio.NewReader(f))
-	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
-	}
-	if scanner.Err() != nil {
-		return nil, scanner.Err()
-	}
-
-	return lines, nil
-}
-
-func getSystemInfo() (SystemInfo, error) {
-	versionPath := path.Join(etcDir, osVersionFileName)
-	versionLines, err := loadFile(versionPath)
-	if err != nil {
-		_ = log.Warn("failed to load os-version file:", err)
-		return SystemInfo{}, err
-	}
-	mapOsVersion := make(map[string]string)
-	for _, item := range versionLines {
-		itemSlice := strings.SplitN(item, "=", 2)
-		if len(itemSlice) < 2 {
-			continue
-		}
-		key := strings.TrimSpace(itemSlice[0])
-		value := strings.TrimSpace(itemSlice[1])
-		mapOsVersion[key] = value
-	}
-	// 判断必要内容是否存在
-	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
-	for _, key := range necessaryKey {
-		if value := mapOsVersion[key]; value == "" {
-			return SystemInfo{}, errors.New("os-version lack necessary content")
-		}
-	}
-	systemInfo := SystemInfo{}
-	systemInfo.SystemName = mapOsVersion["SystemName"]
-	systemInfo.ProductType = mapOsVersion["ProductType"]
-	systemInfo.EditionName = mapOsVersion["EditionName"]
-	systemInfo.Version = strings.Join([]string{
-		mapOsVersion["MajorVersion"],
-		mapOsVersion["MinorVersion"],
-		mapOsVersion["OsBuild"]},
-		".")
-	systemInfo.HardwareId, err = getHardwareId()
-	if err != nil {
-		_ = log.Warn("failed to get hardwareId:", err)
-		return SystemInfo{}, err
-	}
-	return systemInfo, nil
-}
-
-func getHardwareId() (string, error) {
-	hhardware.IncludeDiskInfo = true
-	machineID, err := hhardware.GenMachineID()
-	if err != nil {
-		return "", err
-	}
-	return machineID, nil
 }
