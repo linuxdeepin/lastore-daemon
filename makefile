@@ -33,6 +33,10 @@ test:
 	lastore-daemon  lastore-smartmirror  lastore-tools \
 	lastore-smartmirror-daemon
 
+test-coverage: 
+	env ${GoPath} go test -cover -v ./src/... | awk '$$1 ~ "^(ok|\\?)" {print $$2","$$5}' | sed "s:${CURDIR}::g" | sed 's/files\]/0\.0%/g' > coverage.csv
+
+
 print_gopath:
 	GOPATH="${pwd}:${pwd}/vendor:${GOPATH}"
 
