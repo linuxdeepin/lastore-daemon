@@ -50,18 +50,27 @@ const (
 	UserExperUninstallApp = "uninstallapp"
 
 	uosReleaseNotePkgName = "uos-release-note"
+
+	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
+	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
+	printerPath           = "/usr/bin/dde-printer"
+	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
+	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
+	controlCenterPath     = "/usr/bin/dde-control-center"
 )
 
 var (
 	allowInstallPackageExecPaths = strv.Strv{
-		"/usr/bin/deepin-app-store-daemon",
-		"/usr/bin/deepin-appstore-daemon",
-		"/usr/bin/dde-printer",
+		appStoreDaemonPath,
+		oldAppStoreDaemonPath,
+		printerPath,
+		langSelectorPath,
 	}
 	allowRemovePackageExecPaths = strv.Strv{
-		"/usr/bin/deepin-app-store-daemon",
-		"/usr/bin/deepin-appstore-daemon",
-		"/usr/lib/deepin-daemon/dde-session-daemon",
+		appStoreDaemonPath,
+		oldAppStoreDaemonPath,
+		sessionDaemonPath,
+		langSelectorPath,
 	}
 )
 
@@ -484,7 +493,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 
 	job.setHooks(map[string]func(){
 		string(system.SucceedStatus): func() { go m.installUOSReleaseNote() },
-		string(system.EndStatus): m.handleUpdateInfosChanged,
+		string(system.EndStatus):     m.handleUpdateInfosChanged,
 	})
 	return job, err
 }

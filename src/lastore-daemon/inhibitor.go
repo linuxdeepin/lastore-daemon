@@ -22,7 +22,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/godbus/dbus"
-	"github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
+	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 )
 
 type methodCaller uint
@@ -35,9 +35,9 @@ const (
 
 func mapMethodCaller(execPath string) methodCaller {
 	switch execPath {
-	case "/usr/bin/deepin-app-store-daemon", "/usr/bin/deepin-appstore-daemon":
+	case appStoreDaemonPath, oldAppStoreDaemonPath:
 		return methodCallerAppStore
-	case "/usr/bin/dde-control-center":
+	case controlCenterPath:
 		return methodCallerControlCenter
 	default:
 		return methodCallerOtherCaller
