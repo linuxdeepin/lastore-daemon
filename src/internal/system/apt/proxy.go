@@ -318,6 +318,22 @@ func (p *APTSystem) UpdateSource(jobId string) error {
 	return c.Start()
 }
 
+// 在控制中心进行检查更新时,使用custom-update(按配置文件update)的命令进行检查更新
+func (p *APTSystem) CustomUpdate(jobId string) error {
+	log.Info("start custom update")
+	c := newAPTCommand(p, jobId, system.CustomUpdateJobType, p.indicator, nil)
+	c.atExitFn = func() bool {
+		if c.exitCode == ExitSuccess &&
+			bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
+
+			c.indicateFailed("IndexDownloadFailed", c.stderr.String(), false)
+			return true
+		}
+		return false
+	}
+	return c.Start()
+}
+
 func (p *APTSystem) Clean(jobId string) error {
 	c := newAPTCommand(p, jobId, system.CleanJobType, p.indicator, nil)
 	return c.Start()

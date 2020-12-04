@@ -37,6 +37,7 @@ var DefaultConfig = Config{
 	UpdateNotify:                true,
 	AutoClean:                   true,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
+	UpdateMode:                  SystemUpdate | AppStoreUpdate, // 默认开启系统更新和应用更新,安全更新暂不默认开启
 }
 
 type Config struct {
@@ -49,6 +50,7 @@ type Config struct {
 	UpdateNotify          bool
 	CheckInterval         time.Duration
 	CleanInterval         time.Duration
+	UpdateMode            uint64
 
 	// 缓存大小超出限制时的清理时间间隔
 	CleanIntervalCacheOverLimit time.Duration
@@ -128,6 +130,11 @@ func (c *Config) SetMirrorSource(id string) error {
 
 func (c *Config) SetAppstoreRegion(region string) error {
 	c.AppstoreRegion = region
+	return c.save()
+}
+
+func (c *Config) SetUpdateMode(mode uint64) error {
+	c.UpdateMode = mode
 	return c.save()
 }
 

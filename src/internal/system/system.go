@@ -46,6 +46,7 @@ const (
 	UpdateSourceJobType       = "update_source"
 	CleanJobType              = "clean"
 	FixErrorJobType           = "fix_error"
+	CustomUpdateJobType       = "custom_update"
 )
 
 const (
@@ -107,6 +108,7 @@ type System interface {
 	Remove(jobId string, packages []string, environ map[string]string) error
 	DistUpgrade(jobId string, environ map[string]string) error
 	UpdateSource(jobId string) error
+	CustomUpdate(jobId string) error
 	Clean(jobId string) error
 	Abort(jobId string) error
 	AttachIndicator(Indicator)

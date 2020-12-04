@@ -100,12 +100,21 @@ func main() {
 	manager := NewManager(service, b, config)
 	updater := NewUpdater(service, manager, config)
 	manager.updater = updater
-	err = service.Export("/com/deepin/lastore", manager, updater)
+	serverObject, err := service.NewServerObject("/com/deepin/lastore", manager, updater)
+	if err != nil {
+		_ = log.Error("failed to new server manager and updater object:", err)
+		return
+	}
+
+	err = serverObject.SetWriteCallback(manager, "UpdateMode", manager.updateModeWriteCallback)
+	if err != nil {
+		_ = log.Error("failed to set write cb for property UpdateMode:", err)
+	}
+	err = serverObject.Export()
 	if err != nil {
 		_ = log.Error("failed to export manager and updater:", err)
 		return
 	}
-
 	ihObj := inhibit_hint.New("lastore-daemon")
 	ihObj.SetIconFunc(func(why string) string {
 		switch why {

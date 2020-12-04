@@ -16,7 +16,11 @@ func (l JobList) Len() int {
 	return len(l)
 }
 func (l JobList) Less(i, j int) bool {
-	if l[i].Type == system.UpdateSourceJobType {
+	if (l[i].Type == system.UpdateSourceJobType || l[i].Type == system.CustomUpdateJobType) &&
+		(l[j].Type == system.UpdateSourceJobType || l[j].Type == system.CustomUpdateJobType) {
+		return l[i].CreateTime < l[j].CreateTime
+	}
+	if l[i].Type == system.UpdateSourceJobType || l[i].Type == system.CustomUpdateJobType {
 		return true
 	}
 	return l[i].CreateTime < l[j].CreateTime

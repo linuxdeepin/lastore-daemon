@@ -110,6 +110,8 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
+	case system.CustomUpdateJobType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.DistUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	case system.PrepareDistUpgradeJobType:
@@ -117,7 +119,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 			DownloadQueue, environ)
 	case system.UpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
-
 	case system.CleanJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	case system.FixErrorJobType:
@@ -416,7 +417,8 @@ var genJobId = func() func(string) string {
 	return func(jobType string) string {
 		switch jobType {
 		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType,
-			system.UpdateSourceJobType, system.CleanJobType:
+			system.UpdateSourceJobType, system.CleanJobType,
+			system.CustomUpdateJobType:
 			return jobType
 		default:
 			__count++

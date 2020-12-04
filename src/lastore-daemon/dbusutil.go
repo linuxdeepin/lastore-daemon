@@ -21,10 +21,6 @@ func (v *Updater) emitPropChangedAutoCheckUpdates(value bool) error {
 	return v.service.EmitPropertyChanged(v, "AutoCheckUpdates", value)
 }
 
-func (v *Updater) emitPropChangedUpdateNotify(value bool) error {
-	return v.service.EmitPropertyChanged(v, "UpdateNotify", value)
-}
-
 func (v *Updater) setPropAutoDownloadUpdates(value bool) (changed bool) {
 	if v.AutoDownloadUpdates != value {
 		v.AutoDownloadUpdates = value
@@ -36,6 +32,19 @@ func (v *Updater) setPropAutoDownloadUpdates(value bool) (changed bool) {
 
 func (v *Updater) emitPropChangedAutoDownloadUpdates(value bool) error {
 	return v.service.EmitPropertyChanged(v, "AutoDownloadUpdates", value)
+}
+
+func (v *Updater) setPropUpdateNotify(value bool) (changed bool) {
+	if v.UpdateNotify != value {
+		v.UpdateNotify = value
+		v.emitPropChangedUpdateNotify(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedUpdateNotify(value bool) error {
+	return v.service.EmitPropertyChanged(v, "UpdateNotify", value)
 }
 
 func (v *Updater) setPropMirrorSource(value string) (changed bool) {
@@ -250,4 +259,17 @@ func (v *Manager) setPropAutoClean(value bool) (changed bool) {
 
 func (v *Manager) emitPropChangedAutoClean(value bool) error {
 	return v.service.EmitPropertyChanged(v, "AutoClean", value)
+}
+
+func (v *Manager) setPropUpdateMode(value uint64) (changed bool) {
+	if v.UpdateMode != value {
+		v.UpdateMode = value
+		v.emitPropChangedUpdateMode(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedUpdateMode(value uint64) error {
+	return v.service.EmitPropertyChanged(v, "UpdateMode", value)
 }
