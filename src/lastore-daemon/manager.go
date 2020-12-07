@@ -958,9 +958,17 @@ func (m *Manager) updateCustomConfig() error {
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	mode := pw.Value.(uint64)
-	if mode&AppStoreUpdate == AppStoreUpdate { // 如果更新模式包含应用商店的更新,则强制设置系统更新的配置
+	m.PropsMu.RLock()
+	recordMode := m.UpdateMode
+	m.PropsMu.RUnlock()
+	if recordMode&SystemUpdate == SystemUpdate && mode&SystemUpdate != SystemUpdate { // 系统更新由1->0,则同步关闭应用更新
+		mode &^= AppStoreUpdate
+		pw.Value = mode
+
+	} else if mode&AppStoreUpdate == AppStoreUpdate { // 如果开启应用更新,则强制打开系统更新
 		mode |= SystemUpdate
 		pw.Value = mode
 	}
+
 	return dbusutil.ToError(m.config.SetUpdateMode(mode))
 }
