@@ -589,8 +589,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 
-	m.do.Lock()
-	defer m.do.Unlock()
 	if caller == methodCallerControlCenter {
 		_, err = m.updateSource(false, caller)
 		if err != nil {
@@ -598,6 +596,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 			return nil, dbusutil.ToError(err)
 		}
 	}
+	m.do.Lock()
+	defer m.do.Unlock()
 
 	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
 	if err != nil {
