@@ -25,3 +25,6 @@ ifdef DistDepends
 override_dh_gencontrol:
 	dh_gencontrol -- -Vdist:Depends="$(DistDepends)"
 endif
+
+override_dh_installsystemd:
+	dh_installsystemd -r --no-restart-after-upgrade
