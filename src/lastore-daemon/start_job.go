@@ -31,7 +31,6 @@ func StartSystemJob(sys system.System, j *Job) error {
 	if j == nil {
 		panic("StartSystemJob with nil")
 	}
-
 	j.PropsMu.Lock()
 	j.setPropDescription("")
 	err := TransitionJobState(j, system.RunningStatus)
@@ -113,7 +112,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 // 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
 func TransitionJobState(j *Job, to system.Status) error {
 	if !ValidTransitionJobState(j.Status, to) {
-		return fmt.Errorf("can't transition the status of Job %v to %q", j, to)
+		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
 	}
 	log.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 

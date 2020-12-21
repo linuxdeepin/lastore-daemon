@@ -518,11 +518,12 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	if err != nil {
 		_ = log.Warnf("UpdateSource error: %v\n", err)
 	}
-
-	job.setHooks(map[string]func(){
-		string(system.SucceedStatus): func() { go m.installUOSReleaseNote() },
-		string(system.EndStatus):     m.handleUpdateInfosChanged,
-	})
+	if job != nil {
+		job.setHooks(map[string]func(){
+			string(system.SucceedStatus): func() { go m.installUOSReleaseNote() },
+			string(system.EndStatus):     m.handleUpdateInfosChanged,
+		})
+	}
 	return job, err
 }
 
@@ -534,6 +535,7 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error
 	}
 	job, err := m.updateSource(false, mapMethodCaller(execPath))
 	if err != nil {
+		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
 
@@ -953,6 +955,7 @@ func (m *Manager) updateCustomConfig() error {
 		content = append(content, header+"safe.list"+footer)
 	}
 	resContent := strings.Join(content, "\n")
+	// #nosec
 	return ioutil.WriteFile(confPath, []byte(resContent), 0644)
 }
 

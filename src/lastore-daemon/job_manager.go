@@ -51,7 +51,8 @@ type JobManager struct {
 	mux     sync.RWMutex
 	changed bool
 
-	notify func()
+	dispatchMux sync.Mutex
+	notify      func()
 }
 
 func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()) *JobManager {
@@ -83,6 +84,7 @@ func (jm *JobManager) List() JobList {
 
 // CreateJob create the job and try starting it
 func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (*Job, error) {
+	jm.dispatch()
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus, system.PausedStatus:
@@ -131,6 +133,8 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	}
 
 	log.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
+	jm.dispatchMux.Lock()
+	defer jm.dispatchMux.Unlock()
 	if err := jm.addJob(job); err != nil {
 		return nil, err
 	}
@@ -223,6 +227,8 @@ func (jm *JobManager) PauseJob(jobId string) error {
 // 1. Clean Jobs whose status is system.EndStatus
 // 2. Run all Pending Jobs.
 func (jm *JobManager) dispatch() {
+	jm.dispatchMux.Lock()
+	defer jm.dispatchMux.Unlock()
 	var pendingDeleteJobs []*Job
 	for _, queue := range jm.queues {
 		// 1. Clean Jobs with EndStatus
@@ -232,7 +238,7 @@ func (jm *JobManager) dispatch() {
 	for _, job := range pendingDeleteJobs {
 		_ = jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
-			log.Debugf("Job(%q).next is %v\n", job.Id, job.next)
+			log.Infof("Job(%q).next is %v\n", job.Id, job.next)
 			job = job.next
 
 			_ = jm.addJob(job)
@@ -280,6 +286,9 @@ func (jm *JobManager) sendNotify() {
 }
 
 func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
+	if NotUseDBus {
+		return
+	}
 	jobs := queue.PendingJobs()
 	for _, job := range jobs {
 		job.PropsMu.RLock()
@@ -394,20 +403,26 @@ func (jm *JobManager) findJobById(jobId string) *Job {
 func (jm *JobManager) findJobByType(jobType string, pkgs []string) *Job {
 	pList := strings.Join(pkgs, "")
 	for _, job := range jm.List() {
+		job.PropsMu.RLock()
 		if job.Id == jobType {
+			job.PropsMu.RUnlock()
 			return job
 		}
 		if job.Type == jobType && strings.Join(job.Packages, "") == pList {
+			job.PropsMu.RUnlock()
 			return job
 		}
 		if job.next == nil {
+			job.PropsMu.RUnlock()
 			continue
 		}
 		if job.next.Type == jobType && strings.Join(job.next.Packages, "") == pList {
 			// Don't return the job.next.
 			// It's not a workable Job before the Job finished.
+			job.PropsMu.RUnlock()
 			return job
 		}
+		job.PropsMu.RUnlock()
 	}
 	return nil
 }
