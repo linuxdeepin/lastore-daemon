@@ -96,7 +96,12 @@ func main() {
 
 	b := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-
+	if !config.AutoCheckUpdates {
+		err := config.SetUpdateMode(0)
+		if err != nil {
+			_ = log.Warn(err)
+		}
+	}
 	manager := NewManager(service, b, config)
 	updater := NewUpdater(service, manager, config)
 	manager.updater = updater
