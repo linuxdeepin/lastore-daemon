@@ -591,13 +591,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 
-	if caller == methodCallerControlCenter {
-		_, err = m.updateSource(false, caller)
-		if err != nil {
-			_ = log.Warn(err)
-			return nil, dbusutil.ToError(err)
-		}
-	}
 	m.do.Lock()
 	defer m.do.Unlock()
 
