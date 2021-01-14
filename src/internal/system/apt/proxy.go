@@ -130,7 +130,7 @@ func WaitDpkgLockRelease() {
 func checkLock(p string) (string, bool) {
 	file, err := os.Open(p)
 	if err != nil {
-		log.Warn("error opening %q: %s", err)
+		_ = log.Warnf("error opening %q: %v", p, err)
 		return "", false
 	}
 	defer file.Close()
@@ -144,7 +144,7 @@ func checkLock(p string) (string, bool) {
 	}
 	err = syscall.FcntlFlock(file.Fd(), syscall.F_GETLK, &flockT)
 	if err != nil {
-		log.Warnf("unable to check file %q lock status: %s", p, err)
+		_ = log.Warnf("unable to check file %q lock status: %s", p, err)
 		return p, true
 	}
 
