@@ -118,6 +118,7 @@ type Manager struct {
 	methods *struct { //nolint
 		FixError             func() `in:"errType" out:"job"`
 		CleanArchives        func() `out:"job"`
+		GetArchivesInfo      func() `out:"info"`
 		CleanJob             func() `in:"jobId"`
 		StartJob             func() `in:"jobId"`
 		PauseJob             func() `in:"jobId"`
@@ -746,7 +747,21 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	return nil
 }
 
-var errAptRunning = errors.New("apt or apt-get is running")
+func (m *Manager) GetArchivesInfo() (string, *dbus.Error) {
+	info, err := getArchiveInfo()
+	if err != nil {
+		return "", dbusutil.ToError(err)
+	}
+	return info, nil
+}
+
+func getArchiveInfo() (string, error) {
+	out, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
 
 func (m *Manager) CleanArchives() (dbus.ObjectPath, *dbus.Error) {
 	job, err := m.cleanArchives(false)
@@ -757,16 +772,6 @@ func (m *Manager) CleanArchives() (dbus.ObjectPath, *dbus.Error) {
 }
 
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
-	aptRunning, err := isAptRunning()
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("apt running: ", aptRunning)
-
-	if aptRunning {
-		return nil, errAptRunning
-	}
-
 	var jobName string
 	if needNotify {
 		jobName = "+notify"
@@ -793,19 +798,6 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	return job, err
 }
 
-func isAptRunning() (bool, error) {
-	cmd := exec.Command("pgrep", "-u", "root", "-x", "apt|apt-get")
-	err := cmd.Run()
-	if err != nil {
-		log.Debugf("isAptRunning err: %#v", err)
-		if _, ok := err.(*exec.ExitError); ok {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
 func (m *Manager) loopCheck() {
 	m.autoCleanCfgChange = make(chan struct{})
 	const checkInterval = time.Second * 600
@@ -814,10 +806,7 @@ func (m *Manager) loopCheck() {
 		log.Debug("call doClean")
 
 		_, err := m.cleanArchives(true)
-		if err == errAptRunning {
-			log.Info("apt is running, waiting for the next chance")
-			return
-		} else if err != nil {
+		if err != nil {
 			_ = log.Warnf("CleanArchives failed: %v", err)
 		}
 	}

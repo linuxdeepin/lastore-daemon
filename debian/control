@@ -8,6 +8,7 @@ Build-Depends:
  deepin-gettext-tools,
  golang-dlib-dev(>= 1.2.2),
  golang-github-go-ini-ini-dev,
+ golang-pault-go-debian-dev,
  golang-github-linuxdeepin-go-dbus-factory-dev (>= 0.0.4),
  golang-go | gccgo-5,
  pkg-config,
