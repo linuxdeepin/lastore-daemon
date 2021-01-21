@@ -102,6 +102,8 @@ func main() {
 			_ = log.Warn(err)
 		}
 	}
+	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
+	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, b, config)
 	updater := NewUpdater(service, manager, config)
 	manager.updater = updater

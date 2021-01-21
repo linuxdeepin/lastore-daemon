@@ -53,14 +53,15 @@ type Config struct {
 	UpdateMode            uint64
 
 	// 缓存大小超出限制时的清理时间间隔
-	CleanIntervalCacheOverLimit time.Duration
-	AppstoreRegion              string
-	LastCheckTime               time.Time
-	LastCleanTime               time.Time
-	LastCheckCacheSizeTime      time.Time
-	Repository                  string
-	MirrorsUrl                  string
-	filePath                    string
+	CleanIntervalCacheOverLimit    time.Duration
+	AppstoreRegion                 string
+	LastCheckTime                  time.Time
+	LastCleanTime                  time.Time
+	LastCheckCacheSizeTime         time.Time
+	Repository                     string
+	MirrorsUrl                     string
+	filePath                       string
+	AllowInstallRemovePkgExecPaths []string
 }
 
 func NewConfig(fpath string) *Config {
