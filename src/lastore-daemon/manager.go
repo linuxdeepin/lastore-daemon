@@ -58,6 +58,7 @@ const (
 	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
 	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
 	controlCenterPath     = "/usr/bin/dde-control-center"
+	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
 )
 
 // 用于设置UpdateMode属性,最大支持64位
@@ -219,18 +220,25 @@ func getLang(envVars procfs.EnvVars) string {
 	return ""
 }
 
-func (m *Manager) getExecutablePath(sender dbus.Sender) (string, error) {
+func (m *Manager) getExecutablePathAndCmdline(sender dbus.Sender) (string, string, error) {
 	pid, err := m.service.GetConnPID(string(sender))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	execPath, err := procfs.Process(pid).Exe()
+	proc := procfs.Process(pid)
+
+	execPath, err := proc.Exe()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return execPath, nil
+	cmdLine, err := proc.Cmdline()
+	if err != nil {
+		return "", "", err
+	}
+
+	return execPath, strings.Join(cmdLine, " "), nil
 }
 
 func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -239,12 +247,12 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return nil, dbusutil.ToError(err)
 	}
-	caller := mapMethodCaller(execPath)
+	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce(caller)
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
@@ -277,12 +285,12 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return nil, dbusutil.ToError(err)
 	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath))
+	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
@@ -305,7 +313,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
 	*dbus.Error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
@@ -321,7 +329,7 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	job.next.caller = mapMethodCaller(execPath)
+	job.next.caller = mapMethodCaller(execPath, cmdLine)
 	return job.getPath(), nil
 }
 
@@ -440,7 +448,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 
 func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
 	*dbus.Error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
@@ -456,7 +464,7 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	job.caller = mapMethodCaller(execPath)
+	job.caller = mapMethodCaller(execPath, cmdLine)
 	return job.getPath(), nil
 }
 
@@ -528,12 +536,12 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 }
 
 func (m *Manager) UpdateSource(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
-	job, err := m.updateSource(false, mapMethodCaller(execPath))
+	job, err := m.updateSource(false, mapMethodCaller(execPath, cmdLine))
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
@@ -570,12 +578,12 @@ func (m *Manager) DistUpgrade(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error)
 }
 
 func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return nil, dbusutil.ToError(err)
 	}
-	caller := mapMethodCaller(execPath)
+	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce(caller)
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
@@ -609,12 +617,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 }
 
 func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
-	job, err := m.prepareDistUpgrade(mapMethodCaller(execPath))
+	job, err := m.prepareDistUpgrade(mapMethodCaller(execPath, cmdLine))
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -681,12 +689,12 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 }
 
 func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (int64, *dbus.Error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return 0, dbusutil.ToError(err)
 	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath))
+	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
 
 	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil || s == system.SizeUnknown {
@@ -872,12 +880,12 @@ func (m *Manager) FixError(sender dbus.Sender, errType string) (dbus.ObjectPath,
 }
 
 func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
-	execPath, err := m.getExecutablePath(sender)
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return nil, dbusutil.ToError(err)
 	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath))
+	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err

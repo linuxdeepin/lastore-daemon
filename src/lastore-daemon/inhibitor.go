@@ -33,14 +33,20 @@ const (
 	methodCallerAppStore
 )
 
-func mapMethodCaller(execPath string) methodCaller {
+func mapMethodCaller(execPath string, cmdLine string) methodCaller {
+	log.Debug("execPath:", execPath, "cmdLine:", cmdLine)
 	switch execPath {
 	case appStoreDaemonPath, oldAppStoreDaemonPath:
 		return methodCallerAppStore
 	case controlCenterPath:
 		return methodCallerControlCenter
 	default:
-		return methodCallerOtherCaller
+		switch cmdLine {
+		case controlCenterCmdLine:
+			return methodCallerControlCenter
+		default:
+			return methodCallerOtherCaller
+		}
 	}
 }
 
