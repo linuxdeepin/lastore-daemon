@@ -37,6 +37,7 @@ import (
 	"internal/utils"
 
 	"pkg.deepin.io/lib/dbusutil"
+	"pkg.deepin.io/lib/keyfile"
 	"pkg.deepin.io/lib/procfs"
 	"pkg.deepin.io/lib/strv"
 
@@ -363,7 +364,7 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 		_ = log.Warnf("installPackage %q error: %v\n", packages, err)
 	}
 
-	if job != nil {
+	if job != nil && !isCommunity() {
 		job.setHooks(map[string]func(){
 			string(system.SucceedStatus): func() {
 				for _, pkg := range job.Packages {
@@ -375,6 +376,24 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	}
 
 	return job, err
+}
+
+// dont collect experience message if edition is community
+func isCommunity() bool {
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile("/etc/os-version")
+	// 为避免收集数据的风险，读不到此文件，或者Edition文件不存在也不收集数据
+	if err != nil {
+		return true
+	}
+	edition, err := kf.GetString("Version", "EditionName")
+	if err != nil {
+		return true
+	}
+	if edition == "Community" {
+		return true
+	}
+	return false
 }
 
 func listPackageDesktopFiles(pkg string) []string {
@@ -430,7 +449,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	m.do.Unlock()
 
-	if job != nil {
+	if job != nil && !isCommunity() {
 		job.setHooks(map[string]func(){
 			string(system.SucceedStatus): func() {
 				for _, pkg := range job.Packages {
