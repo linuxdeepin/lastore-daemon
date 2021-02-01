@@ -56,6 +56,7 @@ const (
 	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
 	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
 	printerPath           = "/usr/bin/dde-printer"
+	printerHelperPath     = "/usr/bin/dde-printer-helper"
 	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
 	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
 	controlCenterPath     = "/usr/bin/dde-control-center"
@@ -74,6 +75,7 @@ var (
 		appStoreDaemonPath,
 		oldAppStoreDaemonPath,
 		printerPath,
+		printerHelperPath,
 		langSelectorPath,
 	}
 	allowRemovePackageExecPaths = strv.Strv{
