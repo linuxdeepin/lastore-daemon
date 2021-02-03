@@ -49,6 +49,8 @@ install: gen_mo
 	cp -rf var/lib/lastore/* ${DESTDIR}${PREFIX}/var/lib/lastore/
 	cp -rf lib ${DESTDIR}${PREFIX}/
 
+	mkdir -p ${DESTDIR}${PREFIX}/var/cache/lastore
+
 update_pot:
 	deepin-update-pot locale/locale_config.ini
 
