@@ -50,7 +50,7 @@ func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 	u.setUpdatableApps(apps)
 }
 
-func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, *dbus.Error) {
+func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []ApplicationUpdateInfo, busErr *dbus.Error) {
 	iInfos := packageIconInfos()
 	aInfos := applicationInfos()
 	uInfos, err := system.SystemUpgradeInfo()
@@ -62,7 +62,6 @@ func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, 
 		return nil, dbusutil.ToError(err)
 	}
 
-	var r []ApplicationUpdateInfo
 	for _, uInfo := range uInfos {
 		id := uInfo.Package
 
@@ -84,10 +83,10 @@ func (u *Updater) ApplicationUpdateInfos(lang string) ([]ApplicationUpdateInfo, 
 		if info.Icon == "" {
 			info.Icon = id
 		}
-		r = append(r, info)
+		updateInfos = append(updateInfos, info)
 	}
-	log.Info("ApplicationUpdateInfos: ", r)
-	return r, nil
+	log.Info("ApplicationUpdateInfos: ", updateInfos)
+	return updateInfos, nil
 }
 
 func applicationInfos() map[string]ApplicationInfo {

@@ -117,28 +117,6 @@ type Manager struct {
 	apps *apps.Apps
 
 	UpdateMode uint64 `prop:"access:rw"`
-
-	methods *struct { //nolint
-		FixError             func() `in:"errType" out:"job"`
-		CleanArchives        func() `out:"job"`
-		GetArchivesInfo      func() `out:"info"`
-		CleanJob             func() `in:"jobId"`
-		StartJob             func() `in:"jobId"`
-		PauseJob             func() `in:"jobId"`
-		InstallPackage       func() `in:"jobName,packages" out:"job"`
-		RemovePackage        func() `in:"jobName,packages" out:"job"`
-		UpdatePackage        func() `in:"jobName,packages" out:"job"`
-		UpdateSource         func() `out:"job"`
-		DistUpgrade          func() `out:"job"`
-		PrepareDistUpgrade   func() `out:"job"`
-		PackageDesktopPath   func() `in:"pkgId" out:"desktopPath"`
-		PackagesDownloadSize func() `in:"packages" out:"size"`
-		PackageExists        func() `in:"pkgId" out:"exist"`
-		PackageInstallable   func() `in:"pkgId" out:"installable"`
-		SetAutoClean         func() `in:"enable"`
-		SetRegion            func() `in:"region"`
-		SetLogger            func() `in:"levels,format,output"`
-	}
 }
 
 /*
@@ -274,13 +252,13 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	return job, err
 }
 
-func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
-	*dbus.Error) {
-	job, err := m.updatePackage(sender, jobName, packages)
+func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
+	busErr *dbus.Error) {
+	jobObj, err := m.updatePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	return job.getPath(), nil
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -315,8 +293,8 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	return m.installPkg(jobName, strings.Join(pkgs, " "), environ)
 }
 
-func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
-	*dbus.Error) {
+func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
+	busErr *dbus.Error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
@@ -329,18 +307,18 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 		return "/", dbusutil.ToError(err)
 	}
 
-	job, err := m.installPackage(sender, jobName, packages)
+	jobObj, err := m.installPackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	job.next.caller = mapMethodCaller(execPath, cmdLine)
-	return job.getPath(), nil
+	jobObj.next.caller = mapMethodCaller(execPath, cmdLine)
+	return jobObj.getPath(), nil
 }
 
 func sendInstallMsgToUserExperModule(msg, path, name, id string) {
 	bus, err := dbus.SystemBus()
 	if err != nil {
-		log.Warn(err)
+		_ = log.Warn(err)
 		return
 	}
 	userexp := bus.Object(UserExperServiceName, UserExperPath)
@@ -468,8 +446,8 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	return job, err
 }
 
-func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (dbus.ObjectPath,
-	*dbus.Error) {
+func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
+	busErr *dbus.Error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
@@ -482,12 +460,12 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 		return "/", dbusutil.ToError(err)
 	}
 
-	job, err := m.removePackage(sender, jobName, packages)
+	jobObj, err := m.removePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	job.caller = mapMethodCaller(execPath, cmdLine)
-	return job.getPath(), nil
+	jobObj.caller = mapMethodCaller(execPath, cmdLine)
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) ensureUpdateSourceOnce(caller methodCaller) {
@@ -557,13 +535,13 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	return job, err
 }
 
-func (m *Manager) UpdateSource(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
+func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
-	job, err := m.updateSource(false, mapMethodCaller(execPath, cmdLine))
+	jobObj, err := m.updateSource(false, mapMethodCaller(execPath, cmdLine))
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
@@ -571,7 +549,7 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error
 
 	_ = m.config.UpdateLastCheckTime()
 
-	return job.getPath(), nil
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) cancelAllJob() error {
@@ -591,12 +569,12 @@ func (m *Manager) cancelAllJob() error {
 	return nil
 }
 
-func (m *Manager) DistUpgrade(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
-	job, err := m.distUpgrade(sender)
+func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
+	jobObj, err := m.distUpgrade(sender)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	return job.getPath(), nil
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
@@ -638,17 +616,17 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
+func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
-	job, err := m.prepareDistUpgrade(mapMethodCaller(execPath, cmdLine))
+	jobObj, err := m.prepareDistUpgrade(mapMethodCaller(execPath, cmdLine))
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	return job.getPath(), nil
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) prepareDistUpgrade(caller methodCaller) (*Job, error) {
@@ -710,7 +688,7 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	return dbusutil.ToError(err)
 }
 
-func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (int64, *dbus.Error) {
+func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (size int64, busErr *dbus.Error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		_ = log.Warn(err)
@@ -725,16 +703,16 @@ func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (i
 	return int64(s), dbusutil.ToError(err)
 }
 
-func (m *Manager) PackageInstallable(pkgId string) (bool, *dbus.Error) {
+func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
-func (m *Manager) PackageExists(pkgId string) (bool, *dbus.Error) {
+func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
 	return system.QueryPackageInstalled(pkgId), nil
 }
 
 // TODO: Remove this API
-func (m *Manager) PackageDesktopPath(pkgId string) (string, *dbus.Error) {
+func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
 	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
 	if err != nil {
 		_ = log.Warnf("QueryDesktopPath failed: %q\n", err)
@@ -768,7 +746,7 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	return nil
 }
 
-func (m *Manager) GetArchivesInfo() (string, *dbus.Error) {
+func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
 	info, err := getArchiveInfo()
 	if err != nil {
 		return "", dbusutil.ToError(err)
@@ -784,12 +762,12 @@ func getArchiveInfo() (string, error) {
 	return string(out), nil
 }
 
-func (m *Manager) CleanArchives() (dbus.ObjectPath, *dbus.Error) {
-	job, err := m.cleanArchives(false)
+func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
+	jobObj, err := m.cleanArchives(false)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	return job.getPath(), nil
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
@@ -881,12 +859,12 @@ func (m *Manager) loopCheck() {
 	}
 }
 
-func (m *Manager) FixError(sender dbus.Sender, errType string) (dbus.ObjectPath, *dbus.Error) {
-	job, err := m.fixError(sender, errType)
+func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
+	jobObj, err := m.fixError(sender, errType)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	return job.getPath(), nil
+	return jobObj.getPath(), nil
 }
 
 func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {

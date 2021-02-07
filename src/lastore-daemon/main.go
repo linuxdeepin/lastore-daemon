@@ -53,6 +53,7 @@ func Tr(text string) string {
 }
 
 //go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,github.com/godbus/dbus updater.go job.go manager.go
+//go:generate dbusutil-gen em -type Manager,Updater
 
 func main() {
 	flag.Parse()

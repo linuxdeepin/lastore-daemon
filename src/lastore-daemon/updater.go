@@ -53,16 +53,6 @@ type Updater struct {
 	UpdatableApps []string
 	// dbusutil-gen: equal=nil
 	UpdatablePackages []string
-
-	methods *struct { //nolint
-		ListMirrorSources       func() `in:"lang" out:"mirrorSources"`
-		SetMirrorSource         func() `in:"id"`
-		SetAutoCheckUpdates     func() `in:"enable"`
-		SetAutoDownloadUpdates  func() `in:"enable"`
-		ApplicationUpdateInfos  func() `in:"lang" out:"updateInfos"`
-		GetCheckIntervalAndTime func() `out:"interval,checkTime"`
-		SetUpdateNotify         func() `in:"enable"`
-	}
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
@@ -184,7 +174,7 @@ type LocaleMirrorSource struct {
 
 // ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
 // 其中Name会根据传递进来的lang进行本地化
-func (u *Updater) ListMirrorSources(lang string) ([]LocaleMirrorSource, *dbus.Error) {
+func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
 	return u.listMirrorSources(lang), nil
 }
 
@@ -223,10 +213,10 @@ func UpdatableNames(infos []system.UpgradeInfo) []string {
 	return apps
 }
 
-func (u *Updater) GetCheckIntervalAndTime() (float64, string, *dbus.Error) {
-	interval := u.config.CheckInterval.Hours()
-	checkTime := u.config.LastCheckTime.String()
-	return interval, checkTime, nil
+func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string, busErr *dbus.Error) {
+	interval = u.config.CheckInterval.Hours()
+	checkTime = u.config.LastCheckTime.String()
+	return
 }
 
 func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {

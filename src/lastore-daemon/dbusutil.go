@@ -3,9 +3,8 @@
 package main
 
 import (
-	"internal/system"
-
 	"github.com/godbus/dbus"
+	"internal/system"
 )
 
 func (v *Updater) setPropAutoCheckUpdates(value bool) (changed bool) {

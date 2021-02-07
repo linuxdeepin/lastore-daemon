@@ -31,7 +31,7 @@ import (
 
 const DefaultLogOutput = "/var/log/lastore/smartmirror_daemon.log"
 
-//go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,github.com/godbus/dbus updater.go job.go manager.go
+//go:generate dbusutil-gen em -type SmartMirror
 
 func main() {
 	runDaemon := flag.Bool("daemon", false, "run as daemon and not exit")

@@ -46,11 +46,6 @@ type SmartMirror struct {
 	sources       []system.MirrorSource
 	sourcesURL    []string
 	taskCount     int // TODO: need a lock???
-
-	methods *struct { //nolint
-		Query     func() `in:"origin, official, mirror" out:"url"`
-		SetEnable func() `in:"enable"`
-	}
 }
 
 // GetInterfaceName export dbus interface name
@@ -121,7 +116,7 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 }
 
 // Query the best source
-func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (string, *dbus.Error) {
+func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (url string, busErr *dbus.Error) {
 	if !s.Enable {
 		source := strings.Replace(original, officialMirror, mirrorHost, 1)
 		if utils.ValidURL(source) {
