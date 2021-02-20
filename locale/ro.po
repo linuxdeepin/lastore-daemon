@@ -4,17 +4,16 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Maggie Liu <maggie.liufei@gmail.com>, 2019
-# cricri8o <inactive+cricri8o@transifex.com>, 2019
+# Marian c <dark1ro@yahoo.com>, 2020
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 20:50+0800\n"
-"PO-Revision-Date: 2019-10-23 02:33+0000\n"
-"Last-Translator: cricri8o <inactive+cricri8o@transifex.com>, 2019\n"
+"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"PO-Revision-Date: 2020-08-24 10:36+0000\n"
+"Last-Translator: Marian c <dark1ro@yahoo.com>, 2020\n"
 "Language-Team: Romanian (https://www.transifex.com/linuxdeepin/teams/3617/ro/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -22,10 +21,23 @@ msgstr ""
 "Language: ro\n"
 "Plural-Forms: nplurals=3; plural=(n==1?0:(((n%100>19)||((n%100==0)&&(n!=0)))?2:1));\n"
 
-#: ../src/lastore-daemon/inhibitor.go:31
-msgid "System is updating, please shut down or reboot later."
-msgstr "Sistemul se actualizează, închideţi sau reporniţi mai târziu."
+#: ../src/lastore-daemon/inhibitor.go:52
+msgid "Updating the system, please do not shut down or reboot now."
+msgstr ""
+"Actualizare sistem, va rugam nu închideţi sau reporniţi sistemul acum."
 
-#: ../src/lastore-daemon/main.go:101
+#: ../src/lastore-daemon/inhibitor.go:54
+msgid "Tasks are running..."
+msgstr "Sarcini se execută..."
+
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing from shutting down"
+msgstr "Împiedică închiderea"
+
+#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"
-msgstr "Panou de Control"
+msgstr "Centru Control"
+
+#: ../src/lastore-daemon/main.go:129
+msgid "App Store"
+msgstr "Magazin Aplicații"

@@ -32,7 +32,7 @@ msgstr "Tarefas em execução..."
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing from shutting down"
-msgstr ""
+msgstr "Impedir o encerramento"
 
 #: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"

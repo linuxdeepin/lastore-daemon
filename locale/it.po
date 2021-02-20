@@ -31,7 +31,7 @@ msgstr "Operazioni in corso..."
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing from shutting down"
-msgstr ""
+msgstr "Prevenzione spegnimento"
 
 #: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"

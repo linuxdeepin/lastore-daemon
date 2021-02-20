@@ -32,7 +32,7 @@ msgstr "Probíhají úlohy…"
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing from shutting down"
-msgstr ""
+msgstr "Brání ve vypnutí"
 
 #: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
 msgid "Control Center"
