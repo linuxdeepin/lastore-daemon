@@ -404,7 +404,7 @@ func parseAptCachePolicyOutput(r io.Reader) map[string]string {
 }
 
 func loadCandidateVersions(debInfoList []*debInfo) error {
-	args := []string{binAptCache, "policy", "--"}
+	args := []string{binAptCache, "-c", system.LastoreAptConfPath, "policy", "--"}
 
 	var buf bytes.Buffer
 	for _, info := range debInfoList {
