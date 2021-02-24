@@ -102,21 +102,21 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 
 	switch cmdType {
 	case system.InstallJobType:
-		args = append(args, "-c", "/var/lib/lastore/apt.conf")
+		args = append(args, "-c", system.LastoreAptConfPath)
 		args = append(args, "install")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DistUpgradeJobType:
-		args = append(args, "-c", "/var/lib/lastore/apt.conf")
+		args = append(args, "-c", system.LastoreAptConfPath)
 		args = append(args, "--allow-downgrades", "--allow-change-held-packages")
 		args = append(args, "dist-upgrade")
 	case system.RemoveJobType:
-		args = append(args, "-c", "/var/lib/lastore/apt.conf")
+		args = append(args, "-c", system.LastoreAptConfPath)
 		args = append(args, "autoremove", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
-		args = append(args, "-c", "/var/lib/lastore/apt.conf")
+		args = append(args, "-c", system.LastoreAptConfPath)
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
@@ -124,7 +124,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		sh := "apt-get -y -o APT::Status-Fd=3 update && /var/lib/lastore/scripts/build_system_info -now"
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CustomUpdateJobType:
-		sh := "apt-get -y -o APT::Status-Fd=3 custom-update && /var/lib/lastore/scripts/build_system_info -now"
+		sh := fmt.Sprintf("apt-get -y -o APT::Status-Fd=3 -c %s update && /var/lib/lastore/scripts/build_system_info -now", system.LastoreAptConfPath)
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
@@ -134,10 +134,10 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		switch errType {
 		case system.ErrTypeDpkgInterrupted:
 			sh := "dpkg --force-confold --configure -a;" +
-				"apt-get -y -c /var/lib/lastore/apt.conf -f install;"
+				fmt.Sprintf("apt-get -y -c %s -f install;", system.LastoreAptConfPath)
 			return exec.Command("/bin/sh", "-c", sh)
 		case system.ErrTypeDependenciesBroken:
-			args = append(args, "-c", "/var/lib/lastore/apt.conf")
+			args = append(args, "-c", system.LastoreAptConfPath)
 			args = append(args, "-f", "install")
 		default:
 			panic("invalid error type " + errType)

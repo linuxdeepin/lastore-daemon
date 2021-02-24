@@ -37,6 +37,10 @@ import (
 	"time"
 )
 
+const (
+	LastoreAptConfPath = "/var/lib/lastore/apt.conf"
+)
+
 // ListPackageFile list files path contained in the packages
 func ListPackageFile(packages ...string) []string {
 	desktopFiles, err := utils.FilterExecOutput(
@@ -77,7 +81,7 @@ Dir::Cache::pkgcache=pkgcache.bin
 */
 func GetArchivesDir() (string, error) {
 	binAptConfig, _ := exec.LookPath("apt-config")
-	output, err := exec.Command(binAptConfig, "-c", "/var/lib/lastore/apt.conf", "--format", "%f=%v%n", "dump", "Dir").Output()
+	output, err := exec.Command(binAptConfig, "-c", LastoreAptConfPath, "--format", "%f=%v%n", "dump", "Dir").Output()
 	if err != nil {
 		return "", err
 	}
@@ -135,7 +139,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 		return SizeDownloaded, NotFoundError("hasn't any packages")
 	}
 	cmd := exec.Command("/usr/bin/apt-get",
-		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", "/var/lib/lastore/apt.conf", "--print-uris", "--assume-no", "install", "--"}, packages...)...)
+		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
 	lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
 		_, _err := parsePackageSize(line)

@@ -131,8 +131,7 @@ func queryDpkgUpgradeInfoByAptList() ([]string, error) {
 	if len(ps) == 0 {
 		return nil, nil
 	}
-
-	cmd := exec.Command("apt", append([]string{"list", "--upgradable"}, ps...)...)
+	cmd := exec.Command("apt", append([]string{"-c", system.LastoreAptConfPath, "list", "--upgradable"}, ps...)...)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {

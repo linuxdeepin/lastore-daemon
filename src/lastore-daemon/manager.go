@@ -21,9 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -507,9 +507,9 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	var err error
 	switch caller {
 	case methodCallerControlCenter:
-		err = m.updateCustomConfig()
+		err = m.updateCustomSourceDir()
 		if err != nil {
-			_ = log.Warn()
+			_ = log.Warn(err)
 		}
 		job, err = m.jobManager.CreateJob(jobName, system.CustomUpdateJobType, nil, nil)
 	default:
@@ -928,30 +928,55 @@ func (m *Manager) installUOSReleaseNote() {
 	}
 }
 
-func (m *Manager) updateCustomConfig() error {
+func (m *Manager) updateCustomSourceDir() error {
 	const (
-		confPath = "/etc/apt/apt.conf.d/99custom.conf"
-		header   = "Acquire::SmartMirrors::SourceList:: "
-		footer   = ";"
-		comment  = "# This file was automatically generated from lastore-daemon - DO NOT EDIT!"
+		sourceDir        = "/var/lib/lastore/sources.list.d"
+		sourceListPath   = "/etc/apt/sources.list"
+		appStoreListPath = "/etc/apt/sources.list.d/appstore.list"
+		safeListPath     = "/etc/apt/sources.list.d/safe.list"
 	)
+	tempSourceListPath := filepath.Join(sourceDir, "sources.list")
+	tempAppStoreListPath := filepath.Join(sourceDir, "appstore.list")
+	tempSafeListPath := filepath.Join(sourceDir, "safe.list")
+	_, err := os.Stat(sourceDir)
+	if err == nil || os.IsExist(err) {
+		err := os.RemoveAll(sourceDir)
+		if err != nil {
+			_ = log.Warn(err)
+		}
+	}
+	err = os.MkdirAll(sourceDir, 0755)
+	if err != nil {
+		_ = log.Warn(err)
+	}
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
-	var content []string
-	content = append(content, comment)
 	if mode&SystemUpdate == SystemUpdate {
-		content = append(content, header+"sources.list"+footer)
+		if system.NormalFileExists(sourceListPath) {
+			err = os.Symlink(sourceListPath, tempSourceListPath)
+			if err != nil {
+				return fmt.Errorf("create symlink for %q failed: %v", tempSourceListPath, err)
+			}
+		}
 	}
 	if mode&AppStoreUpdate == AppStoreUpdate {
-		content = append(content, header+"appstore.list"+footer)
+		if system.NormalFileExists(appStoreListPath) {
+			err := os.Symlink(appStoreListPath, tempAppStoreListPath)
+			if err != nil {
+				return fmt.Errorf("create symlink for %q failed: %v", tempAppStoreListPath, err)
+			}
+		}
 	}
 	if mode&SecurityUpdate == SecurityUpdate {
-		content = append(content, header+"safe.list"+footer)
+		if system.NormalFileExists(safeListPath) {
+			err := os.Symlink(safeListPath, tempSafeListPath)
+			if err != nil {
+				return fmt.Errorf("create symlink for %q failed: %v", tempSafeListPath, err)
+			}
+		}
 	}
-	resContent := strings.Join(content, "\n")
-	// #nosec
-	return ioutil.WriteFile(confPath, []byte(resContent), 0644)
+	return nil
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {

@@ -230,7 +230,7 @@ func queryStatusVersion(info *DebInfo) (status, version string, err error) {
 
 func getCandidateVersion(info *DebInfo) (string, error) {
 	pkg := info.name + ":" + info.arch
-	output, err := exec.Command(binAptCache, "policy", "--", pkg).Output()
+	output, err := exec.Command(binAptCache, "-c", system.LastoreAptConfPath, "policy", "--", pkg).Output()
 	if err != nil {
 		return "", err
 	}
