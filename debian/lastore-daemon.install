@@ -2,4 +2,5 @@
 /usr/bin
 /usr/share
 /var/lib/lastore
+/var/cache/lastore
 lib/systemd/system
