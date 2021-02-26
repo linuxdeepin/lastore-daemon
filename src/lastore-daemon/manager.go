@@ -499,7 +499,7 @@ func (m *Manager) ensureUpdateSourceOnce(caller methodCaller) {
 		return
 	}
 
-	_, err := m.updateSource(true, caller)
+	_, err := m.updateSource(false, caller)
 	if err != nil {
 		_ = log.Warn(err)
 	}
@@ -563,7 +563,7 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
 	}
-	job, err := m.updateSource(false, mapMethodCaller(execPath, cmdLine))
+	job, err := m.updateSource(m.updater.UpdateNotify, mapMethodCaller(execPath, cmdLine))
 	if err != nil {
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
