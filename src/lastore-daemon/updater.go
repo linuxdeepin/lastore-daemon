@@ -85,9 +85,8 @@ func (u *Updater) waitOnlineCheck() {
 	if u.AutoCheckUpdates {
 		err := exec.Command("nm-online", "-t", "3600").Run()
 		if err == nil {
-			_, err = u.manager.updateSource(true, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
+			_, err = u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
 			if err != nil {
-
 				_ = log.Warn(err)
 			}
 		}
@@ -120,7 +119,7 @@ func (u *Updater) loopCheck() {
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
-			_, err := u.manager.updateSource(true, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
+			_, err := u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
 			if err != nil {
 				_ = log.Warn(err)
 			}
