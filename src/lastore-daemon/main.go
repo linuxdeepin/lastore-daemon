@@ -96,12 +96,6 @@ func main() {
 
 	b := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	if !config.AutoCheckUpdates {
-		err := config.SetUpdateMode(0)
-		if err != nil {
-			_ = log.Warn(err)
-		}
-	}
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, b, config)
