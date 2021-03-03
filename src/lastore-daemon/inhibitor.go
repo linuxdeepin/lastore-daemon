@@ -49,13 +49,13 @@ func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 		var why string
 		switch caller {
 		case methodCallerControlCenter:
-			why = Tr("Updating the system, please do not shut down or reboot now.")
+			why = Tr("Installing updates...")
 		case methodCallerAppStore:
 			why = Tr("Tasks are running...")
 		default:
 			why = Tr("Preventing from shutting down")
 		}
-		fd, err := Inhibitor("shutdown", dbusServiceName, why)
+		fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
 		log.Infof("Prevent shutdown...: fd:%v\n", fd)
 		if err != nil {
 			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
