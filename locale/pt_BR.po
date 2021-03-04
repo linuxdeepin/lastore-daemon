@@ -4,17 +4,18 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Paulo Schopf, 2020
-# Alex, 2020
+# Paulo Schopf, 2021
+# Cassiano Molinari <chano2808a@gmail.com>, 2021
+# Alex, 2021
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-25 09:25+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Alex, 2020\n"
+"POT-Creation-Date: 2021-03-04 10:02+0800\n"
+"PO-Revision-Date: 2021-02-20 07:30+0000\n"
+"Last-Translator: Alex, 2021\n"
 "Language-Team: Portuguese (Brazil) (https://www.transifex.com/linuxdeepin/teams/3617/pt_BR/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -23,8 +24,8 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: ../src/lastore-daemon/inhibitor.go:52
-msgid "Updating the system, please do not shut down or reboot now."
-msgstr "Atualizando o sistema; não desligue ou reinicie o computador."
+msgid "Installing updates..."
+msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
@@ -32,12 +33,12 @@ msgstr "As tarefas estão em execução..."
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing from shutting down"
-msgstr ""
+msgstr "Impedindo o desligamento"
 
-#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
+#: ../src/lastore-daemon/main.go:137 ../src/lastore-daemon/main.go:141
 msgid "Control Center"
 msgstr "Central de Controle"
 
-#: ../src/lastore-daemon/main.go:129
+#: ../src/lastore-daemon/main.go:139
 msgid "App Store"
 msgstr "Loja de Aplicativos"

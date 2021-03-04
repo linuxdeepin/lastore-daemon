@@ -4,7 +4,7 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Davidmp <medipas@gmail.com>, 2021
+# yeshe lhamo <981611630@qq.com>, 2021
 # 
 #, fuzzy
 msgid ""
@@ -13,13 +13,13 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2021-03-04 10:02+0800\n"
 "PO-Revision-Date: 2021-02-20 07:30+0000\n"
-"Last-Translator: Davidmp <medipas@gmail.com>, 2021\n"
-"Language-Team: Catalan (https://www.transifex.com/linuxdeepin/teams/3617/ca/)\n"
+"Last-Translator: yeshe lhamo <981611630@qq.com>, 2021\n"
+"Language-Team: Tibetan (https://www.transifex.com/linuxdeepin/teams/3617/bo/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: ca\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: bo\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #: ../src/lastore-daemon/inhibitor.go:52
 msgid "Installing updates..."
@@ -27,16 +27,16 @@ msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
-msgstr "Hi ha tasques actives..."
+msgstr "ལས་འགན་སྒྲུབ་བཞིན་པ།"
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing from shutting down"
-msgstr "S'evita l'aturada."
+msgstr "ཁ་བརྒྱབ་པར་བཀག་འགོག་བྱེད་བཞིན་པ།"
 
 #: ../src/lastore-daemon/main.go:137 ../src/lastore-daemon/main.go:141
 msgid "Control Center"
-msgstr "Centre de control"
+msgstr "ཚོད་འཛིན་ལྟེ་གནས།"
 
 #: ../src/lastore-daemon/main.go:139
 msgid "App Store"
-msgstr "Botiga d'aplicacions"
+msgstr "ཉེར་སྤྱོད་ཚོང་ཁང་།"

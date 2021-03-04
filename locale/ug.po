@@ -4,28 +4,40 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Abdusalam Huxur <2250907458@qq.com>, 2019
-# نۇرمۇھەممەت ئۆمەر <tanha451634873@qq.com>, 2019
+# نۇرمۇھەممەت ئۆمەر <tanha451634873@qq.com>, 2021
+# 阿迪力 买买提明 <251078110@qq.com>, 2021
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 20:50+0800\n"
-"PO-Revision-Date: 2019-10-23 02:33+0000\n"
-"Last-Translator: نۇرمۇھەممەت ئۆمەر <tanha451634873@qq.com>, 2019\n"
-"Language-Team: Uighur (https://www.transifex.com/linuxdeepin/teams/3617/ug/)\n"
+"POT-Creation-Date: 2021-03-04 10:02+0800\n"
+"PO-Revision-Date: 2021-02-20 07:30+0000\n"
+"Last-Translator: 阿迪力 买买提明 <251078110@qq.com>, 2021\n"
+"Language-Team: Uyghur (https://www.transifex.com/linuxdeepin/teams/3617/ug/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: ug\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:31
-msgid "System is updating, please shut down or reboot later."
-msgstr "سېستىما يېڭىلىنىۋاتىدۇ، سەل تۇرۇپ تاقاڭ ياكى قايتا قوزغىتىڭ"
+#: ../src/lastore-daemon/inhibitor.go:52
+msgid "Installing updates..."
+msgstr ""
 
-#: ../src/lastore-daemon/main.go:101
+#: ../src/lastore-daemon/inhibitor.go:54
+msgid "Tasks are running..."
+msgstr "ۋەزىپە داۋاملىشىۋاتىدۇ ..."
+
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing from shutting down"
+msgstr "تاقاشقا توسقۇنلۇق قىلىۋاتىدۇ ..."
+
+#: ../src/lastore-daemon/main.go:137 ../src/lastore-daemon/main.go:141
 msgid "Control Center"
 msgstr "كونترول مەركىزى "
+
+#: ../src/lastore-daemon/main.go:139
+msgid "App Store"
+msgstr "ئەپ بازىرى"

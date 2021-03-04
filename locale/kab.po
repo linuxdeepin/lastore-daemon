@@ -4,7 +4,7 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Davidmp <medipas@gmail.com>, 2021
+# ZiriSut, 2021
 # 
 #, fuzzy
 msgid ""
@@ -13,12 +13,12 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2021-03-04 10:02+0800\n"
 "PO-Revision-Date: 2021-02-20 07:30+0000\n"
-"Last-Translator: Davidmp <medipas@gmail.com>, 2021\n"
-"Language-Team: Catalan (https://www.transifex.com/linuxdeepin/teams/3617/ca/)\n"
+"Last-Translator: ZiriSut, 2021\n"
+"Language-Team: Kabyle (https://www.transifex.com/linuxdeepin/teams/3617/kab/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: ca\n"
+"Language: kab\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../src/lastore-daemon/inhibitor.go:52
@@ -27,16 +27,16 @@ msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
-msgstr "Hi ha tasques actives..."
+msgstr "Tigawin teddunt..."
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing from shutting down"
-msgstr "S'evita l'aturada."
+msgstr "Qareɛ ɣef uxsay"
 
 #: ../src/lastore-daemon/main.go:137 ../src/lastore-daemon/main.go:141
 msgid "Control Center"
-msgstr "Centre de control"
+msgstr "Agens n usenqed"
 
 #: ../src/lastore-daemon/main.go:139
 msgid "App Store"
-msgstr "Botiga d'aplicacions"
+msgstr "App Store"

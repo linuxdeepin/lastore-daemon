@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"POT-Creation-Date: 2021-03-04 10:02+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,8 +18,8 @@ msgstr ""
 "Language: \n"
 
 #: ../src/lastore-daemon/inhibitor.go:52
-msgid "Updating the system, please do not shut down or reboot now."
-msgstr "Updating the system, please do not shut down or reboot now."
+msgid "Installing updates..."
+msgstr "Installing updates..."
 
 #: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
@@ -29,10 +29,10 @@ msgstr "Tasks are running..."
 msgid "Preventing from shutting down"
 msgstr "Preventing from shutting down"
 
-#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
+#: ../src/lastore-daemon/main.go:137 ../src/lastore-daemon/main.go:141
 msgid "Control Center"
 msgstr "Control Center"
 
-#: ../src/lastore-daemon/main.go:129
+#: ../src/lastore-daemon/main.go:139
 msgid "App Store"
 msgstr "App Store"
