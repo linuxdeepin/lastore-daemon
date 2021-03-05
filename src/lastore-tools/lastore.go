@@ -19,15 +19,16 @@ package main
 
 import (
 	"fmt"
-	"internal/system"
-	"internal/dstore"
 	"os"
 	"strings"
 	"time"
 
+	"internal/dstore"
+	"internal/system"
+
 	"github.com/codegangsta/cli"
-	"github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore"
 	"github.com/godbus/dbus"
+	lastore "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore"
 )
 
 var CMDTester = cli.Command{
@@ -52,6 +53,9 @@ var CMDTester = cli.Command{
 	},
 }
 
+// MainTester 处理 test 子命令。
+// 部分 install 和 remove 命令不能直接执行，需要把本程序的路径（一般是 /usr/bin/lastore-tools）加入配置文件
+//（一般是/var/lib/lastore/config.json）中的 AllowInstallRemovePkgExecPaths 列表中。
 func MainTester(c *cli.Context) {
 	var err error
 	switch c.String("job") {

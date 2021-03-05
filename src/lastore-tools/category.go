@@ -24,32 +24,18 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-// type CategoryInfo struct {
-// 	Id      string `json:"id"`
-// 	Name    string `json:"name"`
-// 	Locales map[string]struct {
-// 		Name string `json:"name"`
-// 	}
-// }
-
+// writeData 把数据 data 序列化为 JSON 格式写入 fpath 路径的文件。
 func writeData(fpath string, data interface{}) error {
 	return utils.WriteData(fpath, data)
 }
 
+// 废弃
 func GenerateCategory(repo, fpath string) error {
 	_ = log.Warnf("this method has deprecated")
 	return nil
-	// appstoreURI := "http://api.appstore.deepin.org"
-	// url := appstoreURI + "/" + "categories"
-
-	// var d []CategoryInfo
-	// err := decodeData(true, url, &d)
-	// if err != nil {
-	// 	return log.Warnf("GenerateCategory failed %v\n", err)
-	// }
-	// return writeData(fpath, d)
 }
 
+// genApplications 把 v 中数据格式转换，再保存在 fpath 路径的文件中，以 JSON 格式。
 func genApplications(v []*dstore.PackageInfo, fpath string) error {
 	apps := make(map[string]*dstore.AppInfo)
 
@@ -73,6 +59,8 @@ func genApplications(v []*dstore.PackageInfo, fpath string) error {
 	return writeData(fpath, apps)
 }
 
+// GenerateApplications 在 fpath 路径生成 applications.json 文件，此文件内容为上架应用的信息。
+// fpath 一般为/var/lib/lastore/applications.json 。
 func GenerateApplications(repo, fpath string) error {
 	s := dstore.NewStore()
 

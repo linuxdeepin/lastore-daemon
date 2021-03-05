@@ -58,9 +58,12 @@ var CMDUpdater = cli.Command{
 	},
 }
 
+// MainUpdater 处理 update 子命令。
+// 在文件 var/lib/lastore/scripts/update_metadata_info 中被调用。
 func MainUpdater(c *cli.Context) {
 	var err error
 
+	// 输出文件
 	fpath := c.String("output")
 	job := c.String("job")
 	repo := c.String("repo")

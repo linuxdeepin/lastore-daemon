@@ -140,6 +140,7 @@ func RemoteCatLine(url string) (string, error) {
 	return line, err
 }
 
+// WriteData 把数据 data 序列化为 JSON 格式写入 fpath 路径的文件。
 func WriteData(fpath string, data interface{}) error {
 	content, err := json.Marshal(data)
 	if err != nil {

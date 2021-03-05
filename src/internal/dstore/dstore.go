@@ -63,7 +63,8 @@ var expireDelay = time.Hour * 24
 
 type packageApps map[string]*PackageInfo
 
-// 获取上架的apt应用信息
+// GetPackageApplication 通过元数据服务器获取商店软件包信息，会把数据缓存在 path + .cache.json 文件中，
+// 缓存过期时长由 expireDelay 确定。
 func (s *Store) GetPackageApplication(path string) (v []*PackageInfo, err error) {
 	// cachePath := filepath.Join(system.VarLibDir, "packages.cache.json")
 	cachePath := path + ".cache.json"
