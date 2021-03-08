@@ -102,6 +102,7 @@ func MainUpdater(c *cli.Context) {
 }
 
 func main() {
+	// 清除语言相关环境变量
 	_ = utils.UnsetEnv("LC_ALL")
 	_ = utils.UnsetEnv("LANGUAGE")
 	_ = utils.UnsetEnv("LC_MESSAGES")
@@ -112,6 +113,7 @@ func main() {
 	app.Name = "lastore-tools"
 	app.Usage = "help building dstore system."
 	app.Version = "0.9.18"
+	// 定义全局选项
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug,d",

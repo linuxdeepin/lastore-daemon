@@ -17,8 +17,11 @@
 
 package main
 
-import "testing"
-import C "gopkg.in/check.v1"
+import (
+	"testing"
+
+	C "gopkg.in/check.v1"
+)
 
 type testWrap struct{}
 
@@ -27,7 +30,7 @@ func init() {
 	C.Suite(&testWrap{})
 }
 
-func (*testWrap) TestNormalizePackageName(c *C.C) {
+func (*testWrap) Test_getPackageName(c *C.C) {
 	var data = []struct {
 		FileName    string
 		PackageName string

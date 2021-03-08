@@ -19,8 +19,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/codegangsta/cli"
+
 	"internal/querydesktop"
+
+	"github.com/codegangsta/cli"
 )
 
 var CMDQueryDesktop = cli.Command{

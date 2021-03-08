@@ -20,9 +20,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"internal/mirrors"
 	"os"
 	"strings"
+
+	"internal/mirrors"
 
 	"github.com/codegangsta/cli"
 )
@@ -48,7 +49,7 @@ var CMDSmartMirror = cli.Command{
 		},
 		cli.BoolFlag{
 			Name:  "quiet,q",
-			Usage: "slient mode, only produces necessary output",
+			Usage: "silent mode, only produces necessary output",
 		},
 		cli.IntFlag{
 			Name:  "interval,i",
@@ -73,7 +74,7 @@ var CMDSmartMirror = cli.Command{
 		},
 		{
 			Name:   "server_stats",
-			Usage:  "report the status of all knonw mirrors",
+			Usage:  "report the status of all known mirrors",
 			Action: SubmainMirrorSynProgress,
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -83,7 +84,7 @@ var CMDSmartMirror = cli.Command{
 				},
 				cli.BoolFlag{
 					Name:  "list,l",
-					Usage: "only list knonwn mirrors",
+					Usage: "only list known mirrors",
 				},
 				cli.StringFlag{
 					Name:  "export,e",
@@ -103,6 +104,7 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	onlyList := c.Bool("list")
 	n := c.Parent().Int("parallel")
 
+	// 只列出镜像源的 url 列表
 	if onlyList {
 		mlist, _ := getMirrorList(c.Parent().String("mirrorlist"))
 		for _, m := range mlist {
@@ -111,6 +113,7 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 		return
 	}
 
+	// 如果未指定参数，则使用所有的镜像源列表
 	mlist := c.Args()
 	if len(mlist) == 0 {
 		mlist, _ = getMirrorList(c.Parent().String("mirrorlist"))
@@ -130,6 +133,7 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	}
 }
 
+//  appendSuffix 如果 r 没有后缀 suffix，则加上。
 func appendSuffix(r string, suffix string) string {
 	if strings.HasSuffix(r, suffix) {
 		return r
@@ -137,6 +141,7 @@ func appendSuffix(r string, suffix string) string {
 	return r + suffix
 }
 
+// getMirrorList 从来源 p 获取镜像源的 url 列表，p 可以是本地文件路径，或者是 http:// 或 https:// 开头的 url。
 func getMirrorList(p string) ([]string, error) {
 	if strings.HasPrefix(p, "http://") ||
 		strings.HasPrefix(p, "https://") {
@@ -152,6 +157,7 @@ func getMirrorList(p string) ([]string, error) {
 		return r, nil
 	}
 
+	// 把 p 当作文件路径，解码 JSON 到 raw 中
 	f, err := os.Open(p)
 	if err != nil {
 		return nil, err

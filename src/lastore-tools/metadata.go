@@ -56,6 +56,7 @@ var CMDMetadata = cli.Command{
 	},
 }
 
+// 目前 metadata 功能被废弃
 func MainMetadata(c *cli.Context) {
 	remote := c.String("remote")
 	repo := c.String("local")
@@ -69,7 +70,7 @@ func MainMetadata(c *cli.Context) {
 
 	updateFlag := c.Bool("update")
 	if updateFlag || !tree.HasBranch("origin:lastore") {
-		fmt.Fprintf(os.Stderr, "Try updating from %q to %q\n", remote, repo)
+		_, _ = fmt.Fprintf(os.Stderr, "Try updating from %q to %q\n", remote, repo)
 		err = tree.Pull("lastore")
 		if err != nil {
 			fmt.Println("pullRepo:", err)

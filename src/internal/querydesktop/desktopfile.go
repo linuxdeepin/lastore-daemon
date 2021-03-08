@@ -150,6 +150,8 @@ const (
 	desktopExt          = ".desktop"
 )
 
+// QueryDesktopFile 根据软件包名 pkg 返回包内最好的一个 desktop 文件。
+// 此功能可能随着 deepin-app-store 的升级而被废弃。
 func QueryDesktopFile(pkg string) string {
 	if strings.HasPrefix(pkg, flatpakAppPkgPrefix) {
 		appId := pkg[len(flatpakAppPkgPrefix):]

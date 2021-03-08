@@ -54,7 +54,7 @@ var CMDTester = cli.Command{
 }
 
 // MainTester 处理 test 子命令。
-// 部分 install 和 remove 命令不能直接执行，需要把本程序的路径（一般是 /usr/bin/lastore-tools）加入配置文件
+// 其中 install 和 remove 命令不能直接执行，需要把本程序的路径（一般是 /usr/bin/lastore-tools）加入配置文件
 //（一般是/var/lib/lastore/config.json）中的 AllowInstallRemovePkgExecPaths 列表中。
 func MainTester(c *cli.Context) {
 	var err error
@@ -101,7 +101,7 @@ func LastoreRemove(p string) error {
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try removing", p)
-	j, err := m.RemovePackage(0, "RemoveForTesing "+p, p)
+	j, err := m.RemovePackage(0, "RemoveForTesting "+p, p)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func LastoreInstall(p string) error {
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try installing", p)
-	j, err := m.InstallPackage(0, "InstallForTesing "+p, p)
+	j, err := m.InstallPackage(0, "InstallForTesting "+p, p)
 	if err != nil {
 		return err
 	}
@@ -234,8 +234,10 @@ func waitJob(p dbus.ObjectPath) error {
 		fmt.Println(showLine(j))
 	}
 
+	// 每隔 50ms 查询一次状态
 	for l := showLine(j); status != ""; {
 		t := showLine(j)
+		// 状态行发生改变才打印出来
 		if t != l {
 			l = t
 			fmt.Println(t)
@@ -245,7 +247,7 @@ func waitJob(p dbus.ObjectPath) error {
 		case system.PausedStatus:
 			return fmt.Errorf("job be paused")
 		case system.SucceedStatus:
-			fmt.Println("succeeful finished")
+			fmt.Println("successful finished")
 			return nil
 		case system.FailedStatus:
 			return fmt.Errorf("job %v failed %v", p, j)

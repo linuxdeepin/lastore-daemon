@@ -17,14 +17,19 @@
 
 package main
 
-import "net/http"
-import "time"
-import "encoding/json"
-import "fmt"
-import "github.com/apcera/termtables"
-import "strings"
-import "io"
-import "internal/utils"
+import (
+	"encoding/json"
+	"fmt"
+	"internal/utils"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/apcera/termtables"
+)
+
+// 目前这部分代码大部分工作不正常
 
 type URLChecker struct {
 	workerQueue chan chan string
@@ -36,7 +41,7 @@ type URLCheckResult struct {
 	Result     bool
 	ResultCode int
 	StartTime  time.Time
-	Latency    time.Duration
+	Latency    time.Duration // 延时，其实是检查消耗时间
 }
 
 func (c *URLChecker) Check(urls ...string) {
@@ -89,6 +94,7 @@ func (u *URLChecker) SendAllRequest() {
 	}
 }
 
+// CheckURLExists 检查 url 的响应状态码
 func CheckURLExists(url string) *URLCheckResult {
 	n := time.Now().UTC()
 	req, err := http.NewRequest("GET", url, nil)
@@ -112,6 +118,7 @@ func CheckURLExists(url string) *URLCheckResult {
 	return &URLCheckResult{url, false, resp.StatusCode, n, time.Since(n)}
 }
 
+// ParseIndex 获取 indexUrl 的内容，然后过滤重复行。
 func ParseIndex(indexUrl string) ([]string, error) {
 	f, err := utils.OpenURL(indexUrl)
 	if err != nil {
@@ -145,10 +152,12 @@ type MirrorInfo struct {
 	Detail      []URLCheckResult
 }
 
+// SaveMirrorInfos 把 infos 序列化为 JSON 格式，用 w 写入。
 func SaveMirrorInfos(infos []MirrorInfo, w io.Writer) error {
 	return json.NewEncoder(w).Encode(infos)
 }
 
+// ShowMirrorInfos 以表格的形式输出镜像源信息 infos
 func ShowMirrorInfos(infos []MirrorInfo) {
 	termtables.EnableUTF8PerLocale()
 
@@ -161,11 +170,12 @@ func ShowMirrorInfos(infos []MirrorInfo) {
 		false: "✖",
 	}
 	for _, info := range infos {
+		// 名字太长，则截断名字
 		name := info.Name
 		if len(name) > 47 {
 			name = name[0:47] + "..."
 		}
-		var lm string = info.LastSync.Format(time.ANSIC)
+		var lm = info.LastSync.Format(time.ANSIC)
 		if info.LastSync.IsZero() {
 			lm = "?"
 		}
@@ -187,6 +197,8 @@ func u2014(server string) string {
 func u2015(server string) string {
 	return appendSuffix(server, "/") + "dists/unstable/Release"
 }
+
+// uGuards 把 guards 列表中提出 1/5 的部分，和 server 组合为 url。
 func uGuards(server string, guards []string) []string {
 	var r []string
 	// Just need precise of 5%. (Currently has 1%)
@@ -200,6 +212,8 @@ func uGuards(server string, guards []string) []string {
 
 func DetectServer(parallel int, indexName string, official string, mlist []string) []MirrorInfo {
 	indexUrl := appendSuffix(official, "/") + indexName
+	// 获取 GUARD_INDEX 文件，这个文件是所有 GUARD 文件的索引，是 JSON 格式，字符串列表。
+	// 每个 GUARD 文件命名成 __GUARD__ + unix时间戳，是空文件。
 	index, err := ParseIndex(indexUrl)
 	if err != nil || len(index) == 0 {
 		fmt.Println("E:", err)
