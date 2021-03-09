@@ -20,13 +20,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	la_utils "internal/utils"
 	"os"
 	"time"
 
+	"internal/utils"
+
 	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbusutil"
-	"pkg.deepin.io/lib/utils"
 )
 
 const DefaultLogOutput = "/var/log/lastore/smartmirror_daemon.log"
@@ -37,7 +37,7 @@ func main() {
 	runDaemon := flag.Bool("daemon", false, "run as daemon and not exit")
 	flag.Parse()
 
-	err := la_utils.SetSeelogger(la_utils.DefaultLogLevel, la_utils.DefaultLogFormat, DefaultLogOutput)
+	err := utils.SetSeelogger(utils.DefaultLogLevel, utils.DefaultLogFormat, DefaultLogOutput)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

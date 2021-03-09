@@ -29,13 +29,12 @@ import (
 
 	"internal/system"
 	"internal/system/apt"
-	la_utils "internal/utils"
+	"internal/utils"
 
 	log "github.com/cihub/seelog"
 	"pkg.deepin.io/dde/api/inhibit_hint"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
-	"pkg.deepin.io/lib/utils"
 )
 
 const (
@@ -58,7 +57,7 @@ func Tr(text string) string {
 func main() {
 	flag.Parse()
 
-	err := la_utils.SetSeelogger(la_utils.DefaultLogLevel, la_utils.DefaultLogFormat, la_utils.DefaultLogOutput)
+	err := utils.SetSeelogger(utils.DefaultLogLevel, utils.DefaultLogFormat, utils.DefaultLogOutput)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

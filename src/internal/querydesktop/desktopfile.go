@@ -25,7 +25,7 @@ import (
 	"sort"
 	"strings"
 
-	"pkg.deepin.io/lib/appinfo/desktopappinfo"
+	"pkg.deepin.io/lib/keyfile"
 )
 
 // TODO: write tools to analyze the score of desktop in debs
@@ -172,12 +172,12 @@ func QueryDesktopFile(pkg string) string {
 				continue
 			}
 			desktopFile := filepath.Join(flatpakAppsDir, fi.Name())
-			dai, err := desktopappinfo.NewDesktopAppInfoFromFile(desktopFile)
+			kf := keyfile.NewKeyFile()
+			err := kf.LoadFromFile(desktopFile)
 			if err != nil {
 				continue
 			}
-
-			cmdline := dai.GetCommandline()
+			cmdline, _ := kf.GetString("Desktop Entry", "Exec")
 			if strings.Contains(cmdline, appId) ||
 				strings.Contains(strings.ToLower(cmdline), appId) {
 				return desktopFile

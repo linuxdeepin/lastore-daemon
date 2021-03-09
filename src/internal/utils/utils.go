@@ -17,6 +17,10 @@
 
 package utils
 
+/*
+#include <stdlib.h>
+*/
+import "C"
 import (
 	"bufio"
 	"bytes"
@@ -30,6 +34,7 @@ import (
 	"path"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 func RunCommand(prog string, args ...string) (string, error) {
@@ -152,4 +157,39 @@ func WriteData(fpath string, data interface{}) error {
 
 func ValidURL(url string) bool {
 	return strings.HasPrefix(url, "http")
+}
+
+// UnsetEnv 清除指定名称 envName 的环境变量
+func UnsetEnv(envName string) (err error) {
+	doUnsetEnvC(envName) // call C.unsetenv() is necessary
+	envs := os.Environ()
+	newEnvsData := make(map[string]string)
+	for _, e := range envs {
+		a := strings.SplitN(e, "=", 2)
+		var name, value string
+		if len(a) == 2 {
+			name = a[0]
+			value = a[1]
+		} else {
+			name = a[0]
+			value = ""
+		}
+		if name != envName {
+			newEnvsData[name] = value
+		}
+	}
+	os.Clearenv()
+	for e, v := range newEnvsData {
+		err = os.Setenv(e, v)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func doUnsetEnvC(envName string) {
+	cname := C.CString(envName)
+	defer C.free(unsafe.Pointer(cname))
+	C.unsetenv(cname)
 }

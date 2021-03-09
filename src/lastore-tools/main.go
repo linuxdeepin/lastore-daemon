@@ -24,10 +24,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/codegangsta/cli"
-	"pkg.deepin.io/lib/utils"
-
 	"internal/mirrors"
+	"internal/utils"
+
+	"github.com/codegangsta/cli"
 )
 
 var CMDUpdater = cli.Command{
