@@ -252,7 +252,7 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -347,7 +347,7 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	pList := strings.Fields(packages)
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
+	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -418,7 +418,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ, 0)
 	m.do.Unlock()
 
 	if job != nil {
@@ -505,13 +505,9 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	var err error
 	switch caller {
 	case methodCallerControlCenter:
-		err = m.updateCustomConfig()
-		if err != nil {
-			_ = log.Warn()
-		}
-		job, err = m.jobManager.CreateJob(jobName, system.CustomUpdateJobType, nil, nil)
+		job, err = m.jobManager.CreateJob(jobName, system.CustomUpdateJobType, nil, nil, m.UpdateMode)
 	default:
-		job, err = m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
+		job, err = m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil, 0)
 	}
 	m.do.Unlock()
 
@@ -594,7 +590,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ, 0)
 	if err != nil {
 		_ = log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
@@ -637,7 +633,7 @@ func (m *Manager) prepareDistUpgrade(caller methodCaller) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -765,7 +761,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
+	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -892,7 +888,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 	m.do.Lock()
 	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
-		[]string{errType}, environ)
+		[]string{errType}, environ, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -926,27 +922,43 @@ func (m *Manager) installUOSReleaseNote() {
 	}
 }
 
-func (m *Manager) updateCustomConfig() error {
+func updateCustomConfig(mode uint64) error {
 	const (
-		confPath = "/etc/apt/apt.conf.d/99custom.conf"
-		header   = "Acquire::SmartMirrors::SourceList:: "
-		footer   = ";"
-		comment  = "# This file was automatically generated from lastore-daemon - DO NOT EDIT!"
+		confPath        = "/etc/apt/apt.conf.d/99custom.conf"
+		header          = "Acquire::SmartMirrors::SourceList:: "
+		footer          = ";"
+		comment         = "# This file was automatically generated from lastore-daemon - DO NOT EDIT!"
+		originSourceDir = "/etc/apt/sources.list.d"
 	)
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
 	var content []string
 	content = append(content, comment)
 	if mode&SystemUpdate == SystemUpdate {
 		content = append(content, header+"sources.list"+footer)
 	}
-	if mode&AppStoreUpdate == AppStoreUpdate {
-		content = append(content, header+"appstore.list"+footer)
+	fs, err := ioutil.ReadDir(originSourceDir)
+	if err != nil {
+		_ = log.Warn(err)
 	}
-	if mode&SecurityUpdate == SecurityUpdate {
-		content = append(content, header+"safe.list"+footer)
+	for _, fileInfo := range fs {
+		name := fileInfo.Name()
+		if strings.HasSuffix(name, ".list") {
+			switch name {
+			case "appstore.list":
+				if mode&AppStoreUpdate == AppStoreUpdate {
+					content = append(content, header+name+footer)
+				}
+			case "safe.list":
+				if mode&SecurityUpdate == SecurityUpdate {
+					content = append(content, header+name+footer)
+				}
+			default:
+				if mode&SystemUpdate == SystemUpdate {
+					content = append(content, header+name+footer)
+				}
+			}
+		}
 	}
+
 	resContent := strings.Join(content, "\n")
 	// #nosec
 	return ioutil.WriteFile(confPath, []byte(resContent), 0644)

@@ -114,11 +114,11 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 func (*testWrap) TestGuestJobType(c *C.C) {
 	jm := NewJobManager(nil, apt.New(), nil)
 
-	_, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil)
+	_, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, 0)
 	c.Check(err, C.Equals, nil)
 	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, (*Job)(nil))
 
-	job, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil)
+	job, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil, 0)
 	c.Check(err, C.Equals, nil)
 	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, job)
 }
