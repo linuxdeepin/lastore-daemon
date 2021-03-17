@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -242,7 +243,7 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -337,7 +338,7 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	pList := strings.Fields(packages)
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
+	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -426,7 +427,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ, 0)
 	m.do.Unlock()
 
 	if job != nil && !isCommunity() {
@@ -513,13 +514,9 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	var err error
 	switch caller {
 	case methodCallerControlCenter:
-		err = m.updateCustomSourceDir()
-		if err != nil {
-			_ = log.Warn(err)
-		}
-		job, err = m.jobManager.CreateJob(jobName, system.CustomUpdateJobType, nil, nil)
+		job, err = m.jobManager.CreateJob(jobName, system.CustomUpdateJobType, nil, nil, m.UpdateMode)
 	default:
-		job, err = m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
+		job, err = m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil, 0)
 	}
 	m.do.Unlock()
 
@@ -602,7 +599,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ, 0)
 	if err != nil {
 		_ = log.Warnf("DistUpgrade error: %v\n", err)
 		return nil, err
@@ -645,7 +642,7 @@ func (m *Manager) prepareDistUpgrade(caller methodCaller) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -777,7 +774,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
+	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -888,7 +885,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 	m.do.Lock()
 	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
-		[]string{errType}, environ)
+		[]string{errType}, environ, 0)
 	m.do.Unlock()
 
 	if err != nil {
@@ -922,52 +919,57 @@ func (m *Manager) installUOSReleaseNote() {
 	}
 }
 
-func (m *Manager) updateCustomSourceDir() error {
+func updateCustomSourceDir(mode uint64) error {
 	const (
-		sourceDir        = "/var/lib/lastore/sources.list.d"
-		sourceListPath   = "/etc/apt/sources.list"
-		appStoreListPath = "/etc/apt/sources.list.d/appstore.list"
-		safeListPath     = "/etc/apt/sources.list.d/safe.list"
+		customSourceDir = "/var/lib/lastore/sources.list.d"
+		sourceListPath  = "/etc/apt/sources.list"
+		originSourceDir = "/etc/apt/sources.list.d"
 	)
-	tempSourceListPath := filepath.Join(sourceDir, "sources.list")
-	tempAppStoreListPath := filepath.Join(sourceDir, "appstore.list")
-	tempSafeListPath := filepath.Join(sourceDir, "safe.list")
-	_, err := os.Stat(sourceDir)
+
+	_, err := os.Stat(customSourceDir)
 	if err == nil || os.IsExist(err) {
-		err := os.RemoveAll(sourceDir)
+		err := os.RemoveAll(customSourceDir)
 		if err != nil {
 			_ = log.Warn(err)
 		}
 	}
-	err = os.MkdirAll(sourceDir, 0755)
+	err = os.MkdirAll(customSourceDir, 0755)
 	if err != nil {
 		_ = log.Warn(err)
 	}
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
+
+	var customSourceFilePaths []string
 	if mode&SystemUpdate == SystemUpdate {
-		if system.NormalFileExists(sourceListPath) {
-			err = os.Symlink(sourceListPath, tempSourceListPath)
-			if err != nil {
-				return fmt.Errorf("create symlink for %q failed: %v", tempSourceListPath, err)
+		customSourceFilePaths = append(customSourceFilePaths, sourceListPath)
+	}
+	sourceDirFileInfos, err := ioutil.ReadDir(originSourceDir)
+	if err != nil {
+		_ = log.Warn(err)
+	}
+	for _, fileInfo := range sourceDirFileInfos {
+		name := fileInfo.Name()
+		if strings.HasSuffix(name, ".list") {
+			switch name {
+			case "appstore.list":
+				if mode&AppStoreUpdate == AppStoreUpdate {
+					customSourceFilePaths = append(customSourceFilePaths, filepath.Join(originSourceDir, name))
+				}
+			case "safe.list":
+				if mode&SecurityUpdate == SecurityUpdate {
+					customSourceFilePaths = append(customSourceFilePaths, filepath.Join(originSourceDir, name))
+				}
+			default:
+				if mode&SystemUpdate == SystemUpdate {
+					customSourceFilePaths = append(customSourceFilePaths, filepath.Join(originSourceDir, name))
+				}
 			}
 		}
 	}
-	if mode&AppStoreUpdate == AppStoreUpdate {
-		if system.NormalFileExists(appStoreListPath) {
-			err := os.Symlink(appStoreListPath, tempAppStoreListPath)
-			if err != nil {
-				return fmt.Errorf("create symlink for %q failed: %v", tempAppStoreListPath, err)
-			}
-		}
-	}
-	if mode&SecurityUpdate == SecurityUpdate {
-		if system.NormalFileExists(safeListPath) {
-			err := os.Symlink(safeListPath, tempSafeListPath)
-			if err != nil {
-				return fmt.Errorf("create symlink for %q failed: %v", tempSafeListPath, err)
-			}
+	for _, customFilePath := range customSourceFilePaths {
+		customFileLinkPath := filepath.Join(customSourceDir, filepath.Base(customFilePath))
+		err = os.Symlink(customFilePath, customFileLinkPath)
+		if err != nil {
+			return fmt.Errorf("create symlink for %q failed: %v", customFileLinkPath, err)
 		}
 	}
 	return nil

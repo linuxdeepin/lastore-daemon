@@ -83,7 +83,7 @@ func (jm *JobManager) List() JobList {
 }
 
 // CreateJob create the job and try starting it
-func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (*Job, error) {
+func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string, mode uint64) (*Job, error) {
 	jm.dispatch()
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
@@ -113,6 +113,10 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.CustomUpdateJobType:
+		err := updateCustomSourceDir(mode)
+		if err != nil {
+			_ = log.Warn(err)
+		}
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.DistUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
