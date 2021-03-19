@@ -38,7 +38,8 @@ import (
 )
 
 const (
-	LastoreAptConfPath = "/var/lib/lastore/apt_v2.conf"
+	LastoreAptConfPath       = "/var/lib/lastore/apt_v2.conf"
+	LastoreAptCommonConfPath = "/var/lib/lastore/apt_v2_common.conf"
 )
 
 // ListPackageFile list files path contained in the packages
