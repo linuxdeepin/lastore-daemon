@@ -32,10 +32,10 @@ function build_system_info_now()
 
 # If both apt and dpkg hasn't modified after $UPDATE_INFO created, we doesn't need do anything.
 if [[ -f "$UPDATE_INFO" ]] &&
-       [[ $(find /var/lib/apt/lists -maxdepth 1 -type f -\! -name "lock") != "" ]] &&
+       [[ $(find /var/lib/lastore/lists -maxdepth 1 -type f -\! -name "lock") != "" ]] &&
        [[ "$UPDATE_INFO" -nt "/var/lib/dpkg/status" ]] &&
        [[ "$UPDATE_INFO" -ot "/proc/self"  ]] &&
-       [[ $(find /var/lib/apt/lists -maxdepth 1 -type f -newercm "$UPDATE_INFO" ) == "" ]] ;then
+       [[ $(find /var/lib/lastore/lists -maxdepth 1 -type f -newercm "$UPDATE_INFO" ) == "" ]] ;then
 	# trigger lastore-daemon update handler
 	touch "$UPDATE_INFO"
     exit 0

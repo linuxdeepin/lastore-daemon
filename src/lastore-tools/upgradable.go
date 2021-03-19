@@ -69,7 +69,7 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 // return the pkgs from apt dist-upgrade
 // NOTE: the result strim the arch suffix
 func listDistUpgradePackages() ([]string, error) {
-	cmd := exec.Command("apt-get", "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
+	cmd := exec.Command("apt-get", "-c", system.LastoreAptConfPath, "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
