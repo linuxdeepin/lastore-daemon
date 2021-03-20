@@ -58,6 +58,9 @@ func StartSystemJob(sys system.System, j *Job) error {
 	case system.CustomUpdateJobType:
 		return sys.CustomUpdate(j.Id)
 
+	case system.PrepareDistUpgradeJobType:
+		return sys.PrepareDistUpgrade(j.Id, j.Packages)
+
 	case system.UpdateJobType:
 		return sys.Install(j.Id, j.Packages, j.environ)
 

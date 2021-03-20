@@ -270,6 +270,15 @@ func (p *APTSystem) Download(jobId string, packages []string) error {
 	return c.Start()
 }
 
+func (p *APTSystem) PrepareDistUpgrade(jobId string, packages []string) error {
+	err := checkPkgSystemError(false)
+	if err != nil {
+		return err
+	}
+	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.indicator, packages)
+	return c.Start()
+}
+
 func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
 	WaitDpkgLockRelease()
 	err := checkPkgSystemError(true)

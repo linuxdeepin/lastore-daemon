@@ -90,7 +90,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		"APT::Status-Fd": "3",
 	}
 
-	if cmdType == system.DownloadJobType {
+	if cmdType == system.DownloadJobType || cmdType == system.PrepareDistUpgradeJobType {
 		options["Debug::NoLocking"] = "1"
 		options["Acquire::Retries"] = "1"
 		args = append(args, "-m")
@@ -117,6 +117,11 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
 		args = append(args, "-c", system.LastoreAptCommonConfPath)
+		args = append(args, "install", "-d", "--allow-change-held-packages")
+		args = append(args, "--")
+		args = append(args, cmdArgs...)
+	case system.PrepareDistUpgradeJobType:
+		args = append(args, "-c", system.LastoreAptConfPath)
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
