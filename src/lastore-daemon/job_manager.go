@@ -121,7 +121,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.DistUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	case system.PrepareDistUpgradeJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType,
 			DownloadQueue, environ)
 	case system.UpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)

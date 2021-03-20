@@ -106,6 +106,7 @@ type System interface {
 	Download(jobId string, packages []string) error
 	Install(jobId string, packages []string, environ map[string]string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
+	PrepareDistUpgrade(jobId string, packages []string) error
 	DistUpgrade(jobId string, environ map[string]string) error
 	UpdateSource(jobId string) error
 	CustomUpdate(jobId string) error
