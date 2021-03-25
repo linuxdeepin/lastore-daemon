@@ -81,7 +81,7 @@ golang-dlib-dev:
 func BenchmarkShouldDelete(b *testing.B) {
 	findBins()
 
-	dir, err := system.GetArchivesDir()
+	dir, err := system.GetArchivesDir(system.LastoreAptV2ConfPath)
 	if err != nil {
 		b.Fatal(err)
 	}

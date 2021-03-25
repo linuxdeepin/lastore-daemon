@@ -839,9 +839,13 @@ func (m *Manager) loopCheck() {
 					continue
 				}
 
-				cachePath, _ := system.GetArchivesDir()
-				cacheSize, _ := system.QueryFileCacheSize(cachePath)
-				cacheSize = cacheSize / 1024.0 // kb to mb
+				aptCachePath, _ := system.GetArchivesDir(system.LastoreAptOrgConfPath)
+				aptCacheSize, _ := system.QueryFileCacheSize(aptCachePath)
+				lastoreCachePath, _ := system.GetArchivesDir(system.LastoreAptV2ConfPath)
+				lastoreCacheSize, _ := system.QueryFileCacheSize(lastoreCachePath)
+				aptCacheSize = aptCacheSize / 1024.0 // kb to mb
+				lastoreCacheSize = lastoreCacheSize / 1024.0
+				cacheSize := aptCacheSize + lastoreCacheSize
 				if cacheSize > MaxCacheSize {
 					remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
 					log.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)

@@ -165,7 +165,7 @@ func LastoreUpgrade() error {
 	m := getLastore()
 	fmt.Println("Connected lastore-daemon..")
 
-	fmt.Println("Try updating /var/lib/apt/lists .....")
+	fmt.Println("Try updating /var/lib/lastore/lists .....")
 	j, err := m.UpdateSource(0)
 
 	if err != nil {

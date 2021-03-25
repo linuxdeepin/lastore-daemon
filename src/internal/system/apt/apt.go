@@ -102,26 +102,26 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 
 	switch cmdType {
 	case system.InstallJobType:
-		args = append(args, "-c", system.LastoreAptCommonConfPath)
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DistUpgradeJobType:
-		args = append(args, "-c", system.LastoreAptConfPath)
+		args = append(args, "-c", system.LastoreAptV2ConfPath)
 		args = append(args, "--allow-downgrades", "--allow-change-held-packages")
 		args = append(args, "dist-upgrade")
 	case system.RemoveJobType:
-		args = append(args, "-c", system.LastoreAptCommonConfPath)
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "autoremove", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
-		args = append(args, "-c", system.LastoreAptCommonConfPath)
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.PrepareDistUpgradeJobType:
-		args = append(args, "-c", system.LastoreAptConfPath)
+		args = append(args, "-c", system.LastoreAptV2ConfPath)
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
@@ -129,7 +129,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		sh := "apt-get -y -o APT::Status-Fd=3 update && /var/lib/lastore/scripts/build_system_info -now"
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CustomUpdateJobType:
-		sh := fmt.Sprintf("apt-get -y -o APT::Status-Fd=3 -c %s update && /var/lib/lastore/scripts/build_system_info -now", system.LastoreAptConfPath)
+		sh := fmt.Sprintf("apt-get -y -o APT::Status-Fd=3 -c %s update && /var/lib/lastore/scripts/build_system_info -now", system.LastoreAptV2ConfPath)
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
@@ -139,10 +139,10 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		switch errType {
 		case system.ErrTypeDpkgInterrupted:
 			sh := "dpkg --force-confold --configure -a;" +
-				fmt.Sprintf("apt-get -y -c %s -f install;", system.LastoreAptCommonConfPath)
+				fmt.Sprintf("apt-get -y -c %s -f install;", system.LastoreAptV2CommonConfPath)
 			return exec.Command("/bin/sh", "-c", sh)
 		case system.ErrTypeDependenciesBroken:
-			args = append(args, "-c", system.LastoreAptCommonConfPath)
+			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 			args = append(args, "-f", "install")
 		default:
 			panic("invalid error type " + errType)

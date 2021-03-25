@@ -59,6 +59,8 @@ func findBins() {
 	binAptCache = mustGetBin("apt-cache")
 }
 
+var _archivesDirInfos []*archivesDirInfo
+
 func main() {
 	flag.Parse()
 	if options.printJSON {
@@ -67,93 +69,103 @@ func main() {
 	}
 	findBins()
 
-	archivesDir, err := system.GetArchivesDir()
-	if err != nil {
-		logger.Fatal(err)
+	appendArchivesDirInfos(system.LastoreAptV2ConfPath)  // 将lastore缓存路径/var/cache/lastore/archives添加
+	appendArchivesDirInfos(system.LastoreAptOrgConfPath) // 将默认缓存路径/var/cache/apt/archives添加
+
+	archivesInfos := &archivesInfos{
+		Files:     make(map[string][]*archiveInfo),
+		TotalSize: 0,
 	}
-	logger.Debug("archives dir:", archivesDir)
-
-	var archivesInfo *archivesInfo
-	if options.printJSON {
-		archivesInfo = newArchivesInfo(archivesDir)
-	}
-
-	fileInfoList, err := ioutil.ReadDir(archivesDir)
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	cache, err := loadPkgStatusVersion()
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	var testAgainDebInfoList []*debInfo
-
-	for _, fileInfo := range fileInfoList {
-		if fileInfo.IsDir() {
-			continue
+	for _, dirInfo := range _archivesDirInfos {
+		var archivesInfo *archivesInfo
+		if options.printJSON {
+			archivesInfo = newArchivesInfo(dirInfo.archivesDir)
 		}
 
-		if filepath.Ext(fileInfo.Name()) != ".deb" {
-			continue
-		}
-
-		logger.Debug("> ", fileInfo.Name())
-		var delPolicy DeletePolicy = DeleteExpired
-		filename := filepath.Join(archivesDir, fileInfo.Name())
-		debInfo, err := getDebInfo(filename)
+		fileInfoList, err := ioutil.ReadDir(dirInfo.archivesDir)
 		if err != nil {
-			delPolicy = DeleteImmediately
-		} else {
-			logger.Debugf("debInfo: %#v\n", debInfo)
-			var testAgain bool
-			delPolicy, testAgain = shouldDelete(debInfo, cache)
-			if testAgain {
-				// 需要更多地判断
-				debInfo.fileInfo = fileInfo
-				testAgainDebInfoList = append(testAgainDebInfoList, debInfo)
+			logger.Fatal(err)
+		}
+
+		cache, err := loadPkgStatusVersion()
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		var testAgainDebInfoList []*debInfo
+
+		for _, fileInfo := range fileInfoList {
+			if fileInfo.IsDir() {
 				continue
 			}
+
+			if filepath.Ext(fileInfo.Name()) != ".deb" {
+				continue
+			}
+
+			logger.Debug("> ", fileInfo.Name())
+			var delPolicy DeletePolicy = DeleteExpired
+			filename := filepath.Join(dirInfo.archivesDir, fileInfo.Name())
+			debInfo, err := getDebInfo(filename)
+			if err != nil {
+				delPolicy = DeleteImmediately
+			} else {
+				logger.Debugf("debInfo: %#v\n", debInfo)
+				var testAgain bool
+				delPolicy, testAgain = shouldDelete(debInfo, cache)
+				if testAgain {
+					// 需要更多地判断
+					debInfo.fileInfo = fileInfo
+					testAgainDebInfoList = append(testAgainDebInfoList, debInfo)
+					continue
+				}
+			}
+			actWithPolicy(delPolicy, fileInfo, filename, archivesInfo)
 		}
-		actWithPolicy(delPolicy, fileInfo, filename, archivesInfo)
+
+		t := time.Now()
+		err = loadCandidateVersions(testAgainDebInfoList, dirInfo.configPath)
+		logger.Debug("loadCandidateVersions cost:", time.Since(t))
+		if err != nil {
+			logger.Fatal("load candidate versions failed:", err)
+		}
+
+		for _, info := range testAgainDebInfoList {
+			logger.Debug(">> ", info.fileInfo.Name())
+			delPolicy := shouldDeleteTestAgain(info)
+			actWithPolicy(delPolicy, info.fileInfo, info.filename, archivesInfo)
+		}
+		if archivesInfo != nil {
+			archivesInfos.Files[archivesInfo.dir] = archivesInfo.Files
+			archivesInfos.TotalSize += archivesInfo.TotalSize
+		}
 	}
 
-	t := time.Now()
-	err = loadCandidateVersions(testAgainDebInfoList)
-	logger.Debug("loadCandidateVersions cost:", time.Since(t))
+	data, err := json.Marshal(archivesInfos)
 	if err != nil {
-		logger.Fatal("load candidate versions failed:", err)
+		logger.Fatal(err)
+	}
+	_, err = os.Stdout.Write(data)
+	if err != nil {
+		logger.Fatal(err)
 	}
 
-	for _, info := range testAgainDebInfoList {
-		logger.Debug(">> ", info.fileInfo.Name())
-		delPolicy := shouldDeleteTestAgain(info)
-		actWithPolicy(delPolicy, info.fileInfo, info.filename, archivesInfo)
-	}
-
-	if archivesInfo != nil {
-		data, err := json.Marshal(archivesInfo)
-		if err != nil {
-			logger.Fatal(err)
-		}
-		_, err = os.Stdout.Write(data)
-		if err != nil {
-			logger.Fatal(err)
-		}
-	}
 }
 
 type archivesInfo struct {
 	dir       string
+	Files     []*archiveInfo
+	TotalSize uint64
+}
+
+type archivesInfos struct {
 	Files     map[string][]*archiveInfo `json:"files"`
 	TotalSize uint64                    `json:"total"`
 }
 
 func newArchivesInfo(dir string) *archivesInfo {
 	return &archivesInfo{
-		dir:   dir,
-		Files: make(map[string][]*archiveInfo),
+		dir: dir,
 	}
 }
 
@@ -162,7 +174,7 @@ func (ai *archivesInfo) addFileInfo(fileInfo os.FileInfo) {
 		Name: fileInfo.Name(),
 		Size: fileInfo.Size(),
 	}
-	ai.Files[ai.dir] = append(ai.Files[ai.dir], info)
+	ai.Files = append(ai.Files, info)
 	ai.TotalSize += uint64(info.Size)
 }
 
@@ -403,8 +415,8 @@ func parseAptCachePolicyOutput(r io.Reader) map[string]string {
 	return result
 }
 
-func loadCandidateVersions(debInfoList []*debInfo) error {
-	args := []string{binAptCache, "-c", system.LastoreAptConfPath, "policy", "--"}
+func loadCandidateVersions(debInfoList []*debInfo, configPath string) error {
+	args := []string{binAptCache, "-c", configPath, "policy", "--"}
 
 	var buf bytes.Buffer
 	for _, info := range debInfoList {
@@ -473,4 +485,22 @@ func deleteDeb(filename string) {
 	if err != nil {
 		logger.Warning("deleteDeb error:", err)
 	}
+}
+
+type archivesDirInfo struct {
+	archivesDir string
+	configPath  string
+}
+
+func appendArchivesDirInfos(confPath string) {
+	archivesDir, err := system.GetArchivesDir(confPath)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	logger.Debug("archives dir:", archivesDir)
+	_archivesDirInfos = append(_archivesDirInfos, &archivesDirInfo{
+		archivesDir: archivesDir,
+		configPath:  confPath,
+	})
 }
