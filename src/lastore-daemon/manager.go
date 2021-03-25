@@ -927,21 +927,28 @@ func (m *Manager) installUOSReleaseNote() {
 
 func updateCustomSourceDir(mode uint64) error {
 	const (
-		customSourceDir = "/var/lib/lastore/sources.list.d"
-		sourceListPath  = "/etc/apt/sources.list"
-		originSourceDir = "/etc/apt/sources.list.d"
+		lastoreSourcesPath = "/var/lib/lastore/sources.list"
+		customSourceDir    = "/var/lib/lastore/sources.list.d"
+		sourceListPath     = "/etc/apt/sources.list"
+		originSourceDir    = "/etc/apt/sources.list.d"
 	)
 
-	_, err := os.Stat(customSourceDir)
-	if err == nil || os.IsExist(err) {
-		err := os.RemoveAll(customSourceDir)
-		if err != nil {
-			_ = log.Warn(err)
-		}
+	// 移除旧的sources.list.d内容,再根据最新配置重新填充
+	err := os.RemoveAll(customSourceDir)
+	if err != nil {
+		_ = log.Warn(err)
 	}
 	err = os.MkdirAll(customSourceDir, 0755)
 	if err != nil {
 		_ = log.Warn(err)
+	}
+
+	// 移除旧的sources.list,再根据最新配置重新创建链接
+	err = os.Remove(lastoreSourcesPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			_ = log.Warn(err)
+		}
 	}
 
 	var customSourceFilePaths []string
@@ -971,8 +978,16 @@ func updateCustomSourceDir(mode uint64) error {
 			}
 		}
 	}
+
+	// 创建对应的软链接
 	for _, customFilePath := range customSourceFilePaths {
-		customFileLinkPath := filepath.Join(customSourceDir, filepath.Base(customFilePath))
+		var customFileLinkPath string
+		if customFilePath == sourceListPath {
+			customFileLinkPath = lastoreSourcesPath
+		} else {
+			customFileLinkPath = filepath.Join(customSourceDir, filepath.Base(customFilePath))
+		}
+
 		err = os.Symlink(customFilePath, customFileLinkPath)
 		if err != nil {
 			return fmt.Errorf("create symlink for %q failed: %v", customFileLinkPath, err)
