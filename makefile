@@ -41,7 +41,12 @@ print_gopath:
 	GOPATH="${pwd}:${pwd}/vendor:${GOPATH}"
 
 install: gen_mo
-	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/* ${DESTDIR}${PREFIX}/usr/bin/
+	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/lastore-apt-clean ${DESTDIR}${PREFIX}/usr/bin/
+	cp bin/lastore-tools ${DESTDIR}${PREFIX}/usr/bin/
+	cp bin/lastore-smartmirror ${DESTDIR}${PREFIX}/usr/bin/
+	mkdir -p ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon && cp bin/lastore-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
+	cp bin/lastore-smartmirror-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
+
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
 	cp -rf etc ${DESTDIR}${PREFIX}/etc
 
