@@ -5,4 +5,4 @@ After=display-manager.service
 [Service]
 Type=dbus
 BusName=com.deepin.lastore.Smartmirror
-ExecStart=/usr/bin/lastore-smartmirror-daemon
+ExecStart=/usr/libexec/lastore-daemon/lastore-smartmirror-daemon
