@@ -21,7 +21,6 @@ Provides:
  update-notifier,
 Depends:
  dbus,
- libgtk2-perl,
  procps,
  ${dist:Depends},
  ${misc:Depends},
