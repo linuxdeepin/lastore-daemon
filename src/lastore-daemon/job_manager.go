@@ -113,7 +113,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.CustomUpdateJobType:
-		err := updateCustomSourceDir(mode)
+		err := system.UpdateCustomSourceDir(mode)
 		if err != nil {
 			_ = log.Warn(err)
 		}

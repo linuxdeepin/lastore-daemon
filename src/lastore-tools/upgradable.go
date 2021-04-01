@@ -23,7 +23,9 @@ import (
 	"internal/system"
 	"internal/system/apt"
 	"io"
+	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strings"
 	"syscall"
@@ -68,8 +70,13 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 
 // return the pkgs from apt dist-upgrade
 // NOTE: the result strim the arch suffix
-func listDistUpgradePackages() ([]string, error) {
-	cmd := exec.Command("apt-get", "-c", system.LastoreAptConfPath, "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
+func listDistUpgradePackages(useCustomConf bool) ([]string, error) {
+	var cmd *exec.Cmd
+	if useCustomConf {
+		cmd = exec.Command("apt-get", "-c", system.LastoreAptConfPath, "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
+	} else {
+		cmd = exec.Command("apt-get", "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
+	}
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
@@ -124,14 +131,42 @@ func parseAptShowList(r io.Reader, title string) []string {
 }
 
 func queryDpkgUpgradeInfoByAptList() ([]string, error) {
-	ps, err := listDistUpgradePackages()
+	var cmd *exec.Cmd
+	// 判断自定义更新使用的list文件是否存在,sources.list.d可以为空
+	var queryByCustomConf bool
+	_, err := os.Stat("/var/lib/lastore/sources.list.d")
+	if err != nil {
+		config := struct {
+			UpdateMode uint64
+		}{}
+		err := system.DecodeJson(path.Join(system.VarLibDir, "config.json"), &config)
+		if err == nil {
+			err := system.UpdateCustomSourceDir(config.UpdateMode)
+			if err != nil {
+				_ = log.Warn(err)
+				queryByCustomConf = false
+			} else {
+				queryByCustomConf = true
+			}
+		} else {
+			queryByCustomConf = false
+		}
+	} else {
+		queryByCustomConf = true
+	}
+
+	ps, err := listDistUpgradePackages(queryByCustomConf)
 	if err != nil {
 		return nil, err
 	}
 	if len(ps) == 0 {
 		return nil, nil
 	}
-	cmd := exec.Command("apt", append([]string{"-c", system.LastoreAptConfPath, "list", "--upgradable"}, ps...)...)
+	if queryByCustomConf {
+		cmd = exec.Command("apt", append([]string{"-c", system.LastoreAptConfPath, "list", "--upgradable"}, ps...)...)
+	} else {
+		cmd = exec.Command("apt", append([]string{"list", "--upgradable"}, ps...)...)
+	}
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {

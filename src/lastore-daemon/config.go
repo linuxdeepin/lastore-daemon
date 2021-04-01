@@ -37,7 +37,7 @@ var DefaultConfig = Config{
 	UpdateNotify:                true,
 	AutoClean:                   true,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
-	UpdateMode:                  SystemUpdate | AppStoreUpdate | SecurityUpdate, // 默认开启系统更新、应用更新、安全更新
+	UpdateMode:                  system.SystemUpdate | system.AppStoreUpdate | system.SecurityUpdate, // 默认开启系统更新、应用更新、安全更新
 }
 
 type Config struct {
