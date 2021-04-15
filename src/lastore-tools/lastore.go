@@ -81,11 +81,11 @@ func MainTester(c *cli.Context) {
 }
 
 func LastoreUpdate() error {
-	m := getLastore()
+	l := getLastore()
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try updating source")
-	j, err := m.UpdateSource(0)
+	j, err := l.Manager().UpdateSource(0)
 	if err != nil {
 		return err
 	}
@@ -97,11 +97,11 @@ func LastoreUpdate() error {
 }
 
 func LastoreRemove(p string) error {
-	m := getLastore()
+	l := getLastore()
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try removing", p)
-	j, err := m.RemovePackage(0, "RemoveForTesting "+p, p)
+	j, err := l.Manager().RemovePackage(0, "RemoveForTesting "+p, p)
 	if err != nil {
 		return err
 	}
@@ -113,11 +113,11 @@ func LastoreRemove(p string) error {
 }
 
 func LastoreInstall(p string) error {
-	m := getLastore()
+	l := getLastore()
 	fmt.Println("Connected lastore-daemon..")
 
 	fmt.Println("Try installing", p)
-	j, err := m.InstallPackage(0, "InstallForTesting "+p, p)
+	j, err := l.Manager().InstallPackage(0, "InstallForTesting "+p, p)
 	if err != nil {
 		return err
 	}
@@ -129,10 +129,10 @@ func LastoreInstall(p string) error {
 }
 
 func LastorePrepareUpgrade() error {
-	m := getLastore()
+	l := getLastore()
 	fmt.Println("Connected lastore-daemon..")
 
-	j, err := m.PrepareDistUpgrade(0)
+	j, err := l.Manager().PrepareDistUpgrade(0)
 	if err != nil {
 		return err
 	}
@@ -162,8 +162,10 @@ func LastoreSearch(server string, p string, debug bool) error {
 }
 
 func LastoreUpgrade() error {
-	m := getLastore()
+	l := getLastore()
 	fmt.Println("Connected lastore-daemon..")
+
+	m := l.Manager()
 
 	fmt.Println("Try updating /var/lib/lastore/lists .....")
 	j, err := m.UpdateSource(0)
@@ -198,7 +200,7 @@ func LastoreUpgrade() error {
 	return waitJob(j)
 }
 
-func getLastore() *lastore.Lastore {
+func getLastore() lastore.Lastore {
 	sysBus, err := dbus.SystemBus()
 	if err != nil {
 		panic(err)
@@ -207,7 +209,7 @@ func getLastore() *lastore.Lastore {
 	return lastore.NewLastore(sysBus)
 }
 
-func showLine(j *lastore.Job) string {
+func showLine(j lastore.Job) string {
 	id, _ := j.Id().Get(0)
 	type0, _ := j.Type().Get(0)
 	status, _ := j.Status().Get(0)

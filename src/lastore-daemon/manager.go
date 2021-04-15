@@ -106,7 +106,7 @@ type Manager struct {
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
 
-	apps *apps.Apps
+	apps apps.Apps
 
 	UpdateMode uint64 `prop:"access:rw"`
 }
@@ -418,7 +418,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	if len(pkgs) == 1 {
 		desktopFiles := listPackageDesktopFiles(pkgs[0])
 		if len(desktopFiles) > 0 {
-			err = m.apps.UninstallHints(0, desktopFiles)
+			err = m.apps.LaunchedRecorder().UninstallHints(0, desktopFiles)
 			if err != nil {
 				_ = log.Warnf("call UninstallHints(desktopFiles: %v) error: %v",
 					desktopFiles, err)
