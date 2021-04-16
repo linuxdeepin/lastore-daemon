@@ -72,25 +72,21 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 }
 
 func (u *Updater) waitOnlineCheck() {
-	if u.AutoCheckUpdates {
-		err := exec.Command("nm-online", "-t", "3600").Run()
-		if err == nil {
+	err := exec.Command("nm-online", "-t", "3600").Run()
+	if err == nil {
+		if u.AutoCheckUpdates {
 			_, err = u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
 			if err != nil {
 				_ = log.Warn(err)
 			}
 		}
+		if !u.config.DisableUpdateMetadata {
+			startUpdateMetadataInfoService()
+		}
 	}
 }
 
 func (u *Updater) loopCheck() {
-	startUpdateMetadataInfoService := func() {
-		log.Info("start update metadata info service")
-		err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
-		if err != nil {
-			_ = log.Warnf("AutoCheck Update failed: %v", err)
-		}
-	}
 
 	calcDelay := func() time.Duration {
 		elapsed := time.Since(u.config.LastCheckTime)
@@ -120,6 +116,14 @@ func (u *Updater) loopCheck() {
 		}
 
 		_ = u.config.UpdateLastCheckTime()
+	}
+}
+
+func startUpdateMetadataInfoService() {
+	log.Info("start update metadata info service")
+	err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
+	if err != nil {
+		_ = log.Warnf("AutoCheck Update failed: %v", err)
 	}
 }
 
