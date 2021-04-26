@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"POT-Creation-Date: 2021-04-26 14:14+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Samoun El <el.samoun.sna2008@gmail.com>, 2020\n"
 "Language-Team: Khmer (Cambodia) (https://www.transifex.com/linuxdeepin/teams/3617/km_KH/)\n"
@@ -21,22 +21,22 @@ msgstr ""
 "Language: km_KH\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
-msgid "Updating the system, please do not shut down or reboot now."
-msgstr "កំពុងធ្វើបច្ចុប្បន្នភាពប្រព័ន្ធ សូមកុំបិទឬបើកដំណើរការឡើងវិញឥឡូវនេះ។"
+#: ../src/lastore-daemon/inhibitor.go:58
+msgid "Installing updates..."
+msgstr ""
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:60
 msgid "Tasks are running..."
 msgstr "កិច្ចការកំពុងដំណើរការ..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
+#: ../src/lastore-daemon/inhibitor.go:62
 msgid "Preventing from shutting down"
 msgstr "រារាំងមិនឱ្យបិទ"
 
-#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
+#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
 msgid "Control Center"
 msgstr "មជ្ឈមណ្ឌលបញ្ជា"
 
-#: ../src/lastore-daemon/main.go:129
+#: ../src/lastore-daemon/main.go:141
 msgid "App Store"
 msgstr "ហាងកម្មវិធី"

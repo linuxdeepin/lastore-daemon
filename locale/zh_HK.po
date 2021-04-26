@@ -4,16 +4,16 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Cindy0514, 2020
+# Cindy0514, 2021
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"POT-Creation-Date: 2021-04-26 14:14+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Cindy0514, 2020\n"
+"Last-Translator: Cindy0514, 2021\n"
 "Language-Team: Chinese (Hong Kong) (https://www.transifex.com/linuxdeepin/teams/3617/zh_HK/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -21,22 +21,22 @@ msgstr ""
 "Language: zh_HK\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
-msgid "Updating the system, please do not shut down or reboot now."
-msgstr "系統正在更新中，請關機或於稍後重新開機。"
+#: ../src/lastore-daemon/inhibitor.go:58
+msgid "Installing updates..."
+msgstr "正在安裝更新..."
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:60
 msgid "Tasks are running..."
 msgstr "任務正在進行..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
+#: ../src/lastore-daemon/inhibitor.go:62
 msgid "Preventing from shutting down"
 msgstr "正在阻止關機..."
 
-#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
+#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
 msgid "Control Center"
 msgstr "控制中心"
 
-#: ../src/lastore-daemon/main.go:129
+#: ../src/lastore-daemon/main.go:141
 msgid "App Store"
 msgstr "應用商店"

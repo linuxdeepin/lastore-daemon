@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-25 09:25+0800\n"
+"POT-Creation-Date: 2021-04-26 14:14+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Sergio Morales <smmorales.mx@gmail.com>, 2020\n"
 "Language-Team: Spanish (https://www.transifex.com/linuxdeepin/teams/3617/es/)\n"
@@ -21,22 +21,22 @@ msgstr ""
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
-msgid "Updating the system, please do not shut down or reboot now."
-msgstr "Actualizando el sistema, por favor no apague ni reinicie el equipo."
+#: ../src/lastore-daemon/inhibitor.go:58
+msgid "Installing updates..."
+msgstr ""
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:60
 msgid "Tasks are running..."
 msgstr "Tareas en proceso..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
+#: ../src/lastore-daemon/inhibitor.go:62
 msgid "Preventing from shutting down"
 msgstr "Prevenir apagado del equipo"
 
-#: ../src/lastore-daemon/main.go:127 ../src/lastore-daemon/main.go:131
+#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
 msgid "Control Center"
 msgstr "Centro de Control"
 
-#: ../src/lastore-daemon/main.go:129
+#: ../src/lastore-daemon/main.go:141
 msgid "App Store"
 msgstr "Tienda de Aplicaciones"
