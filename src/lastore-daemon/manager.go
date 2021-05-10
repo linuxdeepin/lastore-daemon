@@ -194,6 +194,7 @@ func getLang(envVars procfs.EnvVars) string {
 	return ""
 }
 
+// execPath和cmdLine可以有一个为空,其中一个存在即可作为判断调用者的依据
 func (m *Manager) getExecutablePathAndCmdline(sender dbus.Sender) (string, string, error) {
 	pid, err := m.service.GetConnPID(string(sender))
 	if err != nil {
@@ -211,18 +212,20 @@ func (m *Manager) getExecutablePathAndCmdline(sender dbus.Sender) (string, strin
 				errExecPath := strings.Replace(pErr.Path, "(deleted)", "", -1)
 				oldExecPath := strings.TrimSpace(errExecPath)
 				if system.NormalFileExists(oldExecPath) {
-					return oldExecPath, "", nil
+					execPath = oldExecPath
+					err = nil
 				}
 			}
 		}
-		return "", "", err
 	}
 
-	cmdLine, err := proc.Cmdline()
-	if err != nil {
-		return "", "", err
+	cmdLine, err1 := proc.Cmdline()
+	if err != nil && err1 != nil {
+		return "", "", errors.New(strings.Join([]string{
+			err.Error(),
+			err1.Error(),
+		}, ";"))
 	}
-
 	return execPath, strings.Join(cmdLine, " "), nil
 }
 
