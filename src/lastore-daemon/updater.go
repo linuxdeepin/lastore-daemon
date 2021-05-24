@@ -105,7 +105,7 @@ func (u *Updater) loopCheck() {
 		// ensure delay at least have 10 seconds
 		delay := calcDelay() + time.Second*10
 
-		_ = log.Warnf("Next updater check will trigger at %v", time.Now().Add(delay))
+		log.Infof("Next updater check will trigger at %v", time.Now().Add(delay))
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
