@@ -31,11 +31,11 @@ var DefaultConfig = Config{
 	CheckInterval:               time.Hour * 24 * 7,
 	CleanInterval:               time.Hour * 24 * 7,
 	CleanIntervalCacheOverLimit: time.Hour * 24,
-	AutoCheckUpdates:            true,
+	AutoCheckUpdates:            false,
 	DisableUpdateMetadata:       false,
-	AutoDownloadUpdates:         true,
-	UpdateNotify:                true,
-	AutoClean:                   true,
+	AutoDownloadUpdates:         false,
+	UpdateNotify:                false,
+	AutoClean:                   false,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
 	UpdateMode:                  SystemUpdate | AppStoreUpdate, // 默认开启系统更新和应用更新,安全更新暂不默认开启
 }
