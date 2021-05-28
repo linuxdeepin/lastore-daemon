@@ -80,7 +80,7 @@ func SystemUpgradeInfo() ([]UpgradeInfo, error) {
 	err := DecodeJson(filename, &r)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, err
 		}
 
 		var updateInfoErr UpdateInfoError

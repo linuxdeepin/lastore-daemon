@@ -19,9 +19,10 @@ package main
 
 import (
 	"internal/system"
+	"os"
 	"path"
-
 	"pkg.deepin.io/lib/dbusutil"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/godbus/dbus"
@@ -53,13 +54,26 @@ func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []ApplicationUpdateInfo, busErr *dbus.Error) {
 	iInfos := packageIconInfos()
 	aInfos := applicationInfos()
-	uInfos, err := system.SystemUpgradeInfo()
-	if err != nil {
-		updateInfoErr, ok := err.(*system.UpdateInfoError)
-		if ok {
-			return nil, dbusutil.MakeErrorJSON(u, "UpdateInfoError", updateInfoErr)
+	var uInfos []system.UpgradeInfo
+	var err error
+	repeatCount := 0
+	for {
+		if repeatCount > 5 {
+			break
 		}
-		return nil, dbusutil.ToError(err)
+		uInfos, err = system.SystemUpgradeInfo()
+		if os.IsNotExist(err) {
+			time.Sleep(1 * time.Second)
+			repeatCount++
+		} else if err != nil {
+			updateInfoErr, ok := err.(*system.UpdateInfoError)
+			if ok {
+				return nil, dbusutil.MakeErrorJSON(u, "UpdateInfoError", updateInfoErr)
+			}
+			return nil, dbusutil.ToError(err)
+		} else {
+			break
+		}
 	}
 
 	for _, uInfo := range uInfos {
