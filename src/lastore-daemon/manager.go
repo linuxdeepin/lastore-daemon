@@ -302,7 +302,13 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 		return "/", dbusutil.ToError(err)
 	}
 
-	if !allowInstallPackageExecPaths.Contains(execPath) {
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		_ = log.Warn(err)
+		return "/", dbusutil.ToError(err)
+	}
+	if !allowInstallPackageExecPaths.Contains(execPath) &&
+		uid != 0 {
 		err = fmt.Errorf("%q is not allowed to install packages", execPath)
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
@@ -455,7 +461,14 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 		return "/", dbusutil.ToError(err)
 	}
 
-	if !allowRemovePackageExecPaths.Contains(execPath) {
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		_ = log.Warn(err)
+		return "/", dbusutil.ToError(err)
+	}
+
+	if !allowRemovePackageExecPaths.Contains(execPath) &&
+		uid != 0 {
 		err = fmt.Errorf("%q is not allowed to remove packages", execPath)
 		_ = log.Warn(err)
 		return "/", dbusutil.ToError(err)
