@@ -20,7 +20,6 @@ package main
 import (
 	"fixme/pkg_recommend"
 	"internal/system"
-	"internal/system/apt"
 	"strings"
 	"testing"
 
@@ -29,7 +28,7 @@ import (
 
 type testWrap struct{}
 
-func Test(t *testing.T) { C.TestingT(t) }
+func TestUtil(t *testing.T) { C.TestingT(t) }
 func init() {
 	C.Suite(&testWrap{})
 	NotUseDBus = true
@@ -109,18 +108,6 @@ func (*testWrap) TestGetEnhancedLocalePackages(c *C.C) {
 		d := pkg_recommend.GetEnhancedLocalePackages(lang, p)
 		c.Check(len(d), C.Equals, 0)
 	}
-}
-
-func (*testWrap) TestGuestJobType(c *C.C) {
-	jm := NewJobManager(nil, apt.New(), nil)
-
-	_, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, 0)
-	c.Check(err, C.Equals, nil)
-	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, (*Job)(nil))
-
-	job, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil, 0)
-	c.Check(err, C.Equals, nil)
-	c.Check(jm.findJobByType(system.DistUpgradeJobType, nil), C.Equals, job)
 }
 
 func (*testWrap) TestNormalizePackageNames(c *C.C) {

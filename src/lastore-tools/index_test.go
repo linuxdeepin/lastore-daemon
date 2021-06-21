@@ -25,7 +25,7 @@ import (
 
 type testWrap struct{}
 
-func Test(t *testing.T) { C.TestingT(t) }
+func TestIndex(t *testing.T) { C.TestingT(t) }
 func init() {
 	C.Suite(&testWrap{})
 }

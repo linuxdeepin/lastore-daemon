@@ -18,7 +18,6 @@ func TestJobQueue(t *testing.T) {
 			time.Sleep(time.Millisecond * 10)
 			q.AllJobs()
 			q.DoneJobs()
-			//			q.PendingJobs()
 		}
 	}()
 
@@ -31,10 +30,15 @@ func TestJobQueue(t *testing.T) {
 				t.Log(err)
 			}
 		}
+		q.PendingJobs()
 	}(t)
 
 	for i := 0; i < N; i++ {
 		id := fmt.Sprintf("%d", i)
+		job := q.Find(id)
+		if job == nil {
+			continue
+		}
 		_, err := q.Remove(id)
 		if err != nil {
 			time.Sleep(time.Millisecond * 10)

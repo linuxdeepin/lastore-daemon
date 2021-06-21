@@ -22,7 +22,7 @@ import "testing"
 
 type testWrap struct{}
 
-func Test(t *testing.T) { C.TestingT(t) }
+func TestSystemApt(t *testing.T) { C.TestingT(t) }
 func init() {
 	C.Suite(&testWrap{})
 }
