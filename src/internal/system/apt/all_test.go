@@ -23,7 +23,7 @@ import "internal/system"
 
 type testWrap struct{}
 
-func Test(t *testing.T) { C.TestingT(t) }
+func TestSystemAptAll(t *testing.T) { C.TestingT(t) }
 func init() {
 	C.Suite(&testWrap{})
 }
