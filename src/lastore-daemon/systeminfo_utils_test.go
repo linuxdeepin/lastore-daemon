@@ -1,32 +1,25 @@
 package main
 
 import (
-	"os"
+	"testing"
 
-	C "gopkg.in/check.v1"
+	"github.com/stretchr/testify/assert"
 )
 
-type systeminfoSuite struct{}
-
-func init() {
-	C.Suite(&systeminfoSuite{})
+func TestSystemInfoUtil(t *testing.T) {
+	useDbus := NotUseDBus
 	NotUseDBus = true
-}
-
-func (*systeminfoSuite) TestSystemInfoUtils(c *C.C) {
+	defer func() {
+		NotUseDBus = useDbus
+	}()
 	sys, err := getSystemInfo()
 	if err != nil {
-		if os.IsNotExist(err) {
-			c.Log("TestSystemInfoUtils error:", err)
-			return
-		} else {
-			c.Assert(err, C.Equals, nil)
-		}
+		t.Skip("")
 	}
-	c.Check(sys.SystemName, C.Not(C.Equals), "")
-	c.Check(sys.ProductType, C.Not(C.Equals), "")
-	c.Check(sys.EditionName, C.Not(C.Equals), "")
-	c.Check(sys.Version, C.Not(C.Equals), "")
-	c.Check(sys.HardwareId, C.Not(C.Equals), "")
-	c.Check(sys.Processor, C.Not(C.Equals), "")
+	assert.NotEmpty(t, sys.SystemName)
+	assert.NotEmpty(t, sys.ProductType)
+	assert.NotEmpty(t, sys.EditionName)
+	assert.NotEmpty(t, sys.Version)
+	assert.NotEmpty(t, sys.HardwareId)
+	assert.NotEmpty(t, sys.Processor)
 }
