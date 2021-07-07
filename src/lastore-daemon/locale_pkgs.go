@@ -21,7 +21,7 @@ import (
 	"fixme/pkg_recommend"
 )
 
-func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ...string) []string {
+func QueryEnhancedLocalePackages(checker func(bool, string) bool, useCustomConf bool, lang string, pkgs ...string) []string {
 	set := make(map[string]struct{})
 	for _, pkg := range pkgs {
 		for _, localePkg := range pkg_recommend.GetEnhancedLocalePackages(lang, pkg) {
@@ -31,7 +31,7 @@ func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ..
 
 	var r []string
 	for pkg := range set {
-		if checker(pkg) {
+		if checker(useCustomConf, pkg) {
 			r = append(r, pkg)
 		}
 	}

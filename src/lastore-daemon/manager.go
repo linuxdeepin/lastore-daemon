@@ -278,7 +278,8 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		_ = log.Warn(err)
 		return nil, dbusutil.ToError(err)
 	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
+	caller := mapMethodCaller(execPath, cmdLine)
+	m.ensureUpdateSourceOnce(caller)
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
@@ -290,7 +291,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		return m.installPkg(jobName, packages, environ)
 	}
 
-	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, lang, pkgs...)
+	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, caller == methodCallerControlCenter, lang, pkgs...)
 	if len(localePkgs) != 0 {
 		log.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
@@ -718,8 +719,14 @@ func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (s
 	return int64(s), dbusutil.ToError(err)
 }
 
-func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
-	return system.QueryPackageInstallable(pkgId), nil
+func (m *Manager) PackageInstallable(sender dbus.Sender, pkgId string) (installable bool, busErr *dbus.Error) {
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
+	if err != nil {
+		_ = log.Warn(err)
+		return false, dbusutil.ToError(err)
+	}
+	caller := mapMethodCaller(execPath, cmdLine)
+	return system.QueryPackageInstallable(caller == methodCallerControlCenter, pkgId), nil
 }
 
 func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
@@ -931,7 +938,7 @@ func (m *Manager) installUOSReleaseNote() {
 			}
 		}
 	} else {
-		bInstalled, _ := m.PackageInstallable(uosReleaseNotePkgName)
+		bInstalled := system.QueryPackageInstallable(true, uosReleaseNotePkgName)
 		if bInstalled {
 			_, err := m.installPkg("", uosReleaseNotePkgName, nil)
 			if err != nil {

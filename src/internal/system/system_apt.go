@@ -168,13 +168,24 @@ func QueryPackageInstalled(pkgId string) bool {
 }
 
 // QueryPackageInstallable query whether the pkgId can be installed
-func QueryPackageInstallable(pkgId string) bool {
-	err := exec.Command("/usr/bin/apt-cache", "show", "--", pkgId).Run()
+func QueryPackageInstallable(useCustomConf bool, pkgId string) bool {
+	var showArgs = []string{"show"}
+	var policyArgs = []string{"policy"}
+	if useCustomConf {
+		showArgs = append(showArgs, "-c", LastoreAptV2ConfPath)
+		policyArgs = append(policyArgs, "-c", LastoreAptV2ConfPath)
+	} else {
+		showArgs = append(showArgs, "-c", LastoreAptV2CommonConfPath)
+		policyArgs = append(policyArgs, "-c", LastoreAptV2CommonConfPath)
+	}
+	showArgs = append(showArgs, "--", pkgId)
+	policyArgs = append(policyArgs, "--", pkgId)
+	err := exec.Command("/usr/bin/apt-cache", showArgs...).Run()
 	if err != nil {
 		return false
 	}
 
-	out, err := exec.Command("/usr/bin/apt-cache", "policy", "--", pkgId).CombinedOutput()
+	out, err := exec.Command("/usr/bin/apt-cache", policyArgs...).CombinedOutput()
 	if err != nil {
 		return false
 	}

@@ -99,10 +99,23 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	for k, v := range options {
 		args = append(args, "-o", k+"="+v)
 	}
-
+	// TODO: 针对安装uos-release-note特殊化处理,后续在1050分类安装更新中进行处理;
+	cunstomInstall := false
+	if cmdType == system.DownloadJobType || cmdType == system.InstallJobType {
+		for _, arg := range cmdArgs {
+			if strings.Contains(arg, "uos-release-note") {
+				cunstomInstall = true
+				break
+			}
+		}
+	}
 	switch cmdType {
 	case system.InstallJobType:
-		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
+		if cunstomInstall {
+			args = append(args, "-c", system.LastoreAptV2ConfPath)
+		} else {
+			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
+		}
 		args = append(args, "install")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
@@ -116,7 +129,11 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
-		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
+		if cunstomInstall {
+			args = append(args, "-c", system.LastoreAptV2ConfPath)
+		} else {
+			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
+		}
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
