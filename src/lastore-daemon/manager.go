@@ -109,6 +109,8 @@ type Manager struct {
 	apps apps.Apps
 
 	UpdateMode uint64 `prop:"access:rw"`
+
+	isUpdateSucceed bool
 }
 
 /*
@@ -489,9 +491,9 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 }
 
 func (m *Manager) ensureUpdateSourceOnce(caller methodCaller) {
-	m.do.Lock()
+	m.PropsMu.Lock()
 	updateOnce := m.updateSourceOnce
-	m.do.Unlock()
+	m.PropsMu.Unlock()
 
 	if updateOnce {
 		return
@@ -511,7 +513,10 @@ func (m *Manager) handleUpdateInfosChanged() {
 	}
 	m.updater.loadUpdateInfos(info)
 	m.updatableApps(info)
-	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 {
+	m.PropsMu.Lock()
+	isUpdateSucceed := m.isUpdateSucceed
+	m.PropsMu.Unlock()
+	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed {
 		log.Info("auto download updates")
 		go func() {
 			_, err := m.prepareDistUpgrade(methodCallerControlCenter) // 自动下载使用控制中心的配置
@@ -524,7 +529,6 @@ func (m *Manager) handleUpdateInfosChanged() {
 
 func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, error) {
 	m.do.Lock()
-	m.updateSourceOnce = true
 	var jobName string
 	if needNotify {
 		jobName = "+notify"
@@ -544,8 +548,21 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	}
 	if job != nil {
 		job.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() { go m.installUOSReleaseNote() },
-			string(system.EndStatus):     m.handleUpdateInfosChanged,
+			string(system.ReadyStatus): func() {
+				m.PropsMu.Lock()
+				m.updateSourceOnce = true
+				m.isUpdateSucceed = false
+				m.PropsMu.Unlock()
+			},
+			string(system.SucceedStatus): func() {
+				m.PropsMu.Lock()
+				m.isUpdateSucceed = true
+				m.PropsMu.Unlock()
+				go m.installUOSReleaseNote()
+			},
+			string(system.EndStatus): func() {
+				m.handleUpdateInfosChanged()
+			},
 		})
 	}
 	return job, err
