@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -26,10 +27,15 @@ func TestConfig(t *testing.T) {
 	err = ioutil.WriteFile(tmpfile.Name(), data, 0777)
 	require.NoError(t, err)
 
-	configBefore := NewConfig(tmpfile.Name())
-	require.NotNil(t, configBefore)
 	config := NewConfig(tmpfile.Name())
 	require.NotNil(t, config)
+
+	bytes, err := json.Marshal(config)
+	require.NoError(t, err)
+	configBefore := new(Config)
+	err = json.Unmarshal(bytes, configBefore)
+	require.NoError(t, err)
+	require.NotNil(t, configBefore)
 
 	time.Sleep(time.Millisecond * 10)
 	err = config.UpdateLastCheckTime()

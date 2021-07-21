@@ -1,0 +1,13 @@
+{
+  "Version": "0.1",
+  "AutoCheckUpdates": true,
+  "DisableUpdateMetadata": false,
+  "AutoDownloadUpdates": false,
+  "AutoClean": true,
+  "UpdateNotify": true,
+  "CheckInterval": 604800000000000,
+  "CleanInterval": 604800000000000,
+  "UpdateMode": 15,
+  "CleanIntervalCacheOverLimit": 86400000000000,
+  "MirrorsUrl": "http://packages.deepin.com/mirrors/community.json",
+}

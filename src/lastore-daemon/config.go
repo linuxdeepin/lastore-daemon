@@ -19,6 +19,7 @@ package main
 
 import (
 	"internal/system"
+	"path/filepath"
 	"time"
 )
 
@@ -31,7 +32,7 @@ var DefaultConfig = Config{
 	CleanIntervalCacheOverLimit: time.Hour * 24,
 	AutoCheckUpdates:            true,
 	DisableUpdateMetadata:       false,
-	AutoDownloadUpdates:         true,
+	AutoDownloadUpdates:         false,
 	UpdateNotify:                true,
 	AutoClean:                   true,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
@@ -62,8 +63,19 @@ type Config struct {
 	AllowInstallRemovePkgExecPaths []string
 }
 
+func getDefaultConfig() *Config {
+	var c *Config
+	defaultConfigPath := filepath.Join(system.VarLibDir, "default_config.json")
+	err := system.DecodeJson(defaultConfigPath, &c)
+	if err != nil {
+		logger.Debugf("Can't load default config file: %v\n", err)
+		c = &DefaultConfig
+	}
+	return c
+}
+
 func NewConfig(fpath string) *Config {
-	c := DefaultConfig
+	c := getDefaultConfig()
 	err := system.DecodeJson(fpath, &c)
 	if err != nil {
 		logger.Debugf("Can't load config file: %v\n", err)
@@ -84,7 +96,7 @@ func NewConfig(fpath string) *Config {
 		c.CleanInterval = time.Hour * 24 * 7
 		_ = c.save()
 	}
-	return &c
+	return c
 }
 
 func (c *Config) UpdateLastCheckTime() error {
