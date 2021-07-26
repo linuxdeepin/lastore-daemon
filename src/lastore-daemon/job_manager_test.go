@@ -13,15 +13,15 @@ func TestJobManager(t *testing.T) {
 
 	// 空包只走流程
 	_, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, 0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, jm.findJobByType(system.DistUpgradeJobType, nil), (*Job)(nil))
 
 	jobDistUpgrade2, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil, 0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, jm.findJobByType(system.DistUpgradeJobType, nil), jobDistUpgrade2)
 
 	jobDownload, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil, 0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, jm.findJobByType(system.DownloadJobType, nil), jobDownload)
 
 	jm.MarkStart(jobDistUpgrade2.Id)
