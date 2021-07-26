@@ -547,13 +547,11 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 		_ = log.Warnf("UpdateSource error: %v\n", err)
 	}
 	if job != nil {
+		m.PropsMu.Lock()
+		m.updateSourceOnce = true
+		m.isUpdateSucceed = false
+		m.PropsMu.Unlock()
 		job.setHooks(map[string]func(){
-			string(system.ReadyStatus): func() {
-				m.PropsMu.Lock()
-				m.updateSourceOnce = true
-				m.isUpdateSucceed = false
-				m.PropsMu.Unlock()
-			},
 			string(system.SucceedStatus): func() {
 				m.PropsMu.Lock()
 				m.isUpdateSucceed = true
