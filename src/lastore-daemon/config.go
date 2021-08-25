@@ -19,6 +19,7 @@ package main
 
 import (
 	"internal/system"
+	"path/filepath"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -28,42 +29,53 @@ const MinCheckInterval = time.Minute
 const ConfigVersion = "0.1"
 
 var DefaultConfig = Config{
-	CheckInterval:                time.Hour * 24 * 7,
-	CleanInterval:                time.Hour * 24 * 7,
-	CleanIntervalCacheOverLimit:  time.Hour * 24,
-	AutoCheckUpdates:        true,
-	DisableUpdateMetadata:   false,
-	AutoDownloadUpdates:     true,
-	UpdateNotify:            true,
-	AutoClean:               true,
-	MirrorsUrl:              system.DefaultMirrorsUrl,
+	CheckInterval:               time.Hour * 24 * 7,
+	CleanInterval:               time.Hour * 24 * 7,
+	CleanIntervalCacheOverLimit: time.Hour * 24,
+	AutoCheckUpdates:            false,
+	DisableUpdateMetadata:       false,
+	AutoDownloadUpdates:         false,
+	UpdateNotify:                false,
+	AutoClean:                   false,
+	MirrorsUrl:                  system.DefaultMirrorsUrl,
 }
 
 type Config struct {
-	Version                 string
-	AutoCheckUpdates        bool
-	DisableUpdateMetadata   bool
-	AutoDownloadUpdates     bool
-	AutoClean               bool
-	MirrorSource            string
-	UpdateNotify            bool
-	CheckInterval                time.Duration
-	CleanInterval                time.Duration
-	
+	Version               string
+	AutoCheckUpdates      bool
+	DisableUpdateMetadata bool
+	AutoDownloadUpdates   bool
+	AutoClean             bool
+	MirrorSource          string
+	UpdateNotify          bool
+	CheckInterval         time.Duration
+	CleanInterval         time.Duration
+
 	// 缓存大小超出限制时的清理时间间隔
-	CleanIntervalCacheOverLimit  time.Duration
-	AppstoreRegion          string
-	LastCheckTime           time.Time
-	LastCleanTime           time.Time
-	LastCheckCacheSizeTime  time.Time
-	Repository              string
-	MirrorsUrl              string
+	CleanIntervalCacheOverLimit time.Duration
+	AppstoreRegion              string
+	LastCheckTime               time.Time
+	LastCleanTime               time.Time
+	LastCheckCacheSizeTime      time.Time
+	Repository                  string
+	MirrorsUrl                  string
 
 	filePath string
 }
 
+func getDefaultConfig() *Config {
+	var c *Config
+	defaultConfigPath := filepath.Join(system.VarLibDir, "default_config.json")
+	err := system.DecodeJson(defaultConfigPath, &c)
+	if err != nil {
+		log.Debugf("Can't load default config file: %v\n", err)
+		c = &DefaultConfig
+	}
+	return c
+}
+
 func NewConfig(fpath string) *Config {
-	c := DefaultConfig
+	c := getDefaultConfig()
 	err := system.DecodeJson(fpath, &c)
 	if err != nil {
 		log.Warnf("Can't load config file: %v\n", err)
@@ -84,7 +96,7 @@ func NewConfig(fpath string) *Config {
 		c.CleanInterval = time.Hour * 24 * 7
 		c.save()
 	}
-	return &c
+	return c
 }
 
 func (c *Config) UpdateLastCheckTime() error {
