@@ -136,12 +136,18 @@ func QueryFileCacheSize(path string) (float64, error) {
 
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
-func QueryPackageDownloadSize(packages ...string) (float64, error) {
+func QueryPackageDownloadSize(useCustomConf bool, packages ...string) (float64, error) {
 	if len(packages) == 0 {
 		return SizeDownloaded, NotFoundError("hasn't any packages")
 	}
+	var confPath string
+	if useCustomConf {
+		confPath = LastoreAptV2ConfPath
+	} else {
+		confPath = LastoreAptV2CommonConfPath
+	}
 	cmd := exec.Command("/usr/bin/apt-get",
-		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2ConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
+		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", confPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
 	lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
 		_, _err := parsePackageSize(line)
