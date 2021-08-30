@@ -656,7 +656,7 @@ func (m *Manager) prepareDistUpgrade(caller methodCaller) (*Job, error) {
 	if len(upgradableApps) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
-	if s, err := system.QueryPackageDownloadSize(upgradableApps...); err == nil && s == 0 {
+	if s, err := system.QueryPackageDownloadSize(true, upgradableApps...); err == nil && s == 0 {
 		return nil, system.NotFoundError("no need download")
 	}
 
@@ -710,9 +710,10 @@ func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (s
 		_ = log.Warn(err)
 		return 0, dbusutil.ToError(err)
 	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
+	caller := mapMethodCaller(execPath, cmdLine)
+	m.ensureUpdateSourceOnce(caller)
 
-	s, err := system.QueryPackageDownloadSize(packages...)
+	s, err := system.QueryPackageDownloadSize(caller == methodCallerControlCenter, packages...)
 	if err != nil || s == system.SizeUnknown {
 		_ = log.Warnf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
 	}
