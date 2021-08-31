@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/howeyc/fsnotify"
+	"github.com/fsnotify/fsnotify"
 )
 
 type DirMonitorChangeType string
@@ -72,7 +72,7 @@ func (f *DirMonitor) Start() error {
 	f.watcher = w
 	f.Unlock()
 
-	err = f.watcher.Watch(f.baseDir)
+	err = f.watcher.Add(f.baseDir)
 	if err != nil {
 		return err
 	}
@@ -80,9 +80,9 @@ func (f *DirMonitor) Start() error {
 	go func() {
 		for {
 			select {
-			case event := <-f.watcher.Event:
+			case event := <-f.watcher.Events:
 				f.tryNotify(event)
-			case err := <-f.watcher.Error:
+			case err := <-f.watcher.Errors:
 				_ = log.Warn(err)
 			case <-f.done:
 				goto end
@@ -93,7 +93,7 @@ func (f *DirMonitor) Start() error {
 	return nil
 }
 
-func (f *DirMonitor) tryNotify(event *fsnotify.FileEvent) {
+func (f *DirMonitor) tryNotify(event fsnotify.Event) {
 	f.Lock()
 	defer f.Unlock()
 
@@ -103,7 +103,7 @@ func (f *DirMonitor) tryNotify(event *fsnotify.FileEvent) {
 		return
 	}
 
-	if event.IsModify() || event.IsDelete() {
+	if (event.Op&fsnotify.Remove == fsnotify.Remove) || (event.Op&fsnotify.Chmod == fsnotify.Chmod) || (event.Op&fsnotify.Write == fsnotify.Write) {
 		fn(fpath)
 	}
 }
