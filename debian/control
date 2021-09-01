@@ -13,6 +13,13 @@ Build-Depends:
  golang-github-fsnotify-fsnotify-dev,
  golang-go | gccgo-5,
  pkg-config,
+ golang-ginkgo-dev,
+ golang-gomega-dev,
+ golang-check.v1-dev,
+ golang-yaml.v2-dev,
+ golang-codegangsta-cli-dev,
+ golang-github-jouyouyun-hardware-dev,
+ golang-github-knqyf263-go-deb-version-dev,
 Standards-Version: 4.1.3
 Homepage: http://github.com/linuxdeepin/lastore-daemon
 
