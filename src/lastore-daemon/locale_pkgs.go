@@ -18,7 +18,7 @@
 package main
 
 import (
-	"fixme/pkg_recommend"
+	"internal/utils/fixme/pkg_recommend"
 )
 
 func QueryEnhancedLocalePackages(checker func(bool, string) bool, useCustomConf bool, lang string, pkgs ...string) []string {

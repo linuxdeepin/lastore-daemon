@@ -18,8 +18,8 @@
 package main
 
 import (
-	"fixme/pkg_recommend"
 	"internal/system"
+	"internal/utils/fixme/pkg_recommend"
 	"strings"
 	"testing"
 
