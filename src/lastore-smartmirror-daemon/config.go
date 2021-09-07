@@ -19,8 +19,6 @@ package main
 
 import (
 	"internal/system"
-
-	log "github.com/cihub/seelog"
 )
 
 var defaultConfig = config{
@@ -36,7 +34,7 @@ func newConfig(fpath string) *config {
 	c := defaultConfig
 	err := system.DecodeJson(fpath, &c)
 	if err != nil {
-		_ = log.Warnf("Can't load config file: %v\n", err)
+		logger.Warningf("Can't load config file: %v\n", err)
 	}
 	c.filePath = fpath
 	return &c

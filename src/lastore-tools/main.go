@@ -28,6 +28,7 @@ import (
 	"internal/utils"
 
 	"github.com/codegangsta/cli"
+	"pkg.deepin.io/lib/log"
 )
 
 var CMDUpdater = cli.Command{
@@ -57,6 +58,8 @@ var CMDUpdater = cli.Command{
 		},
 	},
 }
+
+var logger = log.NewLogger("lastore/lastore-tools")
 
 // MainUpdater 处理 update 子命令。
 // 在文件 var/lib/lastore/scripts/update_metadata_info 中被调用。

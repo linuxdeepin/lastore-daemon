@@ -28,8 +28,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	log "github.com/cihub/seelog"
 )
 
 type APTSystem struct {
@@ -109,7 +107,7 @@ func WaitDpkgLockRelease() {
 	for {
 		msg, wait := checkLock("/var/lib/dpkg/lock")
 		if wait {
-			log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
+			logger.Warningf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 				msg, time.Now())
 			time.Sleep(time.Second * 5)
 			continue
@@ -117,7 +115,7 @@ func WaitDpkgLockRelease() {
 
 		msg, wait = checkLock("/var/lib/dpkg/lock-frontend")
 		if wait {
-			log.Warnf("Wait 5s for unlock\n\"%s\" \n at %v\n",
+			logger.Warningf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 				msg, time.Now())
 			time.Sleep(time.Second * 5)
 			continue
@@ -130,7 +128,7 @@ func WaitDpkgLockRelease() {
 func checkLock(p string) (string, bool) {
 	file, err := os.Open(p)
 	if err != nil {
-		_ = log.Warnf("error opening %q: %v", p, err)
+		logger.Warningf("error opening %q: %v", p, err)
 		return "", false
 	}
 	defer file.Close()
@@ -144,7 +142,7 @@ func checkLock(p string) (string, bool) {
 	}
 	err = syscall.FcntlFlock(file.Fd(), syscall.F_GETLK, &flockT)
 	if err != nil {
-		_ = log.Warnf("unable to check file %q lock status: %s", p, err)
+		logger.Warningf("unable to check file %q lock status: %s", p, err)
 		return p, true
 	}
 
@@ -329,7 +327,7 @@ func (p *APTSystem) UpdateSource(jobId string) error {
 
 // 在控制中心进行检查更新时,使用custom-update(按配置文件update)的命令进行检查更新
 func (p *APTSystem) CustomUpdate(jobId string) error {
-	log.Info("start custom update")
+	logger.Info("start custom update")
 	c := newAPTCommand(p, jobId, system.CustomUpdateJobType, p.indicator, nil)
 	c.atExitFn = func() bool {
 		if c.exitCode == ExitSuccess &&

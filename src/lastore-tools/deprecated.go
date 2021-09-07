@@ -26,8 +26,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-
-	log "github.com/cihub/seelog"
 )
 
 type DesktopInfo struct {
@@ -204,7 +202,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 
 	fs, err := ioutil.ReadDir("/var/lib/dpkg/info")
 	if err != nil {
-		_ = log.Warnf("ParsePackageInfos :%v\n", err)
+		logger.Warningf("ParsePackageInfos :%v\n", err)
 		return r, t
 	}
 
@@ -230,7 +228,7 @@ func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string 
 	var old = make(map[string]string)
 	if content, err := ioutil.ReadFile(fpath); err == nil {
 		if err := json.Unmarshal(content, &old); err != nil {
-			_ = log.Warnf("mergeDesktopIndex:%q %v\n", fpath, err)
+			logger.Warningf("mergeDesktopIndex:%q %v\n", fpath, err)
 		}
 
 	}

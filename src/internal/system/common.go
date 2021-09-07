@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/log"
 )
 
 type MirrorSource struct {
@@ -41,6 +41,7 @@ type MirrorSource struct {
 }
 
 var RepoInfos []RepositoryInfo
+var logger = log.NewLogger("lastore")
 
 type RepositoryInfo struct {
 	Name   string `json:"name"`
@@ -116,18 +117,18 @@ func UpdateCustomSourceDir(mode uint64) error {
 	// 移除旧的sources.list.d内容,再根据最新配置重新填充
 	err := os.RemoveAll(customSourceDir)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 	err = os.MkdirAll(customSourceDir, 0755)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 
 	// 移除旧的sources.list,再根据最新配置重新创建链接
 	err = os.Remove(lastoreSourcesPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			_ = log.Warn(err)
+			logger.Warning(err)
 		}
 	}
 
@@ -137,7 +138,7 @@ func UpdateCustomSourceDir(mode uint64) error {
 	}
 	sourceDirFileInfos, err := ioutil.ReadDir(originSourceDir)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()

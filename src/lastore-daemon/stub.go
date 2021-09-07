@@ -21,7 +21,6 @@ import (
 	"internal/system"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/godbus/dbus"
 )
 
@@ -108,7 +107,7 @@ func (m *Manager) updatableApps(info []system.UpgradeInfo) {
 		m.UpgradableApps = apps
 		err := m.emitPropChangedUpgradableApps(apps)
 		if err != nil {
-			_ = log.Warn(err)
+			logger.Warning(err)
 		}
 	}
 }
@@ -159,7 +158,7 @@ func DestroyJobDBus(j *Job) {
 	<-time.After(time.Millisecond * 100)
 	err := j.service.StopExport(j)
 	if err != nil {
-		_ = log.Warnf("failed to stop export job %q: %v", j.Id, err)
+		logger.Warningf("failed to stop export job %q: %v", j.Id, err)
 	}
 }
 

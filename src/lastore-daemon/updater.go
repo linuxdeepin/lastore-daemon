@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/godbus/dbus"
 	"pkg.deepin.io/lib/dbusutil"
 )
@@ -77,7 +76,7 @@ func (u *Updater) waitOnlineCheck() {
 		if u.AutoCheckUpdates {
 			_, err = u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
 			if err != nil {
-				_ = log.Warn(err)
+				logger.Warning(err)
 			}
 		}
 		if !u.config.DisableUpdateMetadata {
@@ -101,13 +100,13 @@ func (u *Updater) loopCheck() {
 		// ensure delay at least have 10 seconds
 		delay := calcDelay() + time.Second*10
 
-		log.Infof("Next updater check will trigger at %v", time.Now().Add(delay))
+		logger.Infof("Next updater check will trigger at %v", time.Now().Add(delay))
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
 			_, err := u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
 			if err != nil {
-				_ = log.Warn(err)
+				logger.Warning(err)
 			}
 		}
 
@@ -120,10 +119,10 @@ func (u *Updater) loopCheck() {
 }
 
 func startUpdateMetadataInfoService() {
-	log.Info("start update metadata info service")
+	logger.Info("start update metadata info service")
 	err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
 	if err != nil {
-		_ = log.Warnf("AutoCheck Update failed: %v", err)
+		logger.Warningf("AutoCheck Update failed: %v", err)
 	}
 }
 
@@ -154,7 +153,7 @@ func (u *Updater) setMirrorSource(id string) error {
 			return system.NotFoundError("empty url")
 		}
 		if err := SetAPTSmartMirror(m.Url); err != nil {
-			_ = log.Warnf("SetMirrorSource(%q) failed:%v\n", id, err)
+			logger.Warningf("SetMirrorSource(%q) failed:%v\n", id, err)
 			return err
 		}
 	}
@@ -281,10 +280,10 @@ func (u *Updater) restoreSystemSource() error {
 	if err == nil {
 		err = ioutil.WriteFile(aptSource+".bak", current, 0644)
 		if err != nil {
-			_ = log.Warn(err)
+			logger.Warning(err)
 		}
 	} else {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 
 	origin, err := ioutil.ReadFile(aptSourceOrigin)
@@ -299,7 +298,7 @@ func (u *Updater) restoreSystemSource() error {
 func (u *Updater) RestoreSystemSource() *dbus.Error {
 	err := u.restoreSystemSource()
 	if err != nil {
-		_ = log.Warn("failed to restore system source:", err)
+		logger.Warning("failed to restore system source:", err)
 		return dbusutil.ToError(err)
 	}
 	return nil

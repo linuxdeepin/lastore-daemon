@@ -6,8 +6,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	log "github.com/cihub/seelog"
 )
 
 type JobList []*Job
@@ -86,7 +84,7 @@ func (l *JobQueue) PendingJobs() JobList {
 		n++
 	}
 	if n+1 < numPending {
-		log.Trace("These jobs are waiting for running...", readyJobs[n+1:])
+		logger.Debug("These jobs are waiting for running...", readyJobs[n+1:])
 	}
 	r := JobList(readyJobs[:n])
 	sort.Sort(r)

@@ -4,9 +4,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/go-ini/ini"
+	"pkg.deepin.io/lib/log"
 )
+
+var logger = log.NewLogger("lastore")
 
 const (
 	appstoreConfPath        = "/usr/share/deepin-app-store/settings.ini"
@@ -23,10 +25,10 @@ func NewStore() *Store {
 
 	s.sysCfg, err = ini.Load(appstoreConfPath)
 	if err != nil {
-		log.Infof("fail to read file: %v", err)
+		logger.Infof("fail to read file: %v", err)
 		s.sysCfg, err = ini.Load(appstoreConfPathDefault)
 		if err != nil {
-			_ = log.Errorf("fail to read file:", err)
+			logger.Errorf("fail to read file:", err)
 		}
 	}
 	return s

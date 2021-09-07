@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbusutil"
 )
 
@@ -115,7 +114,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.CustomUpdateJobType:
 		err := system.UpdateCustomSourceDir(mode)
 		if err != nil {
-			_ = log.Warn(err)
+			logger.Warning(err)
 		}
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.DistUpgradeJobType:
@@ -136,7 +135,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		return nil, system.NotSupportError
 	}
 
-	log.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
+	logger.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
 	jm.dispatchMux.Lock()
 	defer jm.dispatchMux.Unlock()
 	if err := jm.addJob(job); err != nil {
@@ -203,7 +202,7 @@ func (jm *JobManager) CleanJob(jobId string) error {
 func (jm *JobManager) pauseJob(job *Job) error {
 	switch job.Status {
 	case system.PausedStatus:
-		_ = log.Warnf("Try pausing a pasued Job %v\n", job)
+		logger.Warningf("Try pausing a pasued Job %v\n", job)
 		return nil
 	case system.RunningStatus:
 		err := jm.system.Abort(job.Id)
@@ -242,7 +241,7 @@ func (jm *JobManager) dispatch() {
 	for _, job := range pendingDeleteJobs {
 		_ = jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
-			log.Infof("Job(%q).next is %v\n", job.Id, job.next)
+			logger.Infof("Job(%q).next is %v\n", job.Id, job.next)
 			job = job.next
 
 			_ = jm.addJob(job)
@@ -302,7 +301,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 		if jobStatus == system.FailedStatus {
 			job.retry--
 			_ = jm.markStart(job)
-			log.Infof("Retry failed Job %v\n", job)
+			logger.Infof("Retry failed Job %v\n", job)
 		}
 
 		err := StartSystemJob(jm.system, job)
@@ -310,7 +309,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			job.PropsMu.Lock()
 			_ = TransitionJobState(job, system.FailedStatus)
 			job.PropsMu.Unlock()
-			_ = log.Errorf("StartSystemJob failed %v :%v\n", job, err)
+			logger.Errorf("StartSystemJob failed %v :%v\n", job, err)
 
 			pkgSysErr, ok := err.(*system.PkgSystemError)
 			if ok {
@@ -360,7 +359,7 @@ func (jm *JobManager) addJob(j *Job) error {
 		// use dbus
 		err = jm.service.Export(j.getPath(), j)
 		if err != nil {
-			_ = log.Warn(err)
+			logger.Warning(err)
 			return err
 		}
 	}
@@ -385,7 +384,7 @@ func (jm *JobManager) removeJob(jobId string, queueName string) error {
 func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	j := jm.findJobById(info.JobId)
 	if j == nil {
-		_ = log.Warnf("Can't find Job %q when update info %v\n", info.JobId, info)
+		logger.Warningf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
 

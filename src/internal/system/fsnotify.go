@@ -21,7 +21,6 @@ import (
 	"path"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -83,7 +82,7 @@ func (f *DirMonitor) Start() error {
 			case event := <-f.watcher.Events:
 				f.tryNotify(event)
 			case err := <-f.watcher.Errors:
-				_ = log.Warn(err)
+				logger.Warning(err)
 			case <-f.done:
 				goto end
 			}

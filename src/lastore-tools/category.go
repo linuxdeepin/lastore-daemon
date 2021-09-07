@@ -20,8 +20,6 @@ package main
 import (
 	"internal/dstore"
 	"internal/utils"
-
-	log "github.com/cihub/seelog"
 )
 
 // writeData 把数据 data 序列化为 JSON 格式写入 fpath 路径的文件。
@@ -31,7 +29,7 @@ func writeData(fpath string, data interface{}) error {
 
 // 废弃
 func GenerateCategory(repo, fpath string) error {
-	_ = log.Warnf("this method has deprecated")
+	logger.Warningf("this method has deprecated")
 	return nil
 }
 

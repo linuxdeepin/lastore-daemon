@@ -30,8 +30,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	log "github.com/cihub/seelog"
 )
 
 func buildUpgradeInfoRegex(archs []system.Architecture) *regexp.Regexp {
@@ -143,7 +141,7 @@ func queryDpkgUpgradeInfoByAptList() ([]string, error) {
 		if err == nil {
 			err := system.UpdateCustomSourceDir(config.UpdateMode)
 			if err != nil {
-				_ = log.Warn(err)
+				logger.Warning(err)
 				queryByCustomConf = false
 			} else {
 				queryByCustomConf = true
@@ -174,7 +172,7 @@ func queryDpkgUpgradeInfoByAptList() ([]string, error) {
 	}
 	err = cmd.Start()
 	if err != nil {
-		_ = log.Errorf("LockDo: %v\n", err)
+		logger.Errorf("LockDo: %v\n", err)
 	}
 	timer := time.AfterFunc(time.Second*10, func() {
 		_ = cmd.Process.Signal(syscall.SIGINT)
@@ -203,12 +201,12 @@ func queryDpkgUpgradeInfoByAptList() ([]string, error) {
 func getSystemArchitectures() []system.Architecture {
 	foreignArchs, err := exec.Command("dpkg", "--print-foreign-architectures").Output()
 	if err != nil {
-		_ = log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
+		logger.Warningf("GetSystemArchitecture failed:%v\n", foreignArchs)
 	}
 
 	arch, err := exec.Command("dpkg", "--print-architecture").Output()
 	if err != nil {
-		_ = log.Warnf("GetSystemArchitecture failed:%v\n", foreignArchs)
+		logger.Warningf("GetSystemArchitecture failed:%v\n", foreignArchs)
 	}
 
 	var r []system.Architecture

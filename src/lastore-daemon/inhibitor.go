@@ -20,7 +20,6 @@ package main
 import (
 	"syscall"
 
-	log "github.com/cihub/seelog"
 	"github.com/godbus/dbus"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 )
@@ -34,7 +33,7 @@ const (
 )
 
 func mapMethodCaller(execPath string, cmdLine string) methodCaller {
-	log.Debug("execPath:", execPath, "cmdLine:", cmdLine)
+	logger.Debug("execPath:", execPath, "cmdLine:", cmdLine)
 	switch execPath {
 	case appStoreDaemonPath, oldAppStoreDaemonPath:
 		return methodCallerAppStore
@@ -62,18 +61,18 @@ func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 			why = Tr("Preventing from shutting down")
 		}
 		fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
-		log.Infof("Prevent shutdown...: fd:%v\n", fd)
+		logger.Infof("Prevent shutdown...: fd:%v\n", fd)
 		if err != nil {
-			log.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
+			logger.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
 			return
 		}
 		m.inhibitFd = fd
 	} else if !onChanging && m.inhibitFd != -1 {
 		err := syscall.Close(int(m.inhibitFd))
 		if err != nil {
-			log.Infof("Enable shutdown...: fd:%d, err:%s\n", m.inhibitFd, err)
+			logger.Infof("Enable shutdown...: fd:%d, err:%s\n", m.inhibitFd, err)
 		} else {
-			log.Infof("Enable shutdown...")
+			logger.Infof("Enable shutdown...")
 		}
 		m.inhibitFd = -1
 	}

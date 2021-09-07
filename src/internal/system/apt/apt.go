@@ -29,7 +29,7 @@ import (
 	"sync"
 	"syscall"
 
-	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/log"
 )
 
 type CommandSet interface {
@@ -38,21 +38,23 @@ type CommandSet interface {
 	FindCMD(id string) *aptCommand
 }
 
+var logger = log.NewLogger("lastore")
+
 func (p *APTSystem) AddCMD(cmd *aptCommand) {
 	if _, ok := p.cmdSet[cmd.JobId]; ok {
-		_ = log.Warnf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
+		logger.Warningf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
 		return
 	}
-	log.Infof("APTSystem AddCMD: %v\n", cmd)
+	logger.Infof("APTSystem AddCMD: %v\n", cmd)
 	p.cmdSet[cmd.JobId] = cmd
 }
 func (p *APTSystem) RemoveCMD(id string) {
 	c, ok := p.cmdSet[id]
 	if !ok {
-		_ = log.Warnf("APTSystem RemoveCMD with invalid Id=%q\n", id)
+		logger.Warningf("APTSystem RemoveCMD with invalid Id=%q\n", id)
 		return
 	}
-	log.Infof("APTSystem RemoveCMD: %v (exitCode:%d)\n", c, c.exitCode)
+	logger.Infof("APTSystem RemoveCMD: %v (exitCode:%d)\n", c, c.exitCode)
 	delete(p.cmdSet, id)
 }
 func (p *APTSystem) FindCMD(id string) *aptCommand {
@@ -235,7 +237,7 @@ func (c *aptCommand) Wait() (err error) {
 	if c.exitCode != ExitPause {
 		if err != nil {
 			c.exitCode = ExitFailure
-			log.Infof("aptCommand.Wait: %v\n", err)
+			logger.Infof("aptCommand.Wait: %v\n", err)
 		} else {
 			c.exitCode = ExitSuccess
 		}
@@ -253,11 +255,11 @@ const (
 func (c *aptCommand) atExit() {
 	err := c.aptPipe.Close()
 	if err != nil {
-		_ = log.Warn("failed to close pipe:", err)
+		logger.Warning("failed to close pipe:", err)
 	}
 
-	log.Infof("job %s stdout: %s", c.JobId, c.stdout.Bytes())
-	log.Infof("job %s stderr: %s", c.JobId, c.stderr.Bytes())
+	logger.Infof("job %s stdout: %s", c.JobId, c.stdout.Bytes())
+	logger.Infof("job %s stderr: %s", c.JobId, c.stderr.Bytes())
 
 	c.cmdSet.RemoveCMD(c.JobId)
 
@@ -367,7 +369,7 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 }
 
 func (c *aptCommand) indicateFailed(errType, errDetail string, isFatalErr bool) {
-	_ = log.Warnf("indicateFailed: type: %s, detail: %s", errType, errDetail)
+	logger.Warningf("indicateFailed: type: %s, detail: %s", errType, errDetail)
 	progressInfo := system.JobProgressInfo{
 		JobId:      c.JobId,
 		Progress:   -1.0,
@@ -391,7 +393,7 @@ func (c *aptCommand) Abort() error {
 			return errors.New("the process has not yet started")
 		}
 
-		log.Tracef("Abort Command: %v\n", c)
+		logger.Debugf("Abort Command: %v\n", c)
 		c.exitCode = ExitPause
 		var err error
 		pgid, err := syscall.Getpgid(c.apt.Process.Pid)
@@ -413,7 +415,7 @@ func (c *aptCommand) updateProgress() {
 
 		info, err := ParseProgressInfo(c.JobId, line)
 		if err != nil {
-			_ = log.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
+			logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
 			continue
 		}
 

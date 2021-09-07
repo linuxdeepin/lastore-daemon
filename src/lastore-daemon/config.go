@@ -20,8 +20,6 @@ package main
 import (
 	"internal/system"
 	"time"
-
-	log "github.com/cihub/seelog"
 )
 
 const MinCheckInterval = time.Minute
@@ -68,7 +66,7 @@ func NewConfig(fpath string) *Config {
 	c := DefaultConfig
 	err := system.DecodeJson(fpath, &c)
 	if err != nil {
-		log.Debugf("Can't load config file: %v\n", err)
+		logger.Debugf("Can't load config file: %v\n", err)
 	}
 	c.filePath = fpath
 

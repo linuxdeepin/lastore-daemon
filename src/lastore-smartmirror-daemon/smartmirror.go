@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/godbus/dbus"
 	"pkg.deepin.io/lib/dbusutil"
 
@@ -70,12 +69,12 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 	err := system.DecodeJson(path.Join(system.VarLibDir, qualityDataFilepath), &s.mirrorQuality.QualityMap)
 	if nil != err {
-		log.Info("load quality.json failed", err)
+		logger.Info("load quality.json failed", err)
 	}
 
 	err = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &s.sources)
 	if nil != err {
-		_ = log.Error(err)
+		logger.Error(err)
 	}
 
 	for _, source := range s.sources {
@@ -102,7 +101,7 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 	s.Enable = enable
 	err := s.config.setEnable(enable)
 	if nil != err {
-		_ = log.Errorf("save config failed: %v", err)
+		logger.Errorf("save config failed: %v", err)
 		return dbus.NewError(err.Error(), nil)
 	}
 
@@ -209,17 +208,17 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 			}
 		}
 		// dump report
-		log.Info("begin -----------------------")
-		log.Info("query", original)
+		logger.Info("begin -----------------------")
+		logger.Info("query", original)
 		for i, v := range reportList {
 			if 0 == i {
-				log.Info("select", v.String())
+				logger.Info("select", v.String())
 			} else {
-				log.Info("detect", v.String())
+				logger.Info("detect", v.String())
 			}
 		}
 		// TODO: send an report
-		log.Info("end -----------------------\n")
+		logger.Info("end -----------------------\n")
 		s.mirrorQuality.reportList <- reportList
 		header := makeReportHeader(reportList)
 		handleRequest(buildRequest(header, "HEAD", original))

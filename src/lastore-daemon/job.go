@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbusutil"
 )
 
@@ -97,7 +96,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 func (j *Job) initDownloadSize() {
 	s, err := system.QueryPackageDownloadSize(j.Packages...)
 	if err != nil {
-		_ = log.Warnf("initDownloadSize failed: %v", err)
+		logger.Warningf("initDownloadSize failed: %v", err)
 		return
 	}
 	size := int64(s)
@@ -142,7 +141,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 		j.Cancelable = info.Cancelable
 		_ = j.emitPropChangedCancelable(info.Cancelable)
 	}
-	log.Tracef("updateInfo %v <- %v\n", j, info)
+	logger.Debugf("updateInfo %v <- %v\n", j, info)
 
 	cProgress := buildProgress(info.Progress, j.progressRangeBegin, j.progressRangeEnd)
 	if cProgress > j.Progress {
@@ -167,7 +166,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	if info.Status != j.Status {
 		err := TransitionJobState(j, info.Status)
 		if err != nil {
-			_ = log.Warnf("_UpdateInfo: %v\n", err)
+			logger.Warningf("_UpdateInfo: %v\n", err)
 			return false
 		}
 		changed = true
@@ -206,7 +205,7 @@ func (j *Job) setError(e Error) {
 	}
 	jsonBytes, err := json.Marshal(errValue)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 		return
 	}
 	j.setPropDescription(string(jsonBytes))

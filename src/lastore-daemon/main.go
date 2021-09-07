@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"pkg.deepin.io/lib/log"
 	"strings"
 	"sync"
 	"time"
@@ -31,7 +32,6 @@ import (
 	"internal/system/apt"
 	"internal/utils"
 
-	log "github.com/cihub/seelog"
 	"pkg.deepin.io/dde/api/inhibit_hint"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
@@ -51,26 +51,20 @@ func Tr(text string) string {
 	return text
 }
 
+var logger = log.NewLogger("lastore/lastore-daemon")
+
 //go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,github.com/godbus/dbus updater.go job.go manager.go
 //go:generate dbusutil-gen em -type Manager,Updater
 
 func main() {
 	flag.Parse()
-
-	err := utils.SetSeelogger(utils.DefaultLogLevel, utils.DefaultLogFormat, utils.DefaultLogOutput)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
 	service, err := dbusutil.NewSystemService()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	log.Info("Starting lastore-daemon")
-	defer log.Flush()
+	logger.Info("Starting lastore-daemon")
 
 	hasOwner, err := service.NameHasOwner(dbusServiceName)
 	if err != nil {
@@ -99,7 +93,7 @@ func main() {
 	if !config.AutoCheckUpdates {
 		err := config.SetUpdateMode(0)
 		if err != nil {
-			_ = log.Warn(err)
+			logger.Warning(err)
 		}
 	}
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
@@ -109,17 +103,17 @@ func main() {
 	manager.updater = updater
 	serverObject, err := service.NewServerObject("/com/deepin/lastore", manager, updater)
 	if err != nil {
-		_ = log.Error("failed to new server manager and updater object:", err)
+		logger.Error("failed to new server manager and updater object:", err)
 		return
 	}
 
 	err = serverObject.SetWriteCallback(manager, "UpdateMode", manager.updateModeWriteCallback)
 	if err != nil {
-		_ = log.Error("failed to set write cb for property UpdateMode:", err)
+		logger.Error("failed to set write cb for property UpdateMode:", err)
 	}
 	err = serverObject.Export()
 	if err != nil {
-		_ = log.Error("failed to export manager and updater:", err)
+		logger.Error("failed to export manager and updater:", err)
 		return
 	}
 	ihObj := inhibit_hint.New("lastore-daemon")
@@ -145,12 +139,12 @@ func main() {
 	})
 	err = ihObj.Export(service)
 	if err != nil {
-		_ = log.Warn("failed to export inhibit hint:", err)
+		logger.Warning("failed to export inhibit hint:", err)
 	}
 
 	err = service.RequestName(dbusServiceName)
 	if err != nil {
-		_ = log.Error("failed to request name:", err)
+		logger.Error("failed to request name:", err)
 		return
 	}
 
@@ -158,15 +152,15 @@ func main() {
 	manager.PropsMu.RLock()
 	err = manager.emitPropChangedJobList(manager.JobList)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 	err = manager.emitPropChangedUpgradableApps(manager.UpgradableApps)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 	manager.PropsMu.RUnlock()
 
-	log.Info("Started service at system bus")
+	logger.Info("Started service at system bus")
 	RegisterMonitor(manager.handleUpdateInfosChanged, system.VarLibDir, "update_infos.json")
 	RegisterMonitor(updateTokenConfigFile, etcDir, osVersionFileName)
 	manager.handleUpdateInfosChanged()
@@ -182,11 +176,11 @@ func RegisterMonitor(handler func(), dir string, paths ...string) {
 		handler()
 	}, paths...)
 	if err != nil {
-		_ = log.Warnf("Can't add monitor on %s: %v\n", dir, err)
+		logger.Warningf("Can't add monitor on %s: %v\n", dir, err)
 	}
 	err = dm.Start()
 	if err != nil {
-		_ = log.Warnf("Can't create monitor on %s: %v\n", dir, err)
+		logger.Warningf("Can't create monitor on %s: %v\n", dir, err)
 	}
 }
 
@@ -199,7 +193,7 @@ func updateTokenConfigFile() {
 	systemInfo, err := getSystemInfo()
 	tokenPath := path.Join(aptConfDir, tokenConfFileName)
 	if err != nil {
-		_ = log.Warn("failed to update 99lastore-token.conf content:", err)
+		logger.Warning("failed to update 99lastore-token.conf content:", err)
 		return
 	}
 	var tokenSlice []string
@@ -213,6 +207,6 @@ func updateTokenConfigFile() {
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
 	err = ioutil.WriteFile(tokenPath, tokenContent, 0644)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 }

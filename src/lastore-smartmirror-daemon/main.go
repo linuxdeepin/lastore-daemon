@@ -25,23 +25,16 @@ import (
 
 	"internal/utils"
 
-	log "github.com/cihub/seelog"
 	"pkg.deepin.io/lib/dbusutil"
+	"pkg.deepin.io/lib/log"
 )
 
-const DefaultLogOutput = "/var/log/lastore/smartmirror_daemon.log"
-
 //go:generate dbusutil-gen em -type SmartMirror
+var logger = log.NewLogger("lastore/smartmirror")
 
 func main() {
 	runDaemon := flag.Bool("daemon", false, "run as daemon and not exit")
 	flag.Parse()
-
-	err := utils.SetSeelogger(utils.DefaultLogLevel, utils.DefaultLogFormat, DefaultLogOutput)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
 
 	service, err := dbusutil.NewSystemService()
 	if err != nil {
@@ -49,8 +42,7 @@ func main() {
 		return
 	}
 
-	log.Info("Starting lastore-smartmirror-daemon")
-	defer log.Flush()
+	logger.Info("Starting lastore-smartmirror-daemon")
 
 	dbusName := "com.deepin.lastore.Smartmirror"
 	hasOwner, err := service.NameHasOwner(dbusName)
@@ -75,20 +67,20 @@ func main() {
 	smartmirror := newSmartMirror(service)
 	err = service.Export("/com/deepin/lastore/Smartmirror", smartmirror)
 	if err != nil {
-		_ = log.Error("failed to export manager and updater:", err)
+		logger.Error("failed to export manager and updater:", err)
 		return
 	}
 
 	err = service.RequestName(dbusName)
 	if err != nil {
-		_ = log.Error("failed to request name:", err)
+		logger.Error("failed to request name:", err)
 		return
 	}
 
-	log.Info("Started service at system bus")
+	logger.Info("Started service at system bus")
 
 	if *runDaemon {
-		log.Info("Run as daemon and not exist")
+		logger.Info("Run as daemon and not exist")
 		service.SetAutoQuitHandler(time.Second*5, func() bool {
 			return false
 		})

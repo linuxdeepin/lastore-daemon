@@ -20,8 +20,6 @@ package main
 import (
 	"fmt"
 	"internal/system"
-
-	log "github.com/cihub/seelog"
 )
 
 // StartSystemJob start job
@@ -117,7 +115,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
 	}
-	log.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
+	logger.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 
 	j.Status = to
 
@@ -134,7 +132,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 
 	err := j.emitPropChangedStatus(to)
 	if err != nil {
-		_ = log.Warn(err)
+		logger.Warning(err)
 	}
 
 	if j.Status == system.SucceedStatus {

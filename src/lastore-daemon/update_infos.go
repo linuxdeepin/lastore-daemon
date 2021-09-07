@@ -21,10 +21,10 @@ import (
 	"internal/system"
 	"os"
 	"path"
-	"pkg.deepin.io/lib/dbusutil"
 	"time"
 
-	log "github.com/cihub/seelog"
+	"pkg.deepin.io/lib/dbusutil"
+
 	"github.com/godbus/dbus"
 )
 
@@ -99,7 +99,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []Application
 		}
 		updateInfos = append(updateInfos, info)
 	}
-	log.Info("ApplicationUpdateInfos: ", updateInfos)
+	logger.Info("ApplicationUpdateInfos: ", updateInfos)
 	return updateInfos, nil
 }
 

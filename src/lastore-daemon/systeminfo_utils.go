@@ -10,7 +10,6 @@ import (
 	"path"
 	"strings"
 
-	log "github.com/cihub/seelog"
 	hhardware "github.com/jouyouyun/hardware"
 )
 
@@ -40,7 +39,7 @@ func getSystemInfo() (SystemInfo, error) {
 	versionPath := path.Join(etcDir, osVersionFileName)
 	versionLines, err := loadFile(versionPath)
 	if err != nil {
-		_ = log.Warn("failed to load os-version file:", err)
+		logger.Warning("failed to load os-version file:", err)
 		return SystemInfo{}, err
 	}
 	mapOsVersion := make(map[string]string)
@@ -71,13 +70,13 @@ func getSystemInfo() (SystemInfo, error) {
 		".")
 	systemInfo.HardwareId, err = getHardwareId()
 	if err != nil {
-		_ = log.Warn("failed to get hardwareId:", err)
+		logger.Warning("failed to get hardwareId:", err)
 		return SystemInfo{}, err
 	}
 
 	systemInfo.Processor, err = getProcessorModelName()
 	if err != nil {
-		_ = log.Warn("failed to get modelName:", err)
+		logger.Warning("failed to get modelName:", err)
 		return SystemInfo{}, err
 	}
 	if len(systemInfo.Processor) > 100 {
@@ -121,7 +120,7 @@ func getHardwareId() (string, error) {
 func getProcessorModelName() (string, error) {
 	processor, err := getProcessorInfo(cpuInfoFilePath)
 	if err != nil {
-		_ = log.Warn("Get cpu info failed:", err)
+		logger.Warning("Get cpu info failed:", err)
 		return "", err
 	}
 	if processor != "" {
@@ -129,7 +128,7 @@ func getProcessorModelName() (string, error) {
 	}
 	res, err := runLsCpu() // 当 `/proc/cpuinfo` 中无法获取到处理器名称时，通过 `lscpu` 命令来获取
 	if err != nil {
-		_ = log.Warn("run lscpu failed:", err)
+		logger.Warning("run lscpu failed:", err)
 		return "", nil
 	}
 	return getCPUInfoFromMap(lscpuKeyModelName, res)
