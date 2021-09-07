@@ -120,7 +120,6 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	}
 
 	infos := DetectServer(n, indexName, official, mlist)
-	ShowMirrorInfos(infos)
 
 	f, err := os.Create(exportPath)
 	if err != nil {

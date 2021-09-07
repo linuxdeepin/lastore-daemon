@@ -25,8 +25,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/apcera/termtables"
 )
 
 // 目前这部分代码大部分工作不正常
@@ -155,40 +153,6 @@ type MirrorInfo struct {
 // SaveMirrorInfos 把 infos 序列化为 JSON 格式，用 w 写入。
 func SaveMirrorInfos(infos []MirrorInfo, w io.Writer) error {
 	return json.NewEncoder(w).Encode(infos)
-}
-
-// ShowMirrorInfos 以表格的形式输出镜像源信息 infos
-func ShowMirrorInfos(infos []MirrorInfo) {
-	termtables.EnableUTF8PerLocale()
-
-	t := termtables.CreateTable()
-	t.AddHeaders("Name", "2014", "Latency", "2015", "LastSync")
-	t.AddTitle(fmt.Sprintf("Report at %v", time.Now()))
-
-	sym := map[bool]string{
-		true:  "✔",
-		false: "✖",
-	}
-	for _, info := range infos {
-		// 名字太长，则截断名字
-		name := info.Name
-		if len(name) > 47 {
-			name = name[0:47] + "..."
-		}
-		var lm = info.LastSync.Format(time.ANSIC)
-		if info.LastSync.IsZero() {
-			lm = "?"
-		}
-		t.AddRow(name,
-			sym[info.Support2014],
-			fmt.Sprintf("%5.0fms", info.Latency.Seconds()*1000),
-			fmt.Sprintf("%7.0f%%", info.Progress*100),
-			lm,
-		)
-	}
-
-	fmt.Print("\n\n")
-	fmt.Println(t.Render())
 }
 
 func u2014(server string) string {
