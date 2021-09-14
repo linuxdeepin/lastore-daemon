@@ -15,9 +15,9 @@ Build-Depends:
  pkg-config,
  golang-ginkgo-dev,
  golang-gomega-dev,
- golang-check.v1-dev,
- golang-yaml.v2-dev,
- golang-codegangsta-cli-dev,
+ golang-gopkg-check.v1-dev,
+ golang-gopkg-yaml.v2-dev,
+ golang-github-codegangsta-cli-dev,
  golang-github-jouyouyun-hardware-dev,
  golang-github-knqyf263-go-deb-version-dev,
 Standards-Version: 4.1.3
