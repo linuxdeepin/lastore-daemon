@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=electron-ssr
+Comment=Cross platform ShadowsocksR GUI client built with electron
+Exec="/opt/electron-ssr/electron-ssr" %U
+Terminal=false
+Type=Application
+Icon=electron-ssr
+Encoding=UTF-8
+StartupWMClass=electron-ssr
+Categories=Development;
