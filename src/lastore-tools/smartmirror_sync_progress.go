@@ -105,7 +105,9 @@ func CheckURLExists(url string) *URLCheckResult {
 	if err != nil {
 		return &URLCheckResult{url, false, 0, n, time.Since(n)}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	switch resp.StatusCode / 100 {
 	case 4, 5:
@@ -122,7 +124,9 @@ func ParseIndex(indexUrl string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	d := json.NewDecoder(f)
 	var lines []string
@@ -223,12 +227,15 @@ func DetectServer(parallel int, indexName string, official string, mlist []strin
 }
 
 func fetchLastSync(url string) time.Time {
+	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println("E:", resp)
 		return time.Time{}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	t, e := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 	if e != nil {
 		fmt.Println("\nfetchLastSync:", url, e)

@@ -50,11 +50,14 @@ type RepositoryInfo struct {
 }
 
 func DecodeJson(fpath string, d interface{}) error {
+	// #nosec G304
 	f, err := os.Open(fpath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	return json.NewDecoder(f).Decode(&d)
 }
@@ -64,7 +67,9 @@ func EncodeJson(fpath string, d interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	return json.NewEncoder(f).Encode(d)
 }
@@ -119,6 +124,7 @@ func UpdateCustomSourceDir(mode uint64) error {
 	if err != nil {
 		logger.Warning(err)
 	}
+	// #nosec G301
 	err = os.MkdirAll(customSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)

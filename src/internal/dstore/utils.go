@@ -13,6 +13,7 @@ import (
 // Check file in cache
 func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Duration) error {
 	decodeFile := func() error {
+		// #nosec G304
 		f, err := os.Open(cacheFilepath)
 		if err != nil {
 			return err
@@ -39,7 +40,9 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	lastModified, _ := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 	if (fi != nil) && lastModified.Sub(fi.ModTime()) <= 0 {
 		// update modify time
@@ -55,7 +58,9 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 		if err != nil {
 			return err
 		}
-		defer reader.Close()
+		defer func() {
+			_ = reader.Close()
+		}()
 	default:
 		reader = resp.Body
 	}
@@ -70,13 +75,15 @@ func cacheFetchJSON(v interface{}, url, cacheFilepath string, expire time.Durati
 	if err != nil {
 		return err
 	}
-
+	// #nosec G302 G304
 	f, err := os.OpenFile(cacheFilepath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "failed to open cache file:", err)
 		return nil
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	_, err = f.Write(data)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "failed to write data to cache file:", err)

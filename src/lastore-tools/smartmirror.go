@@ -157,11 +157,14 @@ func getMirrorList(p string) ([]string, error) {
 	}
 
 	// 把 p 当作文件路径，解码 JSON 到 raw 中
+	// #nosec G304
 	f, err := os.Open(p)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	d := json.NewDecoder(f)
 	var raw []struct {

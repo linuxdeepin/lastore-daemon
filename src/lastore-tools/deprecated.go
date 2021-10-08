@@ -36,13 +36,13 @@ type DesktopInfo struct {
 }
 
 func BuildDesktopDirectories() []string {
-	var scanDirectories map[string]struct{} = map[string]struct{}{
-		"/usr/share/applications":             struct{}{},
-		"/usr/share/applications/kde4":        struct{}{},
-		"/usr/local/share/applications":       struct{}{},
-		"/usr/local/share/applications/kde4":  struct{}{},
-		"/usr/share/deepin/applications":      struct{}{},
-		"/usr/share/deepin/applications/kde4": struct{}{},
+	var scanDirectories = map[string]struct{}{
+		"/usr/share/applications":             {},
+		"/usr/share/applications/kde4":        {},
+		"/usr/local/share/applications":       {},
+		"/usr/local/share/applications/kde4":  {},
+		"/usr/share/deepin/applications":      {},
+		"/usr/share/deepin/applications/kde4": {},
 	}
 	xdg_data_home := os.Getenv("$XDG_DATA_HOME")
 	if xdg_data_home == "" {
@@ -81,6 +81,7 @@ func GetDesktopFiles(dirs []string) []string {
 // 2. desktop --> exec
 // 3. desktop --> package
 func GenerateDesktopIndexes(baseDir string) error {
+	// #nosec G301
 	_ = os.MkdirAll(baseDir, 0755)
 
 	packageIndex, installTimeIndex := ParsePackageInfos()
@@ -118,12 +119,15 @@ var execRegexp = regexp.MustCompile("Exec=(.+)")
 
 // ParseDesktopInfo 根据文件列表返回分析结果
 func ParseDesktopInfo(packagesIndex map[string]string, dPath string) *DesktopInfo {
+	// #nosec G304
 	f, err := os.Open(dPath)
 	if err != nil {
 		fmt.Println("ParseDesktopInfo:", err)
 		return nil
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	buf := bufio.NewReader(f)
 
@@ -159,12 +163,15 @@ func ParseDesktopInfo(packagesIndex map[string]string, dPath string) *DesktopInf
 }
 
 func getDesktopFilePaths(listFilePath string) []string {
+	// #nosec G304
 	f, err := os.Open(listFilePath)
 	if err != nil {
 		fmt.Println("getDesktopFilePaths:", err)
 		return nil
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	var r []string
 
@@ -226,6 +233,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 
 func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string {
 	var old = make(map[string]string)
+	// #nosec G304
 	if content, err := ioutil.ReadFile(fpath); err == nil {
 		if err := json.Unmarshal(content, &old); err != nil {
 			logger.Warningf("mergeDesktopIndex:%q %v\n", fpath, err)

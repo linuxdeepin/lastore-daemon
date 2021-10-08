@@ -47,11 +47,14 @@ func handleDropinDir(dirPath string, handle func(f io.Reader) error) error {
 		if info.IsDir() {
 			return filepath.SkipDir
 		}
+		// #nosec G304
 		f, err := os.Open(path)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() {
+			_ = f.Close()
+		}()
 		return handle(f)
 	})
 }

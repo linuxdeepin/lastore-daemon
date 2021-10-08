@@ -46,6 +46,7 @@ const (
 // ListPackageFile list files path contained in the packages
 func ListPackageFile(packages ...string) []string {
 	desktopFiles, err := utils.FilterExecOutput(
+		// #nosec G204
 		exec.Command("dpkg", append([]string{"-L", "--"}, packages...)...),
 		time.Second*2,
 		func(string) bool { return true },
@@ -58,6 +59,7 @@ func ListPackageFile(packages ...string) []string {
 
 // QueryPackageDependencies return the directly dependencies
 func QueryPackageDependencies(pkgId string) []string {
+	// #nosec G204
 	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Depends}", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return nil
@@ -83,6 +85,7 @@ Dir::Cache::pkgcache=pkgcache.bin
 */
 func GetArchivesDir(configPath string) (string, error) {
 	binAptConfig, _ := exec.LookPath("apt-config")
+	// #nosec G204
 	output, err := exec.Command(binAptConfig, "-c", configPath, "--format", "%f=%v%n", "dump", "Dir").Output()
 	if err != nil {
 		return "", err
@@ -123,6 +126,7 @@ loop:
 
 // QueryFileCacheSize parsing the file total size(kb) of the path
 func QueryFileCacheSize(path string) (float64, error) {
+	// #nosec G204
 	output, err := exec.Command("/usr/bin/du", "-s", path).Output()
 	if err != nil {
 		return 0, err
@@ -140,6 +144,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 	if len(packages) == 0 {
 		return SizeDownloaded, NotFoundError("hasn't any packages")
 	}
+	// #nosec G204
 	cmd := exec.Command("/usr/bin/apt-get",
 		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2ConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
@@ -159,6 +164,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 
 // QueryPackageInstalled query whether the pkgId installed
 func QueryPackageInstalled(pkgId string) bool {
+	// #nosec G204
 	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${db:Status-Status}", "--", pkgId).CombinedOutput()
 	if err != nil {
 		return false
@@ -230,9 +236,9 @@ func init() {
 	if err != nil {
 		RepoInfos = []RepositoryInfo{defaultRepoInfo}
 	}
-	os.Setenv("DEBIAN_FRONTEND", "noninteractive")
-	os.Setenv("DEBIAN_PRIORITY", "critical")
-	os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
+	_ = os.Setenv("DEBIAN_FRONTEND", "noninteractive")
+	_ = os.Setenv("DEBIAN_PRIORITY", "critical")
+	_ = os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
 }
 
 func DetectDefaultRepoInfo(rInfos []RepositoryInfo) RepositoryInfo {
@@ -240,7 +246,9 @@ func DetectDefaultRepoInfo(rInfos []RepositoryInfo) RepositoryInfo {
 	if err != nil {
 		return defaultRepoInfo
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	r := bufio.NewReader(f)
 	for {
