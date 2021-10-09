@@ -68,8 +68,9 @@ var CMDSmartMirror = cli.Command{
 			Usage: `show the history of serving
      ✓ and ★ indicate the candidates in next mirror selecting.
      But ★ also indicate the mirror was unworkable in preview detecting.`,
-			Action: func(c *cli.Context) {
+			Action: func(c *cli.Context) error {
 				fmt.Println("Didn't support at this version")
+				return nil
 			},
 		},
 		{
@@ -96,7 +97,7 @@ var CMDSmartMirror = cli.Command{
 	},
 }
 
-func SubmainMirrorSynProgress(c *cli.Context) {
+func SubmainMirrorSynProgress(c *cli.Context) error {
 	indexName := c.String("index")
 	exportPath := c.String("export")
 	official := c.Parent().String("official")
@@ -110,7 +111,7 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 		for _, m := range mlist {
 			fmt.Println(m)
 		}
-		return
+		return nil
 	}
 
 	// 如果未指定参数，则使用所有的镜像源列表
@@ -124,12 +125,13 @@ func SubmainMirrorSynProgress(c *cli.Context) {
 	f, err := os.Create(exportPath)
 	if err != nil {
 		fmt.Println("E:", err)
-		return
+		return err
 	}
 	err = SaveMirrorInfos(infos, f)
 	if err != nil {
 		fmt.Println("E:", err)
 	}
+	return err
 }
 
 //  appendSuffix 如果 r 没有后缀 suffix，则加上。

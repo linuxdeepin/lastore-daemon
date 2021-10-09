@@ -56,8 +56,8 @@ var CMDMetadata = cli.Command{
 	},
 }
 
-// 目前 metadata 功能被废弃
-func MainMetadata(c *cli.Context) {
+// MainMetadata 目前 metadata 功能被废弃
+func MainMetadata(c *cli.Context) error {
 	remote := c.String("remote")
 	repo := c.String("local")
 	checkout := c.String("checkout")
@@ -65,7 +65,7 @@ func MainMetadata(c *cli.Context) {
 	tree, err := utils.NewOSTree(repo, remote)
 	if err != nil {
 		fmt.Println("NewOSTree:", err)
-		return
+		return err
 	}
 
 	updateFlag := c.Bool("update")
@@ -74,19 +74,19 @@ func MainMetadata(c *cli.Context) {
 		err = tree.Pull("lastore")
 		if err != nil {
 			fmt.Println("pullRepo:", err)
-			return
+			return err
 		}
 		err = tree.Checkout("lastore", checkout, false)
 		if err != nil {
 			fmt.Println("checkoutRepo:", err)
-			return
+			return err
 		}
 	}
 
 	if c.Bool("list") {
 		c, err := tree.List("lastore", "/")
 		fmt.Println(c, err)
-		return
+		return err
 	}
 
 	for _, id := range c.Args() {
@@ -97,5 +97,5 @@ func MainMetadata(c *cli.Context) {
 		}
 		fmt.Println(c)
 	}
-
+	return nil
 }

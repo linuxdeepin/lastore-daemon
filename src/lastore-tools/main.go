@@ -63,9 +63,7 @@ var logger = log.NewLogger("lastore/lastore-tools")
 
 // MainUpdater 处理 update 子命令。
 // 在文件 var/lib/lastore/scripts/update_metadata_info 中被调用。
-func MainUpdater(c *cli.Context) {
-	var err error
-
+func MainUpdater(c *cli.Context) (err error) {
 	// 输出文件
 	fpath := c.String("output")
 	job := c.String("job")
@@ -95,13 +93,13 @@ func MainUpdater(c *cli.Context) {
 		url := c.String("mirrors-url")
 		err = mirrors.GenerateUnpublishedMirrors(url, fpath)
 	default:
-		cli.ShowCommandHelp(c, "update")
-		return
+		_ = cli.ShowCommandHelp(c, "update")
 	}
 	if err != nil {
 		fmt.Println("E:", err)
 		os.Exit(-1)
 	}
+	return err
 }
 
 func main() {
@@ -130,5 +128,8 @@ func main() {
 	}
 	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop}
 
-	app.RunAndExitOnError()
+	err := app.Run(os.Args)
+	if err != nil {
+		logger.Fatal(err)
+	}
 }

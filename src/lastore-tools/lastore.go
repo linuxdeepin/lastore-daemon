@@ -56,7 +56,7 @@ var CMDTester = cli.Command{
 // MainTester 处理 test 子命令。
 // 其中 install 和 remove 命令不能直接执行，需要把本程序的路径（一般是 /usr/bin/lastore-tools）加入配置文件
 //（一般是/var/lib/lastore/config.json）中的 AllowInstallRemovePkgExecPaths 列表中。
-func MainTester(c *cli.Context) {
+func MainTester(c *cli.Context) error {
 	var err error
 	switch c.String("job") {
 	case "install":
@@ -72,12 +72,13 @@ func MainTester(c *cli.Context) {
 	case "prepare_upgrade":
 		err = LastorePrepareUpgrade()
 	default:
-		cli.ShowCommandHelp(c, "test")
+		_ = cli.ShowCommandHelp(c, "test")
 	}
 	if err != nil {
 		fmt.Println("E:", err)
 		os.Exit(-1)
 	}
+	return err
 }
 
 func LastoreUpdate() error {
