@@ -9,6 +9,12 @@ import (
 func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 	return dbusutil.ExportedMethods{
 		{
+			Name:    "ClassifiedUpgrade",
+			Fn:      v.ClassifiedUpgrade,
+			InArgs:  []string{"updateType"},
+			OutArgs: []string{"outArg0"},
+		},
+		{
 			Name:    "CleanArchives",
 			Fn:      v.CleanArchives,
 			OutArgs: []string{"job"},

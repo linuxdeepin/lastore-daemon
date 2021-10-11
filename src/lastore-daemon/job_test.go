@@ -8,7 +8,7 @@ import (
 
 func TestJob(t *testing.T) {
 	tests := []string{system.DownloadJobType, system.InstallJobType, system.RemoveJobType, system.UpdateJobType, system.DistUpgradeJobType,
-		system.PrepareDistUpgradeJobType, system.UpdateSourceJobType, system.CleanJobType, system.FixErrorJobType, system.CustomUpdateJobType}
+		system.PrepareDistUpgradeJobType, system.UpdateSourceJobType, system.CleanJobType, system.FixErrorJobType}
 
 	info := system.JobProgressInfo{}
 	info.Cancelable = true

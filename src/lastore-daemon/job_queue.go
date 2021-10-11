@@ -13,16 +13,14 @@ type JobList []*Job
 func (l JobList) Len() int {
 	return len(l)
 }
+
 func (l JobList) Less(i, j int) bool {
-	if (l[i].Type == system.UpdateSourceJobType || l[i].Type == system.CustomUpdateJobType) &&
-		(l[j].Type == system.UpdateSourceJobType || l[j].Type == system.CustomUpdateJobType) {
-		return l[i].CreateTime < l[j].CreateTime
-	}
-	if l[i].Type == system.UpdateSourceJobType || l[i].Type == system.CustomUpdateJobType {
+	if l[i].Type == system.UpdateSourceJobType {
 		return true
 	}
 	return l[i].CreateTime < l[j].CreateTime
 }
+
 func (l JobList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }

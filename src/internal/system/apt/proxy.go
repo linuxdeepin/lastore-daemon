@@ -126,12 +126,15 @@ func WaitDpkgLockRelease() {
 }
 
 func checkLock(p string) (string, bool) {
+	// #nosec G304
 	file, err := os.Open(p)
 	if err != nil {
 		logger.Warningf("error opening %q: %v", p, err)
 		return "", false
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	flockT := syscall.Flock_t{
 		Type:   syscall.F_WRLCK,
@@ -222,7 +225,7 @@ func safeStart(c *aptCommand) error {
 	args := c.apt.Args
 	// add -s option
 	args = append([]string{"-s"}, args[1:]...)
-	cmd := exec.Command("apt-get", args...)
+	cmd := exec.Command("apt-get", args...) // #nosec G204
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -268,15 +271,6 @@ func (p *APTSystem) Download(jobId string, packages []string) error {
 	return c.Start()
 }
 
-func (p *APTSystem) PrepareDistUpgrade(jobId string, packages []string) error {
-	err := checkPkgSystemError(false)
-	if err != nil {
-		return err
-	}
-	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.indicator, packages)
-	return c.Start()
-}
-
 func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
 	WaitDpkgLockRelease()
 	err := checkPkgSystemError(true)
@@ -300,35 +294,19 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 	return safeStart(c)
 }
 
-func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string) error {
+func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error {
 	WaitDpkgLockRelease()
 	err := checkPkgSystemError(true)
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, nil)
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, cmdArgs)
 	c.setEnv(environ)
 	return safeStart(c)
 }
 
 func (p *APTSystem) UpdateSource(jobId string) error {
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
-	c.atExitFn = func() bool {
-		if c.exitCode == ExitSuccess &&
-			bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
-
-			c.indicateFailed("IndexDownloadFailed", c.stderr.String(), false)
-			return true
-		}
-		return false
-	}
-	return c.Start()
-}
-
-// 在控制中心进行检查更新时,使用custom-update(按配置文件update)的命令进行检查更新
-func (p *APTSystem) CustomUpdate(jobId string) error {
-	logger.Info("start custom update")
-	c := newAPTCommand(p, jobId, system.CustomUpdateJobType, p.indicator, nil)
 	c.atExitFn = func() bool {
 		if c.exitCode == ExitSuccess &&
 			bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {

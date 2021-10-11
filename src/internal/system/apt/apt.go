@@ -92,7 +92,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		"APT::Status-Fd": "3",
 	}
 
-	if cmdType == system.DownloadJobType || cmdType == system.PrepareDistUpgradeJobType {
+	if cmdType == system.DownloadJobType {
 		options["Debug::NoLocking"] = "1"
 		options["Acquire::Retries"] = "1"
 		args = append(args, "-m")
@@ -101,54 +101,29 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	for k, v := range options {
 		args = append(args, "-o", k+"="+v)
 	}
-	// TODO: 针对安装uos-release-note特殊化处理,后续在1050分类安装更新中进行处理;
-	cunstomInstall := false
-	if cmdType == system.DownloadJobType || cmdType == system.InstallJobType {
-		for _, arg := range cmdArgs {
-			if strings.Contains(arg, "uos-release-note") {
-				cunstomInstall = true
-				break
-			}
-		}
-	}
 	switch cmdType {
 	case system.InstallJobType:
-		if cunstomInstall {
-			args = append(args, "-c", system.LastoreAptV2ConfPath)
-		} else {
-			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
-		}
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DistUpgradeJobType:
-		args = append(args, "-c", system.LastoreAptV2ConfPath)
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "--allow-downgrades", "--allow-change-held-packages")
 		args = append(args, "dist-upgrade")
+		args = append(args, cmdArgs...)
 	case system.RemoveJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "autoremove", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
-		if cunstomInstall {
-			args = append(args, "-c", system.LastoreAptV2ConfPath)
-		} else {
-			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
-		}
-		args = append(args, "install", "-d", "--allow-change-held-packages")
-		args = append(args, "--")
-		args = append(args, cmdArgs...)
-	case system.PrepareDistUpgradeJobType:
-		args = append(args, "-c", system.LastoreAptV2ConfPath)
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
 		sh := "apt-get -y -o APT::Status-Fd=3 update && /var/lib/lastore/scripts/build_system_info -now"
-		return exec.Command("/bin/sh", "-c", sh)
-	case system.CustomUpdateJobType:
-		sh := fmt.Sprintf("apt-get -y -o APT::Status-Fd=3 -c %s update && /var/lib/lastore/scripts/build_system_info -now", system.LastoreAptV2ConfPath)
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
@@ -159,7 +134,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		case system.ErrTypeDpkgInterrupted:
 			sh := "dpkg --force-confold --configure -a;" +
 				fmt.Sprintf("apt-get -y -c %s -f install;", system.LastoreAptV2CommonConfPath)
-			return exec.Command("/bin/sh", "-c", sh)
+			return exec.Command("/bin/sh", "-c", sh) // #nosec G204
 		case system.ErrTypeDependenciesBroken:
 			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 			args = append(args, "-f", "install")
@@ -209,7 +184,9 @@ func (c *aptCommand) Start() error {
 	}
 
 	// It must be closed after c.osCMD.Start
-	defer ww.Close()
+	defer func() {
+		_ = ww.Close()
+	}()
 
 	c.apt.ExtraFiles = append(c.apt.ExtraFiles, ww)
 
@@ -217,7 +194,7 @@ func (c *aptCommand) Start() error {
 	err = c.apt.Start()
 	c.aptMu.Unlock()
 	if err != nil {
-		rr.Close()
+		_ = rr.Close()
 		return err
 	}
 

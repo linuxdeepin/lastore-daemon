@@ -87,7 +87,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 		progressRangeEnd:   1,
 		environ:            environ,
 	}
-	if jobType == system.DownloadJobType || jobType == system.PrepareDistUpgradeJobType {
+	if jobType == system.DownloadJobType {
 		go j.initDownloadSize()
 	}
 	return j

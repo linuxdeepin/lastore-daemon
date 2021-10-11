@@ -46,7 +46,16 @@ const (
 	UpdateSourceJobType       = "update_source"
 	CleanJobType              = "clean"
 	FixErrorJobType           = "fix_error"
-	CustomUpdateJobType       = "custom_update"
+
+	// 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
+	PrepareSystemUpgradeJobType   = "prepare_system_upgrade"
+	PrepareAppStoreUpgradeJobType = "prepare_appstore_upgrade"
+	PrepareSecurityUpgradeJobType = "prepare_security_upgrade"
+	PrepareUnknownUpgradeJobType  = "prepare_unknown_upgrade"
+	SystemUpgradeJobType          = "system_upgrade"
+	AppStoreUpgradeJobType        = "appstore_upgrade"
+	SecurityUpgradeJobType        = "security_upgrade"
+	UnknownUpgradeJobType         = "unknown_upgrade"
 )
 
 const (
@@ -66,6 +75,11 @@ type JobProgressInfo struct {
 	FatalError  bool
 }
 
+type SourceUpgradeInfo struct {
+	UpgradeInfo []UpgradeInfo
+	Error       *UpdateInfoError
+}
+
 type UpgradeInfo struct {
 	Package        string
 	CurrentVersion string
@@ -83,6 +97,8 @@ func (err *UpdateInfoError) Error() string {
 		err.Type, err.Detail)
 }
 
+type SourceUpgradeInfoMap map[string]SourceUpgradeInfo
+
 type Architecture string
 
 var NotImplementError = errors.New("not implement")
@@ -93,8 +109,10 @@ func (e NotFoundErrorType) Error() string {
 	return string(e)
 }
 
+const NotFoundErrorMsg = "not found resource: "
+
 func NotFoundError(w string) NotFoundErrorType {
-	return NotFoundErrorType("not found resource: " + w)
+	return NotFoundErrorType(NotFoundErrorMsg + w)
 }
 
 var NotSupportError = errors.New("not support operation")
@@ -106,10 +124,8 @@ type System interface {
 	Download(jobId string, packages []string) error
 	Install(jobId string, packages []string, environ map[string]string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
-	PrepareDistUpgrade(jobId string, packages []string) error
-	DistUpgrade(jobId string, environ map[string]string) error
+	DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error
 	UpdateSource(jobId string) error
-	CustomUpdate(jobId string) error
 	Clean(jobId string) error
 	Abort(jobId string) error
 	AttachIndicator(Indicator)

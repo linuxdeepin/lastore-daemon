@@ -77,6 +77,15 @@ func (v *Updater) emitPropChangedUpdatablePackages(value []string) error {
 	return v.service.EmitPropertyChanged(v, "UpdatablePackages", value)
 }
 
+func (v *Updater) setPropClassifiedUpdatablePackages(value map[string][]string) {
+	v.ClassifiedUpdatablePackages = value
+	v.emitPropChangedClassifiedUpdatablePackages(value)
+}
+
+func (v *Updater) emitPropChangedClassifiedUpdatablePackages(value map[string][]string) error {
+	return v.service.EmitPropertyChanged(v, "ClassifiedUpdatablePackages", value)
+}
+
 func (v *Job) setPropId(value string) (changed bool) {
 	if v.Id != value {
 		v.Id = value
@@ -260,7 +269,7 @@ func (v *Manager) emitPropChangedAutoClean(value bool) error {
 	return v.service.EmitPropertyChanged(v, "AutoClean", value)
 }
 
-func (v *Manager) setPropUpdateMode(value uint64) (changed bool) {
+func (v *Manager) setPropUpdateMode(value system.UpdateType) (changed bool) {
 	if v.UpdateMode != value {
 		v.UpdateMode = value
 		v.emitPropChangedUpdateMode(value)
@@ -269,6 +278,6 @@ func (v *Manager) setPropUpdateMode(value uint64) (changed bool) {
 	return false
 }
 
-func (v *Manager) emitPropChangedUpdateMode(value uint64) error {
+func (v *Manager) emitPropChangedUpdateMode(value system.UpdateType) error {
 	return v.service.EmitPropertyChanged(v, "UpdateMode", value)
 }

@@ -115,9 +115,9 @@ func (*testWrap) TestBuildUpgradeInfo(c *C.C) {
 		lines = append(lines, item.Raw)
 	}
 	infos := mapUpgradeInfo(lines, buildUpgradeInfoRegex([]system.Architecture{"amd64", "i386", "alpha"}), buildUpgradeInfo)
-	c.Assert(len(infos), C.Equals, len(data))
+	c.Assert(len(infos.UpgradeInfo), C.Equals, len(data))
 	for i, item := range data {
-		info := infos[i]
+		info := infos.UpgradeInfo[i]
 		c.Check(info.Package, C.Equals, item.Package)
 		c.Check(info.CurrentVersion, C.Equals, item.CurrentVersion)
 		c.Check(info.LastVersion, C.Equals, item.LastVersion)

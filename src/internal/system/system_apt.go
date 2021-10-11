@@ -40,7 +40,7 @@ import (
 const (
 	LastoreAptOrgConfPath      = "/var/lib/lastore/apt.conf"
 	LastoreAptV2ConfPath       = "/var/lib/lastore/apt_v2.conf"
-	LastoreAptV2CommonConfPath = "/var/lib/lastore/apt_v2_common.conf"
+	LastoreAptV2CommonConfPath = "/var/lib/lastore/apt_v2_common.conf" // 该配置指定了通过lastore更新的deb包缓存路径
 )
 
 // ListPackageFile list files path contained in the packages
@@ -146,7 +146,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 	}
 	// #nosec G204
 	cmd := exec.Command("/usr/bin/apt-get",
-		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2ConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
+		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
 	lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
 		_, _err := parsePackageSize(line)
@@ -174,24 +174,13 @@ func QueryPackageInstalled(pkgId string) bool {
 }
 
 // QueryPackageInstallable query whether the pkgId can be installed
-func QueryPackageInstallable(useCustomConf bool, pkgId string) bool {
-	var showArgs = []string{"show"}
-	var policyArgs = []string{"policy"}
-	if useCustomConf {
-		showArgs = append(showArgs, "-c", LastoreAptV2ConfPath)
-		policyArgs = append(policyArgs, "-c", LastoreAptV2ConfPath)
-	} else {
-		showArgs = append(showArgs, "-c", LastoreAptV2CommonConfPath)
-		policyArgs = append(policyArgs, "-c", LastoreAptV2CommonConfPath)
-	}
-	showArgs = append(showArgs, "--", pkgId)
-	policyArgs = append(policyArgs, "--", pkgId)
-	err := exec.Command("/usr/bin/apt-cache", showArgs...).Run()
+func QueryPackageInstallable(pkgId string) bool {
+	err := exec.Command("/usr/bin/apt-cache", "-c", LastoreAptV2CommonConfPath, "show", "--", pkgId).Run() // #nosec G204
 	if err != nil {
 		return false
 	}
 
-	out, err := exec.Command("/usr/bin/apt-cache", policyArgs...).CombinedOutput()
+	out, err := exec.Command("/usr/bin/apt-cache", "-c", LastoreAptV2CommonConfPath, "policy", "--", pkgId).CombinedOutput() // #nosec G204
 	if err != nil {
 		return false
 	}

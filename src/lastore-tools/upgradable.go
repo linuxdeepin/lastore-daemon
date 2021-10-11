@@ -25,7 +25,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"regexp"
 	"strings"
 	"syscall"
@@ -54,7 +53,7 @@ func buildUpgradeInfo(needle *regexp.Regexp, line string) *system.UpgradeInfo {
 	return nil
 }
 
-func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regexp, string) *system.UpgradeInfo) []system.UpgradeInfo {
+func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regexp, string) *system.UpgradeInfo) system.SourceUpgradeInfo {
 	var infos []system.UpgradeInfo
 	for _, line := range lines {
 		info := fn(needle, line)
@@ -63,18 +62,33 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 		}
 		infos = append(infos, *info)
 	}
-	return infos
+	return system.SourceUpgradeInfo{
+		UpgradeInfo: infos,
+		Error:       nil,
+	}
 }
 
 // return the pkgs from apt dist-upgrade
 // NOTE: the result strim the arch suffix
-func listDistUpgradePackages(useCustomConf bool) ([]string, error) {
-	var cmd *exec.Cmd
-	if useCustomConf {
-		cmd = exec.Command("apt-get", "-c", system.LastoreAptV2ConfPath, "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
-	} else {
-		cmd = exec.Command("apt-get", "dist-upgrade", "--assume-no", "-o", "Debug::NoLocking=1")
+func listDistUpgradePackages(sourcePath string) ([]string, error) {
+	args := []string{
+		"-c", system.LastoreAptV2CommonConfPath,
+		"dist-upgrade", "--assume-no",
+		"-o", "Debug::NoLocking=1",
 	}
+	if info, err := os.Stat(sourcePath); err == nil {
+		if info.IsDir() {
+			args = append(args, "-o", "Dir::Etc::SourceList=/dev/null")
+			args = append(args, "-o", "Dir::Etc::SourceParts="+sourcePath)
+		} else {
+			args = append(args, "-o", "Dir::Etc::SourceList="+sourcePath)
+			args = append(args, "-o", "Dir::Etc::SourceParts=/dev/null")
+		}
+	} else {
+		return nil, err
+	}
+
+	cmd := exec.Command("apt-get", args...) // #nosec G204
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
@@ -128,43 +142,15 @@ func parseAptShowList(r io.Reader, title string) []string {
 	return p
 }
 
-func queryDpkgUpgradeInfoByAptList() ([]string, error) {
-	var cmd *exec.Cmd
-	// 判断自定义更新使用的list文件是否存在,sources.list.d可以为空
-	var queryByCustomConf bool
-	_, err := os.Stat("/var/lib/lastore/sources.list.d")
-	if err != nil {
-		config := struct {
-			UpdateMode uint64
-		}{}
-		err := system.DecodeJson(path.Join(system.VarLibDir, "config.json"), &config)
-		if err == nil {
-			err := system.UpdateCustomSourceDir(config.UpdateMode)
-			if err != nil {
-				logger.Warning(err)
-				queryByCustomConf = false
-			} else {
-				queryByCustomConf = true
-			}
-		} else {
-			queryByCustomConf = false
-		}
-	} else {
-		queryByCustomConf = true
-	}
-
-	ps, err := listDistUpgradePackages(queryByCustomConf)
+func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
+	ps, err := listDistUpgradePackages(sourcePath)
 	if err != nil {
 		return nil, err
 	}
 	if len(ps) == 0 {
 		return nil, nil
 	}
-	if queryByCustomConf {
-		cmd = exec.Command("apt", append([]string{"-c", system.LastoreAptV2ConfPath, "list", "--upgradable"}, ps...)...)
-	} else {
-		cmd = exec.Command("apt", append([]string{"list", "--upgradable"}, ps...)...)
-	}
+	cmd := exec.Command("apt", append([]string{"-c", system.LastoreAptV2CommonConfPath, "list", "--upgradable"}, ps...)...) // #nosec G204
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {
@@ -222,22 +208,41 @@ func getSystemArchitectures() []system.Architecture {
 }
 
 func GenerateUpdateInfos(fpath string) error {
-	lines, err := queryDpkgUpgradeInfoByAptList()
+	err := system.UpdateUnknownSourceDir()
 	if err != nil {
-		var updateInfoErr system.UpdateInfoError
-		pkgSysErr, ok := err.(*system.PkgSystemError)
-		if ok {
-			updateInfoErr.Type = pkgSysErr.GetType()
-			updateInfoErr.Detail = pkgSysErr.GetDetail()
-		} else {
-			updateInfoErr.Type = "unknown"
-			updateInfoErr.Detail = err.Error()
-		}
-		return writeData(fpath, updateInfoErr)
+		logger.Warning(err)
 	}
-	data := mapUpgradeInfo(
-		lines,
-		buildUpgradeInfoRegex(getSystemArchitectures()),
-		buildUpgradeInfo)
-	return writeData(fpath, data)
+	updateInfoMap := make(system.SourceUpgradeInfoMap)
+	for category, sourcePath := range system.GetCategorySourceMap() {
+		var upgradeInfo system.SourceUpgradeInfo
+		var updateInfoErr *system.UpdateInfoError
+		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)
+		if err != nil {
+			if os.IsNotExist(err) { // 该类型源文件不存在时,无需将错误写入到文件中
+				logger.Info(err)
+			} else {
+				updateInfoErr = &system.UpdateInfoError{}
+				pkgSysErr, ok := err.(*system.PkgSystemError)
+				if ok {
+					updateInfoErr.Type = pkgSysErr.GetType()
+					updateInfoErr.Detail = pkgSysErr.GetDetail()
+				} else {
+					updateInfoErr.Type = "unknown"
+					updateInfoErr.Detail = err.Error()
+				}
+			}
+			upgradeInfo = system.SourceUpgradeInfo{
+				UpgradeInfo: nil,
+				Error:       updateInfoErr,
+			}
+		} else {
+			upgradeInfo = mapUpgradeInfo(
+				lines,
+				buildUpgradeInfoRegex(getSystemArchitectures()),
+				buildUpgradeInfo)
+		}
+		updateInfoMap[category.JobType()] = upgradeInfo
+	}
+
+	return writeData(fpath, updateInfoMap)
 }

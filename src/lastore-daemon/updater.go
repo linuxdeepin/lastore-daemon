@@ -28,6 +28,7 @@ import (
 
 	"github.com/godbus/dbus"
 	"pkg.deepin.io/lib/dbusutil"
+	"pkg.deepin.io/lib/strv"
 )
 
 type ApplicationUpdateInfo struct {
@@ -52,6 +53,8 @@ type Updater struct {
 	UpdatableApps []string
 	// dbusutil-gen: equal=nil
 	UpdatablePackages []string
+	// dbusutil-gen: equal=nil
+	ClassifiedUpdatablePackages map[string][]string
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
@@ -64,7 +67,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		MirrorSource:        config.MirrorSource,
 		UpdateNotify:        config.UpdateNotify,
 	}
-
+	u.ClassifiedUpdatablePackages = make(map[string][]string)
 	go u.waitOnlineCheck()
 	go u.loopCheck()
 	return u
@@ -74,7 +77,7 @@ func (u *Updater) waitOnlineCheck() {
 	err := exec.Command("nm-online", "-t", "3600").Run()
 	if err == nil {
 		if u.AutoCheckUpdates {
-			_, err = u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
+			_, err = u.manager.updateSource(u.UpdateNotify)
 			if err != nil {
 				logger.Warning(err)
 			}
@@ -104,7 +107,7 @@ func (u *Updater) loopCheck() {
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
-			_, err := u.manager.updateSource(u.UpdateNotify, methodCallerControlCenter) // 自动检查更新按照控制中心更新配置进行检查
+			_, err := u.manager.updateSource(u.UpdateNotify)
 			if err != nil {
 				logger.Warning(err)
 			}
@@ -129,7 +132,7 @@ func startUpdateMetadataInfoService() {
 func SetAPTSmartMirror(url string) error {
 	return ioutil.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
 		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
-		0644)
+		0644) // #nosec G306
 }
 
 // 设置用于下载软件的镜像源
@@ -208,10 +211,17 @@ func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	return r
 }
 
-func UpdatableNames(infos []system.UpgradeInfo) []string {
+func UpdatableNames(infosMap system.SourceUpgradeInfoMap) []string {
+	// 去重,防止出现下载量出现偏差（同一包，重复出现在系统仓库和商店仓库）
 	var apps []string
-	for _, info := range infos {
-		apps = append(apps, info.Package)
+	appsMap := make(map[string]struct{})
+	for _, infos := range infosMap {
+		for _, info := range infos.UpgradeInfo {
+			appsMap[info.Package] = struct{}{}
+		}
+	}
+	for name := range appsMap {
+		apps = append(apps, name)
 	}
 	return apps
 }
@@ -278,7 +288,7 @@ func (u *Updater) restoreSystemSource() error {
 	// write backup file
 	current, err := ioutil.ReadFile(aptSource)
 	if err == nil {
-		err = ioutil.WriteFile(aptSource+".bak", current, 0644)
+		err = ioutil.WriteFile(aptSource+".bak", current, 0644) // #nosec G306
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -291,7 +301,7 @@ func (u *Updater) restoreSystemSource() error {
 		return err
 	}
 
-	err = ioutil.WriteFile(aptSource, origin, 0644)
+	err = ioutil.WriteFile(aptSource, origin, 0644) // #nosec G306
 	return err
 }
 
@@ -302,4 +312,31 @@ func (u *Updater) RestoreSystemSource() *dbus.Error {
 		return dbusutil.ToError(err)
 	}
 	return nil
+}
+
+func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeInfoMap) {
+	changed := false
+	updatablePackages := make(map[string][]string)
+
+	u.PropsMu.RLock()
+	classifiedUpdatablePackages := u.ClassifiedUpdatablePackages
+	u.PropsMu.RUnlock()
+
+	for updateType, infos := range infosMap {
+		var packages []string
+		for _, info := range infos.UpgradeInfo {
+			packages = append(packages, info.Package)
+		}
+		updatablePackages[updateType] = packages
+		if !changed {
+			newData := strv.Strv(packages)
+			oldData := strv.Strv(classifiedUpdatablePackages[updateType])
+			changed = !newData.Equal(oldData)
+		}
+	}
+	if changed {
+		u.PropsMu.Lock()
+		defer u.PropsMu.Unlock()
+		u.setPropClassifiedUpdatablePackages(updatablePackages)
+	}
 }

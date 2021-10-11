@@ -36,9 +36,7 @@ type ApplicationInfo struct {
 	LocaleName map[string]string `json:"locale_name"`
 }
 
-func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
-	u.setUpdatablePackages(UpdatableNames(info))
-
+func (u *Updater) updateUpdatableApps() {
 	var apps []string
 	appInfos := applicationInfos()
 	u.PropsMu.RLock()
@@ -54,14 +52,14 @@ func (u *Updater) loadUpdateInfos(info []system.UpgradeInfo) {
 func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []ApplicationUpdateInfo, busErr *dbus.Error) {
 	iInfos := packageIconInfos()
 	aInfos := applicationInfos()
-	var uInfos []system.UpgradeInfo
+	var uInfosMap system.SourceUpgradeInfoMap
 	var err error
 	repeatCount := 0
 	for {
 		if repeatCount > 5 {
 			break
 		}
-		uInfos, err = system.SystemUpgradeInfo()
+		uInfosMap, err = system.SystemUpgradeInfo()
 		if os.IsNotExist(err) {
 			time.Sleep(1 * time.Second)
 			repeatCount++
@@ -76,28 +74,30 @@ func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []Application
 		}
 	}
 
-	for _, uInfo := range uInfos {
-		id := uInfo.Package
+	for _, uInfos := range uInfosMap {
+		for _, uInfo := range uInfos.UpgradeInfo {
+			id := uInfo.Package
 
-		aInfo, ok := aInfos[id]
-		if !ok {
-			continue
-		}
+			aInfo, ok := aInfos[id]
+			if !ok {
+				continue
+			}
 
-		info := ApplicationUpdateInfo{
-			Id:             id,
-			Name:           aInfo.LocaleName[lang],
-			Icon:           iInfos[id],
-			CurrentVersion: uInfo.CurrentVersion,
-			LastVersion:    uInfo.LastVersion,
+			info := ApplicationUpdateInfo{
+				Id:             id,
+				Name:           aInfo.LocaleName[lang],
+				Icon:           iInfos[id],
+				CurrentVersion: uInfo.CurrentVersion,
+				LastVersion:    uInfo.LastVersion,
+			}
+			if info.Name == "" {
+				info.Name = id
+			}
+			if info.Icon == "" {
+				info.Icon = id
+			}
+			updateInfos = append(updateInfos, info)
 		}
-		if info.Name == "" {
-			info.Name = id
-		}
-		if info.Icon == "" {
-			info.Icon = id
-		}
-		updateInfos = append(updateInfos, info)
 	}
 	logger.Info("ApplicationUpdateInfos: ", updateInfos)
 	return updateInfos, nil

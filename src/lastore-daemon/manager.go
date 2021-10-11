@@ -106,7 +106,7 @@ type Manager struct {
 
 	apps apps.Apps
 
-	UpdateMode uint64 `prop:"access:rw"`
+	UpdateMode system.UpdateType `prop:"access:rw"`
 
 	isUpdateSucceed bool
 }
@@ -241,14 +241,14 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 		return nil, dbusutil.ToError(err)
 	}
 	caller := mapMethodCaller(execPath, cmdLine)
-	m.ensureUpdateSourceOnce(caller)
+	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ, 0)
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
 	m.do.Unlock()
 
 	if err != nil {
@@ -273,13 +273,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine)
-	m.ensureUpdateSourceOnce(caller)
+	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
@@ -291,7 +285,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 		return m.installPkg(jobName, packages, environ)
 	}
 
-	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, caller == methodCallerControlCenter, lang, pkgs...)
+	localePkgs := QueryEnhancedLocalePackages(system.QueryPackageInstallable, lang, pkgs...)
 	if len(localePkgs) != 0 {
 		logger.Infof("Follow locale packages will be installed:%v\n", localePkgs)
 	}
@@ -350,7 +344,7 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	pList := strings.Fields(packages)
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, 0)
+	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
 	m.do.Unlock()
 
 	if err != nil {
@@ -439,7 +433,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ, 0)
+	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	m.do.Unlock()
 
 	if job != nil && !isCommunity() {
@@ -488,7 +482,7 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) ensureUpdateSourceOnce(caller methodCaller) {
+func (m *Manager) ensureUpdateSourceOnce() {
 	m.PropsMu.Lock()
 	updateOnce := m.updateSourceOnce
 	m.PropsMu.Unlock()
@@ -497,7 +491,7 @@ func (m *Manager) ensureUpdateSourceOnce(caller methodCaller) {
 		return
 	}
 
-	_, err := m.updateSource(false, caller)
+	_, err := m.updateSource(false)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -505,19 +499,30 @@ func (m *Manager) ensureUpdateSourceOnce(caller methodCaller) {
 
 func (m *Manager) handleUpdateInfosChanged() {
 	logger.Info("handleUpdateInfosChanged")
-	info, err := system.SystemUpgradeInfo()
+	infosMap, err := system.SystemUpgradeInfo()
 	if err != nil {
-		logger.Error("failed to get upgrade info:", err)
+		if os.IsNotExist(err) {
+			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
+		} else {
+			logger.Error("failed to get upgrade info:", err)
+		}
+		return
 	}
-	m.updater.loadUpdateInfos(info)
-	m.updatableApps(info)
+
+	for updateType, info := range infosMap {
+		if info.Error != nil {
+			logger.Warningf("failed to get %v info:%v", updateType, info.Error)
+		}
+	}
+	m.updateUpdatableProp(infosMap)
+
 	m.PropsMu.Lock()
 	isUpdateSucceed := m.isUpdateSucceed
 	m.PropsMu.Unlock()
 	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed {
 		logger.Info("auto download updates")
 		go func() {
-			_, err := m.prepareDistUpgrade(methodCallerControlCenter) // 自动下载使用控制中心的配置
+			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.UpdateMode, false) // 自动下载使用控制中心的配置
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
@@ -525,20 +530,32 @@ func (m *Manager) handleUpdateInfosChanged() {
 	}
 }
 
-func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, error) {
+// 根据解析update_infos.json数据的结果,将数据分别设置到Manager的UpgradableApps和Updater的UpdatablePackages,ClassifiedUpdatablePackages,UpdatableApps
+func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
+	m.updater.setClassifiedUpdatablePackages(infosMap)
+
+	m.PropsMu.RLock()
+	updateType := m.UpdateMode
+	m.PropsMu.RUnlock()
+	for _, t := range system.AllUpdateType() {
+		category := updateType & t
+		if category == 0 {
+			infosMap[t.JobType()] = system.SourceUpgradeInfo{}
+		}
+	}
+	updatableApps := UpdatableNames(infosMap)
+	m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
+	m.updater.setUpdatablePackages(updatableApps)
+	m.updater.updateUpdatableApps()
+}
+
+func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	m.do.Lock()
 	var jobName string
 	if needNotify {
 		jobName = "+notify"
 	}
-	var job *Job
-	var err error
-	switch caller {
-	case methodCallerControlCenter:
-		job, err = m.jobManager.CreateJob(jobName, system.CustomUpdateJobType, nil, nil, m.UpdateMode)
-	default:
-		job, err = m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil, 0)
-	}
+	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -564,13 +581,8 @@ func (m *Manager) updateSource(needNotify bool, caller methodCaller) (*Job, erro
 	return job, err
 }
 
-func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-	jobObj, err := m.updateSource(false, mapMethodCaller(execPath, cmdLine))
+func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
+	jobObj, err := m.updateSource(false)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
@@ -581,7 +593,7 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr 
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) cancelAllJob() error {
+func (m *Manager) cancelAllUpdateJob() error {
 	var updateJobIds []string
 	for _, job := range m.jobManager.List() {
 		if job.Type == system.UpdateJobType && job.Status != system.RunningStatus {
@@ -613,7 +625,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 		return nil, dbusutil.ToError(err)
 	}
 	caller := mapMethodCaller(execPath, cmdLine)
-	m.ensureUpdateSourceOnce(caller)
+	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
@@ -631,13 +643,13 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ, 0)
+	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
 	if err != nil {
 		logger.Warningf("DistUpgrade error: %v\n", err)
 		return nil, err
 	}
 	job.caller = caller
-	cancelErr := m.cancelAllJob()
+	cancelErr := m.cancelAllUpdateJob()
 	if cancelErr != nil {
 		logger.Warning(cancelErr)
 	}
@@ -645,21 +657,16 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-	jobObj, err := m.prepareDistUpgrade(mapMethodCaller(execPath, cmdLine))
+func (m *Manager) PrepareDistUpgrade() (job dbus.ObjectPath, busErr *dbus.Error) {
+	jobObj, err := m.prepareDistUpgrade()
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) prepareDistUpgrade(caller methodCaller) (*Job, error) {
-	m.ensureUpdateSourceOnce(caller)
+func (m *Manager) prepareDistUpgrade() (*Job, error) {
+	m.ensureUpdateSourceOnce()
 	m.updateJobList()
 
 	m.PropsMu.RLock()
@@ -674,13 +681,143 @@ func (m *Manager) prepareDistUpgrade(caller methodCaller) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil, 0)
+	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
 	m.do.Unlock()
 
 	if err != nil {
 		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
 		return nil, err
 	}
+	return job, err
+}
+
+func (m *Manager) ClassifiedUpgrade(sender dbus.Sender, updateType system.UpdateType) ([]dbus.ObjectPath, *dbus.Error) {
+	return m.classifiedUpgrade(sender, updateType, true)
+}
+
+// 根据更新类型,创建对应的下载或下载+安装的job
+func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool) ([]dbus.ObjectPath, *dbus.Error) {
+	var jobPaths []dbus.ObjectPath
+	var err error
+	var errList []string
+	// 保证任务创建顺序
+	for _, t := range system.AllUpdateType() {
+		category := updateType & t
+		if category != 0 {
+			var upgradeJob, prepareJob *Job
+			if isUpgrade {
+				upgradeJob, err = m.createClassifiedUpgradeJob(sender, category)
+				if err != nil {
+					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
+						errList = append(errList, err.Error())
+						logger.Warning(err)
+					} else {
+						logger.Info(err)
+					}
+					continue
+				}
+				jobPaths = append(jobPaths, upgradeJob.getPath())
+				if upgradeJob.next != nil {
+					jobPaths = append(jobPaths, upgradeJob.next.getPath())
+				}
+			} else {
+				prepareJob, err = m.createPrepareClassifiedUpgradeJob(category)
+				if err != nil {
+					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
+						errList = append(errList, err.Error())
+						logger.Warning(err)
+					} else {
+						logger.Info(err)
+					}
+					continue
+				}
+				jobPaths = append(jobPaths, prepareJob.getPath())
+			}
+		}
+	}
+	if len(errList) > 0 {
+		return jobPaths, dbusutil.ToError(errors.New(strings.Join(errList, ",")))
+	}
+	return jobPaths, nil
+}
+
+func (m *Manager) createPrepareClassifiedUpgradeJob(updateType system.UpdateType) (*Job, error) {
+	m.ensureUpdateSourceOnce()
+	m.updateJobList()
+
+	m.updater.PropsMu.RLock()
+	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
+	m.updater.PropsMu.RUnlock()
+
+	if len(classifiedUpdatablePackagesMap[updateType.JobType()]) == 0 {
+		return nil, system.NotFoundError("empty UpgradableApps")
+	}
+	if s, err := system.QueryPackageDownloadSize(classifiedUpdatablePackagesMap[updateType.JobType()]...); err == nil && s == 0 {
+		return nil, system.NotFoundError("no need download")
+	}
+	categoryMap := GetUpgradeInfoMap()
+	jobType := categoryMap[updateType.JobType()].PrepareJobId
+	m.do.Lock()
+	job, err := m.jobManager.CreateJob("", jobType, classifiedUpdatablePackagesMap[updateType.JobType()], nil)
+	m.do.Unlock()
+
+	if err != nil {
+		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
+		return nil, err
+	}
+	return job, nil
+}
+
+func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType system.UpdateType) (*Job, error) {
+	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
+	if err != nil {
+		logger.Warning(err)
+		return nil, dbusutil.ToError(err)
+	}
+	caller := mapMethodCaller(execPath, cmdLine)
+	m.ensureUpdateSourceOnce()
+	environ, err := makeEnvironWithSender(m.service, sender)
+	if err != nil {
+		return nil, err
+	}
+
+	m.updateJobList()
+
+	m.updater.PropsMu.RLock()
+	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
+	m.updater.PropsMu.RUnlock()
+	if len(classifiedUpdatablePackagesMap[updateType.JobType()]) == 0 {
+		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", updateType.JobType()))
+	}
+
+	m.do.Lock()
+	defer m.do.Unlock()
+	categoryMap := GetUpgradeInfoMap()
+	jobType := categoryMap[updateType.JobType()].UpgradeJobId
+	job, err := m.jobManager.CreateJob("", jobType, classifiedUpdatablePackagesMap[updateType.JobType()], environ)
+	if err != nil {
+		logger.Warningf("DistUpgrade error: %v\n", err)
+		return nil, err
+	}
+	job.setHooks(map[string]func(){
+		string(system.EndStatus): func() { // 每次更新一个模块完成之后,需要更新update_info.json文件
+			args := []string{
+				"update",
+				"-j=update_infos",
+				`-output=/var/lib/lastore/update_infos.json`,
+			}
+			err := exec.Command("/usr/bin/lastore-tools", args...).Run()
+			if err != nil {
+				logger.Warning(err)
+			}
+		},
+	})
+	job.caller = caller
+	cancelErr := m.cancelAllUpdateJob()
+	if cancelErr != nil {
+		logger.Warning(cancelErr)
+	}
+
 	return job, err
 }
 
@@ -717,13 +854,8 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	return dbusutil.ToError(err)
 }
 
-func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (size int64, busErr *dbus.Error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return 0, dbusutil.ToError(err)
-	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
+func (m *Manager) PackagesDownloadSize(packages []string) (size int64, busErr *dbus.Error) {
+	m.ensureUpdateSourceOnce()
 
 	s, err := system.QueryPackageDownloadSize(packages...)
 	if err != nil || s == system.SizeUnknown {
@@ -732,21 +864,15 @@ func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (s
 	return int64(s), dbusutil.ToError(err)
 }
 
-func (m *Manager) PackageInstallable(sender dbus.Sender, pkgId string) (installable bool, busErr *dbus.Error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return false, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine)
-	return system.QueryPackageInstallable(caller == methodCallerControlCenter, pkgId), nil
+func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
+	return system.QueryPackageInstallable(pkgId), nil
 }
 
 func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
 	return system.QueryPackageInstalled(pkgId), nil
 }
 
-// TODO: Remove this API
+// PackageDesktopPath TODO: Remove this API
 func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
 	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
 	if err != nil {
@@ -812,7 +938,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil, 0)
+	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
 	m.do.Unlock()
 
 	if err != nil {
@@ -879,7 +1005,7 @@ func (m *Manager) loopCheck() {
 
 				aptCachePath, _ := system.GetArchivesDir(system.LastoreAptOrgConfPath)
 				aptCacheSize, _ := system.QueryFileCacheSize(aptCachePath)
-				lastoreCachePath, _ := system.GetArchivesDir(system.LastoreAptV2ConfPath)
+				lastoreCachePath, _ := system.GetArchivesDir(system.LastoreAptV2CommonConfPath)
 				lastoreCacheSize, _ := system.QueryFileCacheSize(lastoreCachePath)
 				aptCacheSize = aptCacheSize / 1024.0 // kb to mb
 				lastoreCacheSize = lastoreCacheSize / 1024.0
@@ -907,12 +1033,7 @@ func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectP
 }
 
 func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	m.ensureUpdateSourceOnce(mapMethodCaller(execPath, cmdLine))
+	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m.service, sender)
 	if err != nil {
 		return nil, err
@@ -927,7 +1048,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 	m.do.Lock()
 	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
-		[]string{errType}, environ, 0)
+		[]string{errType}, environ)
 	m.do.Unlock()
 
 	if err != nil {
@@ -951,7 +1072,7 @@ func (m *Manager) installUOSReleaseNote() {
 			}
 		}
 	} else {
-		bInstalled := system.QueryPackageInstallable(true, uosReleaseNotePkgName)
+		bInstalled := system.QueryPackageInstallable(uosReleaseNotePkgName)
 		if bInstalled {
 			_, err := m.installPkg("", uosReleaseNotePkgName, nil)
 			if err != nil {
@@ -962,18 +1083,5 @@ func (m *Manager) installUOSReleaseNote() {
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
-	mode := pw.Value.(uint64)
-	m.PropsMu.RLock()
-	recordMode := m.UpdateMode
-	m.PropsMu.RUnlock()
-	if recordMode&system.SystemUpdate == system.SystemUpdate && mode&system.SystemUpdate != system.SystemUpdate { // 系统更新由1->0,则同步关闭应用更新
-		mode &^= system.AppStoreUpdate
-		pw.Value = mode
-
-	} else if mode&system.AppStoreUpdate == system.AppStoreUpdate { // 如果开启应用更新,则强制打开系统更新
-		mode |= system.SystemUpdate
-		pw.Value = mode
-	}
-
-	return dbusutil.ToError(m.config.SetUpdateMode(mode))
+	return dbusutil.ToError(m.config.SetUpdateMode(system.UpdateType(pw.Value.(uint64))))
 }

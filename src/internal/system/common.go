@@ -85,99 +85,109 @@ func NormalFileExists(fpath string) bool {
 	return true
 }
 
-func SystemUpgradeInfo() ([]UpgradeInfo, error) {
+//SystemUpgradeInfo 将update_infos.json数据解析成map
+func SystemUpgradeInfo() (map[string]SourceUpgradeInfo, error) {
 	filename := path.Join(VarLibDir, "update_infos.json")
-	var r []UpgradeInfo
+	var r map[string]SourceUpgradeInfo
 	err := DecodeJson(filename, &r)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, err
-		}
-
-		var updateInfoErr UpdateInfoError
-		err2 := DecodeJson(filename, &updateInfoErr)
-		if err2 == nil {
-			return nil, &updateInfoErr
-		}
-		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
+		return nil, err
 	}
 	return r, nil
 }
 
+type UpdateType uint64
+
 // 用于设置UpdateMode属性,最大支持64位
 const (
-	SystemUpdate   = 1 << 0 // 系统更新
-	AppStoreUpdate = 1 << 1 // 应用更新
-	SecurityUpdate = 1 << 2 // 安全更新
+	SystemUpdate   UpdateType = 1 << 0 // 系统更新
+	AppStoreUpdate UpdateType = 1 << 1 // 应用更新
+	SecurityUpdate UpdateType = 1 << 2 // 安全更新
+	UnknownUpdate  UpdateType = 1 << 3 // 未知来源更新
 )
 
-func UpdateCustomSourceDir(mode uint64) error {
-	const (
-		lastoreSourcesPath = "/var/lib/lastore/sources.list"
-		customSourceDir    = "/var/lib/lastore/sources.list.d"
-		sourceListPath     = "/etc/apt/sources.list"
-		originSourceDir    = "/etc/apt/sources.list.d"
-	)
+func (m UpdateType) JobType() string {
+	switch m {
+	case SystemUpdate:
+		return SystemUpgradeJobType
+	case AppStoreUpdate:
+		return AppStoreUpgradeJobType
+	case SecurityUpdate:
+		return SecurityUpgradeJobType
+	case UnknownUpdate:
+		return UnknownUpgradeJobType
+	default:
+		return ""
+	}
+}
 
-	// 移除旧的sources.list.d内容,再根据最新配置重新填充
-	err := os.RemoveAll(customSourceDir)
+func AllUpdateType() []UpdateType {
+	return []UpdateType{
+		SystemUpdate, AppStoreUpdate, SecurityUpdate, UnknownUpdate,
+	}
+}
+
+const (
+	LastoreSourcesPath = "/var/lib/lastore/sources.list"
+	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
+	OriginSourceDir    = "/etc/apt/sources.list.d"
+	SystemSourceFile   = "/etc/apt/sources.list"
+	AppStoreSourceFile = "/etc/apt/sources.list.d/appstore.list"
+	SecuritySourceFile = "/etc/apt/sources.list.d/safe.list" // 安全更新源路径
+	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"  // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
+)
+
+func GetCategorySourceMap() map[UpdateType]string {
+	return map[UpdateType]string{
+		SystemUpdate:   SystemSourceFile,
+		AppStoreUpdate: AppStoreSourceFile,
+		SecurityUpdate: SecuritySourceFile,
+		UnknownUpdate:  UnknownSourceDir,
+	}
+}
+
+func UpdateUnknownSourceDir() error {
+	// 移除旧版本内容
+	err := os.RemoveAll(CustomSourceDir)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = os.RemoveAll(LastoreSourcesPath)
+	if err != nil {
+		logger.Warning(err)
+	}
+	// 移除旧数据
+	err = os.RemoveAll(UnknownSourceDir)
 	if err != nil {
 		logger.Warning(err)
 	}
 	// #nosec G301
-	err = os.MkdirAll(customSourceDir, 0755)
+	err = os.MkdirAll(UnknownSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
 	}
 
-	// 移除旧的sources.list,再根据最新配置重新创建链接
-	err = os.Remove(lastoreSourcesPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			logger.Warning(err)
-		}
-	}
-
-	var customSourceFilePaths []string
-	if mode&SystemUpdate == SystemUpdate {
-		customSourceFilePaths = append(customSourceFilePaths, sourceListPath)
-	}
-	sourceDirFileInfos, err := ioutil.ReadDir(originSourceDir)
+	var unknownSourceFilePaths []string
+	sourceDirFileInfos, err := ioutil.ReadDir(OriginSourceDir)
 	if err != nil {
 		logger.Warning(err)
+		return err
 	}
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			switch name {
-			case "appstore.list":
-				if mode&AppStoreUpdate == AppStoreUpdate {
-					customSourceFilePaths = append(customSourceFilePaths, filepath.Join(originSourceDir, name))
-				}
-			case "safe.list":
-				if mode&SecurityUpdate == SecurityUpdate {
-					customSourceFilePaths = append(customSourceFilePaths, filepath.Join(originSourceDir, name))
-				}
-			default:
-				if mode&SystemUpdate == SystemUpdate {
-					customSourceFilePaths = append(customSourceFilePaths, filepath.Join(originSourceDir, name))
-				}
+			if name != "appstore.list" && name != "safe.list" {
+				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
 	}
 
 	// 创建对应的软链接
-	for _, customFilePath := range customSourceFilePaths {
-		var customFileLinkPath string
-		if customFilePath == sourceListPath {
-			customFileLinkPath = lastoreSourcesPath
-		} else {
-			customFileLinkPath = filepath.Join(customSourceDir, filepath.Base(customFilePath))
-		}
-
-		err = os.Symlink(customFilePath, customFileLinkPath)
+	for _, filePath := range unknownSourceFilePaths {
+		linkPath := filepath.Join(UnknownSourceDir, filepath.Base(filePath))
+		err = os.Symlink(filePath, linkPath)
 		if err != nil {
-			return fmt.Errorf("create symlink for %q failed: %v", customFileLinkPath, err)
+			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
 		}
 	}
 	return nil

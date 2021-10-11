@@ -45,19 +45,18 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.Install(j.Id, j.Packages, j.environ)
 
 	case system.DistUpgradeJobType:
-		return sys.DistUpgrade(j.Id, j.environ)
+		var args []string
+		for key, value := range j.option { // upgradeJobInfo结构体中指定的更新参数
+			args = append(args, "-o")
+			args = append(args, fmt.Sprintf("%v=%v", key, value))
+		}
+		return sys.DistUpgrade(j.Id, j.environ, args)
 
 	case system.RemoveJobType:
 		return sys.Remove(j.Id, j.Packages, j.environ)
 
 	case system.UpdateSourceJobType:
 		return sys.UpdateSource(j.Id)
-
-	case system.CustomUpdateJobType:
-		return sys.CustomUpdate(j.Id)
-
-	case system.PrepareDistUpgradeJobType:
-		return sys.PrepareDistUpgrade(j.Id, j.Packages)
 
 	case system.UpdateJobType:
 		return sys.Install(j.Id, j.Packages, j.environ)
@@ -74,7 +73,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 }
 
 func ValidTransitionJobState(from system.Status, to system.Status) bool {
-	validtion := map[system.Status][]system.Status{
+	validation := map[system.Status][]system.Status{
 		system.ReadyStatus: {
 			system.RunningStatus,
 			system.PausedStatus,
@@ -98,7 +97,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		},
 	}
 
-	tos, ok := validtion[from]
+	tos, ok := validation[from]
 	if !ok {
 		return false
 	}
@@ -110,7 +109,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 	return false
 }
 
-// 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
+// TransitionJobState 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
 func TransitionJobState(j *Job, to system.Status) error {
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
@@ -129,7 +128,9 @@ func TransitionJobState(j *Job, to system.Status) error {
 		hookFn()
 		j.PropsMu.Lock()
 	}
-
+	if NotUseDBus {
+		return nil
+	}
 	err := j.emitPropChangedStatus(to)
 	if err != nil {
 		logger.Warning(err)

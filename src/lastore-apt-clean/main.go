@@ -69,8 +69,8 @@ func main() {
 	}
 	findBins()
 
-	appendArchivesDirInfos(system.LastoreAptV2ConfPath)  // 将lastore缓存路径/var/cache/lastore/archives添加
-	appendArchivesDirInfos(system.LastoreAptOrgConfPath) // 将默认缓存路径/var/cache/apt/archives添加
+	appendArchivesDirInfos(system.LastoreAptV2CommonConfPath) // 将lastore缓存路径/var/cache/lastore/archives添加
+	appendArchivesDirInfos(system.LastoreAptOrgConfPath)      // 将默认缓存路径/var/cache/apt/archives添加
 
 	archivesInfos := &archivesInfos{
 		Files:     make(map[string][]*archiveInfo),
@@ -300,7 +300,7 @@ func getDebInfo(filename string) (*debInfo, error) {
 	)
 
 	output, err := exec.Command(binDpkgDeb, "-f", "--", filename,
-		fieldPkg, fieldVer, fieldArch).Output()
+		fieldPkg, fieldVer, fieldArch).Output() // #nosec G204
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +335,7 @@ type statusVersion struct {
 }
 
 func loadPkgStatusVersion() (map[string]statusVersion, error) {
-	out, err := exec.Command(binDpkgQuery, "-f", "${Package}:${Architecture} ${db:Status-Abbrev} ${Version}\n", "-W").Output()
+	out, err := exec.Command(binDpkgQuery, "-f", "${Package}:${Architecture} ${db:Status-Abbrev} ${Version}\n", "-W").Output() // #nosec G204
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +425,7 @@ func loadCandidateVersions(debInfoList []*debInfo, configPath string) error {
 	}
 
 	// NOTE: 使用 xargs 命令来自动处理传给 apt-cache 命令参数过多的情况。
-	cmd := exec.Command("xargs", args...)
+	cmd := exec.Command("xargs", args...) // #nosec G204
 	cmd.Stdin = &buf
 	stdOutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -469,7 +469,7 @@ func compareVersionsGtFast(ver1, ver2 string) (bool, error) {
 }
 
 func compareVersionsGtDpkg(ver1, ver2 string) bool {
-	err := exec.Command(binDpkg, "--compare-versions", "--", ver1, "gt", ver2).Run()
+	err := exec.Command(binDpkg, "--compare-versions", "--", ver1, "gt", ver2).Run() // #nosec G204
 	return err == nil
 }
 

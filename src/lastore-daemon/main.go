@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"pkg.deepin.io/lib/log"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +34,7 @@ import (
 	"pkg.deepin.io/dde/api/inhibit_hint"
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/gettext"
+	"pkg.deepin.io/lib/log"
 )
 
 const (
@@ -44,7 +44,7 @@ const (
 	etcDir            = "/etc"
 	osVersionFileName = "os-version"
 	aptConfDir        = "/etc/apt/apt.conf.d"
-	tokenConfFileName = "99lastore-token.conf"
+	tokenConfFileName = "99lastore-token.conf" // #nosec G101
 )
 
 func Tr(text string) string {
@@ -90,12 +90,6 @@ func main() {
 
 	b := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	if !config.AutoCheckUpdates {
-		err := config.SetUpdateMode(0)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, b, config)
@@ -205,7 +199,7 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
 	token := strings.Join(tokenSlice, ";")
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err = ioutil.WriteFile(tokenPath, tokenContent, 0644)
+	err = ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
 	if err != nil {
 		logger.Warning(err)
 	}

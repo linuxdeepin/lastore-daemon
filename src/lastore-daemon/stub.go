@@ -18,7 +18,6 @@
 package main
 
 import (
-	"internal/system"
 	"time"
 
 	"github.com/godbus/dbus"
@@ -88,9 +87,7 @@ func (m *Manager) updateJobList() {
 	}
 }
 
-func (m *Manager) updatableApps(info []system.UpgradeInfo) {
-	apps := UpdatableNames(info)
-
+func (m *Manager) updatableApps(apps []string) {
 	m.PropsMu.Lock()
 	defer m.PropsMu.Unlock()
 
