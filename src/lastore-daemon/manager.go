@@ -777,8 +777,9 @@ func (m *Manager) createPrepareClassifiedUpgradeJob(updateType system.UpdateType
 	}
 	categoryMap := GetUpgradeInfoMap()
 	jobType := categoryMap[updateType.JobType()].PrepareJobId
+	const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", jobType, classifiedUpdatablePackagesMap[updateType.JobType()], nil)
+	job, err := m.jobManager.CreateJob(jobName, jobType, classifiedUpdatablePackagesMap[updateType.JobType()], nil)
 	m.do.Unlock()
 
 	if err != nil {

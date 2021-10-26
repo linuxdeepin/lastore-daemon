@@ -145,6 +145,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 					logger.Warning(err)
 				}
 			}
+			job.setPropName(jobName) // 如果找到下载任务,绑定安装任务时,需要去掉"OnlyDownload"的Name字段
 		} else {
 			job = NewJob(jm.service, info.PrepareJobId, jobName, packages, info.PrepareJobType, DownloadQueue, environ) // 新建对应下载任务
 		}
