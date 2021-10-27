@@ -37,6 +37,9 @@ var DefaultConfig = Config{
 	AutoClean:                   true,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
 	UpdateMode:                  system.SystemUpdate | system.AppStoreUpdate | system.UnknownUpdate, // 默认不开启安全更新
+
+	AutoInstallUpdates:    false,
+	AutoInstallUpdateType: system.SecurityUpdate, // 开启状态下,默认只开启安全更新的自动安装
 }
 
 type Config struct {
@@ -61,6 +64,8 @@ type Config struct {
 	MirrorsUrl                     string
 	filePath                       string
 	AllowInstallRemovePkgExecPaths []string
+	AutoInstallUpdates             bool
+	AutoInstallUpdateType          system.UpdateType
 }
 
 func getDefaultConfig() *Config {
@@ -146,6 +151,16 @@ func (c *Config) SetAppstoreRegion(region string) error {
 
 func (c *Config) SetUpdateMode(mode system.UpdateType) error {
 	c.UpdateMode = mode
+	return c.save()
+}
+
+func (c *Config) SetAutoInstallUpdates(autoInstall bool) error {
+	c.AutoInstallUpdates = autoInstall
+	return c.save()
+}
+
+func (c *Config) SetAutoInstallUpdateType(updateType system.UpdateType) error {
+	c.AutoInstallUpdateType = updateType
 	return c.save()
 }
 

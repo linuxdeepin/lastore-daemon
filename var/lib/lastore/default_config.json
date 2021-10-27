@@ -9,5 +9,7 @@
   "CleanInterval": 604800000000000,
   "UpdateMode": 11,
   "CleanIntervalCacheOverLimit": 86400000000000,
-  "MirrorsUrl": "http://packages.deepin.com/mirrors/community.json"
+  "MirrorsUrl": "http://packages.deepin.com/mirrors/community.json",
+  "AutoInstallUpdates": false,
+  "AutoInstallUpdateType": 4
 }

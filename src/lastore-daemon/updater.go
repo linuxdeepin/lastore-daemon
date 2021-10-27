@@ -55,17 +55,22 @@ type Updater struct {
 	UpdatablePackages []string
 	// dbusutil-gen: equal=nil
 	ClassifiedUpdatablePackages map[string][]string
+
+	AutoInstallUpdates    bool              `prop:"access:rw"`
+	AutoInstallUpdateType system.UpdateType `prop:"access:rw"`
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
 	u := &Updater{
-		manager:             m,
-		service:             service,
-		config:              config,
-		AutoCheckUpdates:    config.AutoCheckUpdates,
-		AutoDownloadUpdates: config.AutoDownloadUpdates,
-		MirrorSource:        config.MirrorSource,
-		UpdateNotify:        config.UpdateNotify,
+		manager:               m,
+		service:               service,
+		config:                config,
+		AutoCheckUpdates:      config.AutoCheckUpdates,
+		AutoDownloadUpdates:   config.AutoDownloadUpdates,
+		MirrorSource:          config.MirrorSource,
+		UpdateNotify:          config.UpdateNotify,
+		AutoInstallUpdates:    config.AutoInstallUpdates,
+		AutoInstallUpdateType: config.AutoInstallUpdateType,
 	}
 	u.ClassifiedUpdatablePackages = make(map[string][]string)
 	go u.waitOnlineCheck()
@@ -77,7 +82,7 @@ func (u *Updater) waitOnlineCheck() {
 	err := exec.Command("nm-online", "-t", "3600").Run()
 	if err == nil {
 		if u.AutoCheckUpdates {
-			_, err = u.manager.updateSource(u.UpdateNotify)
+			_, err = u.manager.updateSource(u.UpdateNotify, true)
 			if err != nil {
 				logger.Warning(err)
 			}
@@ -107,7 +112,7 @@ func (u *Updater) loopCheck() {
 		time.Sleep(delay)
 
 		if u.AutoCheckUpdates {
-			_, err := u.manager.updateSource(u.UpdateNotify)
+			_, err := u.manager.updateSource(u.UpdateNotify, true)
 			if err != nil {
 				logger.Warning(err)
 			}
@@ -339,4 +344,12 @@ func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeIn
 		defer u.PropsMu.Unlock()
 		u.setPropClassifiedUpdatablePackages(updatablePackages)
 	}
+}
+
+func (u *Updater) autoInstallUpdatesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	return dbusutil.ToError(u.config.SetAutoInstallUpdates(pw.Value.(bool)))
+}
+
+func (u *Updater) autoInstallUpdatesSuitesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	return dbusutil.ToError(u.config.SetAutoInstallUpdateType(system.UpdateType(pw.Value.(uint64))))
 }

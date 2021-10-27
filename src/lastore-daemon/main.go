@@ -102,6 +102,14 @@ func main() {
 		return
 	}
 
+	err = serverObject.SetWriteCallback(updater, "AutoInstallUpdates", updater.autoInstallUpdatesWriteCallback)
+	if err != nil {
+		logger.Error("failed to set write cb for property AutoInstallUpdates:", err)
+	}
+	err = serverObject.SetWriteCallback(updater, "AutoInstallUpdateType", updater.autoInstallUpdatesSuitesWriteCallback)
+	if err != nil {
+		logger.Error("failed to set write cb for property AutoInstallUpdateType:", err)
+	}
 	err = serverObject.SetWriteCallback(manager, "UpdateMode", manager.updateModeWriteCallback)
 	if err != nil {
 		logger.Error("failed to set write cb for property UpdateMode:", err)
@@ -156,9 +164,12 @@ func main() {
 	manager.PropsMu.RUnlock()
 
 	logger.Info("Started service at system bus")
-	RegisterMonitor(manager.handleUpdateInfosChanged, system.VarLibDir, "update_infos.json")
+	handleUpdateInfosChanged := func() {
+		manager.handleUpdateInfosChanged(false)
+	}
+	RegisterMonitor(handleUpdateInfosChanged, system.VarLibDir, "update_infos.json")
 	RegisterMonitor(updateTokenConfigFile, etcDir, osVersionFileName)
-	manager.handleUpdateInfosChanged()
+	manager.handleUpdateInfosChanged(false)
 	time.AfterFunc(60*time.Second, func() {
 		updateTokenConfigFile()
 	})

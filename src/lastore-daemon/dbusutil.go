@@ -86,6 +86,32 @@ func (v *Updater) emitPropChangedClassifiedUpdatablePackages(value map[string][]
 	return v.service.EmitPropertyChanged(v, "ClassifiedUpdatablePackages", value)
 }
 
+func (v *Updater) setPropAutoInstallUpdates(value bool) (changed bool) {
+	if v.AutoInstallUpdates != value {
+		v.AutoInstallUpdates = value
+		v.emitPropChangedAutoInstallUpdates(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedAutoInstallUpdates(value bool) error {
+	return v.service.EmitPropertyChanged(v, "AutoInstallUpdates", value)
+}
+
+func (v *Updater) setPropAutoInstallUpdateType(value system.UpdateType) (changed bool) {
+	if v.AutoInstallUpdateType != value {
+		v.AutoInstallUpdateType = value
+		v.emitPropChangedAutoInstallUpdateType(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedAutoInstallUpdateType(value system.UpdateType) error {
+	return v.service.EmitPropertyChanged(v, "AutoInstallUpdateType", value)
+}
+
 func (v *Job) setPropId(value string) (changed bool) {
 	if v.Id != value {
 		v.Id = value

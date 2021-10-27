@@ -21,6 +21,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"internal/system"
+	"internal/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -32,10 +34,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/godbus/dbus"
+	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
-
-	"internal/system"
-	"internal/utils"
+	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
 
 	"pkg.deepin.io/lib/dbusutil"
 	"pkg.deepin.io/lib/keyfile"
@@ -106,7 +107,12 @@ type Manager struct {
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
 
-	apps apps.Apps
+	apps                     apps.Apps
+	sysPower                 power.Power
+	abRecovery               abrecovery.ABRecovery
+	signalLoop               *dbusutil.SignalLoop
+	shouldHandleBackupJobEnd bool
+	autoInstallType          system.UpdateType // 保存需要自动安装的类别
 
 	UpdateMode system.UpdateType `prop:"access:rw"`
 
@@ -136,7 +142,7 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	}
 	sysBus := service.Conn()
 	m.apps = apps.NewApps(sysBus)
-
+	m.initAutoInstall(sysBus)
 	m.jobManager = NewJobManager(service, b, m.updateJobList)
 	go m.jobManager.Dispatch()
 
@@ -493,13 +499,13 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	_, err := m.updateSource(false)
+	_, err := m.updateSource(false, false)
 	if err != nil {
 		logger.Warning(err)
 	}
 }
 
-func (m *Manager) handleUpdateInfosChanged() {
+func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 	logger.Info("handleUpdateInfosChanged")
 	infosMap, err := system.SystemUpgradeInfo()
 	if err != nil {
@@ -524,7 +530,7 @@ func (m *Manager) handleUpdateInfosChanged() {
 	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed {
 		logger.Info("auto download updates")
 		go func() {
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.UpdateMode, false) // 自动下载使用控制中心的配置
+			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.UpdateMode, false, autoCheck) // 自动下载使用控制中心的配置
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
@@ -551,7 +557,7 @@ func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
 	m.updater.updateUpdatableApps()
 }
 
-func (m *Manager) updateSource(needNotify bool) (*Job, error) {
+func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	m.do.Lock()
 	var jobName string
 	if needNotify {
@@ -576,7 +582,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 				go m.installUOSReleaseNote()
 			},
 			string(system.EndStatus): func() {
-				m.handleUpdateInfosChanged()
+				m.handleUpdateInfosChanged(autoCheck)
 			},
 		})
 	}
@@ -584,7 +590,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 }
 
 func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
-	jobObj, err := m.updateSource(false)
+	jobObj, err := m.updateSource(false, false)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
@@ -694,11 +700,11 @@ func (m *Manager) prepareDistUpgrade() (*Job, error) {
 }
 
 func (m *Manager) ClassifiedUpgrade(sender dbus.Sender, updateType system.UpdateType) ([]dbus.ObjectPath, *dbus.Error) {
-	return m.classifiedUpgrade(sender, updateType, true)
+	return m.classifiedUpgrade(sender, updateType, true, false)
 }
 
 // 根据更新类型,创建对应的下载或下载+安装的job
-func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool) ([]dbus.ObjectPath, *dbus.Error) {
+func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool, autoCheck bool) ([]dbus.ObjectPath, *dbus.Error) {
 	var jobPaths []dbus.ObjectPath
 	var err error
 	var errList []string
@@ -730,10 +736,22 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						logger.Warning(err)
 					} else {
 						logger.Info(err)
+						if autoCheck && m.updater.AutoInstallUpdates && (m.updater.AutoInstallUpdateType&category != 0) {
+							go m.handlePackagesDownloaded(sender, category)
+						}
 					}
 					continue
 				}
 				jobPaths = append(jobPaths, prepareJob.getPath())
+				if autoCheck {
+					prepareJob.setHooks(map[string]func(){
+						string(system.EndStatus): func() {
+							if m.updater.AutoInstallUpdates && (m.updater.AutoInstallUpdateType&category != 0) {
+								go m.handlePackagesDownloaded(sender, category)
+							}
+						},
+					})
+				}
 			}
 		}
 	}
@@ -1084,6 +1102,66 @@ func (m *Manager) installUOSReleaseNote() {
 	}
 }
 
+func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system.UpdateType) {
+	hasBattery, err := m.sysPower.HasBattery().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	batteryPercentage, err := m.sysPower.BatteryPercentage().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	if hasBattery && batteryPercentage > 50 || !hasBattery {
+		canBackup, err := m.abRecovery.CanBackup(0)
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
+		if canBackup {
+			hasBackedUp, err := m.abRecovery.HasBackedUp().Get(0)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+			if hasBackedUp { // 本次开机,已经完成过备份,则无需再进行备份
+				_, err := m.createClassifiedUpgradeJob(sender, updateType)
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+			} else {
+				m.PropsMu.Lock()
+				m.autoInstallType |= updateType
+				m.PropsMu.Unlock()
+				isBackingUp, err := m.abRecovery.BackingUp().Get(0)
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+				if isBackingUp {
+					return
+				}
+				err = m.abRecovery.StartBackup(0)
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+				m.PropsMu.Lock()
+				m.shouldHandleBackupJobEnd = true
+				m.PropsMu.Unlock()
+			}
+		} else {
+			_, err := m.createClassifiedUpgradeJob(sender, updateType)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+		}
+	}
+}
+
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	writeType := system.UpdateType(pw.Value.(uint64))
 
@@ -1152,4 +1230,30 @@ func updateSecurityConfigFile(create bool) error {
 		}
 	}
 	return nil
+}
+
+func (m *Manager) initAutoInstall(conn *dbus.Conn) {
+	const jobKindBackup = "backup"
+	m.sysPower = power.NewPower(conn)
+	m.abRecovery = abrecovery.NewABRecovery(conn)
+	m.signalLoop = dbusutil.NewSignalLoop(conn, 10)
+	m.signalLoop.Start()
+	m.abRecovery.InitSignalExt(m.signalLoop, true)
+	_, _ = m.abRecovery.ConnectJobEnd(func(kind string, success bool, errMsg string) {
+		m.PropsMu.RLock()
+		updateType := m.autoInstallType
+		shouldHandleBackupJobEnd := m.shouldHandleBackupJobEnd
+		m.PropsMu.RUnlock()
+		if kind == jobKindBackup && success && shouldHandleBackupJobEnd {
+			m.PropsMu.Lock()
+			m.autoInstallType = 0
+			m.shouldHandleBackupJobEnd = false
+			m.PropsMu.Unlock()
+			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+		}
+	})
 }
