@@ -41,10 +41,11 @@ const (
 	dbusServiceName = "com.deepin.lastore"
 )
 const (
-	etcDir            = "/etc"
-	osVersionFileName = "os-version"
-	aptConfDir        = "/etc/apt/apt.conf.d"
-	tokenConfFileName = "99lastore-token.conf" // #nosec G101
+	etcDir               = "/etc"
+	osVersionFileName    = "os-version"
+	aptConfDir           = "/etc/apt/apt.conf.d"
+	tokenConfFileName    = "99lastore-token.conf" // #nosec G101
+	securityConfFileName = "99security.conf"
 )
 
 func Tr(text string) string {

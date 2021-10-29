@@ -21,8 +21,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -139,7 +141,7 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	go m.jobManager.Dispatch()
 
 	m.updateJobList()
-
+	m.modifyUpdateMode()
 	go m.loopCheck()
 	return m
 }
@@ -1083,5 +1085,71 @@ func (m *Manager) installUOSReleaseNote() {
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
-	return dbusutil.ToError(m.config.SetUpdateMode(system.UpdateType(pw.Value.(uint64))))
+	writeType := system.UpdateType(pw.Value.(uint64))
+
+	if writeType&system.SecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
+		writeType |= system.UnknownUpdate
+	} else { // 如果更新类别包含安全更新,则关闭其他更新
+		writeType = system.SecurityUpdate
+	}
+	pw.Value = writeType
+	err := m.config.SetUpdateMode(writeType)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = updateSecurityConfigFile(writeType == system.SecurityUpdate)
+	if err != nil {
+		logger.Warning(err)
+	}
+	return nil
+}
+
+func (m *Manager) modifyUpdateMode() {
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
+	if mode&system.SecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
+		mode |= system.UnknownUpdate
+	} else { // 如果更新类别包含安全更新,则关闭其他更新
+		mode = system.SecurityUpdate
+	}
+	m.setPropUpdateMode(mode)
+	err := m.config.SetUpdateMode(mode)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = updateSecurityConfigFile(mode == system.SecurityUpdate)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+var _securityConfigUpdateMu sync.Mutex
+
+// 在控制中心打开仅安全更新时,在apt配置文件中增加参数,用户使用命令行安装更新时,也同样仅会进行安全更新
+func updateSecurityConfigFile(create bool) error {
+	_securityConfigUpdateMu.Lock()
+	defer _securityConfigUpdateMu.Unlock()
+	configPath := path.Join(aptConfDir, securityConfFileName)
+	if create {
+		_, err := os.Stat(configPath)
+		if err == nil {
+			return nil
+		}
+		configContent := []string{
+			`Dir::Etc::SourceParts "/dev/null";`,
+			`Dir::Etc::SourceList "/etc/apt/sources.list.d/quality.list";`,
+		}
+		config := strings.Join(configContent, "\n")
+		err = ioutil.WriteFile(configPath, []byte(config), 0644)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := os.RemoveAll(configPath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

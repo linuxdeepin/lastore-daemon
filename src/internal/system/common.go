@@ -102,7 +102,7 @@ type UpdateType uint64
 const (
 	SystemUpdate   UpdateType = 1 << 0 // 系统更新
 	AppStoreUpdate UpdateType = 1 << 1 // 应用更新
-	SecurityUpdate UpdateType = 1 << 2 // 安全更新
+	SecurityUpdate UpdateType = 1 << 2 // 仅开启安全更新（该选项开启时，其他更新关闭）
 	UnknownUpdate  UpdateType = 1 << 3 // 未知来源更新
 )
 
@@ -133,8 +133,8 @@ const (
 	OriginSourceDir    = "/etc/apt/sources.list.d"
 	SystemSourceFile   = "/etc/apt/sources.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/appstore.list"
-	SecuritySourceFile = "/etc/apt/sources.list.d/safe.list" // 安全更新源路径
-	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"  // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
+	SecuritySourceFile = "/etc/apt/sources.list.d/quality.list" // 安全更新源路径
+	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"     // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 )
 
 func GetCategorySourceMap() map[UpdateType]string {
@@ -176,7 +176,7 @@ func UpdateUnknownSourceDir() error {
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != "appstore.list" && name != "safe.list" {
+			if name != "appstore.list" && name != "quality.list" {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
