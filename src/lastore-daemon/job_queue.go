@@ -122,12 +122,20 @@ func (l *JobQueue) RunningJobs() JobList {
 }
 
 func (l *JobQueue) Add(j *Job) error {
+	if j == nil {
+		return system.NotFoundError("addJob with nil")
+	}
 	l.mux.Lock()
 	defer l.mux.Unlock()
-
 	for _, job := range l.jobs {
 		if job.Type == j.Type && strings.Join(job.Packages, "") == strings.Join(j.Packages, "") {
-			return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)
+			if l.Name != SystemChangeQueue { // 如果不是应用安装任务,则需要判断job的Id是否一致
+				if job.Id == j.Id {
+					return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)
+				}
+			} else {
+				return fmt.Errorf("exists job %q:%q", job.Type, job.Packages)
+			}
 		}
 	}
 	l.jobs = append(l.jobs, j)
