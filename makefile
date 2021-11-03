@@ -5,6 +5,7 @@ GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
 
 GOBUILD = go build
 GOTEST = go test -v
+export GO111MODULE=off
 
 all:  build
 
