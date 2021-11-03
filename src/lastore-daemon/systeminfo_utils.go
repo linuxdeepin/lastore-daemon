@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"internal/system"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+
+	"github.com/godbus/dbus"
 
 	hhardware "github.com/jouyouyun/hardware"
 )
@@ -33,7 +36,15 @@ type SystemInfo struct {
 	Version     string
 	HardwareId  string
 	Processor   string
+	Arch        string
+	Custom      string
+	SN          string
 }
+
+const (
+	OemNotCustomState = "0"
+	OemCustomState    = "1"
+)
 
 func getSystemInfo() (SystemInfo, error) {
 	versionPath := path.Join(etcDir, osVersionFileName)
@@ -59,7 +70,9 @@ func getSystemInfo() (SystemInfo, error) {
 			return SystemInfo{}, errors.New("os-version lack necessary content")
 		}
 	}
-	systemInfo := SystemInfo{}
+	systemInfo := SystemInfo{
+		Custom: OemNotCustomState,
+	}
 	systemInfo.SystemName = mapOsVersion["SystemName"]
 	systemInfo.ProductType = mapOsVersion["ProductType"]
 	systemInfo.EditionName = mapOsVersion["EditionName"]
@@ -79,6 +92,24 @@ func getSystemInfo() (SystemInfo, error) {
 		logger.Warning("failed to get modelName:", err)
 		return SystemInfo{}, err
 	}
+	systemInfo.Arch, err = getArchInfo()
+	if err != nil {
+		logger.Warning("failed to get Arch:", err)
+		return SystemInfo{}, err
+	}
+	systemInfo.SN, err = getSN()
+	if err != nil {
+		logger.Warning("failed to get SN:", err)
+		return SystemInfo{}, err
+	}
+	isCustom, err := getCustomInfo()
+	if err != nil {
+		return SystemInfo{}, err
+	}
+	if isCustom {
+		systemInfo.Custom = OemCustomState
+	}
+
 	if len(systemInfo.Processor) > 100 {
 		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
 	}
@@ -220,4 +251,48 @@ func parseInfoFile(file, delim string) (map[string]string, error) {
 	}
 
 	return ret, nil
+}
+
+func getArchInfo() (string, error) {
+	arch, err := exec.Command("dpkg", "--print-architecture").Output()
+	if err != nil {
+		logger.Warningf("GetSystemArchitecture failed:%v\n", arch)
+		return "", err
+	}
+	return string(arch), nil
+}
+
+// 获取激活码
+func getSN() (string, error) {
+	systemBus, err := dbus.SystemBus()
+	if err != nil {
+		return "", err
+	}
+	object := systemBus.Object("com.deepin.license", "/com/deepin/license/Info")
+	var ret dbus.Variant
+	err = object.Call("org.freedesktop.DBus.Properties.Get", 0, "com.deepin.license.Info", "ActiveCode").Store(&ret)
+	if err != nil {
+		return "", err
+	}
+	v := ret.Value().(string)
+	return v, nil
+}
+
+type oemInfo struct {
+	Basic struct {
+		IsoId     string `json:"iso_id"`
+		TimeStamp uint64 `json:"timestamp"`
+	} `json:"basic"`
+	CustomInfo struct {
+		CustomizedKernel bool `json:"customized_kernel"`
+	} `json:"custom_info"`
+}
+
+func getCustomInfo() (bool, error) {
+	var info oemInfo
+	err := system.DecodeJson("/etc/oem-info.json", &info)
+	if err != nil {
+		return false, err
+	}
+	return info.CustomInfo.CustomizedKernel, nil
 }

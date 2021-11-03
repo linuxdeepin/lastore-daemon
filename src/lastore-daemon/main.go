@@ -209,7 +209,11 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
 	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
 	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
+	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
+	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
+	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
 	token := strings.Join(tokenSlice, ";")
+	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
 	err = ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
 	if err != nil {

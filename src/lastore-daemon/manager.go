@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"internal/system"
@@ -48,8 +49,9 @@ const (
 	UserExperServiceName = "com.deepin.userexperience.Daemon"
 	UserExperPath        = "/com/deepin/userexperience/Daemon"
 
-	UserExperInstallApp   = "installapp"
-	UserExperUninstallApp = "uninstallapp"
+	UserExperInstallApp       = "installapp"
+	UserExperUninstallApp     = "uninstallapp"
+	UserExperSystemUpgradeApp = "systemUpgrade"
 
 	uosReleaseNotePkgName = "uos-release-note"
 
@@ -833,6 +835,14 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 			if err != nil {
 				logger.Warning(err)
 			}
+			if updateType == system.SystemUpdate {
+				go postSystemUpgradeMessage(upgradeSucceed, job)
+			}
+		},
+		string(system.FailedStatus): func() {
+			if updateType == system.SystemUpdate {
+				go postSystemUpgradeMessage(upgradeFailed, job)
+			}
 		},
 	})
 	job.caller = caller
@@ -1259,4 +1269,40 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 			}
 		}
 	})
+}
+
+type upgradePostContent struct {
+	SerialNumber    string `json:"serialNumber"`
+	MachineID       string `json:"machineId"`
+	UpgradeStatus   int    `json:"status"`
+	UpgradeErrorMsg string `json:"msg"`
+}
+
+const (
+	upgradeSucceed int = 0
+	upgradeFailed  int = 1
+)
+
+// 发送系统更新成功或失败的状态
+func postSystemUpgradeMessage(upgradeStatus int, j *Job) {
+	var upgradeErrorMsg string
+	if upgradeStatus == upgradeFailed {
+		upgradeErrorMsg = j.Description
+	}
+	sn, err := getSN()
+	if err != nil {
+		logger.Warning(err)
+	}
+	hardwareId, err := getHardwareId()
+	if err != nil {
+		logger.Warning(err)
+	}
+	postContent := &upgradePostContent{
+		SerialNumber:    sn,
+		MachineID:       hardwareId,
+		UpgradeStatus:   upgradeStatus,
+		UpgradeErrorMsg: upgradeErrorMsg,
+	}
+	content, err := json.Marshal(postContent)
+	sendInstallMsgToUserExperModule(UserExperSystemUpgradeApp, "", "System_Upgrade", string(content))
 }
