@@ -55,14 +55,14 @@ const (
 
 	uosReleaseNotePkgName = "uos-release-note"
 
-	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
-	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
-	printerPath           = "/usr/bin/dde-printer"
-	printerHelperPath     = "/usr/bin/dde-printer-helper"
-	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
-	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
-	controlCenterPath     = "/usr/bin/dde-control-center"
-	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
+	appStoreDaemonPath       = "/usr/bin/deepin-app-store-daemon"
+	oldAppStoreDaemonPath    = "/usr/bin/deepin-appstore-daemon"
+	printerPath              = "/usr/bin/dde-printer"
+	printerHelperPath        = "/usr/bin/dde-printer-helper"
+	sessionDaemonPath        = "/usr/lib/deepin-daemon/dde-session-daemon"
+	langSelectorPath         = "/usr/lib/deepin-daemon/langselector"
+	controlCenterPath        = "/usr/bin/dde-control-center"
+	controlCenterCmdLine     = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
 	deepinDeepinidClientPath = "/usr/bin/deepin-deepinid-client"
 )
 
@@ -544,6 +544,14 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 
 // 根据解析update_infos.json数据的结果,将数据分别设置到Manager的UpgradableApps和Updater的UpdatablePackages,ClassifiedUpdatablePackages,UpdatableApps
 func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
+	for _, updateType := range system.AllUpdateType() {
+		if updateType&mode == 0 {
+			infosMap[updateType.JobType()] = system.SourceUpgradeInfo{}
+		}
+	}
 	m.updater.setClassifiedUpdatablePackages(infosMap)
 
 	m.PropsMu.RLock()
