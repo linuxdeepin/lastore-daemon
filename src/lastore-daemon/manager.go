@@ -19,12 +19,14 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"internal/system"
 	"internal/utils"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -49,9 +51,8 @@ const (
 	UserExperServiceName = "com.deepin.userexperience.Daemon"
 	UserExperPath        = "/com/deepin/userexperience/Daemon"
 
-	UserExperInstallApp       = "installapp"
-	UserExperUninstallApp     = "uninstallapp"
-	UserExperSystemUpgradeApp = "systemUpgrade"
+	UserExperInstallApp   = "installapp"
+	UserExperUninstallApp = "uninstallapp"
 
 	uosReleaseNotePkgName = "uos-release-note"
 
@@ -390,6 +391,23 @@ func isCommunity() bool {
 		return true
 	}
 	if edition == "Community" {
+		return true
+	}
+	return false
+}
+
+func isProfessional() bool {
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile("/etc/os-version")
+	// 为避免收集数据的风险，读不到此文件，或者Edition文件不存在也不收集数据
+	if err != nil {
+		return true
+	}
+	edition, err := kf.GetString("Version", "EditionName")
+	if err != nil {
+		return true
+	}
+	if edition == "Professional" {
 		return true
 	}
 	return false
@@ -844,12 +862,12 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 				if err != nil {
 					logger.Warning(err)
 				}
-				if updateType == system.SystemUpdate {
+				if isProfessional() && updateType == system.SystemUpdate {
 					go postSystemUpgradeMessage(upgradeSucceed, job)
 				}
 			},
 			string(system.FailedStatus): func() {
-				if updateType == system.SystemUpdate {
+				if isProfessional() && updateType == system.SystemUpdate {
 					go postSystemUpgradeMessage(upgradeFailed, job)
 				}
 			},
@@ -1290,11 +1308,12 @@ type upgradePostContent struct {
 	MachineID       string `json:"machineId"`
 	UpgradeStatus   int    `json:"status"`
 	UpgradeErrorMsg string `json:"msg"`
+	TimeStamp       int64  `json:"timestamp"`
 }
 
 const (
-	upgradeSucceed int = 0
-	upgradeFailed  int = 1
+	upgradeSucceed = 0
+	upgradeFailed  = 1
 )
 
 // 发送系统更新成功或失败的状态
@@ -1316,7 +1335,36 @@ func postSystemUpgradeMessage(upgradeStatus int, j *Job) {
 		MachineID:       hardwareId,
 		UpgradeStatus:   upgradeStatus,
 		UpgradeErrorMsg: upgradeErrorMsg,
+		TimeStamp:       time.Now().Unix(),
 	}
 	content, err := json.Marshal(postContent)
-	sendInstallMsgToUserExperModule(UserExperSystemUpgradeApp, "", "System_Upgrade", string(content))
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	client := &http.Client{
+		Timeout: 4 * time.Second,
+	}
+	encryptMsg, err := EncryptMsg(content)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
+	const url = "http://gray-update-pre.uniontech.com/api/v1/update/status"
+	request, err := http.NewRequest("POST", url, strings.NewReader(base64EncodeString))
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	response, err := client.Do(request)
+	if err == nil {
+		defer func() {
+			_ = response.Body.Close()
+		}()
+		body, _ := ioutil.ReadAll(response.Body)
+		logger.Info(string(body))
+	} else {
+		logger.Warning(err)
+	}
 }
