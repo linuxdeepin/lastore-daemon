@@ -84,27 +84,28 @@ func getSystemInfo() (SystemInfo, error) {
 	systemInfo.HardwareId, err = getHardwareId()
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
-		return SystemInfo{}, err
+		return systemInfo, err
 	}
 
 	systemInfo.Processor, err = getProcessorModelName()
 	if err != nil {
 		logger.Warning("failed to get modelName:", err)
-		return SystemInfo{}, err
+		return systemInfo, err
 	}
 	systemInfo.Arch, err = getArchInfo()
 	if err != nil {
 		logger.Warning("failed to get Arch:", err)
-		return SystemInfo{}, err
+		return systemInfo, err
 	}
 	systemInfo.SN, err = getSN()
 	if err != nil {
 		logger.Warning("failed to get SN:", err)
-		return SystemInfo{}, err
+		return systemInfo, err
 	}
 	isCustom, err := getCustomInfo()
 	if err != nil {
-		return SystemInfo{}, err
+		systemInfo.Custom = OemNotCustomState
+		return systemInfo, err
 	}
 	if isCustom {
 		systemInfo.Custom = OemCustomState

@@ -200,7 +200,6 @@ func updateTokenConfigFile() {
 	tokenPath := path.Join(aptConfDir, tokenConfFileName)
 	if err != nil {
 		logger.Warning("failed to update 99lastore-token.conf content:", err)
-		return
 	}
 	var tokenSlice []string
 	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
