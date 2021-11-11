@@ -832,28 +832,34 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 		logger.Warningf("DistUpgrade error: %v\n", err)
 		return nil, err
 	}
-	job.setHooks(map[string]func(){
-		string(system.EndStatus): func() { // 每次更新一个模块完成之后,需要更新update_info.json文件
-			args := []string{
-				"update",
-				"-j=update_infos",
-				`-output=/var/lib/lastore/update_infos.json`,
-			}
-			err := exec.Command("/usr/bin/lastore-tools", args...).Run()
-			if err != nil {
-				logger.Warning(err)
-			}
-			if updateType == system.SystemUpdate {
-				go postSystemUpgradeMessage(upgradeSucceed, job)
-			}
-		},
-		string(system.FailedStatus): func() {
-			if updateType == system.SystemUpdate {
-				go postSystemUpgradeMessage(upgradeFailed, job)
-			}
-		},
-	})
+	if job.next != nil {
+		job.next.setHooks(map[string]func(){
+			string(system.EndStatus): func() { // 每次更新一个模块完成之后,需要更新update_info.json文件
+				args := []string{
+					"update",
+					"-j=update_infos",
+					`-output=/var/lib/lastore/update_infos.json`,
+				}
+				err := exec.Command("/usr/bin/lastore-tools", args...).Run()
+				if err != nil {
+					logger.Warning(err)
+				}
+				if updateType == system.SystemUpdate {
+					go postSystemUpgradeMessage(upgradeSucceed, job)
+				}
+			},
+			string(system.FailedStatus): func() {
+				if updateType == system.SystemUpdate {
+					go postSystemUpgradeMessage(upgradeFailed, job)
+				}
+			},
+		})
+	}
+
 	job.caller = caller
+	if job.next != nil {
+		job.next.caller = caller
+	}
 	cancelErr := m.cancelAllUpdateJob()
 	if cancelErr != nil {
 		logger.Warning(cancelErr)
