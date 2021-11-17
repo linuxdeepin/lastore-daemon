@@ -39,7 +39,7 @@ var DefaultConfig = Config{
 	UpdateMode:                  system.SystemUpdate | system.AppStoreUpdate | system.UnknownUpdate, // 默认不开启安全更新
 
 	AutoInstallUpdates:    false,
-	AutoInstallUpdateType: system.SecurityUpdate, // 开启状态下,默认只开启安全更新的自动安装
+	AutoInstallUpdateType: system.OnlySecurityUpdate, // 开启状态下,默认只开启安全更新的自动安装
 }
 
 type Config struct {

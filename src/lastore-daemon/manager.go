@@ -1192,17 +1192,17 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	writeType := system.UpdateType(pw.Value.(uint64))
 
-	if writeType&system.SecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
+	if writeType&system.OnlySecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
 		writeType |= system.UnknownUpdate
 	} else { // 如果更新类别包含安全更新,则关闭其他更新
-		writeType = system.SecurityUpdate
+		writeType = system.OnlySecurityUpdate
 	}
 	pw.Value = writeType
 	err := m.config.SetUpdateMode(writeType)
 	if err != nil {
 		logger.Warning(err)
 	}
-	err = updateSecurityConfigFile(writeType == system.SecurityUpdate)
+	err = updateSecurityConfigFile(writeType == system.OnlySecurityUpdate)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -1213,17 +1213,17 @@ func (m *Manager) modifyUpdateMode() {
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
-	if mode&system.SecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
+	if mode&system.OnlySecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
 		mode |= system.UnknownUpdate
 	} else { // 如果更新类别包含安全更新,则关闭其他更新
-		mode = system.SecurityUpdate
+		mode = system.OnlySecurityUpdate
 	}
 	m.setPropUpdateMode(mode)
 	err := m.config.SetUpdateMode(mode)
 	if err != nil {
 		logger.Warning(err)
 	}
-	err = updateSecurityConfigFile(mode == system.SecurityUpdate)
+	err = updateSecurityConfigFile(mode == system.OnlySecurityUpdate)
 	if err != nil {
 		logger.Warning(err)
 	}

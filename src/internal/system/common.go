@@ -100,10 +100,11 @@ type UpdateType uint64
 
 // 用于设置UpdateMode属性,最大支持64位
 const (
-	SystemUpdate   UpdateType = 1 << 0 // 系统更新
-	AppStoreUpdate UpdateType = 1 << 1 // 应用更新
-	SecurityUpdate UpdateType = 1 << 2 // 仅开启安全更新（该选项开启时，其他更新关闭）
-	UnknownUpdate  UpdateType = 1 << 3 // 未知来源更新
+	SystemUpdate       UpdateType = 1 << 0 // 系统更新
+	AppStoreUpdate     UpdateType = 1 << 1 // 应用更新
+	SecurityUpdate     UpdateType = 1 << 2 // 1050及以上版本,安全更新项废弃,改为仅安全更新
+	UnknownUpdate      UpdateType = 1 << 3 // 未知来源更新
+	OnlySecurityUpdate UpdateType = 1 << 4 // 仅开启安全更新（该选项开启时，其他更新关闭）
 )
 
 func (m UpdateType) JobType() string {
@@ -112,7 +113,7 @@ func (m UpdateType) JobType() string {
 		return SystemUpgradeJobType
 	case AppStoreUpdate:
 		return AppStoreUpgradeJobType
-	case SecurityUpdate:
+	case SecurityUpdate, OnlySecurityUpdate:
 		return SecurityUpgradeJobType
 	case UnknownUpdate:
 		return UnknownUpgradeJobType
@@ -123,7 +124,7 @@ func (m UpdateType) JobType() string {
 
 func AllUpdateType() []UpdateType {
 	return []UpdateType{
-		SystemUpdate, AppStoreUpdate, SecurityUpdate, UnknownUpdate,
+		SystemUpdate, AppStoreUpdate, OnlySecurityUpdate, UnknownUpdate,
 	}
 }
 
@@ -139,10 +140,10 @@ const (
 
 func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
-		SystemUpdate:   SystemSourceFile,
-		AppStoreUpdate: AppStoreSourceFile,
-		SecurityUpdate: SecuritySourceFile,
-		UnknownUpdate:  UnknownSourceDir,
+		SystemUpdate:       SystemSourceFile,
+		AppStoreUpdate:     AppStoreSourceFile,
+		OnlySecurityUpdate: SecuritySourceFile,
+		UnknownUpdate:      UnknownSourceDir,
 	}
 }
 
