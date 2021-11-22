@@ -561,25 +561,18 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 
 // 根据解析update_infos.json数据的结果,将数据分别设置到Manager的UpgradableApps和Updater的UpdatablePackages,ClassifiedUpdatablePackages,UpdatableApps
 func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
-	for _, updateType := range system.AllUpdateType() {
-		if updateType&mode == 0 {
-			infosMap[updateType.JobType()] = system.SourceUpgradeInfo{}
+	if infosMap != nil {
+		m.PropsMu.RLock()
+		updateType := m.UpdateMode
+		m.PropsMu.RUnlock()
+		for _, t := range system.AllUpdateType() {
+			category := updateType & t
+			if category == 0 {
+				infosMap[t.JobType()] = system.SourceUpgradeInfo{}
+			}
 		}
 	}
 	m.updater.setClassifiedUpdatablePackages(infosMap)
-
-	m.PropsMu.RLock()
-	updateType := m.UpdateMode
-	m.PropsMu.RUnlock()
-	for _, t := range system.AllUpdateType() {
-		category := updateType & t
-		if category == 0 {
-			infosMap[t.JobType()] = system.SourceUpgradeInfo{}
-		}
-	}
 	updatableApps := UpdatableNames(infosMap)
 	m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
 	m.updater.setUpdatablePackages(updatableApps)
