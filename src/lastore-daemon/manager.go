@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1035,14 +1036,11 @@ func (m *Manager) loopCheck() {
 					doClean()
 					continue
 				}
-
-				aptCachePath, _ := system.GetArchivesDir(system.LastoreAptOrgConfPath)
-				aptCacheSize, _ := system.QueryFileCacheSize(aptCachePath)
-				lastoreCachePath, _ := system.GetArchivesDir(system.LastoreAptV2CommonConfPath)
-				lastoreCacheSize, _ := system.QueryFileCacheSize(lastoreCachePath)
-				aptCacheSize = aptCacheSize / 1024.0 // kb to mb
-				lastoreCacheSize = lastoreCacheSize / 1024.0
-				cacheSize := aptCacheSize + lastoreCacheSize
+				size, err := getNeedCleanCacheSize()
+				if err != nil {
+					logger.Warning(err)
+				}
+				cacheSize := size / 1024.0
 				if cacheSize > MaxCacheSize {
 					remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
 					logger.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
@@ -1173,6 +1171,23 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 			}
 		}
 	}
+}
+
+func getNeedCleanCacheSize() (float64, error) {
+	output, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
+	if err != nil {
+		return 0, err
+	}
+	var archivesInfo map[string]json.RawMessage
+	err = json.Unmarshal(output, &archivesInfo)
+	if err != nil {
+		return 0, err
+	}
+	size, err := strconv.ParseFloat(string(archivesInfo["total"]), 64)
+	if err != nil {
+		return 0, err
+	}
+	return size, nil
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
