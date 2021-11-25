@@ -40,6 +40,8 @@ var DefaultConfig = Config{
 
 	AutoInstallUpdates:    false,
 	AutoInstallUpdateType: system.OnlySecurityUpdate, // 开启状态下,默认只开启安全更新的自动安装
+
+	AllowPostSystemUpgradeMessageVersion: []string{"Professional"},
 }
 
 type Config struct {
@@ -66,6 +68,8 @@ type Config struct {
 	AllowInstallRemovePkgExecPaths []string
 	AutoInstallUpdates             bool
 	AutoInstallUpdateType          system.UpdateType
+
+	AllowPostSystemUpgradeMessageVersion []string //只有数组内的系统版本被允许发送更新完成的数据
 }
 
 func getDefaultConfig() *Config {

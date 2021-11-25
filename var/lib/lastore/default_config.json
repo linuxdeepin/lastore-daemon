@@ -11,5 +11,6 @@
   "CleanIntervalCacheOverLimit": 86400000000000,
   "MirrorsUrl": "http://packages.deepin.com/mirrors/community.json",
   "AutoInstallUpdates": false,
-  "AutoInstallUpdateType": 16
+  "AutoInstallUpdateType": 16,
+  "AllowPostSystemUpgradeMessageVersion": ["Professional"]
 }

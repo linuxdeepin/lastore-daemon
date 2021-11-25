@@ -396,21 +396,22 @@ func isCommunity() bool {
 	return false
 }
 
-func isProfessional() bool {
+func (m *Manager) needPostSystemUpgradeMessage() bool {
+	return strv.Strv(m.config.AllowPostSystemUpgradeMessageVersion).Contains(getEditionName())
+}
+
+func getEditionName() string {
 	kf := keyfile.NewKeyFile()
 	err := kf.LoadFromFile("/etc/os-version")
 	// 为避免收集数据的风险，读不到此文件，或者Edition文件不存在也不收集数据
 	if err != nil {
-		return true
+		return ""
 	}
 	edition, err := kf.GetString("Version", "EditionName")
 	if err != nil {
-		return true
+		return ""
 	}
-	if edition == "Professional" {
-		return true
-	}
-	return false
+	return strings.TrimSpace(edition)
 }
 
 func listPackageDesktopFiles(pkg string) []string {
@@ -862,12 +863,12 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 				if err != nil {
 					logger.Warning(err)
 				}
-				if isProfessional() && updateType == system.SystemUpdate {
+				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
 					go postSystemUpgradeMessage(upgradeSucceed, job)
 				}
 			},
 			string(system.FailedStatus): func() {
-				if isProfessional() && updateType == system.SystemUpdate {
+				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
 					go postSystemUpgradeMessage(upgradeFailed, job)
 				}
 			},
