@@ -1261,7 +1261,7 @@ func updateSecurityConfigFile(create bool) error {
 		}
 		configContent := []string{
 			`Dir::Etc::SourceParts "/dev/null";`,
-			`Dir::Etc::SourceList "/etc/apt/sources.list.d/quality.list";`,
+			fmt.Sprintf(`Dir::Etc::SourceList "/etc/apt/sources.list.d/%v";`, system.SecurityList),
 		}
 		config := strings.Join(configContent, "\n")
 		err = ioutil.WriteFile(configPath, []byte(config), 0644)

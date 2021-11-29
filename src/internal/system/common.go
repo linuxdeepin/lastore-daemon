@@ -133,9 +133,11 @@ const (
 	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
 	OriginSourceDir    = "/etc/apt/sources.list.d"
 	SystemSourceFile   = "/etc/apt/sources.list"
-	AppStoreSourceFile = "/etc/apt/sources.list.d/appstore.list"
-	SecuritySourceFile = "/etc/apt/sources.list.d/quality.list" // 安全更新源路径
-	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"     // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
+	AppStoreList       = "appstore.list"
+	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
+	SecurityList       = "security.list"
+	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
+	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"        // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 )
 
 func GetCategorySourceMap() map[UpdateType]string {
@@ -177,7 +179,7 @@ func UpdateUnknownSourceDir() error {
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != "appstore.list" && name != "quality.list" {
+			if name != AppStoreList && name != SecurityList {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
