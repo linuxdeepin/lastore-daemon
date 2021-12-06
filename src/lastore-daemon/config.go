@@ -36,7 +36,7 @@ var DefaultConfig = Config{
 	UpdateNotify:                true,
 	AutoClean:                   true,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
-	UpdateMode:                  system.SystemUpdate | system.AppStoreUpdate | system.UnknownUpdate, // 默认不开启安全更新
+	UpdateMode:                  system.SystemUpdate | system.UnknownUpdate, // 默认不开启安全更新,移除应用更新
 
 	AutoInstallUpdates:    false,
 	AutoInstallUpdateType: system.OnlySecurityUpdate, // 开启状态下,默认只开启安全更新的自动安装
