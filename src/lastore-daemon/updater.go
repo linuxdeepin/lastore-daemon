@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus"
-	"pkg.deepin.io/lib/dbusutil"
-	"pkg.deepin.io/lib/strv"
+	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 type ApplicationUpdateInfo struct {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-ini/ini"
-	"pkg.deepin.io/lib/log"
+	"github.com/linuxdeepin/go-lib/log"
 )
 
 var logger = log.NewLogger("lastore")

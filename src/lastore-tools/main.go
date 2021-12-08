@@ -28,7 +28,7 @@ import (
 	"internal/utils"
 
 	"github.com/codegangsta/cli"
-	"pkg.deepin.io/lib/log"
+	"github.com/linuxdeepin/go-lib/log"
 )
 
 var CMDUpdater = cli.Command{

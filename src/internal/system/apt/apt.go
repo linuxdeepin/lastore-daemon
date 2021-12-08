@@ -29,7 +29,7 @@ import (
 	"sync"
 	"syscall"
 
-	"pkg.deepin.io/lib/log"
+	"github.com/linuxdeepin/go-lib/log"
 )
 
 type CommandSet interface {

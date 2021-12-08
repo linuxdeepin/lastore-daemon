@@ -3,7 +3,7 @@
 * Project layout
 
 ** Coding layout
-Lastore Daemon developed by golang, pkg.deepin.io/lib/dbus and
+Lastore Daemon developed by golang, github.com/linuxdeepin/go-lib/dbus and
 the command line apt tools (not libapt).
 
 The golang project layout is ruled under [[https://getgb.io/][gb]].

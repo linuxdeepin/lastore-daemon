@@ -6,7 +6,7 @@ Build-Depends:
  dde-api-dev (>= 5.0.2),
  debhelper-compat (= 11),
  deepin-gettext-tools,
- golang-dlib-dev(>= 1.2.2),
+ golang-github-linuxdeepin-go-lib-dev(>= 1.2.2,
  golang-github-go-ini-ini-dev,
  golang-pault-go-debian-dev,
  golang-github-linuxdeepin-go-dbus-factory-dev (>= 0.0.4),

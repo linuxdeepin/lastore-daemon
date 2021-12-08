@@ -23,7 +23,7 @@ import (
 	"path"
 	"time"
 
-	"pkg.deepin.io/lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/dbusutil"
 
 	"github.com/godbus/dbus"
 )

@@ -25,7 +25,7 @@ import (
 	"sort"
 	"strings"
 
-	"pkg.deepin.io/lib/keyfile"
+	"github.com/linuxdeepin/go-lib/keyfile"
 )
 
 // TODO: write tools to analyze the score of desktop in debs

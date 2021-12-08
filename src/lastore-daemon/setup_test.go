@@ -25,7 +25,7 @@ func init() {
 import (
 	proxy "./dbusproxy"
 	. "github.com/smartystreets/goconvey/convey"
-	//	"pkg.deepin.io/lib/dbus"
+	//	"github.com/linuxdeepin/go-lib/dbus"
 	"fmt"
 	"testing"
 )

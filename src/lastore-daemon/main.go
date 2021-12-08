@@ -31,10 +31,10 @@ import (
 	"internal/system/apt"
 	"internal/utils"
 
-	"pkg.deepin.io/dde/api/inhibit_hint"
-	"pkg.deepin.io/lib/dbusutil"
-	"pkg.deepin.io/lib/gettext"
-	"pkg.deepin.io/lib/log"
+	"github.com/linuxdeepin/dde-api/inhibit_hint"
+	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/gettext"
+	"github.com/linuxdeepin/go-lib/log"
 )
 
 const (

@@ -41,10 +41,10 @@ import (
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
 
-	"pkg.deepin.io/lib/dbusutil"
-	"pkg.deepin.io/lib/keyfile"
-	"pkg.deepin.io/lib/procfs"
-	"pkg.deepin.io/lib/strv"
+	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/keyfile"
+	"github.com/linuxdeepin/go-lib/procfs"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 const (

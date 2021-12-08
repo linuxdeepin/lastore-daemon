@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"pkg.deepin.io/lib/log"
+	"github.com/linuxdeepin/go-lib/log"
 )
 
 type MirrorSource struct {
