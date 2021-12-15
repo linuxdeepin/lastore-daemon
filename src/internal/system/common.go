@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -83,17 +82,6 @@ func NormalFileExists(fpath string) bool {
 		return false
 	}
 	return true
-}
-
-//SystemUpgradeInfo 将update_infos.json数据解析成map
-func SystemUpgradeInfo() (map[string]SourceUpgradeInfo, error) {
-	filename := path.Join(VarLibDir, "update_infos.json")
-	var r map[string]SourceUpgradeInfo
-	err := DecodeJson(filename, &r)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
 }
 
 type UpdateType uint64

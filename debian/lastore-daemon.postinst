@@ -18,9 +18,6 @@ case "$1" in
             systemd-machine-id-setup
         fi
         ;;
-    triggered)
-        /var/lib/lastore/scripts/build_system_info || true
-        ;;
 esac
 
 #DEBHELPER#

@@ -53,19 +53,17 @@ func buildUpgradeInfo(needle *regexp.Regexp, line string) *system.UpgradeInfo {
 	return nil
 }
 
-func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regexp, string) *system.UpgradeInfo) system.SourceUpgradeInfo {
+func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regexp, string) *system.UpgradeInfo, category string) []system.UpgradeInfo {
 	var infos []system.UpgradeInfo
 	for _, line := range lines {
 		info := fn(needle, line)
 		if info == nil {
 			continue
 		}
+		info.Category = category
 		infos = append(infos, *info)
 	}
-	return system.SourceUpgradeInfo{
-		UpgradeInfo: infos,
-		Error:       nil,
-	}
+	return infos
 }
 
 // return the pkgs from apt dist-upgrade
@@ -212,16 +210,14 @@ func GenerateUpdateInfos(fpath string) error {
 	if err != nil {
 		logger.Warning(err)
 	}
-	updateInfoMap := make(system.SourceUpgradeInfoMap)
+	var upgradeInfo []system.UpgradeInfo
 	for category, sourcePath := range system.GetCategorySourceMap() {
-		var upgradeInfo system.SourceUpgradeInfo
-		var updateInfoErr *system.UpdateInfoError
 		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)
 		if err != nil {
 			if os.IsNotExist(err) { // 该类型源文件不存在时,无需将错误写入到文件中
 				logger.Info(err)
 			} else {
-				updateInfoErr = &system.UpdateInfoError{}
+				var updateInfoErr system.UpdateInfoError
 				pkgSysErr, ok := err.(*system.PkgSystemError)
 				if ok {
 					updateInfoErr.Type = pkgSysErr.GetType()
@@ -230,19 +226,15 @@ func GenerateUpdateInfos(fpath string) error {
 					updateInfoErr.Type = "unknown"
 					updateInfoErr.Detail = err.Error()
 				}
-			}
-			upgradeInfo = system.SourceUpgradeInfo{
-				UpgradeInfo: nil,
-				Error:       updateInfoErr,
+				return writeData(fpath, updateInfoErr)
 			}
 		} else {
-			upgradeInfo = mapUpgradeInfo(
+			upgradeInfo = append(upgradeInfo, mapUpgradeInfo(
 				lines,
 				buildUpgradeInfoRegex(getSystemArchitectures()),
-				buildUpgradeInfo)
+				buildUpgradeInfo,
+				category.JobType())...)
 		}
-		updateInfoMap[category.JobType()] = upgradeInfo
 	}
-
-	return writeData(fpath, updateInfoMap)
+	return writeData(fpath, upgradeInfo)
 }

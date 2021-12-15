@@ -56,14 +56,14 @@ const (
 
 	uosReleaseNotePkgName = "uos-release-note"
 
-	appStoreDaemonPath       = "/usr/bin/deepin-app-store-daemon"
-	oldAppStoreDaemonPath    = "/usr/bin/deepin-appstore-daemon"
-	printerPath              = "/usr/bin/dde-printer"
-	printerHelperPath        = "/usr/bin/dde-printer-helper"
-	sessionDaemonPath        = "/usr/lib/deepin-daemon/dde-session-daemon"
-	langSelectorPath         = "/usr/lib/deepin-daemon/langselector"
-	controlCenterPath        = "/usr/bin/dde-control-center"
-	controlCenterCmdLine     = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
+	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
+	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
+	printerPath           = "/usr/bin/dde-printer"
+	printerHelperPath     = "/usr/bin/dde-printer-helper"
+	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
+	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
+	controlCenterPath     = "/usr/bin/dde-control-center"
+	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
 )
 
 var (
@@ -528,7 +528,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 
 func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 	logger.Info("handleUpdateInfosChanged")
-	infosMap, err := system.SystemUpgradeInfo()
+	infosMap, err := m.SystemUpgradeInfo()
 	if err != nil {
 		if os.IsNotExist(err) {
 			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
@@ -538,11 +538,6 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 		return
 	}
 
-	for updateType, info := range infosMap {
-		if info.Error != nil {
-			logger.Warningf("failed to get %v info:%v", updateType, info.Error)
-		}
-	}
 	m.updateUpdatableProp(infosMap)
 
 	m.PropsMu.Lock()
@@ -561,17 +556,6 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 
 // 根据解析update_infos.json数据的结果,将数据分别设置到Manager的UpgradableApps和Updater的UpdatablePackages,ClassifiedUpdatablePackages,UpdatableApps
 func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
-	if infosMap != nil {
-		m.PropsMu.RLock()
-		updateType := m.UpdateMode
-		m.PropsMu.RUnlock()
-		for _, t := range system.AllUpdateType() {
-			category := updateType & t
-			if category == 0 {
-				infosMap[t.JobType()] = system.SourceUpgradeInfo{}
-			}
-		}
-	}
 	m.updater.setClassifiedUpdatablePackages(infosMap)
 	updatableApps := UpdatableNames(infosMap)
 	m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
@@ -1293,6 +1277,43 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 			}
 		}
 	})
+}
+
+//SystemUpgradeInfo 将update_infos.json数据解析成map
+func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
+	r := make(map[string][]system.UpgradeInfo)
+	m.PropsMu.RLock()
+	updateType := m.UpdateMode
+	m.PropsMu.RUnlock()
+	for _, t := range system.AllUpdateType() {
+		category := updateType & t
+		if category != 0 {
+			r[t.JobType()] = nil
+		}
+	}
+
+	filename := path.Join(system.VarLibDir, "update_infos.json")
+	var updateInfosList []system.UpgradeInfo
+	err := system.DecodeJson(filename, &updateInfosList)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, err
+		}
+
+		var updateInfoErr system.UpdateInfoError
+		err2 := system.DecodeJson(filename, &updateInfoErr)
+		if err2 == nil {
+			return nil, &updateInfoErr
+		}
+		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
+	}
+	for _, info := range updateInfosList {
+		_, ok := r[info.Category]
+		if ok {
+			r[info.Category] = append(r[info.Category], info)
+		}
+	}
+	return r, nil
 }
 
 type upgradePostContent struct {

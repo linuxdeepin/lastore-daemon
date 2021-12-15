@@ -75,16 +75,12 @@ type JobProgressInfo struct {
 	FatalError  bool
 }
 
-type SourceUpgradeInfo struct {
-	UpgradeInfo []UpgradeInfo
-	Error       *UpdateInfoError
-}
-
 type UpgradeInfo struct {
 	Package        string
 	CurrentVersion string
 	LastVersion    string
 	ChangeLog      string
+	Category       string
 }
 
 type UpdateInfoError struct {
@@ -97,7 +93,7 @@ func (err *UpdateInfoError) Error() string {
 		err.Type, err.Detail)
 }
 
-type SourceUpgradeInfoMap map[string]SourceUpgradeInfo
+type SourceUpgradeInfoMap map[string][]UpgradeInfo
 
 type Architecture string
 

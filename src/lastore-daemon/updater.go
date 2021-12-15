@@ -221,7 +221,7 @@ func UpdatableNames(infosMap system.SourceUpgradeInfoMap) []string {
 	var apps []string
 	appsMap := make(map[string]struct{})
 	for _, infos := range infosMap {
-		for _, info := range infos.UpgradeInfo {
+		for _, info := range infos {
 			appsMap[info.Package] = struct{}{}
 		}
 	}
@@ -329,7 +329,7 @@ func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeIn
 
 	for updateType, infos := range infosMap {
 		var packages []string
-		for _, info := range infos.UpgradeInfo {
+		for _, info := range infos {
 			packages = append(packages, info.Package)
 		}
 		updatablePackages[updateType] = packages

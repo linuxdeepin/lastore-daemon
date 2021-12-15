@@ -59,7 +59,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []Application
 		if repeatCount > 5 {
 			break
 		}
-		uInfosMap, err = system.SystemUpgradeInfo()
+		uInfosMap, err = u.manager.SystemUpgradeInfo()
 		if os.IsNotExist(err) {
 			time.Sleep(1 * time.Second)
 			repeatCount++
@@ -75,7 +75,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []Application
 	}
 
 	for _, uInfos := range uInfosMap {
-		for _, uInfo := range uInfos.UpgradeInfo {
+		for _, uInfo := range uInfos {
 			id := uInfo.Package
 
 			aInfo, ok := aInfos[id]

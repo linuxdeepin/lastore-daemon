@@ -114,10 +114,10 @@ func (*testWrap) TestBuildUpgradeInfo(c *C.C) {
 	for _, item := range data {
 		lines = append(lines, item.Raw)
 	}
-	infos := mapUpgradeInfo(lines, buildUpgradeInfoRegex([]system.Architecture{"amd64", "i386", "alpha"}), buildUpgradeInfo)
-	c.Assert(len(infos.UpgradeInfo), C.Equals, len(data))
+	infos := mapUpgradeInfo(lines, buildUpgradeInfoRegex([]system.Architecture{"amd64", "i386", "alpha"}), buildUpgradeInfo, system.SystemUpdate.JobType())
+	c.Assert(len(infos), C.Equals, len(data))
 	for i, item := range data {
-		info := infos.UpgradeInfo[i]
+		info := infos[i]
 		c.Check(info.Package, C.Equals, item.Package)
 		c.Check(info.CurrentVersion, C.Equals, item.CurrentVersion)
 		c.Check(info.LastVersion, C.Equals, item.LastVersion)
