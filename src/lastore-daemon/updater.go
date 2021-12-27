@@ -335,8 +335,13 @@ func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeIn
 		updatablePackages[updateType] = packages
 		if !changed {
 			newData := strv.Strv(packages)
-			oldData := strv.Strv(classifiedUpdatablePackages[updateType])
-			changed = !newData.Equal(oldData)
+			oldPackages, ok := classifiedUpdatablePackages[updateType]
+			if ok {
+				oldData := strv.Strv(oldPackages)
+				changed = !newData.Equal(oldData)
+			} else {
+				changed = true
+			}
 		}
 	}
 	if changed {

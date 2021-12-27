@@ -828,16 +828,7 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 	}
 	if job.next != nil {
 		job.next.setHooks(map[string]func(){
-			string(system.EndStatus): func() { // 每次更新一个模块完成之后,需要更新update_info.json文件
-				args := []string{
-					"update",
-					"-j=update_infos",
-					`-output=/var/lib/lastore/update_infos.json`,
-				}
-				err := exec.Command("/usr/bin/lastore-tools", args...).Run()
-				if err != nil {
-					logger.Warning(err)
-				}
+			string(system.EndStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
 					go postSystemUpgradeMessage(upgradeSucceed, job)
 				}
@@ -1124,7 +1115,7 @@ func (m *Manager) installUOSReleaseNote() {
 }
 
 func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system.UpdateType) {
-	hasBattery, err := m.sysPower.HasBattery().Get(0)
+	onBattery, err := m.sysPower.OnBattery().Get(0)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -1134,7 +1125,7 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 		logger.Warning(err)
 		return
 	}
-	if hasBattery && batteryPercentage > 50 || !hasBattery {
+	if onBattery && batteryPercentage > 50 || !onBattery {
 		canBackup, err := m.abRecovery.CanBackup(0)
 		if err != nil {
 			logger.Warning(err)
