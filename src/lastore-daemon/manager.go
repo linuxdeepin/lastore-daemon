@@ -120,6 +120,7 @@ type Manager struct {
 	UpdateMode system.UpdateType `prop:"access:rw"`
 
 	isUpdateSucceed bool
+	canRestore      bool
 }
 
 /*
@@ -742,7 +743,7 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						logger.Warning(err)
 					} else {
 						logger.Info(err)
-						if autoCheck && m.updater.AutoInstallUpdates && (m.updater.AutoInstallUpdateType&category != 0) {
+						if autoCheck && m.categorySupportAutoInstall(category) {
 							go m.handlePackagesDownloaded(sender, category)
 						}
 					}
@@ -752,7 +753,7 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 				if autoCheck {
 					prepareJob.setHooks(map[string]func(){
 						string(system.EndStatus): func() {
-							if m.updater.AutoInstallUpdates && (m.updater.AutoInstallUpdateType&category != 0) {
+							if m.categorySupportAutoInstall(category) {
 								go m.handlePackagesDownloaded(sender, category)
 							}
 						},
@@ -1268,6 +1269,16 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 			}
 		}
 	})
+	canRestore, err := m.abRecovery.CanRestore(0) // 如果初始化时系统处于可回退状态,则不进行自动安装更新（true： 不自动安装）
+	if err != nil {
+		m.PropsMu.Lock()
+		m.canRestore = true
+		m.PropsMu.Unlock()
+	} else {
+		m.PropsMu.Lock()
+		m.canRestore = canRestore
+		m.PropsMu.Unlock()
+	}
 }
 
 //SystemUpgradeInfo 将update_infos.json数据解析成map
@@ -1305,6 +1316,18 @@ func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 		}
 	}
 	return r, nil
+}
+
+func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
+	m.updater.PropsMu.RLock()
+	autoInstallUpdates := m.updater.AutoInstallUpdates
+	autoInstallUpdateType := m.updater.AutoInstallUpdateType
+	m.updater.PropsMu.RUnlock()
+
+	m.PropsMu.RLock()
+	canRestore := m.canRestore
+	m.PropsMu.RUnlock()
+	return !canRestore && autoInstallUpdates && (autoInstallUpdateType&category != 0)
 }
 
 type upgradePostContent struct {
