@@ -830,7 +830,7 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 	}
 	if job.next != nil {
 		job.next.setHooks(map[string]func(){
-			string(system.EndStatus): func() {
+			string(system.SucceedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
 					go postSystemUpgradeMessage(upgradeSucceed, job)
 				}
