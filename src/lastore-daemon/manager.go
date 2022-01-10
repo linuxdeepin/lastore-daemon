@@ -1393,7 +1393,7 @@ func postSystemUpgradeMessage(upgradeStatus int, j *Job) {
 		return
 	}
 	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
-	const url = "http://gray-update-pre.uniontech.com/api/v1/update/status"
+	const url = "https://update-platform-api.uniontech.com/api/v1/update/status"
 	request, err := http.NewRequest("POST", url, strings.NewReader(base64EncodeString))
 	if err != nil {
 		logger.Warning(err)
