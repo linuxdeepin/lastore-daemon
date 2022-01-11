@@ -321,10 +321,10 @@ func (u *Updater) RestoreSystemSource() *dbus.Error {
 
 func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeInfoMap) {
 	changed := false
-	updatablePackages := make(map[string][]string)
+	newUpdatablePackages := make(map[string][]string)
 
 	u.PropsMu.RLock()
-	classifiedUpdatablePackages := u.ClassifiedUpdatablePackages
+	oldUpdatablePackages := u.ClassifiedUpdatablePackages
 	u.PropsMu.RUnlock()
 
 	for updateType, infos := range infosMap {
@@ -332,22 +332,22 @@ func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeIn
 		for _, info := range infos {
 			packages = append(packages, info.Package)
 		}
-		updatablePackages[updateType] = packages
+		newUpdatablePackages[updateType] = packages
+	}
+	for _, updateType := range system.AllUpdateType() {
 		if !changed {
-			newData := strv.Strv(packages)
-			oldPackages, ok := classifiedUpdatablePackages[updateType]
-			if ok {
-				oldData := strv.Strv(oldPackages)
-				changed = !newData.Equal(oldData)
-			} else {
-				changed = true
+			newData := strv.Strv(newUpdatablePackages[updateType.JobType()])
+			oldData := strv.Strv(oldUpdatablePackages[updateType.JobType()])
+			changed = !newData.Equal(oldData)
+			if changed {
+				break
 			}
 		}
 	}
 	if changed {
 		u.PropsMu.Lock()
 		defer u.PropsMu.Unlock()
-		u.setPropClassifiedUpdatablePackages(updatablePackages)
+		u.setPropClassifiedUpdatablePackages(newUpdatablePackages)
 	}
 }
 
