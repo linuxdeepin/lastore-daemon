@@ -194,6 +194,7 @@ var _tokenUpdateMu sync.Mutex
 
 // 更新 99lastore-token.conf 文件的内容
 func updateTokenConfigFile() {
+	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
 	systemInfo, err := getSystemInfo()

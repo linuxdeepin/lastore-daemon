@@ -2,6 +2,11 @@ package main
 
 import (
 	"bufio"
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"internal/system"
@@ -289,11 +294,60 @@ type oemInfo struct {
 	} `json:"custom_info"`
 }
 
+const (
+	oemInfoFile = "/etc/oem-info"
+	oemSignFile = "/var/uos/.oem-shadow"
+	oemPubKey   = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwzVS35kJl3mhSJssD3S5\nEzjJbFoAD+VsMSy2nS7WQA2XH0aPAWjgCeU+1ScYdBOWz+zWsnK77fGm96HueAuT\nhQEJ9J+ISJUuYBYCc6ovc35gxnhCmP2Qof+/vw98+uKnf1aTDI1imNCWOd/shSbL\nOBn5xFXPsQld1HJqahOuQZOguNIWvrvT7RtmQb77iu576gVLc948HreXKOPD57uK\nJoA2KcoUt95hd94wYyphCuE4onjPcIlpJQfda6PP+HO2Xwze3ltIG6hJSSAEK4R9\n8GnaOTqvslWVI9QFLCIyQ63dbbnASYFTWpDXTlPJsss64vfWOuEjwIyzzQDJNOzN\nFQIDAQAB\n-----END PUBLIC KEY-----"
+)
+
 func getCustomInfo() (bool, error) {
+	if !verifyOemFile() {
+		logger.Warning("verify oem-info failure")
+		return false, nil
+	}
 	var info oemInfo
-	err := system.DecodeJson("/etc/oem-info.json", &info)
+	err := system.DecodeJson(oemInfoFile, &info)
 	if err != nil {
 		return false, err
 	}
 	return info.CustomInfo.CustomizedKernel, nil
+}
+
+// 定制标识校验
+func verifyOemFile() bool {
+	//pem解码
+	block, _ := pem.Decode([]byte(oemPubKey))
+	if block == nil {
+		return false
+	}
+	//解析得到一个公钥interface
+	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	//转为rsa公钥
+	publicKey := pubKeyInterface.(*rsa.PublicKey)
+	//sha256计算
+	hash := sha256.New()
+	encContent, err := ioutil.ReadFile(oemInfoFile)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	_, err = hash.Write(encContent)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	hashed := hash.Sum(nil)
+
+	//读取签名文件
+	srBuf, err := ioutil.ReadFile(oemSignFile)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	//签名认证
+	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed, srBuf) == nil
 }
