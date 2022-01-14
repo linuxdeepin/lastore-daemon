@@ -21,7 +21,7 @@ const (
 /**
  * 对要发送的消息进行AES-CBC加密
  */
-var encodingAesKey = "1FVcC1z2G4dh1hv2TaR12o307ugbhG1B"
+var encodingAesKey = "DflXyFwTmaoGmbDkVj8uD62XGb01pkJn"
 
 func EncryptMsg(data []byte) ([]byte, error) {
 	// 获得16位随机字符串，填充到明文之前
