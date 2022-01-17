@@ -126,6 +126,7 @@ const (
 	SystemSourceFile   = "/etc/apt/sources.list"
 	AppStoreList       = "appstore.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
+	DriverList         = "driver.list"
 	SecurityList       = "security.list"
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
 	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"        // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
@@ -170,7 +171,7 @@ func UpdateUnknownSourceDir() error {
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != AppStoreList && name != SecurityList {
+			if name != AppStoreList && name != SecurityList && name != DriverList {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
