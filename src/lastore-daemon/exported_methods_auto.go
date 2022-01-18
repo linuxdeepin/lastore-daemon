@@ -41,6 +41,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"info"},
 		},
 		{
+			Name:   "HandleSystemEvent",
+			Fn:     v.HandleSystemEvent,
+			InArgs: []string{"eventType"},
+		},
+		{
 			Name:    "InstallPackage",
 			Fn:      v.InstallPackage,
 			InArgs:  []string{"jobName", "packages"},

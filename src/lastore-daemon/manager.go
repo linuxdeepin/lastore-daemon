@@ -30,12 +30,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -106,9 +108,8 @@ type Manager struct {
 	// dbusutil-gen: equal=nil
 	UpgradableApps []string
 
-	SystemOnChanging   bool
-	AutoClean          bool
-	autoCleanCfgChange chan struct{}
+	SystemOnChanging bool
+	AutoClean        bool
 
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
@@ -124,6 +125,10 @@ type Manager struct {
 
 	isUpdateSucceed bool
 	canRestore      bool
+
+	inhibitAutoQuitCount int32
+	autoQuitCountMu      sync.Mutex
+	lastoreUnitCacheMu   sync.Mutex
 }
 
 /*
@@ -151,11 +156,9 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	m.apps = apps.NewApps(sysBus)
 	m.initAutoInstall(sysBus)
 	m.jobManager = NewJobManager(service, b, m.updateJobList)
-	go m.jobManager.Dispatch()
-
+	go m.handleOSSignal()
 	m.updateJobList()
 	m.modifyUpdateMode()
-	go m.loopCheck()
 	return m
 }
 
@@ -275,6 +278,7 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 
 func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	jobObj, err := m.updatePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -311,6 +315,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		logger.Warning(err)
@@ -488,6 +493,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 
 func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		logger.Warning(err)
@@ -550,10 +556,12 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed {
 		logger.Info("auto download updates")
 		go func() {
+			m.inhibitAutoQuitCountAdd()
 			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.UpdateMode, false, autoCheck) // 自动下载使用控制中心的配置
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
+			m.inhibitAutoQuitCountSub()
 		}()
 	}
 }
@@ -573,6 +581,7 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	if needNotify {
 		jobName = "+notify"
 	}
+	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
 
@@ -600,6 +609,7 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 }
 
 func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	jobObj, err := m.updateSource(false, false)
 	if err != nil {
 		logger.Warning(err)
@@ -629,6 +639,7 @@ func (m *Manager) cancelAllUpdateJob() error {
 }
 
 func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	jobObj, err := m.distUpgrade(sender)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -676,6 +687,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 }
 
 func (m *Manager) PrepareDistUpgrade() (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	jobObj, err := m.prepareDistUpgrade()
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -710,6 +722,7 @@ func (m *Manager) prepareDistUpgrade() (*Job, error) {
 }
 
 func (m *Manager) ClassifiedUpgrade(sender dbus.Sender, updateType system.UpdateType) ([]dbus.ObjectPath, *dbus.Error) {
+	m.service.DelayAutoQuit()
 	return m.classifiedUpgrade(sender, updateType, true, false)
 }
 
@@ -746,12 +759,14 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						logger.Warning(err)
 					} else {
 						logger.Info(err)
+						prepareJob.autoCheck = autoCheck
 						if autoCheck && m.categorySupportAutoInstall(category) {
 							go m.handlePackagesDownloaded(sender, category)
 						}
 					}
 					continue
 				}
+				prepareJob.autoCheck = autoCheck
 				jobPaths = append(jobPaths, prepareJob.getPath())
 				if autoCheck {
 					prepareJob.setHooks(map[string]func(){
@@ -834,12 +849,12 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 		job.next.setHooks(map[string]func(){
 			string(system.SucceedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go postSystemUpgradeMessage(upgradeSucceed, job, updateType)
+					go m.postSystemUpgradeMessage(upgradeSucceed, job, updateType)
 				}
 			},
 			string(system.FailedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go postSystemUpgradeMessage(upgradeFailed, job, updateType)
+					go m.postSystemUpgradeMessage(upgradeFailed, job, updateType)
 				}
 			},
 		})
@@ -858,6 +873,7 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 }
 
 func (m *Manager) StartJob(jobId string) *dbus.Error {
+	m.service.DelayAutoQuit()
 	m.do.Lock()
 	err := m.jobManager.MarkStart(jobId)
 	m.do.Unlock()
@@ -880,6 +896,7 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 }
 
 func (m *Manager) CleanJob(jobId string) *dbus.Error {
+	m.service.DelayAutoQuit()
 	m.do.Lock()
 	err := m.jobManager.CleanJob(jobId)
 	m.do.Unlock()
@@ -891,6 +908,7 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) (size int64, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()
 
 	s, err := system.QueryPackageDownloadSize(packages...)
@@ -901,15 +919,18 @@ func (m *Manager) PackagesDownloadSize(packages []string) (size int64, busErr *d
 }
 
 func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
 func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	return system.QueryPackageInstalled(pkgId), nil
 }
 
 // PackageDesktopPath TODO: Remove this API
 func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
 	if err != nil {
 		logger.Warningf("QueryDesktopPath failed: %q\n", err)
@@ -919,11 +940,13 @@ func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *
 }
 
 func (m *Manager) SetRegion(region string) *dbus.Error {
+	m.service.DelayAutoQuit()
 	err := m.config.SetAppstoreRegion(region)
 	return dbusutil.ToError(err)
 }
 
 func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
+	m.service.DelayAutoQuit()
 	if m.AutoClean == enable {
 		return nil
 	}
@@ -935,7 +958,6 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	}
 
 	m.AutoClean = enable
-	m.autoCleanCfgChange <- struct{}{}
 	err = m.emitPropChangedAutoClean(enable)
 	if err != nil {
 		logger.Warning(err)
@@ -944,6 +966,7 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 }
 
 func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	info, err := getArchiveInfo()
 	if err != nil {
 		return "", dbusutil.ToError(err)
@@ -960,6 +983,7 @@ func getArchiveInfo() (string, error) {
 }
 
 func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	jobObj, err := m.cleanArchives(false)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -994,70 +1018,8 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) loopCheck() {
-	m.autoCleanCfgChange = make(chan struct{})
-	const checkInterval = time.Second * 600
-
-	doClean := func() {
-		logger.Debug("call doClean")
-
-		_, err := m.cleanArchives(true)
-		if err != nil {
-			logger.Warningf("CleanArchives failed: %v", err)
-		}
-	}
-
-	calcRemainingDuration := func() time.Duration {
-		elapsed := time.Since(m.config.LastCleanTime)
-		if elapsed < 0 {
-			// now time < last clean time : last clean time (from config) is invalid
-			return -1
-		}
-		return m.config.CleanInterval - elapsed
-	}
-
-	calcRemainingCleanCacheOverLimitDuration := func() time.Duration {
-		elapsed := time.Since(m.config.LastCheckCacheSizeTime)
-		if elapsed < 0 {
-			// now time < last check cache size time : last check cache size time (from config) is invalid
-			return -1
-		}
-		return m.config.CleanIntervalCacheOverLimit - elapsed
-	}
-
-	for {
-		select {
-		case <-m.autoCleanCfgChange:
-			logger.Debug("auto clean config changed")
-			continue
-		case <-time.After(checkInterval):
-			if m.AutoClean {
-				remaining := calcRemainingDuration()
-				logger.Debugf("auto clean remaining duration: %v", remaining)
-				if remaining < 0 {
-					doClean()
-					continue
-				}
-				size, err := getNeedCleanCacheSize()
-				if err != nil {
-					logger.Warning(err)
-				}
-				cacheSize := size / 1024.0
-				if cacheSize > MaxCacheSize {
-					remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
-					logger.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
-					if remainingCleanCacheOverLimitDuration < 0 {
-						doClean()
-					}
-				}
-			} else {
-				logger.Debug("auto clean disabled")
-			}
-		}
-	}
-}
-
 func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
 	jobObj, err := m.fixError(sender, errType)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -1116,6 +1078,9 @@ func (m *Manager) installUOSReleaseNote() {
 }
 
 func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system.UpdateType) {
+	m.inhibitAutoQuitCountAdd()
+	defer m.inhibitAutoQuitCountSub()
+
 	onBattery, err := m.sysPower.OnBattery().Get(0)
 	if err != nil {
 		logger.Warning(err)
@@ -1161,6 +1126,7 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 					logger.Warning(err)
 					return
 				}
+				m.inhibitAutoQuitCountAdd()
 				m.PropsMu.Lock()
 				m.shouldHandleBackupJobEnd = true
 				m.PropsMu.Unlock()
@@ -1274,16 +1240,18 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 		updateType := m.autoInstallType
 		shouldHandleBackupJobEnd := m.shouldHandleBackupJobEnd
 		m.PropsMu.RUnlock()
-		if kind == jobKindBackup && success && shouldHandleBackupJobEnd {
-			m.PropsMu.Lock()
-			m.autoInstallType = 0
-			m.shouldHandleBackupJobEnd = false
-			m.PropsMu.Unlock()
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
-			if err != nil {
-				logger.Warning(err)
-				return
+		if kind == jobKindBackup && shouldHandleBackupJobEnd {
+			if success {
+				m.PropsMu.Lock()
+				m.autoInstallType = 0
+				m.shouldHandleBackupJobEnd = false
+				m.PropsMu.Unlock()
+				_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
+				if err != nil {
+					logger.Warning(err)
+				}
 			}
+			m.inhibitAutoQuitCountSub()
 		}
 	})
 	canRestore, err := m.abRecovery.CanRestore(0) // 如果初始化时系统处于可回退状态,则不进行自动安装更新（true： 不自动安装）
@@ -1347,6 +1315,104 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 	return !canRestore && autoInstallUpdates && (autoInstallUpdateType&category != 0)
 }
 
+func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	if uid != 0 {
+		err = fmt.Errorf("%q is not allowed to trigger system event", uid)
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	m.service.DelayAutoQuit()
+	switch eventType {
+	case "AutoCheck":
+		return dbusutil.ToError(m.handleAutoCheckEvent())
+	case "AutoClean":
+		return dbusutil.ToError(m.handleAutoCleanEvent())
+	case "UpdateInfosChanged":
+		m.handleUpdateInfosChanged(false)
+	case "OsVersionChanged":
+		updateTokenConfigFile()
+	default:
+		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
+	}
+
+	return nil
+}
+
+func (m *Manager) handleAutoCheckEvent() error {
+	if m.updater.config.AutoCheckUpdates {
+		_, err := m.updateSource(m.updater.UpdateNotify, true)
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+	}
+	if !m.updater.config.DisableUpdateMetadata {
+		startUpdateMetadataInfoService()
+	}
+	return m.config.UpdateLastCheckTime()
+}
+
+func (m *Manager) handleAutoCleanEvent() error {
+
+	doClean := func() error {
+		logger.Debug("call doClean")
+
+		_, err := m.cleanArchives(true)
+		if err != nil {
+			logger.Warningf("CleanArchives failed: %v", err)
+			return err
+		}
+		return nil
+	}
+
+	calcRemainingDuration := func() time.Duration {
+		elapsed := time.Since(m.config.LastCleanTime)
+		if elapsed < 0 {
+			// now time < last clean time : last clean time (from config) is invalid
+			return -1
+		}
+		return m.config.CleanInterval - elapsed
+	}
+
+	calcRemainingCleanCacheOverLimitDuration := func() time.Duration {
+		elapsed := time.Since(m.config.LastCheckCacheSizeTime)
+		if elapsed < 0 {
+			// now time < last check cache size time : last check cache size time (from config) is invalid
+			return -1
+		}
+		return m.config.CleanIntervalCacheOverLimit - elapsed
+	}
+
+	if m.AutoClean {
+		remaining := calcRemainingDuration()
+		logger.Debugf("auto clean remaining duration: %v", remaining)
+		if remaining < 0 {
+			return doClean()
+		}
+		size, err := getNeedCleanCacheSize()
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+		cacheSize := size / 1024.0
+		if cacheSize > MaxCacheSize {
+			remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
+			logger.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
+			if remainingCleanCacheOverLimitDuration < 0 {
+				return doClean()
+			}
+		}
+	} else {
+		logger.Debug("auto clean disabled")
+	}
+	return nil
+}
+
 type upgradePostContent struct {
 	SerialNumber    string   `json:"serialNumber"`
 	MachineID       string   `json:"machineId"`
@@ -1362,7 +1428,9 @@ const (
 )
 
 // 发送系统更新成功或失败的状态
-func postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType system.UpdateType) {
+func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType system.UpdateType) {
+	m.inhibitAutoQuitCountAdd()
+	defer m.inhibitAutoQuitCountSub()
 	var upgradeErrorMsg string
 	if upgradeStatus == upgradeFailed {
 		upgradeErrorMsg = j.Description
@@ -1457,4 +1525,328 @@ func getUpgradeUrls(path string) []string {
 		}
 	}
 	return upgradeUrls
+}
+
+type lastoreSystemUnit struct {
+	UnitName string
+	Args     []string
+}
+
+const (
+	lastoreUnitCache    = "/tmp/lastoreUnitCache"
+	lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
+	run                 = "systemd-run"
+	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.HandleSystemEvent"
+)
+
+func (m *Manager) getNextUpdateDelay() time.Duration {
+	elapsed := time.Since(m.config.LastCheckTime)
+	remained := m.config.CheckInterval - elapsed
+	if remained < 0 {
+		return 0
+	}
+	// ensure delay at least have 10 seconds
+	return remained + time.Second*10
+
+}
+
+// 定时任务和文件监听
+func (m *Manager) getLastoreSystemUnitList() []lastoreSystemUnit {
+	return []lastoreSystemUnit{
+		{
+			"lastoreOnline",
+			[]string{
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, "AutoCheck"),
+			}, // 等待网络联通后检查更新
+		},
+		{
+			"lastoreAutoClean",
+			[]string{
+				"--on-active=600",
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoClean"), // 10分钟后自动检查是否需要清理
+			},
+		},
+		{
+			"lastoreAutoCheck",
+			[]string{
+				fmt.Sprintf("--on-active=%d", m.getNextUpdateDelay()/time.Second),
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoCheck"), // 根据上次检查时间,设置下一次自动检查时间
+			},
+		},
+		{
+			"lastoreAutoUpdateToken",
+			[]string{
+				"--on-active=60",
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 60s后更新token文件
+			},
+		},
+		{
+			"watchOsVersion",
+			[]string{
+				"--path-property=PathModified=/etc/os-version",
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
+			},
+		},
+		{
+			"watchUpdateInfo",
+			[]string{
+				"--path-property=PathModified=/var/lib/lastore/update_infos.json",
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
+			},
+		},
+	}
+}
+
+// 开启定时任务和文件监听(通过systemd-run实现)
+func (m *Manager) startSystemdUnit() {
+	m.lastoreUnitCacheMu.Lock()
+	defer m.lastoreUnitCacheMu.Unlock()
+
+	if system.NormalFileExists(lastoreUnitCache) {
+		return
+	}
+	kf := keyfile.NewKeyFile()
+	for _, unit := range m.getLastoreSystemUnitList() {
+		var args []string
+		args = append(args, fmt.Sprintf("--unit=%s", unit.UnitName))
+		args = append(args, unit.Args...)
+		cmd := exec.Command(run, args...)
+		logger.Info(cmd.String())
+		err := cmd.Run()
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+		kf.SetString("UnitName", unit.UnitName, fmt.Sprintf("%s.unit", unit.UnitName))
+	}
+
+	err := kf.SaveToFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+func (m *Manager) canAutoQuit() bool {
+	m.PropsMu.RLock()
+	jobList := m.jobList
+	m.PropsMu.RUnlock()
+	haveActiveJob := false
+	for _, job := range jobList {
+		if (job.Status != system.FailedStatus || job.retry > 0) && job.Status != system.PausedStatus {
+			logger.Info(job.Id)
+			haveActiveJob = true
+		}
+	}
+	m.autoQuitCountMu.Lock()
+	inhibitAutoQuitCount := m.inhibitAutoQuitCount
+	m.autoQuitCountMu.Unlock()
+	logger.Info("haveActiveJob", haveActiveJob)
+	logger.Info("inhibitAutoQuitCount", inhibitAutoQuitCount)
+	return !haveActiveJob && inhibitAutoQuitCount == 0
+}
+
+// 保存检查过更新的状态
+func (m *Manager) saveUpdateSourceOnce() {
+	m.lastoreUnitCacheMu.Lock()
+	defer m.lastoreUnitCacheMu.Unlock()
+
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	kf.SetBool("RecordData", "UpdateSourceOnce", true)
+	err = kf.SaveToFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+// 读取检查过更新的状态
+func (m *Manager) loadUpdateSourceOnce() {
+	m.lastoreUnitCacheMu.Lock()
+	defer m.lastoreUnitCacheMu.Unlock()
+
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	updateSourceOnce, err := kf.GetBool("RecordData", "UpdateSourceOnce")
+	if err == nil {
+		m.PropsMu.Lock()
+		m.updateSourceOnce = updateSourceOnce
+		m.PropsMu.Unlock()
+	} else {
+		logger.Warning(err)
+	}
+
+}
+
+type JobContent struct {
+	Id   string
+	Name string
+
+	Packages     []string
+	CreateTime   int64
+	DownloadSize int64
+
+	Type string
+
+	Status system.Status
+
+	Progress    float64
+	Description string
+	Environ     map[string]string
+	// completed bytes per second
+	QueueName string
+	HaveNext  bool
+	AutoCheck bool
+}
+
+// 读取上一次退出时失败和暂停的job,并导出
+func (m *Manager) loadCacheJob() {
+	var jobList []*JobContent
+	jobContent, err := ioutil.ReadFile(lastoreJobCacheJson)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = json.Unmarshal(jobContent, &jobList)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	for _, j := range jobList {
+		if j.Status == system.FailedStatus {
+			failedJob := NewJob(m.service, j.Id, j.Name, j.Packages, j.Type, j.QueueName, j.Environ)
+			failedJob.Description = j.Description
+			failedJob.CreateTime = j.CreateTime
+			failedJob.DownloadSize = j.DownloadSize
+			failedJob.Status = j.Status
+			err = m.jobManager.addJob(failedJob)
+			if err != nil {
+				logger.Warning(err)
+				continue
+			}
+		} else if j.Status == system.PausedStatus {
+			var updateType system.UpdateType
+			switch j.Id {
+			case genJobId(system.PrepareSystemUpgradeJobType), genJobId(system.SystemUpgradeJobType):
+				updateType = system.SystemUpdate
+			case genJobId(system.PrepareSecurityUpgradeJobType), genJobId(system.SecurityUpgradeJobType):
+				updateType = system.OnlySecurityUpdate
+			case genJobId(system.PrepareUnknownUpgradeJobType), genJobId(system.UnknownUpgradeJobType):
+				updateType = system.UnknownUpdate
+			default: // lastore目前是对控制中心提供功能，任务暂停场景只有三种类型的分类更新（下载）
+				continue
+			}
+			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, j.HaveNext, j.AutoCheck)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+			pausedJob := m.jobManager.findJobById(j.Id)
+			if pausedJob != nil {
+				err := m.jobManager.pauseJob(pausedJob)
+				if err != nil {
+					logger.Warning(err)
+				}
+				pausedJob.Progress = j.Progress
+			}
+		} else {
+			continue
+		}
+	}
+}
+
+// 保存失败和暂停的job内容
+func (m *Manager) saveCacheJob() {
+	m.PropsMu.RLock()
+	jobList := m.jobList
+	m.PropsMu.RUnlock()
+
+	var needSaveJobs []*JobContent
+	for _, job := range jobList {
+		if (job.Status == system.FailedStatus && job.retry == 0) || job.Status == system.PausedStatus {
+			haveNext := false
+			if job.next != nil {
+				haveNext = true
+			}
+			needSaveJob := &JobContent{
+				job.Id,
+				job.Name,
+				job.Packages,
+				job.CreateTime,
+				job.DownloadSize,
+				job.Type,
+				job.Status,
+				job.Progress,
+				job.Description,
+				job.environ,
+				job.queueName,
+				haveNext,
+				job.autoCheck,
+			}
+			needSaveJobs = append(needSaveJobs, needSaveJob)
+		}
+	}
+	b, err := json.Marshal(needSaveJobs)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = ioutil.WriteFile(lastoreJobCacheJson, b, 0600)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+func (m *Manager) inhibitAutoQuitCountSub() {
+	m.autoQuitCountMu.Lock()
+	m.inhibitAutoQuitCount -= 1
+	m.autoQuitCountMu.Unlock()
+}
+
+func (m *Manager) inhibitAutoQuitCountAdd() {
+	m.autoQuitCountMu.Lock()
+	m.inhibitAutoQuitCount += 1
+	m.autoQuitCountMu.Unlock()
+}
+
+func (m *Manager) loadLastoreCache() {
+	m.loadUpdateSourceOnce()
+	m.loadCacheJob()
+}
+
+func (m *Manager) saveLastoreCache() {
+	m.saveUpdateSourceOnce()
+	m.saveCacheJob()
+}
+
+func (m *Manager) handleOSSignal() {
+	var sigChan = make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGSEGV)
+
+	for sig := range sigChan {
+		switch sig {
+		case syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGSEGV:
+			logger.Info("received signal:", sig)
+			m.service.Quit()
+		}
+	}
 }

@@ -83,7 +83,6 @@ func (jm *JobManager) List() JobList {
 
 // CreateJob create the job and try starting it
 func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (*Job, error) {
-	jm.dispatch()
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus, system.PausedStatus:

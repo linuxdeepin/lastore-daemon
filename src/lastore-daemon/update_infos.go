@@ -50,6 +50,7 @@ func (u *Updater) updateUpdatableApps() {
 }
 
 func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []ApplicationUpdateInfo, busErr *dbus.Error) {
+	u.service.DelayAutoQuit()
 	iInfos := packageIconInfos()
 	aInfos := applicationInfos()
 	var uInfosMap system.SourceUpgradeInfoMap

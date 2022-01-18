@@ -24,7 +24,6 @@ import (
 	"os/exec"
 	"path"
 	"sync"
-	"time"
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -73,57 +72,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		AutoInstallUpdateType: config.AutoInstallUpdateType,
 	}
 	u.ClassifiedUpdatablePackages = make(map[string][]string)
-	go u.waitOnlineCheck()
-	go u.loopCheck()
 	return u
-}
-
-func (u *Updater) waitOnlineCheck() {
-	err := exec.Command("nm-online", "-t", "3600").Run()
-	if err == nil {
-		if u.AutoCheckUpdates {
-			_, err = u.manager.updateSource(u.UpdateNotify, true)
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-		if !u.config.DisableUpdateMetadata {
-			startUpdateMetadataInfoService()
-		}
-	}
-}
-
-func (u *Updater) loopCheck() {
-
-	calcDelay := func() time.Duration {
-		elapsed := time.Since(u.config.LastCheckTime)
-		remained := u.config.CheckInterval - elapsed
-		if remained < 0 {
-			return 0
-		}
-		return remained
-	}
-
-	for {
-		// ensure delay at least have 10 seconds
-		delay := calcDelay() + time.Second*10
-
-		logger.Infof("Next updater check will trigger at %v", time.Now().Add(delay))
-		time.Sleep(delay)
-
-		if u.AutoCheckUpdates {
-			_, err := u.manager.updateSource(u.UpdateNotify, true)
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-
-		if !u.config.DisableUpdateMetadata {
-			startUpdateMetadataInfoService()
-		}
-
-		_ = u.config.UpdateLastCheckTime()
-	}
 }
 
 func startUpdateMetadataInfoService() {
@@ -142,6 +91,7 @@ func SetAPTSmartMirror(url string) error {
 
 // 设置用于下载软件的镜像源
 func (u *Updater) SetMirrorSource(id string) *dbus.Error {
+	u.service.DelayAutoQuit()
 	err := u.setMirrorSource(id)
 	return dbusutil.ToError(err)
 }
@@ -186,6 +136,7 @@ type LocaleMirrorSource struct {
 // ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
 // 其中Name会根据传递进来的lang进行本地化
 func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
+	u.service.DelayAutoQuit()
 	return u.listMirrorSources(lang), nil
 }
 
@@ -232,12 +183,14 @@ func UpdatableNames(infosMap system.SourceUpgradeInfoMap) []string {
 }
 
 func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string, busErr *dbus.Error) {
+	u.service.DelayAutoQuit()
 	interval = u.config.CheckInterval.Hours()
-	checkTime = u.config.LastCheckTime.String()
+	checkTime = u.config.LastCheckTime.Format("2006-01-02 15:04:05.999999999 -0700 MST")
 	return
 }
 
 func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
+	u.service.DelayAutoQuit()
 	if u.UpdateNotify == enable {
 		return nil
 	}
@@ -253,6 +206,7 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 }
 
 func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
+	u.service.DelayAutoQuit()
 	if u.AutoCheckUpdates == enable {
 		return nil
 	}
@@ -269,6 +223,7 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
 }
 
 func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
+	u.service.DelayAutoQuit()
 	if u.AutoDownloadUpdates == enable {
 		return nil
 	}
@@ -311,6 +266,7 @@ func (u *Updater) restoreSystemSource() error {
 }
 
 func (u *Updater) RestoreSystemSource() *dbus.Error {
+	u.service.DelayAutoQuit()
 	err := u.restoreSystemSource()
 	if err != nil {
 		logger.Warning("failed to restore system source:", err)

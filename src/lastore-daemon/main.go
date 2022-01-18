@@ -114,6 +114,9 @@ func main() {
 	if err != nil {
 		logger.Error("failed to set write cb for property UpdateMode:", err)
 	}
+	manager.handleUpdateInfosChanged(false)
+	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况
+	go manager.jobManager.Dispatch() // 导入job缓存之后，再执行job的dispatch，防止暂停任务创建时自动开始
 	err = serverObject.Export()
 	if err != nil {
 		logger.Error("failed to export manager and updater:", err)
@@ -162,32 +165,11 @@ func main() {
 		logger.Warning(err)
 	}
 	manager.PropsMu.RUnlock()
-
+	manager.startSystemdUnit()
 	logger.Info("Started service at system bus")
-	handleUpdateInfosChanged := func() {
-		manager.handleUpdateInfosChanged(false)
-	}
-	RegisterMonitor(handleUpdateInfosChanged, system.VarLibDir, "update_infos.json")
-	RegisterMonitor(updateTokenConfigFile, etcDir, osVersionFileName)
-	manager.handleUpdateInfosChanged(false)
-	time.AfterFunc(60*time.Second, func() {
-		updateTokenConfigFile()
-	})
+	service.SetAutoQuitHandler(60*time.Second, manager.canAutoQuit)
 	service.Wait()
-}
-
-func RegisterMonitor(handler func(), dir string, paths ...string) {
-	dm := system.NewDirMonitor(dir)
-	err := dm.Add(func(filePath string) {
-		handler()
-	}, paths...)
-	if err != nil {
-		logger.Warningf("Can't add monitor on %s: %v\n", dir, err)
-	}
-	err = dm.Start()
-	if err != nil {
-		logger.Warningf("Can't create monitor on %s: %v\n", dir, err)
-	}
+	manager.saveLastoreCache()
 }
 
 var _tokenUpdateMu sync.Mutex
