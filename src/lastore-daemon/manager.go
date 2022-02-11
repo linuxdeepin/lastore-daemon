@@ -18,6 +18,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -30,6 +31,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -832,12 +834,12 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 		job.next.setHooks(map[string]func(){
 			string(system.SucceedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go postSystemUpgradeMessage(upgradeSucceed, job)
+					go postSystemUpgradeMessage(upgradeSucceed, job, updateType)
 				}
 			},
 			string(system.FailedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go postSystemUpgradeMessage(upgradeFailed, job)
+					go postSystemUpgradeMessage(upgradeFailed, job, updateType)
 				}
 			},
 		})
@@ -1346,11 +1348,12 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 }
 
 type upgradePostContent struct {
-	SerialNumber    string `json:"serialNumber"`
-	MachineID       string `json:"machineId"`
-	UpgradeStatus   int    `json:"status"`
-	UpgradeErrorMsg string `json:"msg"`
-	TimeStamp       int64  `json:"timestamp"`
+	SerialNumber    string   `json:"serialNumber"`
+	MachineID       string   `json:"machineId"`
+	UpgradeStatus   int      `json:"status"`
+	UpgradeErrorMsg string   `json:"msg"`
+	TimeStamp       int64    `json:"timestamp"`
+	SourceUrl       []string `json:"sourceUrl"`
 }
 
 const (
@@ -1359,7 +1362,7 @@ const (
 )
 
 // 发送系统更新成功或失败的状态
-func postSystemUpgradeMessage(upgradeStatus int, j *Job) {
+func postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType system.UpdateType) {
 	var upgradeErrorMsg string
 	if upgradeStatus == upgradeFailed {
 		upgradeErrorMsg = j.Description
@@ -1372,12 +1375,14 @@ func postSystemUpgradeMessage(upgradeStatus int, j *Job) {
 	if err != nil {
 		logger.Warning(err)
 	}
+	sourceFilePath := system.GetCategorySourceMap()[updateType]
 	postContent := &upgradePostContent{
 		SerialNumber:    sn,
 		MachineID:       hardwareId,
 		UpgradeStatus:   upgradeStatus,
 		UpgradeErrorMsg: upgradeErrorMsg,
 		TimeStamp:       time.Now().Unix(),
+		SourceUrl:       getUpgradeUrls(sourceFilePath),
 	}
 	content, err := json.Marshal(postContent)
 	if err != nil {
@@ -1409,4 +1414,47 @@ func postSystemUpgradeMessage(upgradeStatus int, j *Job) {
 	} else {
 		logger.Warning(err)
 	}
+}
+
+var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file)://[^ ]+)`)
+
+// 获取list文件或list.d文件夹中所有list文件的未被屏蔽的仓库地址
+func getUpgradeUrls(path string) []string {
+	var upgradeUrls []string
+	info, err := os.Stat(path)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	if info.IsDir() {
+		infos, err := ioutil.ReadDir(path)
+		if err != nil {
+			logger.Warning(err)
+			return nil
+		}
+		for _, info := range infos {
+			upgradeUrls = append(upgradeUrls, getUpgradeUrls(filepath.Join(path, info.Name()))...)
+		}
+	} else {
+		f, err := os.Open(path)
+		if err != nil {
+			logger.Warning(err)
+			return nil
+		}
+		defer f.Close()
+		r := bufio.NewReader(f)
+		for {
+			s, err := r.ReadString('\n')
+			if err != nil {
+				break
+			}
+			allMatchedString := _urlReg.FindAllStringSubmatch(s, -1)
+			for _, MatchedString := range allMatchedString {
+				if len(MatchedString) == 2 {
+					upgradeUrls = append(upgradeUrls, MatchedString[1])
+				}
+			}
+		}
+	}
+	return upgradeUrls
 }
