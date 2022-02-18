@@ -1,0 +1,22 @@
+name: mirror-check
+on:
+  pull_request:
+    # branches: [github-integration]
+    types: [opened, synchronize]
+    paths:
+      - "var/lib/lastore/mirrors.json"
+      - ".github/workflows/mirror-check.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.16.1"
+      - name: install
+        run: go install github.com/myml/mirrors/cmd/mirror-tools@master
+      - name: check
+        run: mirror-tools -f var/lib/lastore/mirrors.json
