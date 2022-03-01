@@ -10,11 +10,11 @@ export GO111MODULE=off
 all:  build
 
 build:
-	${GoPath} ${GOBUILD} -o bin/lastore-daemon lastore-daemon
-	${GoPath} ${GOBUILD} -o bin/lastore-tools lastore-tools
-	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror lastore-smartmirror || echo "build failed, disable smartmirror support "
-	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
-	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean lastore-apt-clean
+	${GoPath} ${GOBUILD} -o bin/lastore-daemon ${GOBUILD_OPTIONS} lastore-daemon
+	${GoPath} ${GOBUILD} -o bin/lastore-tools ${GOBUILD_OPTIONS} lastore-tools
+	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} lastore-smartmirror || echo "build failed, disable smartmirror support "
+	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon ${GOBUILD_OPTIONS} lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
+	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean ${GOBUILD_OPTIONS} lastore-apt-clean
 
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
@@ -34,7 +34,7 @@ test:
 	lastore-daemon  lastore-smartmirror  lastore-tools \
 	lastore-smartmirror-daemon
 
-test-coverage: 
+test-coverage:
 	env ${GoPath} go test -cover -v ./src/... | awk '$$1 ~ "^(ok|\\?)" {print $$2","$$5}' | sed "s:${CURDIR}::g" | sed 's/files\]/0\.0%/g' > coverage.csv
 
 

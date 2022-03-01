@@ -11,6 +11,10 @@ ifdef depend_ostree
 	DistDepends += ostree,
 endif
 
+ifneq ($(DEB_BUILD_ARCH), mips64el)
+	export GOBUILD_OPTIONS=-ldflags "-w -s" -buildmode=pie
+endif
+
 %:
 	dh $@
 
