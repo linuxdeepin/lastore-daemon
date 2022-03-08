@@ -1161,9 +1161,7 @@ func getNeedCleanCacheSize() (float64, error) {
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	writeType := system.UpdateType(pw.Value.(uint64))
 
-	if writeType&system.OnlySecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
-		writeType |= system.UnknownUpdate
-	} else { // 如果更新类别包含安全更新,则关闭其他更新
+	if writeType&system.OnlySecurityUpdate != 0 { // 如果更新类别包含仅安全更新，关闭其它更新项
 		writeType = system.OnlySecurityUpdate
 	}
 	pw.Value = writeType
@@ -1182,9 +1180,7 @@ func (m *Manager) modifyUpdateMode() {
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
-	if mode&system.OnlySecurityUpdate == 0 { //如果更新类别不包含安全更新（即关闭仅安全更新），默认将未知来源更新开启
-		mode |= system.UnknownUpdate
-	} else { // 如果更新类别包含安全更新,则关闭其他更新
+	if mode&system.OnlySecurityUpdate != 0 { // 如果更新类别包含仅安全更新，关闭其它更新项
 		mode = system.OnlySecurityUpdate
 	}
 	m.setPropUpdateMode(mode)
