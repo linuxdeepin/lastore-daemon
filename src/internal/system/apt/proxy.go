@@ -337,5 +337,5 @@ func (p *APTSystem) FixError(jobId string, errType string,
 	WaitDpkgLockRelease()
 	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, []string{errType})
 	c.setEnv(environ)
-	return c.Start()
+	return safeStart(c)
 }
