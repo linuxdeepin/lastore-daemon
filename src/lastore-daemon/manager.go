@@ -1346,14 +1346,14 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
-	if m.updater.config.AutoCheckUpdates {
+	if m.config.AutoCheckUpdates {
 		_, err := m.updateSource(m.updater.UpdateNotify, true)
 		if err != nil {
 			logger.Warning(err)
 			return err
 		}
 	}
-	if !m.updater.config.DisableUpdateMetadata {
+	if !m.config.DisableUpdateMetadata {
 		startUpdateMetadataInfoService()
 	}
 	return m.config.UpdateLastCheckTime()
