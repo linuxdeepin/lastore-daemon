@@ -759,7 +759,6 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						logger.Warning(err)
 					} else {
 						logger.Info(err)
-						prepareJob.autoCheck = autoCheck
 						if autoCheck && m.categorySupportAutoInstall(category) {
 							go m.handlePackagesDownloaded(sender, category)
 						}
