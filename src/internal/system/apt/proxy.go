@@ -337,5 +337,8 @@ func (p *APTSystem) FixError(jobId string, errType string,
 	WaitDpkgLockRelease()
 	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, []string{errType})
 	c.setEnv(environ)
+	if errType == system.ErrTypeDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
+		return safeStart(c)
+	}
 	return c.Start()
 }
