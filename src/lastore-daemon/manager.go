@@ -1295,15 +1295,6 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 //SystemUpgradeInfo 将update_infos.json数据解析成map
 func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 	r := make(map[string][]system.UpgradeInfo)
-	m.PropsMu.RLock()
-	updateType := m.UpdateMode
-	m.PropsMu.RUnlock()
-	for _, t := range system.AllUpdateType() {
-		category := updateType & t
-		if category != 0 {
-			r[t.JobType()] = nil
-		}
-	}
 
 	filename := path.Join(system.VarLibDir, "update_infos.json")
 	var updateInfosList []system.UpgradeInfo
@@ -1321,10 +1312,7 @@ func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
 	}
 	for _, info := range updateInfosList {
-		_, ok := r[info.Category]
-		if ok {
-			r[info.Category] = append(r[info.Category], info)
-		}
+		r[info.Category] = append(r[info.Category], info)
 	}
 	return r, nil
 }
