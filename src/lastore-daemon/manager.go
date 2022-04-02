@@ -574,10 +574,29 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 // 根据解析update_infos.json数据的结果,将数据分别设置到Manager的UpgradableApps和Updater的UpdatablePackages,ClassifiedUpdatablePackages,UpdatableApps
 func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
 	m.updater.setClassifiedUpdatablePackages(infosMap)
-	updatableApps := UpdatableNames(infosMap)
+	filterInfos := m.getFilterInfosMap(infosMap)
+	updatableApps := UpdatableNames(filterInfos)
 	m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
 	m.updater.setUpdatablePackages(updatableApps)
 	m.updater.updateUpdatableApps()
+}
+
+// ClassifiedUpdatablePackages属性保存所有数据,UpdatablePackages属性保存过滤后的数据
+func (m *Manager) getFilterInfosMap(infosMap system.SourceUpgradeInfoMap) system.SourceUpgradeInfoMap {
+	r := make(system.SourceUpgradeInfoMap)
+	m.PropsMu.RLock()
+	updateType := m.UpdateMode
+	m.PropsMu.RUnlock()
+	for _, t := range system.AllUpdateType() {
+		category := updateType & t
+		if category != 0 {
+			info, ok := infosMap[t.JobType()]
+			if ok {
+				r[t.JobType()] = info
+			}
+		}
+	}
+	return r
 }
 
 func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
@@ -1294,7 +1313,7 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 
 //SystemUpgradeInfo 将update_infos.json数据解析成map
 func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
-	r := make(map[string][]system.UpgradeInfo)
+	r := make(system.SourceUpgradeInfoMap)
 
 	filename := path.Join(system.VarLibDir, "update_infos.json")
 	var updateInfosList []system.UpgradeInfo
