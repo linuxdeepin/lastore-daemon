@@ -45,6 +45,7 @@ import (
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
+	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
@@ -533,7 +534,14 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	_, err := m.updateSource(false, false)
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
+	err = m.config.UpdateLastCheckTime()
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	m.updateAutoCheckSystemUnit()
 }
 
 func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
@@ -636,7 +644,7 @@ func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
 	}
 
 	_ = m.config.UpdateLastCheckTime()
-
+	m.updateAutoCheckSystemUnit()
 	return jobObj.getPath(), nil
 }
 
@@ -1352,11 +1360,17 @@ func (m *Manager) handleAutoCheckEvent() error {
 			logger.Warning(err)
 			return err
 		}
+		err = m.config.UpdateLastCheckTime()
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+		m.updateAutoCheckSystemUnit()
 	}
 	if !m.config.DisableUpdateMetadata {
 		startUpdateMetadataInfoService()
 	}
-	return m.config.UpdateLastCheckTime()
+	return nil
 }
 
 func (m *Manager) handleAutoCleanEvent() error {
@@ -1552,63 +1566,67 @@ func (m *Manager) getNextUpdateDelay() time.Duration {
 
 }
 
+type lastoreUnitMap map[string][]string
+
 // 定时任务和文件监听
-func (m *Manager) getLastoreSystemUnitList() []lastoreSystemUnit {
-	return []lastoreSystemUnit{
-		{
-			"lastoreOnline",
-			[]string{
-				"/bin/bash",
-				"-c",
-				fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, "AutoCheck"),
-			}, // 等待网络联通后检查更新
-		},
-		{
-			"lastoreAutoClean",
-			[]string{
-				"--on-active=600",
-				"/bin/bash",
-				"-c",
-				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoClean"), // 10分钟后自动检查是否需要清理
-			},
-		},
-		{
-			"lastoreAutoCheck",
-			[]string{
-				fmt.Sprintf("--on-active=%d", m.getNextUpdateDelay()/time.Second),
-				"/bin/bash",
-				"-c",
-				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoCheck"), // 根据上次检查时间,设置下一次自动检查时间
-			},
-		},
-		{
-			"lastoreAutoUpdateToken",
-			[]string{
-				"--on-active=60",
-				"/bin/bash",
-				"-c",
-				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 60s后更新token文件
-			},
-		},
-		{
-			"watchOsVersion",
-			[]string{
-				"--path-property=PathModified=/etc/os-version",
-				"/bin/bash",
-				"-c",
-				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
-			},
-		},
-		{
-			"watchUpdateInfo",
-			[]string{
-				"--path-property=PathModified=/var/lib/lastore/update_infos.json",
-				"/bin/bash",
-				"-c",
-				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
-			},
-		},
+func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
+	unitMap := make(lastoreUnitMap)
+	unitMap["lastoreOnline"] = []string{
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, "AutoCheck"), // 等待网络联通后检查更新
 	}
+	unitMap["lastoreAutoClean"] = []string{
+		"--on-active=600",
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoClean"), // 10分钟后自动检查是否需要清理
+	}
+	unitMap["lastoreAutoCheck"] = []string{
+		fmt.Sprintf("--on-active=%d", m.getNextUpdateDelay()/time.Second),
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoCheck"), // 根据上次检查时间,设置下一次自动检查时间
+	}
+	unitMap["lastoreAutoUpdateToken"] = []string{
+		"--on-active=60",
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 60s后更新token文件
+	}
+	unitMap["watchOsVersion"] = []string{
+		"--path-property=PathModified=/etc/os-version",
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
+	}
+	unitMap["watchUpdateInfo"] = []string{
+		"--path-property=PathModified=/var/lib/lastore/update_infos.json",
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
+	}
+	return unitMap
+}
+
+// systemd计时服务需要根据上一次更新时间而变化
+func (m *Manager) updateAutoCheckSystemUnit() {
+	systemd := systemd1.NewManager(m.service.Conn())
+	_, err := systemd.StopUnit(0, "lastoreAutoCheck.timer", "replace")
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	var args []string
+	args = append(args, fmt.Sprintf("--unit=%s", "lastoreAutoCheck"))
+	autoCheckArgs := m.getLastoreSystemUnitMap()["lastoreAutoCheck"]
+	args = append(args, autoCheckArgs...)
+	cmd := exec.Command(run, args...)
+	err = cmd.Run()
+	if err != nil {
+		logger.Warning(err)
+	}
+	logger.Debug(cmd.String())
 }
 
 // 开启定时任务和文件监听(通过systemd-run实现)
@@ -1620,10 +1638,10 @@ func (m *Manager) startSystemdUnit() {
 		return
 	}
 	kf := keyfile.NewKeyFile()
-	for _, unit := range m.getLastoreSystemUnitList() {
+	for name, cmdArgs := range m.getLastoreSystemUnitMap() {
 		var args []string
-		args = append(args, fmt.Sprintf("--unit=%s", unit.UnitName))
-		args = append(args, unit.Args...)
+		args = append(args, fmt.Sprintf("--unit=%s", name))
+		args = append(args, cmdArgs...)
 		cmd := exec.Command(run, args...)
 		logger.Info(cmd.String())
 		err := cmd.Run()
@@ -1631,7 +1649,7 @@ func (m *Manager) startSystemdUnit() {
 			logger.Warning(err)
 			continue
 		}
-		kf.SetString("UnitName", unit.UnitName, fmt.Sprintf("%s.unit", unit.UnitName))
+		kf.SetString("UnitName", name, fmt.Sprintf("%s.unit", name))
 	}
 
 	err := kf.SaveToFile(lastoreUnitCache)
