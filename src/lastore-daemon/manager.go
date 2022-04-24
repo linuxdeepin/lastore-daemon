@@ -610,6 +610,7 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	if needNotify {
 		jobName = "+notify"
 	}
+	prepareUpdateSource()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
@@ -1869,6 +1870,21 @@ func (m *Manager) handleOSSignal() {
 		case syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGSEGV:
 			logger.Info("received signal:", sig)
 			m.service.Quit()
+		}
+	}
+}
+
+func prepareUpdateSource() {
+	partialFilePaths := []string{
+		"/var/lib/apt/lists/partial",
+		"/var/lib/lastore/lists/partial",
+		"/var/cache/apt/archives/partial",
+		"/var/cache/lastore/archives/partial",
+	}
+	for _, partialFilePath := range partialFilePaths {
+		err := os.RemoveAll(partialFilePath)
+		if err != nil {
+			logger.Warning(err)
 		}
 	}
 }
