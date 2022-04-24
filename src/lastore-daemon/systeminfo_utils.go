@@ -52,39 +52,22 @@ const (
 )
 
 func getSystemInfo() (SystemInfo, error) {
-	versionPath := path.Join(etcDir, osVersionFileName)
-	versionLines, err := loadFile(versionPath)
-	if err != nil {
-		logger.Warning("failed to load os-version file:", err)
-		return SystemInfo{}, err
-	}
-	mapOsVersion := make(map[string]string)
-	for _, item := range versionLines {
-		itemSlice := strings.SplitN(item, "=", 2)
-		if len(itemSlice) < 2 {
-			continue
-		}
-		key := strings.TrimSpace(itemSlice[0])
-		value := strings.TrimSpace(itemSlice[1])
-		mapOsVersion[key] = value
-	}
-	// 判断必要内容是否存在
-	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
-	for _, key := range necessaryKey {
-		if value := mapOsVersion[key]; value == "" {
-			return SystemInfo{}, errors.New("os-version lack necessary content")
-		}
-	}
 	systemInfo := SystemInfo{
 		Custom: OemNotCustomState,
 	}
-	systemInfo.SystemName = mapOsVersion["SystemName"]
-	systemInfo.ProductType = mapOsVersion["ProductType"]
-	systemInfo.EditionName = mapOsVersion["EditionName"]
+
+	osVersionInfoMap, err := getOSVersionInfo()
+	if err != nil {
+		logger.Warning("failed to get os-version:", err)
+		return systemInfo, err
+	}
+	systemInfo.SystemName = osVersionInfoMap["SystemName"]
+	systemInfo.ProductType = osVersionInfoMap["ProductType"]
+	systemInfo.EditionName = osVersionInfoMap["EditionName"]
 	systemInfo.Version = strings.Join([]string{
-		mapOsVersion["MajorVersion"],
-		mapOsVersion["MinorVersion"],
-		mapOsVersion["OsBuild"]},
+		osVersionInfoMap["MajorVersion"],
+		osVersionInfoMap["MinorVersion"],
+		osVersionInfoMap["OsBuild"]},
 		".")
 	systemInfo.HardwareId, err = getHardwareId()
 	if err != nil {
@@ -143,6 +126,33 @@ func loadFile(filepath string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func getOSVersionInfo() (map[string]string, error) {
+	versionPath := path.Join(etcDir, osVersionFileName)
+	versionLines, err := loadFile(versionPath)
+	if err != nil {
+		logger.Warning("failed to load os-version file:", err)
+		return nil, err
+	}
+	osVersionInfoMap := make(map[string]string)
+	for _, item := range versionLines {
+		itemSlice := strings.SplitN(item, "=", 2)
+		if len(itemSlice) < 2 {
+			continue
+		}
+		key := strings.TrimSpace(itemSlice[0])
+		value := strings.TrimSpace(itemSlice[1])
+		osVersionInfoMap[key] = value
+	}
+	// 判断必要内容是否存在
+	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
+	for _, key := range necessaryKey {
+		if value := osVersionInfoMap[key]; value == "" {
+			return nil, errors.New("os-version lack necessary content")
+		}
+	}
+	return osVersionInfoMap, nil
 }
 
 func getHardwareId() (string, error) {
