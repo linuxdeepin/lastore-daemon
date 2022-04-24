@@ -132,6 +132,8 @@ type Manager struct {
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
+
+	preUpgradeOSVersion string
 }
 
 /*
@@ -154,6 +156,12 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
 		UpdateMode:          c.UpdateMode,
+	}
+	osVersionInfoMap, err := getOSVersionInfo()
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		m.preUpgradeOSVersion = osVersionInfoMap["MinorVersion"]
 	}
 	sysBus := service.Conn()
 	m.apps = apps.NewApps(sysBus)
@@ -1439,6 +1447,7 @@ type upgradePostContent struct {
 	UpgradeErrorMsg string   `json:"msg"`
 	TimeStamp       int64    `json:"timestamp"`
 	SourceUrl       []string `json:"sourceUrl"`
+	Version         string   `json:"version"`
 }
 
 const (
@@ -1451,9 +1460,19 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	m.inhibitAutoQuitCountAdd()
 	defer m.inhibitAutoQuitCountSub()
 	var upgradeErrorMsg string
+	var version string
 	if upgradeStatus == upgradeFailed {
 		upgradeErrorMsg = j.Description
+		version = m.preUpgradeOSVersion
+	} else {
+		infoMap, err := getOSVersionInfo()
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			version = infoMap["MinorVersion"]
+		}
 	}
+
 	sn, err := getSN()
 	if err != nil {
 		logger.Warning(err)
@@ -1462,6 +1481,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	if err != nil {
 		logger.Warning(err)
 	}
+
 	sourceFilePath := system.GetCategorySourceMap()[updateType]
 	postContent := &upgradePostContent{
 		SerialNumber:    sn,
@@ -1470,6 +1490,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 		UpgradeErrorMsg: upgradeErrorMsg,
 		TimeStamp:       time.Now().Unix(),
 		SourceUrl:       getUpgradeUrls(sourceFilePath),
+		Version:         version,
 	}
 	content, err := json.Marshal(postContent)
 	if err != nil {
@@ -1479,6 +1500,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	client := &http.Client{
 		Timeout: 4 * time.Second,
 	}
+	logger.Debug(postContent)
 	encryptMsg, err := EncryptMsg(content)
 	if err != nil {
 		logger.Warning(err)
