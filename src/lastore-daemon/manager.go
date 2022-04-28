@@ -1611,11 +1611,15 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 
 // systemd计时服务需要根据上一次更新时间而变化
 func (m *Manager) updateAutoCheckSystemUnit() {
+	const autoCheckUnit = "lastoreAutoCheck.timer"
 	systemd := systemd1.NewManager(m.service.Conn())
-	_, err := systemd.StopUnit(0, "lastoreAutoCheck.timer", "replace")
-	if err != nil {
-		logger.Warning(err)
-		return
+	_, err := systemd.GetUnit(0, autoCheckUnit)
+	if err == nil {
+		_, err = systemd.StopUnit(0, autoCheckUnit, "replace")
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
 	}
 	var args []string
 	args = append(args, fmt.Sprintf("--unit=%s", "lastoreAutoCheck"))
