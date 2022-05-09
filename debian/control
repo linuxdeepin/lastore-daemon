@@ -35,6 +35,7 @@ Depends:
  ${shlibs:Depends},
 Recommends:
  deepin-default-settings,
+ deepin-ab-recovery
 Description: daemon of lastore
  daemon of lastore - support dbus interface
 
