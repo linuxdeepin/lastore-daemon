@@ -19,6 +19,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -1350,9 +1351,9 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 	m.service.DelayAutoQuit()
 	switch eventType {
 	case "AutoCheck":
-		return dbusutil.ToError(m.handleAutoCheckEvent())
+		go m.handleAutoCheckEvent()
 	case "AutoClean":
-		return dbusutil.ToError(m.handleAutoCleanEvent())
+		go m.handleAutoCleanEvent()
 	case "UpdateInfosChanged":
 		m.handleUpdateInfosChanged(false)
 	case "OsVersionChanged":
@@ -1651,9 +1652,12 @@ func (m *Manager) updateAutoCheckSystemUnit() {
 	autoCheckArgs := m.getLastoreSystemUnitMap()["lastoreAutoCheck"]
 	args = append(args, autoCheckArgs...)
 	cmd := exec.Command(run, args...)
+	var errBuffer bytes.Buffer
+	cmd.Stderr = &errBuffer
 	err = cmd.Run()
 	if err != nil {
 		logger.Warning(err)
+		logger.Warning(errBuffer.String())
 	}
 	logger.Debug(cmd.String())
 }
@@ -1673,9 +1677,12 @@ func (m *Manager) startSystemdUnit() {
 		args = append(args, cmdArgs...)
 		cmd := exec.Command(run, args...)
 		logger.Info(cmd.String())
+		var errBuffer bytes.Buffer
+		cmd.Stderr = &errBuffer
 		err := cmd.Run()
 		if err != nil {
 			logger.Warning(err)
+			logger.Warning(errBuffer.String())
 			continue
 		}
 		kf.SetString("UnitName", name, fmt.Sprintf("%s.unit", name))
