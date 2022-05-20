@@ -162,7 +162,9 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		m.preUpgradeOSVersion = osVersionInfoMap["MinorVersion"]
+		m.preUpgradeOSVersion = strings.Join(
+			[]string{osVersionInfoMap["MajorVersion"], osVersionInfoMap["MinorVersion"], osVersionInfoMap["OsBuild"]},
+			".")
 	}
 	sysBus := service.Conn()
 	m.apps = apps.NewApps(sysBus)
@@ -1470,7 +1472,9 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			version = infoMap["MinorVersion"]
+			version = strings.Join(
+				[]string{infoMap["MajorVersion"], infoMap["MinorVersion"], infoMap["OsBuild"]},
+				".")
 		}
 	}
 
