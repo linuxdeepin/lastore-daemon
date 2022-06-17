@@ -126,6 +126,7 @@ type Manager struct {
 	autoInstallType          system.UpdateType // 保存需要自动安装的类别
 
 	UpdateMode system.UpdateType `prop:"access:rw"`
+	HardwareId string
 
 	isUpdateSucceed bool
 	canRestore      bool
@@ -173,6 +174,12 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.modifyUpdateMode()
+	hardwareId, err := getHardwareId()
+	if err != nil {
+		logger.Warning("failed to get HardwareId")
+	} else {
+		m.HardwareId = hardwareId
+	}
 	return m
 }
 
