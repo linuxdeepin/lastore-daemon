@@ -79,12 +79,14 @@ var (
 		printerPath,
 		printerHelperPath,
 		langSelectorPath,
+		controlCenterPath,
 	}
 	allowRemovePackageExecPaths = strv.Strv{
 		appStoreDaemonPath,
 		oldAppStoreDaemonPath,
 		sessionDaemonPath,
 		langSelectorPath,
+		controlCenterPath,
 	}
 )
 
