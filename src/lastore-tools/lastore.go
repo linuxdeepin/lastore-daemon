@@ -15,7 +15,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/godbus/dbus"
-	lastore "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore"
+	lastore "github.com/linuxdeepin/go-dbus-factory/org.deepin.lastore1"
 )
 
 var CMDTester = cli.Command{

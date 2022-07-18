@@ -32,8 +32,8 @@ import (
 	"github.com/godbus/dbus"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
-	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
+	power "github.com/linuxdeepin/go-dbus-factory/org.deepin.system.power1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
@@ -1604,7 +1604,7 @@ const (
 	lastoreUnitCache    = "/tmp/lastoreUnitCache"
 	lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
 	run                 = "systemd-run"
-	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.HandleSystemEvent"
+	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=org.deepin.lastore1 /org/deepin/lastore1 org.deepin.lastore1.Manager.HandleSystemEvent"
 )
 
 func (m *Manager) getNextUpdateDelay() time.Duration {

@@ -6,8 +6,8 @@ case "$1" in
         [ -x /usr/share/update-notifier/notify-reboot-required ] && /usr/share/update-notifier/notify-reboot-required || true
         if dpkg --compare-versions "$2" le 0.9.30; then
             [ -e /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist ] && mv /etc/apt/apt.conf.d/99lastore.conf.dpkg-dist  /etc/apt/apt.conf.d/99lastore.conf || true
-            systemctl disable dbus-com.deepin.lastore.service > /dev/null || true
-            [ -e /lib/systemd/dbus-com.deepin.lastore.service ] && rm /lib/systemd/system/dbus-com.deepin.lastore.service || true
+            systemctl disable dbus-org.deepin.lastore1.service > /dev/null || true
+            [ -e /lib/systemd/dbus-org.deepin.lastore1.service ] && rm /lib/systemd/system/dbus-org.deepin.lastore1.service || true
         fi
         systemctl daemon-reload || true
         /var/lib/lastore/scripts/update_metadata_info || true
