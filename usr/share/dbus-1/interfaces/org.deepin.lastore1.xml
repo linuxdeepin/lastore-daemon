@@ -1,5 +1,5 @@
 <node>
-     <interface name="com.deepin.lastore.Manager">
+     <interface name="org.deepin.lastore1.Manager">
           <method name="PauseJob">
                <arg type="s" direction="in"></arg>
           </method>
@@ -61,7 +61,7 @@
           <property name="SystemOnChanging" type="b" access="read"></property>
      </interface>
 
-     <interface name="com.deepin.lastore.Updater">
+     <interface name="org.deepin.lastore1.Updater">
           <method name="ApplicationUpdateInfos">
                <arg type="s" direction="in"></arg>
                <arg type="a(sssss)" direction="out"></arg>

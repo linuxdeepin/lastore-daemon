@@ -38,7 +38,7 @@ void install_package(const char* package)
     return;
   }
 
-  j = new Job(QString("system"), "com.deepin.lastore", rpath.Value<0>().path());
+  j = new Job(QString("system"), "org.deepin.lastore1", rpath.Value<0>().path());
   j->connect(j, &Job::progressChanged, printStatus);
   R<void> r =  m->StartJob(j->id().Value<0>());
  
@@ -58,7 +58,7 @@ void remove_package(const char* package)
     return;
   }
 
-  j = new Job(QString("system"), "com.deepin.lastore", rpath.Value<0>().path());
+  j = new Job(QString("system"), "org.deepin.lastore1", rpath.Value<0>().path());
   j->connect(j, &Job::progressChanged, printStatus);
   R<void> r =  m->StartJob(j->id().Value<0>());
   

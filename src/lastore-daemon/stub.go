@@ -13,7 +13,7 @@ import (
 var NotUseDBus = false
 
 func (*Manager) GetInterfaceName() string {
-	return "com.deepin.lastore.Manager"
+	return "org.deepin.lastore1.Manager"
 }
 
 func (m *Manager) updateJobList() {
@@ -147,15 +147,15 @@ func DestroyJobDBus(j *Job) {
 }
 
 func (j *Job) getPath() dbus.ObjectPath {
-	return dbus.ObjectPath("/com/deepin/lastore/Job" + j.Id)
+	return dbus.ObjectPath("/org/deepin/lastore1/Job" + j.Id)
 }
 
 func (*Job) GetInterfaceName() string {
-	return "com.deepin.lastore.Job"
+	return "org.deepin.lastore1.Job"
 }
 
 func (*Updater) GetInterfaceName() string {
-	return "com.deepin.lastore.Updater"
+	return "org.deepin.lastore1.Updater"
 }
 
 func (j *Job) notifyAll() {
