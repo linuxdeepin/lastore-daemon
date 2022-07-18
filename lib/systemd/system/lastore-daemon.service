@@ -4,5 +4,5 @@ After=display-manager.service
 
 [Service]
 Type=dbus
-BusName=com.deepin.lastore
+BusName=org.deepin.lastore1
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon

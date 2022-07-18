@@ -49,7 +49,7 @@ type SmartMirror struct {
 
 // GetInterfaceName export dbus interface name
 func (s *SmartMirror) GetInterfaceName() string {
-	return "com.deepin.lastore.Smartmirror"
+	return "org.deepin.lastore1.Smartmirror"
 }
 
 // newSmartMirror return a object with dbus

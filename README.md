@@ -69,7 +69,7 @@ For example, use the PackageDesktopPath api to query the desktop path of
 any installed package.
 
 ```
-dbus-send --print-reply --system --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.PackageDesktopPath string:"gedit"
+dbus-send --print-reply --system --dest=org.deepin.lastore1 /org/deepin/lastore1 org.deepin.lastore1.Manager.PackageDesktopPath string:"gedit"
 ```
 
 ### lastore-tools

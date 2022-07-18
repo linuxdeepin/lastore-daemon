@@ -423,15 +423,15 @@ class Job : public dbus::common::DBusObject
 {
 	Q_OBJECT
 	private:
-	static const char *defaultService() { return "com.deepin.lastore";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/com/deepin/lastore/Job");}
+	static const char *defaultService() { return "org.deepin.lastore1";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore1/Job");}
 	public:
         Job(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "com.deepin.lastore.Job", addr)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore1.Job", addr)
         {
         }
 	Job(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "com.deepin.lastore.Job", addr)
+	:DBusObject(parent, service, path, "org.deepin.lastore1.Job", addr)
 	{
 	}
 	~Job(){}
@@ -518,15 +518,15 @@ class Manager : public dbus::common::DBusObject
 {
 	Q_OBJECT
 	private:
-	static const char *defaultService() { return "com.deepin.lastore.Manager";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/com/deepin/lastore/Manager");}
+	static const char *defaultService() { return "org.deepin.lastore1.Manager";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore1/Manager");}
 	public:
         Manager(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "com.deepin.lastore.Manager", addr)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore1.Manager", addr)
         {
         }
 	Manager(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "com.deepin.lastore.Manager", addr)
+	:DBusObject(parent, service, path, "org.deepin.lastore1.Manager", addr)
 	{
 	}
 	~Manager(){}
@@ -743,15 +743,15 @@ class Updater : public dbus::common::DBusObject
 {
 	Q_OBJECT
 	private:
-	static const char *defaultService() { return "com.deepin.lastore.Updater";}
-	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/com/deepin/lastore/Updater");}
+	static const char *defaultService() { return "org.deepin.lastore1.Updater";}
+	static const QDBusObjectPath defaultPath() { return QDBusObjectPath("/org/deepin/lastore1/Updater");}
 	public:
         Updater(QString addr="session", QObject* parent=0)
-        :DBusObject(parent, defaultService(), defaultPath().path(), "com.deepin.lastore.Updater", addr)
+        :DBusObject(parent, defaultService(), defaultPath().path(), "org.deepin.lastore1.Updater", addr)
         {
         }
 	Updater(QString addr, QString service, QString path, QObject* parent=0)
-	:DBusObject(parent, service, path, "com.deepin.lastore.Updater", addr)
+	:DBusObject(parent, service, path, "org.deepin.lastore1.Updater", addr)
 	{
 	}
 	~Updater(){}
