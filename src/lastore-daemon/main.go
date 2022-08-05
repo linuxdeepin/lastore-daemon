@@ -179,11 +179,8 @@ func updateTokenConfigFile() {
 	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
-	systemInfo, err := getSystemInfo()
+	systemInfo := getSystemInfo()
 	tokenPath := path.Join(aptConfDir, tokenConfFileName)
-	if err != nil {
-		logger.Warning("failed to update 99lastore-token.conf content:", err)
-	}
 	var tokenSlice []string
 	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
 	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
@@ -194,10 +191,12 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
 	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
 	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
+	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
+	tokenSlice = append(tokenSlice, "ois="+systemInfo.OEMID)
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err = ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
 	if err != nil {
 		logger.Warning(err)
 	}

@@ -35,15 +35,17 @@ const (
 )
 
 type SystemInfo struct {
-	SystemName  string
-	ProductType string
-	EditionName string
-	Version     string
-	HardwareId  string
-	Processor   string
-	Arch        string
-	Custom      string
-	SN          string
+	SystemName      string
+	ProductType     string
+	EditionName     string
+	Version         string
+	HardwareId      string
+	Processor       string
+	Arch            string
+	Custom          string
+	SN              string
+	HardwareVersion string
+	OEMID           string
 }
 
 const (
@@ -51,7 +53,7 @@ const (
 	OemCustomState    = "1"
 )
 
-func getSystemInfo() (SystemInfo, error) {
+func getSystemInfo() SystemInfo {
 	systemInfo := SystemInfo{
 		Custom: OemNotCustomState,
 	}
@@ -59,51 +61,55 @@ func getSystemInfo() (SystemInfo, error) {
 	osVersionInfoMap, err := getOSVersionInfo()
 	if err != nil {
 		logger.Warning("failed to get os-version:", err)
-		return systemInfo, err
+	} else {
+		systemInfo.SystemName = osVersionInfoMap["SystemName"]
+		systemInfo.ProductType = osVersionInfoMap["ProductType"]
+		systemInfo.EditionName = osVersionInfoMap["EditionName"]
+		systemInfo.Version = strings.Join([]string{
+			osVersionInfoMap["MajorVersion"],
+			osVersionInfoMap["MinorVersion"],
+			osVersionInfoMap["OsBuild"]},
+			".")
 	}
-	systemInfo.SystemName = osVersionInfoMap["SystemName"]
-	systemInfo.ProductType = osVersionInfoMap["ProductType"]
-	systemInfo.EditionName = osVersionInfoMap["EditionName"]
-	systemInfo.Version = strings.Join([]string{
-		osVersionInfoMap["MajorVersion"],
-		osVersionInfoMap["MinorVersion"],
-		osVersionInfoMap["OsBuild"]},
-		".")
+
 	systemInfo.HardwareId, err = getHardwareId()
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
-		return systemInfo, err
 	}
 
 	systemInfo.Processor, err = getProcessorModelName()
 	if err != nil {
 		logger.Warning("failed to get modelName:", err)
-		return systemInfo, err
+	} else if len(systemInfo.Processor) > 100 {
+		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
 	}
+
 	systemInfo.Arch, err = getArchInfo()
 	if err != nil {
 		logger.Warning("failed to get Arch:", err)
-		return systemInfo, err
 	}
 	systemInfo.SN, err = getSN()
 	if err != nil {
 		logger.Warning("failed to get SN:", err)
-		return systemInfo, err
 	}
 	isCustom, err := getCustomInfo()
 	if err != nil {
 		systemInfo.Custom = OemNotCustomState
-		return systemInfo, err
-	}
-	if isCustom {
+	} else if isCustom {
 		systemInfo.Custom = OemCustomState
 	}
 
-	if len(systemInfo.Processor) > 100 {
-		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
+	systemInfo.HardwareVersion, err = getHardwareVersion()
+	if err != nil {
+		logger.Warning("failed to get HardwareVersion:", err)
 	}
 
-	return systemInfo, nil
+	systemInfo.OEMID, err = getOEMID()
+	if err != nil {
+		logger.Warning("failed to get OEMID:", err)
+	}
+
+	return systemInfo
 }
 
 func loadFile(filepath string) ([]string, error) {
@@ -360,4 +366,22 @@ func verifyOemFile() bool {
 	}
 	//签名认证
 	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed, srBuf) == nil
+}
+
+func getHardwareVersion() (string, error) {
+	res, err := exec.Command("dmidecode", "-s", "system-version").Output()
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
+}
+
+const oemFilePath = "/etc/.oemid"
+
+func getOEMID() (string, error) {
+	content, err := ioutil.ReadFile(oemFilePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

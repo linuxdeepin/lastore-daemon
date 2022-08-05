@@ -12,10 +12,7 @@ func TestSystemInfoUtil(t *testing.T) {
 	defer func() {
 		NotUseDBus = useDbus
 	}()
-	sys, err := getSystemInfo()
-	if err != nil {
-		t.Skip("")
-	}
+	sys := getSystemInfo()
 	assert.NotEmpty(t, sys.SystemName)
 	assert.NotEmpty(t, sys.ProductType)
 	assert.NotEmpty(t, sys.EditionName)
