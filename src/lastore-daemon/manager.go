@@ -1359,7 +1359,7 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 	case "UpdateInfosChanged":
 		m.handleUpdateInfosChanged(false)
 	case "OsVersionChanged":
-		updateTokenConfigFile()
+		go updateTokenConfigFile()
 	default:
 		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
 	}
