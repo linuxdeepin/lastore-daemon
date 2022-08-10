@@ -192,7 +192,7 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
 	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
 	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
-	tokenSlice = append(tokenSlice, "ois="+systemInfo.OEMID)
+	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
