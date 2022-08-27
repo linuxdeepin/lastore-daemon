@@ -1926,9 +1926,16 @@ func prepareUpdateSource() {
 		"/var/cache/lastore/archives/partial",
 	}
 	for _, partialFilePath := range partialFilePaths {
-		err := os.RemoveAll(partialFilePath)
+		infos, err := ioutil.ReadDir(partialFilePath)
 		if err != nil {
 			logger.Warning(err)
+			continue
+		}
+		for _, info := range infos {
+			err = os.RemoveAll(filepath.Join(partialFilePath, info.Name()))
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 	}
 }
