@@ -131,7 +131,7 @@ It's the helper utils for apt with smartmirror patch. Can't be used alone.
   The lastore-tools will parse this file, according "/etc/apt/sources.list".
 
   This file support three field:
-  1. *name* : the repository name. It will be send to server when update mirror lists
+  1. *name* : the repository name. It will be send to server when update mirror lists.
   2. *url* : the official repository url which will be parsed with sources.list and get the correct *name*
   3. *mirror* (optional): the default mirror url
 
