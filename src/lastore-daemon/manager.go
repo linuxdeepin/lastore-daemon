@@ -1639,6 +1639,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	}
 	unitMap["watchUpdateInfo"] = []string{
 		"--path-property=PathModified=/var/lib/lastore/update_infos.json",
+		"--property=StartLimitBurst=0",
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
