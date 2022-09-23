@@ -1375,7 +1375,31 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
+	var checkNeedUpdateSource = func() bool {
+		upgradeTypeList := []string{
+			system.PrepareDistUpgradeJobType,
+			system.PrepareSystemUpgradeJobType,
+			system.PrepareAppStoreUpgradeJobType,
+			system.PrepareUnknownUpgradeJobType,
+			system.PrepareSecurityUpgradeJobType,
+			system.DistUpgradeJobType,
+			system.SystemUpgradeJobType,
+			system.AppStoreUpgradeJobType,
+			system.SecurityUpgradeJobType,
+			system.UnknownUpgradeJobType,
+		}
+		for _, job := range m.jobList {
+			if job.Status == system.RunningStatus && strv.Strv(upgradeTypeList).Contains(job.Type) {
+				return false
+			}
+		}
+		return true
+	}
 	if m.config.AutoCheckUpdates {
+		if !checkNeedUpdateSource() {
+			logger.Info("lastore is running prepare upgrade or upgrade job, not need check update")
+			return nil
+		}
 		_, err := m.updateSource(m.updater.UpdateNotify, true)
 		if err != nil {
 			logger.Warning(err)
