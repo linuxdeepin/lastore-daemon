@@ -124,7 +124,6 @@ const (
 	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
 	OriginSourceDir    = "/etc/apt/sources.list.d"
 	SystemSourceFile   = "/etc/apt/sources.list"
-	DeepinTestSource   = "deepin-unstable-source.list"
 	AppStoreList       = "appstore.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
 	DriverList         = "driver.list"
@@ -172,7 +171,7 @@ func UpdateUnknownSourceDir() error {
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != AppStoreList && name != SecurityList && name != DriverList && name != DeepinTestSource {
+			if name != AppStoreList && name != SecurityList && name != DriverList {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
