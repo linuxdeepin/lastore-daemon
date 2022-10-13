@@ -5,15 +5,17 @@
 # 
 # Translators:
 # Marcin Kozioł <koziol.martin@gmail.com>, 2020
+# Hubert Ożga <hubert.ozga@outlook.com>, 2021
+# Janusz Ruchała, 2022
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-26 14:14+0800\n"
+"POT-Creation-Date: 2021-12-29 10:48+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Marcin Kozioł <koziol.martin@gmail.com>, 2020\n"
+"Last-Translator: Janusz Ruchała, 2022\n"
 "Language-Team: Polish (https://www.transifex.com/linuxdeepin/teams/3617/pl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -21,22 +23,22 @@ msgstr ""
 "Language: pl\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:58
+#: ../src/lastore-daemon/inhibitor.go:52
 msgid "Installing updates..."
-msgstr ""
+msgstr "Instalowanie aktualizacji..."
 
-#: ../src/lastore-daemon/inhibitor.go:60
+#: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
 msgstr "Zadania są uruchomione..."
 
-#: ../src/lastore-daemon/inhibitor.go:62
-msgid "Preventing from shutting down"
-msgstr "Zapobieganie wyłączaniu"
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing the computer from shutting down..."
+msgstr "Uniemożliwianie wyłączenia komputera..."
 
-#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
+#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
 msgid "Control Center"
-msgstr "Centrum Kontroli"
+msgstr "Centrum kontroli"
 
-#: ../src/lastore-daemon/main.go:141
+#: ../src/lastore-daemon/main.go:121
 msgid "App Store"
-msgstr "Sklep z aplikacjami"
+msgstr "App Store"

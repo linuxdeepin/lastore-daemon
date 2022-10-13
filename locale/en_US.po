@@ -4,7 +4,7 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Yuri Chornoivan <yurchor@ukr.net>, 2021
+# Cindy0514, 2022
 # 
 #, fuzzy
 msgid ""
@@ -13,30 +13,30 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2021-12-29 10:48+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Yuri Chornoivan <yurchor@ukr.net>, 2021\n"
-"Language-Team: Ukrainian (https://www.transifex.com/linuxdeepin/teams/3617/uk/)\n"
+"Last-Translator: Cindy0514, 2022\n"
+"Language-Team: English (United States) (https://www.transifex.com/linuxdeepin/teams/3617/en_US/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: uk\n"
-"Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n % 10 == 1 && n % 100 != 11 ? 0 : n % 1 == 0 && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || (n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../src/lastore-daemon/inhibitor.go:52
 msgid "Installing updates..."
-msgstr "Встановлення оновлень…"
+msgstr "Installing updates..."
 
 #: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
-msgstr "Виконуємо завдання…"
+msgstr "Tasks are running..."
 
 #: ../src/lastore-daemon/inhibitor.go:56
 msgid "Preventing the computer from shutting down..."
-msgstr "Запобігаємо вимиканню комп'ютера…"
+msgstr "Preventing the computer from shutting down..."
 
 #: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
 msgid "Control Center"
-msgstr "Центр керування"
+msgstr "Control Center"
 
 #: ../src/lastore-daemon/main.go:121
 msgid "App Store"
-msgstr "Крамниця програм"
+msgstr "App Store"

@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-26 14:14+0800\n"
+"POT-Creation-Date: 2021-12-29 10:48+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Cindy0514, 2021\n"
 "Language-Team: Chinese (Hong Kong) (https://www.transifex.com/linuxdeepin/teams/3617/zh_HK/)\n"
@@ -21,22 +21,22 @@ msgstr ""
 "Language: zh_HK\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:58
+#: ../src/lastore-daemon/inhibitor.go:52
 msgid "Installing updates..."
 msgstr "正在安裝更新..."
 
-#: ../src/lastore-daemon/inhibitor.go:60
+#: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
 msgstr "任務正在進行..."
 
-#: ../src/lastore-daemon/inhibitor.go:62
-msgid "Preventing from shutting down"
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing the computer from shutting down..."
 msgstr "正在阻止關機..."
 
-#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
+#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
 msgid "Control Center"
 msgstr "控制中心"
 
-#: ../src/lastore-daemon/main.go:141
+#: ../src/lastore-daemon/main.go:121
 msgid "App Store"
 msgstr "應用商店"

@@ -4,17 +4,17 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Maggie Liu <maggie.liufei@gmail.com>, 2019
-# Mark A <flamemilk@gmail.com>, 2019
+# 457d8bb295cd215bf4b5d4421a7e6f2f_dbd70dd <547531d7e05a062719580f89832ccbd9_785821>, 2020
+# Rosserex <superiorgravelgr@gmail.com>, 2021
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 20:50+0800\n"
-"PO-Revision-Date: 2019-10-23 02:33+0000\n"
-"Last-Translator: Mark A <flamemilk@gmail.com>, 2019\n"
+"POT-Creation-Date: 2021-12-29 10:48+0800\n"
+"PO-Revision-Date: 2020-08-24 10:36+0000\n"
+"Last-Translator: Rosserex <superiorgravelgr@gmail.com>, 2021\n"
 "Language-Team: Greek (https://www.transifex.com/linuxdeepin/teams/3617/el/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -22,11 +22,22 @@ msgstr ""
 "Language: el\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:31
-msgid "System is updating, please shut down or reboot later."
-msgstr ""
-"Το σύστημα ενημερώνεται, παρακαλούμε κλείστε ή επανεκκινήστε αργότερα."
+#: ../src/lastore-daemon/inhibitor.go:52
+msgid "Installing updates..."
+msgstr "Εγκατάσταση ενημερώσεων..."
 
-#: ../src/lastore-daemon/main.go:101
+#: ../src/lastore-daemon/inhibitor.go:54
+msgid "Tasks are running..."
+msgstr "Υπάρχουν εργασίες που τρέχουν..."
+
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing the computer from shutting down..."
+msgstr ""
+
+#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
 msgid "Control Center"
 msgstr "Κέντρο Ελέγχου"
+
+#: ../src/lastore-daemon/main.go:121
+msgid "App Store"
+msgstr "App Store"
