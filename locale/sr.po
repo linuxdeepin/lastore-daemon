@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-26 14:14+0800\n"
+"POT-Creation-Date: 2021-12-29 10:48+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Марко Пејовић <markopejovic@tutanota.com>, 2021\n"
 "Language-Team: Serbian (https://www.transifex.com/linuxdeepin/teams/3617/sr/)\n"
@@ -21,22 +21,22 @@ msgstr ""
 "Language: sr\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:58
+#: ../src/lastore-daemon/inhibitor.go:52
 msgid "Installing updates..."
 msgstr "Инсталирање ажурирања..."
 
-#: ../src/lastore-daemon/inhibitor.go:60
+#: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
 msgstr "Задаци у току..."
 
-#: ../src/lastore-daemon/inhibitor.go:62
-msgid "Preventing from shutting down"
-msgstr "Спречавање искључивања"
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing the computer from shutting down..."
+msgstr ""
 
-#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
+#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
 msgid "Control Center"
 msgstr "Контролни Центар"
 
-#: ../src/lastore-daemon/main.go:141
+#: ../src/lastore-daemon/main.go:121
 msgid "App Store"
 msgstr "Продавница"
