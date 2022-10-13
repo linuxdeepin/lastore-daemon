@@ -1,20 +1,13 @@
 # Lastore Daemon
 
-**Description**
-
-[![Build Status](https://ci.deepin.io/job/lastore-daemon/badge/icon)](https://ci.deepin.io/job/lastore-daemon)
-
 Lastore Daemon is based on dbus and support apt backend (And Currently only support apt).
-
 The project is mainly support Linux Application Store. Currently it power deepin store 4.0.
 
 ## Dependencies
+You can also check the "Depends" provided in the debian/control file.
 
 ### Build dependencies
-- golang >= 1.2
-- pkg-config
-- make
-- glib-2.0
+You can also check the "Build-Depends" provided in the debian/control file.
 
 ### Runtime dependencies
 - apt-get
@@ -161,4 +154,4 @@ We encourage you to report issues and contribute changes
 
 ## License
 
-Lastore Daemon is licensed under [GPLv3](LICENSE).
+Lastore Daemon is licensed under [GPL-3.0-or-later](LICENSE).
