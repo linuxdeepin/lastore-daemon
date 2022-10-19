@@ -1,3 +1,11 @@
+lastore-daemon (6.0.1) stable; urgency=medium
+
+  [ Deepin Packages Builder ]
+  * lastore-daemon兼容适配(Task: 166045)(Influence: 兼容V20接口)
+  * chore: 触发编译(Task: 160471)(Influence: 无)
+
+ -- baodi <baodi@uniontech.com>  Wed, 19 Oct 2022 11:05:23 +0800
+
 lastore-daemon (6.0.0.0) UNRELEASED; urgency=medium
 
   * 6.0.0.0 pre-release
