@@ -45,11 +45,13 @@ import (
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	power "github.com/linuxdeepin/go-dbus-factory/org.deepin.system.power1"
+	atomic1 "github.com/linuxdeepin/go-dbus-factory/org.deepin.AtomicUpgrade1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
 	"github.com/linuxdeepin/go-lib/strv"
+	dutils "github.com/linuxdeepin/go-lib/utils"
 )
 
 const (
@@ -119,6 +121,7 @@ type Manager struct {
 	apps                     apps.Apps
 	sysPower                 power.Power
 	abRecovery               abrecovery.ABRecovery
+	atomic                   atomic1.AtomicUpgrade1
 	signalLoop               *dbusutil.SignalLoop
 	shouldHandleBackupJobEnd bool
 	autoInstallType          system.UpdateType // 保存需要自动安装的类别
@@ -1079,6 +1082,40 @@ func (m *Manager) installUOSReleaseNote() {
 	}
 }
 
+type atomicCommit struct {
+	SubmissionTime string
+	SystemVersion  string
+	SubmissionType uint
+	UUID           string
+	Note           string
+}
+
+const systemCommitType = 0
+
+func getSystemVersion() string {
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile("/etc/os-version")
+	if err != nil {
+		return ""
+	}
+	majorVersion, err := kf.GetString("Version", "MajorVersion")
+	if err != nil {
+		return ""
+	}
+	minorVersion, err := kf.GetString("Version", "MinorVersion")
+	if err != nil {
+		return ""
+	}
+	osBuild, err := kf.GetString("Version", "OsBuild")
+	if err != nil || strings.TrimSpace(osBuild) == "" {
+		logger.Warning("failed to get key OsBuild")
+		return fmt.Sprintf("UOS-V%v-%v", strings.TrimSpace(majorVersion), strings.TrimSpace(minorVersion))
+	} else {
+		buildSplit := strings.Split(strings.TrimSpace(osBuild), ".")
+		return fmt.Sprintf("UOS-V%v-%v-%v", strings.TrimSpace(majorVersion), strings.TrimSpace(minorVersion), buildSplit[len(buildSplit)-1])
+	}
+}
+
 func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system.UpdateType) {
 	m.inhibitAutoQuitCountAdd()
 	defer m.inhibitAutoQuitCountSub()
@@ -1093,48 +1130,21 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 		logger.Warning(err)
 		return
 	}
-	if onBattery && batteryPercentage > 50 || !onBattery {
-		canBackup, err := m.abRecovery.CanBackup(0)
-		if err != nil {
-			logger.Warning(err)
-			return
-		}
-		if canBackup {
-			hasBackedUp, err := m.abRecovery.HasBackedUp().Get(0)
+	if onBattery && batteryPercentage > 50 || !onBattery {	
+		if m.atomic != nil {
+			// 原子更新
+			commit := atomicCommit{}
+			commit.SubmissionTime = fmt.Sprint(time.Now().Unix())
+			commit.UUID = dutils.GenUuid()
+			commit.Note = "自动安装系统更新时进行备份"
+			commit.SubmissionType = systemCommitType
+			commit.SystemVersion = getSystemVersion()
+			content, err := json.Marshal(commit)
 			if err != nil {
 				logger.Warning(err)
 				return
 			}
-			if hasBackedUp { // 本次开机,已经完成过备份,则无需再进行备份
-				_, err := m.createClassifiedUpgradeJob(sender, updateType)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-			} else {
-				m.PropsMu.Lock()
-				m.autoInstallType |= updateType
-				m.PropsMu.Unlock()
-				isBackingUp, err := m.abRecovery.BackingUp().Get(0)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-				if isBackingUp {
-					return
-				}
-				err = m.abRecovery.StartBackup(0)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-				m.inhibitAutoQuitCountAdd()
-				m.PropsMu.Lock()
-				m.shouldHandleBackupJobEnd = true
-				m.PropsMu.Unlock()
-			}
-		} else {
-			_, err := m.createClassifiedUpgradeJob(sender, updateType)
+			err = m.atomic.Commit(0, string(content))
 			if err != nil {
 				logger.Warning(err)
 				return
@@ -1230,6 +1240,7 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 	const jobKindBackup = "backup"
 	m.sysPower = power.NewPower(conn)
 	m.abRecovery = abrecovery.NewABRecovery(conn)
+	m.atomic = atomic1.NewAtomicUpgrade1(conn)
 	m.signalLoop = dbusutil.NewSignalLoop(conn, 10)
 	m.signalLoop.Start()
 	m.abRecovery.InitSignalExt(m.signalLoop, true)
@@ -1248,6 +1259,23 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 				if err != nil {
 					logger.Warning(err)
 				}
+			}
+			m.inhibitAutoQuitCountSub()
+		}
+	})
+	_, _ = m.atomic.ConnectStateChanged(func(op int32, state int32, target string, desc string) {
+		m.PropsMu.RLock()
+		updateType := m.autoInstallType
+		shouldHandleBackupJobEnd := m.shouldHandleBackupJobEnd
+		m.PropsMu.RUnlock()
+		if state == 0 && shouldHandleBackupJobEnd {
+			m.PropsMu.Lock()
+			m.autoInstallType = 0
+			m.shouldHandleBackupJobEnd = false
+			m.PropsMu.Unlock()
+			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
+			if err != nil {
+				logger.Warning(err)
 			}
 			m.inhibitAutoQuitCountSub()
 		}
