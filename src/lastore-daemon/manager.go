@@ -883,12 +883,12 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 		job.next.setHooks(map[string]func(){
 			string(system.SucceedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeSucceed, job, updateType)
+					go m.postSystemUpgradeMessage(upgradeSucceed, job.next, updateType)
 				}
 			},
 			string(system.FailedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeFailed, job, updateType)
+					go m.postSystemUpgradeMessage(upgradeFailed, job.next, updateType)
 				}
 			},
 		})
@@ -1483,7 +1483,9 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	var upgradeErrorMsg string
 	var version string
 	if upgradeStatus == upgradeFailed {
-		upgradeErrorMsg = j.Description
+		if j != nil {
+			upgradeErrorMsg = j.Description
+		}
 		version = m.preUpgradeOSVersion
 	} else {
 		infoMap, err := getOSVersionInfo()
