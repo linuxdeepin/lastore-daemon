@@ -111,8 +111,11 @@ const (
 	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
 	OriginSourceDir    = "/etc/apt/sources.list.d"
 	SystemSourceFile   = "/etc/apt/sources.list"
+	SystemSourceDir	   = "/var/lib/lastore/SystemSource.d"
 	AppStoreList       = "appstore.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
+	TestSourceList     = "deepin-unstable-source.list"
+	TestSourceFile     = "/etc/apt/sources.list.d/" + TestSourceList
 	DriverList         = "driver.list"
 	SecurityList       = "security.list"
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
@@ -121,7 +124,7 @@ const (
 
 func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
-		SystemUpdate: SystemSourceFile,
+		SystemUpdate: SystemSourceDir,
 		//AppStoreUpdate:     AppStoreSourceFile,
 		OnlySecurityUpdate: SecuritySourceFile,
 		UnknownUpdate:      UnknownSourceDir,
@@ -158,7 +161,7 @@ func UpdateUnknownSourceDir() error {
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != AppStoreList && name != SecurityList && name != DriverList {
+			if name != AppStoreList && name != SecurityList && name != DriverList  && name != TestSourceList{
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
@@ -167,6 +170,35 @@ func UpdateUnknownSourceDir() error {
 	// 创建对应的软链接
 	for _, filePath := range unknownSourceFilePaths {
 		linkPath := filepath.Join(UnknownSourceDir, filepath.Base(filePath))
+		err = os.Symlink(filePath, linkPath)
+		if err != nil {
+			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
+		}
+	}
+	return nil
+}
+
+
+func UpdateSystemSourceDir() error {
+	
+	err := os.RemoveAll(SystemSourceDir)
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	err = os.MkdirAll(SystemSourceDir, 0755)
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	var SystemSourceFilePaths []string
+	SystemSourceFilePaths = append(SystemSourceFilePaths, TestSourceFile)
+	SystemSourceFilePaths = append(SystemSourceFilePaths, SystemSourceFile)
+
+
+	// 创建对应的软链接
+	for _, filePath := range SystemSourceFilePaths {
+		linkPath := filepath.Join(SystemSourceDir, filepath.Base(filePath))
 		err = os.Symlink(filePath, linkPath)
 		if err != nil {
 			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
