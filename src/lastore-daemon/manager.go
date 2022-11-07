@@ -58,6 +58,7 @@ const (
 	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
 	controlCenterPath     = "/usr/bin/dde-control-center"
 	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
+	preVersionFilePath    = "/var/lib/lastore/preVersion"
 )
 
 var (
@@ -122,7 +123,7 @@ type Manager struct {
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
 
-	preUpgradeOSVersion string
+	preUpgradeOSVersion map[string]string
 }
 
 /*
@@ -145,14 +146,15 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
 		UpdateMode:          c.UpdateMode,
+		preUpgradeOSVersion: make(map[string]string),
 	}
 	osVersionInfoMap, err := getOSVersionInfo()
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		m.preUpgradeOSVersion = strings.Join(
-			[]string{osVersionInfoMap["MajorVersion"], osVersionInfoMap["MinorVersion"], osVersionInfoMap["OsBuild"]},
-			".")
+		m.preUpgradeOSVersion["MajorVersion"] = osVersionInfoMap["MajorVersion"]
+		m.preUpgradeOSVersion["MinorVersion"] = osVersionInfoMap["MinorVersion"]
+		m.preUpgradeOSVersion["OsBuild"] = osVersionInfoMap["OsBuild"]
 	}
 	sysBus := service.Conn()
 	m.apps = apps.NewApps(sysBus)
@@ -1476,18 +1478,40 @@ const (
 	upgradeFailed  = 1
 )
 
+func genPreVersionFile(versionMap map[string]string) error {
+	kf := keyfile.NewKeyFile()
+	for key, value := range versionMap {
+		kf.SetString("Version", key, value)
+	}
+	return kf.SaveToFile(preVersionFilePath)
+}
+
 // 发送系统更新成功或失败的状态
 func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType system.UpdateType) {
 	m.inhibitAutoQuitCountAdd()
 	defer m.inhibitAutoQuitCountSub()
 	var upgradeErrorMsg string
 	var version string
+	// 更新失败时，需要获取更新前的系统版本（os-version文件可能存在变动），并将更新失败时的版本号保存，用于更新token文件，在下一次检查更新和完成更新时，上报对应系统版本
 	if upgradeStatus == upgradeFailed {
 		if j != nil {
 			upgradeErrorMsg = j.Description
 		}
-		version = m.preUpgradeOSVersion
+		version = strings.Join(
+			[]string{m.preUpgradeOSVersion["MajorVersion"],
+				m.preUpgradeOSVersion["MinorVersion"],
+				m.preUpgradeOSVersion["OsBuild"]},
+			".")
+		err := genPreVersionFile(m.preUpgradeOSVersion)
+		if err != nil {
+			logger.Warning(err)
+		}
 	} else {
+		// 更新成功后，移除保存的更新前系统版本记录，重新获取系统版本并更新token文件
+		err := os.RemoveAll(preVersionFilePath)
+		if err != nil {
+			logger.Warning(err)
+		}
 		infoMap, err := getOSVersionInfo()
 		if err != nil {
 			logger.Warning(err)
@@ -1497,7 +1521,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 				".")
 		}
 	}
-
+	updateTokenConfigFile()
 	sn, err := getSN()
 	if err != nil {
 		logger.Warning(err)

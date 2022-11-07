@@ -11,8 +11,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
+
 	"internal/system"
 	"io/ioutil"
 	"os"
@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus"
-
 	hhardware "github.com/jouyouyun/hardware"
+	"github.com/linuxdeepin/go-lib/keyfile"
 )
 
 const (
@@ -140,26 +140,35 @@ func loadFile(filepath string) ([]string, error) {
 
 func getOSVersionInfo() (map[string]string, error) {
 	versionPath := path.Join(etcDir, osVersionFileName)
-	versionLines, err := loadFile(versionPath)
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile(versionPath)
 	if err != nil {
-		logger.Warning("failed to load os-version file:", err)
+		logger.Warning(err)
 		return nil, err
 	}
 	osVersionInfoMap := make(map[string]string)
-	for _, item := range versionLines {
-		itemSlice := strings.SplitN(item, "=", 2)
-		if len(itemSlice) < 2 {
-			continue
-		}
-		key := strings.TrimSpace(itemSlice[0])
-		value := strings.TrimSpace(itemSlice[1])
-		osVersionInfoMap[key] = value
-	}
-	// 判断必要内容是否存在
 	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
+
 	for _, key := range necessaryKey {
-		if value := osVersionInfoMap[key]; value == "" {
-			return nil, errors.New("os-version lack necessary content")
+		osVersionInfoMap[key], err = kf.GetString("Version", key)
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
+	// 如果存在该文件，证明存在更新失败导致os-version版本和系统实际版本不一致情况，需要使用预留文件的内容
+	if system.NormalFileExists(preVersionFilePath) {
+		versionKey := []string{"MajorVersion", "MinorVersion", "OsBuild"}
+		preVersionKf := keyfile.NewKeyFile()
+		err = preVersionKf.LoadFromFile(preVersionFilePath)
+		if err != nil {
+			logger.Warning(err)
+			return osVersionInfoMap, nil
+		}
+		for _, key := range versionKey {
+			osVersionInfoMap[key], err = preVersionKf.GetString("Version", key)
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 	}
 	return osVersionInfoMap, nil
