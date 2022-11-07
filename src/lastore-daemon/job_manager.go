@@ -486,8 +486,8 @@ func GetUpgradeInfoMap() map[string]upgradeJobInfo {
 			UpgradeJobId:   genJobId(system.SystemUpgradeJobType),
 			UpgradeJobType: system.DistUpgradeJobType,
 			Option: map[string]string{
-				"Dir::Etc::SourceList":  system.SystemSourceFile,
-				"Dir::Etc::SourceParts": "/dev/null",
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": system.SystemSourceDir,
 			},
 		},
 		system.AppStoreUpgradeJobType: {

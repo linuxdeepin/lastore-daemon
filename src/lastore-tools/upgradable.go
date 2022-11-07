@@ -200,6 +200,12 @@ func GenerateUpdateInfos(fpath string) error {
 	if err != nil {
 		logger.Warning(err)
 	}
+
+	err = system.UpdateSystemSourceDir()
+	if err != nil {
+		logger.Warning(err)
+	}
+
 	var upgradeInfo []system.UpgradeInfo
 	for category, sourcePath := range system.GetCategorySourceMap() {
 		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)
