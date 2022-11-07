@@ -114,8 +114,8 @@ const (
 	SystemSourceDir	   = "/var/lib/lastore/SystemSource.d"
 	AppStoreList       = "appstore.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
-	TestSourceList     = "deepin-unstable-source.list"
-	TestSourceFile     = "/etc/apt/sources.list.d/" + TestSourceList
+	UstableSourceList     = "deepin-unstable-source.list"
+	UstableSourceFile     = "/etc/apt/sources.list.d/" + UstableSourceList
 	DriverList         = "driver.list"
 	SecurityList       = "security.list"
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
@@ -161,7 +161,7 @@ func UpdateUnknownSourceDir() error {
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != AppStoreList && name != SecurityList && name != DriverList  && name != TestSourceList{
+			if name != AppStoreList && name != SecurityList && name != DriverList  && name != UstableSourceList{
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
@@ -185,19 +185,16 @@ func UpdateSystemSourceDir() error {
 	if err != nil {
 		logger.Warning(err)
 	}
-
+	// #nosec G301
 	err = os.MkdirAll(SystemSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
 	}
 
-	var SystemSourceFilePaths []string
-	SystemSourceFilePaths = append(SystemSourceFilePaths, TestSourceFile)
-	SystemSourceFilePaths = append(SystemSourceFilePaths, SystemSourceFile)
-
+	var systemSourceFilePaths = []string{UstableSourceFile, SystemSourceFile}
 
 	// 创建对应的软链接
-	for _, filePath := range SystemSourceFilePaths {
+	for _, filePath := range systemSourceFilePaths {
 		linkPath := filepath.Join(SystemSourceDir, filepath.Base(filePath))
 		err = os.Symlink(filePath, linkPath)
 		if err != nil {
