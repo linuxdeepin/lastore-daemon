@@ -7,6 +7,7 @@ package system
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/linuxdeepin/go-lib/strv"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -111,11 +112,13 @@ const (
 	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
 	OriginSourceDir    = "/etc/apt/sources.list.d"
 	SystemSourceFile   = "/etc/apt/sources.list"
-	SystemSourceDir	   = "/var/lib/lastore/SystemSource.d"
+	SystemSourceDir    = "/var/lib/lastore/SystemSource.d"
 	AppStoreList       = "appstore.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
-	UstableSourceList     = "deepin-unstable-source.list"
-	UstableSourceFile     = "/etc/apt/sources.list.d/" + UstableSourceList
+	UnstableSourceList = "deepin-unstable-source.list"
+	UnstableSourceFile = "/etc/apt/sources.list.d/" + UnstableSourceList
+	HweSourceList      = "hwe.list"
+	HweSourceFile      = "/etc/apt/sources.list.d/" + HweSourceList
 	DriverList         = "driver.list"
 	SecurityList       = "security.list"
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
@@ -158,10 +161,17 @@ func UpdateUnknownSourceDir() error {
 		logger.Warning(err)
 		return err
 	}
+	nonUnknownSourceFileList := strv.Strv{
+		AppStoreList,
+		SecurityList,
+		DriverList,
+		UnstableSourceFile,
+		HweSourceList,
+	}
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != AppStoreList && name != SecurityList && name != DriverList  && name != UstableSourceList{
+			if !nonUnknownSourceFileList.Contains(name) {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
@@ -178,9 +188,8 @@ func UpdateUnknownSourceDir() error {
 	return nil
 }
 
-
 func UpdateSystemSourceDir() error {
-	
+
 	err := os.RemoveAll(SystemSourceDir)
 	if err != nil {
 		logger.Warning(err)
@@ -191,7 +200,7 @@ func UpdateSystemSourceDir() error {
 		logger.Warning(err)
 	}
 
-	var systemSourceFilePaths = []string{UstableSourceFile, SystemSourceFile}
+	var systemSourceFilePaths = []string{UnstableSourceFile, SystemSourceFile, HweSourceFile}
 
 	// 创建对应的软链接
 	for _, filePath := range systemSourceFilePaths {
