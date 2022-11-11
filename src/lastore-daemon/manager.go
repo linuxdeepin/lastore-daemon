@@ -44,8 +44,8 @@ import (
 	"github.com/godbus/dbus"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
-	power "github.com/linuxdeepin/go-dbus-factory/org.deepin.system.power1"
 	atomic1 "github.com/linuxdeepin/go-dbus-factory/org.deepin.AtomicUpgrade1"
+	power "github.com/linuxdeepin/go-dbus-factory/org.deepin.system.power1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
@@ -1130,7 +1130,7 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 		logger.Warning(err)
 		return
 	}
-	if onBattery && batteryPercentage > 50 || !onBattery {	
+	if onBattery && batteryPercentage > 50 || !onBattery {
 		if m.atomic != nil {
 			// 原子更新
 			commit := atomicCommit{}
@@ -1244,6 +1244,7 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 	m.signalLoop = dbusutil.NewSignalLoop(conn, 10)
 	m.signalLoop.Start()
 	m.abRecovery.InitSignalExt(m.signalLoop, true)
+	m.atomic.InitSignalExt(m.signalLoop, true)
 	_, _ = m.abRecovery.ConnectJobEnd(func(kind string, success bool, errMsg string) {
 		m.PropsMu.RLock()
 		updateType := m.autoInstallType
