@@ -33,8 +33,9 @@ import (
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
+	ofdbus "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.dbus"
+	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
-
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
@@ -85,7 +86,6 @@ type Manager struct {
 	do      sync.Mutex
 	b       system.System
 	config  *Config
-
 	PropsMu sync.RWMutex
 	// dbusutil-gen: equal=nil
 	JobList    []dbus.ObjectPath
@@ -123,6 +123,10 @@ type Manager struct {
 	lastoreUnitCacheMu   sync.Mutex
 
 	preUpgradeOSVersion string
+
+	userAgents    *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
+	loginManager  login1.Manager
+	sysDBusDaemon ofdbus.DBus
 }
 
 /*
@@ -145,6 +149,10 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
 		UpdateMode:          c.UpdateMode,
+		userAgents:          newUserAgentMap(service),
+		loginManager:        login1.NewManager(service.Conn()),
+		sysDBusDaemon:       ofdbus.NewDBus(service.Conn()),
+		signalLoop:          dbusutil.NewSignalLoop(service.Conn(), 10),
 	}
 	osVersionInfoMap, err := getOSVersionInfo()
 	if err != nil {
@@ -166,6 +174,25 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		logger.Warning("failed to get HardwareId")
 	} else {
 		m.HardwareId = hardwareId
+	}
+	m.signalLoop.Start()
+	m.loginManager.InitSignalExt(m.signalLoop, true)
+	_, err = m.loginManager.ConnectSessionNew(m.handleSessionNew)
+	if err != nil {
+		logger.Warning(err)
+	}
+	_, err = m.loginManager.ConnectSessionRemoved(m.handleSessionRemoved)
+	if err != nil {
+		logger.Warning(err)
+	}
+	m.sysDBusDaemon.InitSignalExt(m.signalLoop, true)
+	_, err = m.sysDBusDaemon.ConnectNameOwnerChanged(func(name string, oldOwner string, newOwner string) {
+		if strings.HasPrefix(name, ":") && oldOwner != "" && newOwner == "" {
+			m.userAgents.handleNameLost(name)
+		}
+	})
+	if err != nil {
+		logger.Warning(err)
 	}
 	return m
 }
@@ -1088,6 +1115,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 }
 
 func (m *Manager) installUOSReleaseNote() {
+	// TODO delete
 	logger.Info("installUOSReleaseNote begin")
 	bExists, _ := m.PackageExists(uosReleaseNotePkgName)
 	if bExists {
@@ -1262,8 +1290,7 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 	const jobKindBackup = "backup"
 	m.sysPower = power.NewPower(conn)
 	m.abRecovery = abrecovery.NewABRecovery(conn)
-	m.signalLoop = dbusutil.NewSignalLoop(conn, 10)
-	m.signalLoop.Start()
+
 	m.abRecovery.InitSignalExt(m.signalLoop, true)
 	_, _ = m.abRecovery.ConnectJobEnd(func(kind string, success bool, errMsg string) {
 		m.PropsMu.RLock()
@@ -1917,6 +1944,7 @@ func (m *Manager) loadLastoreCache() {
 func (m *Manager) saveLastoreCache() {
 	m.saveUpdateSourceOnce()
 	m.saveCacheJob()
+	m.userAgents.saveRecordContent(userAgentRecordPath)
 }
 
 func (m *Manager) handleOSSignal() {
@@ -1930,6 +1958,69 @@ func (m *Manager) handleOSSignal() {
 			m.service.Quit()
 		}
 	}
+}
+
+func (m *Manager) watchSession(uid string, session login1.Session) {
+	logger.Infof("watching '%s session:%s", uid, session.ServiceName_())
+	session.InitSignalExt(m.signalLoop, true)
+	err := session.Active().ConnectChanged(func(hasValue bool, active bool) {
+		if !hasValue {
+			return
+		}
+		if active {
+			m.userAgents.setActiveUid(uid)
+		}
+	})
+
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	active, err := session.Active().Get(0)
+	if err != nil {
+		logger.Warning(err)
+	}
+	if active {
+		m.userAgents.setActiveUid(uid)
+	}
+}
+
+func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath) {
+	logger.Info("session added", sessionId, sessionPath)
+	sysBus := m.service.Conn()
+	session, err := login1.NewSession(sysBus, sessionPath)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+
+	var userInfo login1.UserInfo
+	userInfo, err = session.User().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+
+	uidStr := strconv.Itoa(int(userInfo.UID))
+	if !m.userAgents.hasUser(uidStr) {
+		// 不关心这个用户的新 session,因为只有注册了agent的用户的user才需要监听
+		return
+	}
+
+	newlyAdded := m.userAgents.addSession(uidStr, session)
+	if newlyAdded {
+		m.watchSession(uidStr, session)
+	}
+}
+
+func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.ObjectPath) {
+	logger.Info("session removed", sessionId, sessionPath)
+	m.userAgents.removeSession(sessionPath)
+}
+
+func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
+	uidStr := strconv.Itoa(int(uid))
+	m.userAgents.removeUser(uidStr)
 }
 
 func prepareUpdateSource() {

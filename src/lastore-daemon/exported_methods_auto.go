@@ -86,6 +86,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
+			Name:   "RegisterAgent",
+			Fn:     v.RegisterAgent,
+			InArgs: []string{"path"},
+		},
+		{
 			Name:    "RemovePackage",
 			Fn:      v.RemovePackage,
 			InArgs:  []string{"jobName", "packages"},
@@ -105,6 +110,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "StartJob",
 			Fn:     v.StartJob,
 			InArgs: []string{"jobId"},
+		},
+		{
+			Name:   "UnRegisterAgent",
+			Fn:     v.UnRegisterAgent,
+			InArgs: []string{"path"},
 		},
 		{
 			Name:    "UpdatePackage",
