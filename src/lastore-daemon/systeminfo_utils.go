@@ -96,21 +96,16 @@ func getSystemInfo() SystemInfo {
 	if err != nil {
 		logger.Warning("failed to get SN:", err)
 	}
-	isCustom, err := getCustomInfo()
+	isCustom, oemId, err := getCustomInfoAndOemId()
 	if err != nil {
 		systemInfo.Custom = OemNotCustomState
 	} else if isCustom {
 		systemInfo.Custom = OemCustomState
 	}
-
+	systemInfo.OEMID = oemId
 	systemInfo.HardwareVersion, err = getHardwareVersion()
 	if err != nil {
 		logger.Warning("failed to get HardwareVersion:", err)
-	}
-
-	systemInfo.OEMID, err = getOEMID()
-	if err != nil {
-		logger.Warning("failed to get OEMID:", err)
 	}
 
 	return systemInfo
@@ -320,17 +315,17 @@ const (
 	oemPubKey   = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwzVS35kJl3mhSJssD3S5\nEzjJbFoAD+VsMSy2nS7WQA2XH0aPAWjgCeU+1ScYdBOWz+zWsnK77fGm96HueAuT\nhQEJ9J+ISJUuYBYCc6ovc35gxnhCmP2Qof+/vw98+uKnf1aTDI1imNCWOd/shSbL\nOBn5xFXPsQld1HJqahOuQZOguNIWvrvT7RtmQb77iu576gVLc948HreXKOPD57uK\nJoA2KcoUt95hd94wYyphCuE4onjPcIlpJQfda6PP+HO2Xwze3ltIG6hJSSAEK4R9\n8GnaOTqvslWVI9QFLCIyQ63dbbnASYFTWpDXTlPJsss64vfWOuEjwIyzzQDJNOzN\nFQIDAQAB\n-----END PUBLIC KEY-----"
 )
 
-func getCustomInfo() (bool, error) {
+func getCustomInfoAndOemId() (bool, string, error) {
 	if !verifyOemFile() {
 		logger.Warning("verify oem-info failure")
-		return false, nil
+		return false, "", nil
 	}
 	var info oemInfo
 	err := system.DecodeJson(oemInfoFile, &info)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	return info.CustomInfo.CustomizedKernel, nil
+	return info.CustomInfo.CustomizedKernel, info.Basic.IsoId, nil
 }
 
 // 定制标识校验
