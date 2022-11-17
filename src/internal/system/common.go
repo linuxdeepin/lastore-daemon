@@ -165,7 +165,7 @@ func UpdateUnknownSourceDir() error {
 		AppStoreList,
 		SecurityList,
 		DriverList,
-		UnstableSourceFile,
+		UnstableSourceList,
 		HweSourceList,
 	}
 	for _, fileInfo := range sourceDirFileInfos {
