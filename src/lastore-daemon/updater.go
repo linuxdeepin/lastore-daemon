@@ -76,13 +76,6 @@ func SetAPTSmartMirror(url string) error {
 		0644) // #nosec G306
 }
 
-// 设置用于下载软件的镜像源
-func (u *Updater) SetMirrorSource(id string) *dbus.Error {
-	u.service.DelayAutoQuit()
-	err := u.setMirrorSource(id)
-	return dbusutil.ToError(err)
-}
-
 func (u *Updater) setMirrorSource(id string) error {
 	if id == "" || u.MirrorSource == id {
 		return nil
@@ -118,13 +111,6 @@ type LocaleMirrorSource struct {
 	Id   string
 	Url  string
 	Name string
-}
-
-// ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
-// 其中Name会根据传递进来的lang进行本地化
-func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
-	u.service.DelayAutoQuit()
-	return u.listMirrorSources(lang), nil
 }
 
 func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
@@ -169,63 +155,6 @@ func UpdatableNames(infosMap system.SourceUpgradeInfoMap) []string {
 	return apps
 }
 
-func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string, busErr *dbus.Error) {
-	u.service.DelayAutoQuit()
-	interval = u.config.CheckInterval.Hours()
-	checkTime = u.config.LastCheckTime.Format("2006-01-02 15:04:05.999999999 -0700 MST")
-	return
-}
-
-func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
-	u.service.DelayAutoQuit()
-	if u.UpdateNotify == enable {
-		return nil
-	}
-	err := u.config.SetUpdateNotify(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-	u.UpdateNotify = enable
-
-	_ = u.emitPropChangedUpdateNotify(enable)
-
-	return nil
-}
-
-func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
-	u.service.DelayAutoQuit()
-	if u.AutoCheckUpdates == enable {
-		return nil
-	}
-
-	// save the config to disk
-	err := u.config.SetAutoCheckUpdates(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-
-	u.AutoCheckUpdates = enable
-	_ = u.emitPropChangedAutoCheckUpdates(enable)
-	return nil
-}
-
-func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
-	u.service.DelayAutoQuit()
-	if u.AutoDownloadUpdates == enable {
-		return nil
-	}
-
-	// save the config to disk
-	err := u.config.SetAutoDownloadUpdates(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-
-	u.AutoDownloadUpdates = enable
-	_ = u.emitPropChangedAutoDownloadUpdates(enable)
-	return nil
-}
-
 const (
 	aptSource       = "/etc/apt/sources.list"
 	aptSourceOrigin = aptSource + ".origin"
@@ -250,16 +179,6 @@ func (u *Updater) restoreSystemSource() error {
 
 	err = ioutil.WriteFile(aptSource, origin, 0644) // #nosec G306
 	return err
-}
-
-func (u *Updater) RestoreSystemSource() *dbus.Error {
-	u.service.DelayAutoQuit()
-	err := u.restoreSystemSource()
-	if err != nil {
-		logger.Warning("failed to restore system source:", err)
-		return dbusutil.ToError(err)
-	}
-	return nil
 }
 
 func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeInfoMap) {

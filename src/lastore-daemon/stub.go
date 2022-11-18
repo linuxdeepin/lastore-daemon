@@ -16,6 +16,14 @@ func (*Manager) GetInterfaceName() string {
 	return "com.deepin.lastore.Manager"
 }
 
+func (*Job) GetInterfaceName() string {
+	return "com.deepin.lastore.Job"
+}
+
+func (*Updater) GetInterfaceName() string {
+	return "com.deepin.lastore.Updater"
+}
+
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
 	var caller methodCaller
@@ -148,14 +156,6 @@ func DestroyJobDBus(j *Job) {
 
 func (j *Job) getPath() dbus.ObjectPath {
 	return dbus.ObjectPath("/com/deepin/lastore/Job" + j.Id)
-}
-
-func (*Job) GetInterfaceName() string {
-	return "com.deepin.lastore.Job"
-}
-
-func (*Updater) GetInterfaceName() string {
-	return "com.deepin.lastore.Updater"
 }
 
 func (j *Job) notifyAll() {
