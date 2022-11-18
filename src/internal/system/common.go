@@ -7,13 +7,13 @@ package system
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/linuxdeepin/go-lib/strv"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/linuxdeepin/go-lib/log"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 type MirrorSource struct {

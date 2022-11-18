@@ -7,16 +7,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
-	"strings"
-	"sync"
-	"time"
-
 	"internal/system"
 	"internal/system/apt"
 	"internal/utils"
+	"os"
+	"path"
+	"time"
 
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -76,11 +72,11 @@ func main() {
 		_ = os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
 
-	b := apt.New()
+	aptImpl := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
-	manager := NewManager(service, b, config)
+	manager := NewManager(service, aptImpl, config)
 	updater := NewUpdater(service, manager, config)
 	manager.updater = updater
 	serverObject, err := service.NewServerObject("/com/deepin/lastore", manager, updater)
@@ -109,6 +105,36 @@ func main() {
 		logger.Error("failed to export manager and updater:", err)
 		return
 	}
+	initLastoreInhibitHint(service)
+	err = service.RequestName(dbusServiceName)
+	if err != nil {
+		logger.Error("failed to request name:", err)
+		return
+	}
+
+	// Force notify changed at the first time
+	manager.PropsMu.RLock()
+	err = manager.emitPropChangedJobList(manager.JobList)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = manager.emitPropChangedUpgradableApps(manager.UpgradableApps)
+	if err != nil {
+		logger.Warning(err)
+	}
+	manager.PropsMu.RUnlock()
+	manager.startSystemdUnit()
+	logger.Info("Started service at system bus")
+	autoQuitTime := 60 * time.Second
+	if logger.GetLogLevel() == log.LevelDebug {
+		autoQuitTime = 6000 * time.Second
+	}
+	service.SetAutoQuitHandler(autoQuitTime, manager.canAutoQuit)
+	service.Wait()
+	manager.saveLastoreCache()
+}
+
+func initLastoreInhibitHint(service *dbusutil.Service) {
 	ihObj := inhibit_hint.New("lastore-daemon")
 	ihObj.SetIconFunc(func(why string) string {
 		switch why {
@@ -130,61 +156,8 @@ func main() {
 			return Tr("Control Center") // TODO
 		}
 	})
-	err = ihObj.Export(service)
+	err := ihObj.Export(service)
 	if err != nil {
 		logger.Warning("failed to export inhibit hint:", err)
-	}
-
-	err = service.RequestName(dbusServiceName)
-	if err != nil {
-		logger.Error("failed to request name:", err)
-		return
-	}
-
-	// Force notify changed at the first time
-	manager.PropsMu.RLock()
-	err = manager.emitPropChangedJobList(manager.JobList)
-	if err != nil {
-		logger.Warning(err)
-	}
-	err = manager.emitPropChangedUpgradableApps(manager.UpgradableApps)
-	if err != nil {
-		logger.Warning(err)
-	}
-	manager.PropsMu.RUnlock()
-	manager.startSystemdUnit()
-	logger.Info("Started service at system bus")
-	service.SetAutoQuitHandler(60*time.Second, manager.canAutoQuit)
-	service.Wait()
-	manager.saveLastoreCache()
-}
-
-var _tokenUpdateMu sync.Mutex
-
-// 更新 99lastore-token.conf 文件的内容
-func updateTokenConfigFile() {
-	logger.Debug("start updateTokenConfigFile")
-	_tokenUpdateMu.Lock()
-	defer _tokenUpdateMu.Unlock()
-	systemInfo := getSystemInfo()
-	tokenPath := path.Join(aptConfDir, tokenConfFileName)
-	var tokenSlice []string
-	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
-	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
-	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
-	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
-	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
-	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
-	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
-	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
-	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
-	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
-	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
-	token := strings.Join(tokenSlice, ";")
-	token = strings.Replace(token, "\n", "", -1)
-	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
-	if err != nil {
-		logger.Warning(err)
 	}
 }

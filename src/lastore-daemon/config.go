@@ -59,17 +59,6 @@ type Config struct {
 	AllowPostSystemUpgradeMessageVersion []string //只有数组内的系统版本被允许发送更新完成的数据
 }
 
-func getDefaultConfig() *Config {
-	var c *Config
-	defaultConfigPath := filepath.Join(system.VarLibDir, "default_config.json")
-	err := system.DecodeJson(defaultConfigPath, &c)
-	if err != nil {
-		logger.Debugf("Can't load default config file: %v\n", err)
-		c = &DefaultConfig
-	}
-	return c
-}
-
 func NewConfig(fpath string) *Config {
 	c := getDefaultConfig()
 	err := system.DecodeJson(fpath, &c)
@@ -91,6 +80,17 @@ func NewConfig(fpath string) *Config {
 		c.CheckInterval = time.Hour * 24 * 7
 		c.CleanInterval = time.Hour * 24 * 7
 		_ = c.save()
+	}
+	return c
+}
+
+func getDefaultConfig() *Config {
+	var c *Config
+	defaultConfigPath := filepath.Join(system.VarLibDir, "default_config.json")
+	err := system.DecodeJson(defaultConfigPath, &c)
+	if err != nil {
+		logger.Debugf("Can't load default config file: %v\n", err)
+		c = &DefaultConfig
 	}
 	return c
 }
