@@ -1,25 +1,13 @@
-/*
- * Copyright (C) 2015 ~ 2017 Deepin Technology Co., Ltd.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package system
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/linuxdeepin/go-lib/strv"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -124,8 +112,13 @@ const (
 	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
 	OriginSourceDir    = "/etc/apt/sources.list.d"
 	SystemSourceFile   = "/etc/apt/sources.list"
+	SystemSourceDir    = "/var/lib/lastore/SystemSource.d"
 	AppStoreList       = "appstore.list"
 	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
+	UnstableSourceList = "deepin-unstable-source.list"
+	UnstableSourceFile = "/etc/apt/sources.list.d/" + UnstableSourceList
+	HweSourceList      = "hwe.list"
+	HweSourceFile      = "/etc/apt/sources.list.d/" + HweSourceList
 	DriverList         = "driver.list"
 	SecurityList       = "security.list"
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
@@ -134,7 +127,7 @@ const (
 
 func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
-		SystemUpdate: SystemSourceFile,
+		SystemUpdate: SystemSourceDir,
 		//AppStoreUpdate:     AppStoreSourceFile,
 		OnlySecurityUpdate: SecuritySourceFile,
 		UnknownUpdate:      UnknownSourceDir,
@@ -168,10 +161,17 @@ func UpdateUnknownSourceDir() error {
 		logger.Warning(err)
 		return err
 	}
+	nonUnknownSourceFileList := strv.Strv{
+		AppStoreList,
+		SecurityList,
+		DriverList,
+		UnstableSourceList,
+		HweSourceList,
+	}
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if name != AppStoreList && name != SecurityList && name != DriverList {
+			if !nonUnknownSourceFileList.Contains(name) {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
@@ -180,6 +180,31 @@ func UpdateUnknownSourceDir() error {
 	// 创建对应的软链接
 	for _, filePath := range unknownSourceFilePaths {
 		linkPath := filepath.Join(UnknownSourceDir, filepath.Base(filePath))
+		err = os.Symlink(filePath, linkPath)
+		if err != nil {
+			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
+		}
+	}
+	return nil
+}
+
+func UpdateSystemSourceDir() error {
+
+	err := os.RemoveAll(SystemSourceDir)
+	if err != nil {
+		logger.Warning(err)
+	}
+	// #nosec G301
+	err = os.MkdirAll(SystemSourceDir, 0755)
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	var systemSourceFilePaths = []string{UnstableSourceFile, SystemSourceFile, HweSourceFile}
+
+	// 创建对应的软链接
+	for _, filePath := range systemSourceFilePaths {
+		linkPath := filepath.Join(SystemSourceDir, filepath.Base(filePath))
 		err = os.Symlink(filePath, linkPath)
 		if err != nil {
 			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)

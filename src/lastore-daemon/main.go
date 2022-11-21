@@ -1,19 +1,6 @@
-/*
- * Copyright (C) 2015 ~ 2017 Deepin Technology Co., Ltd.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package main
 
@@ -179,11 +166,8 @@ func updateTokenConfigFile() {
 	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
-	systemInfo, err := getSystemInfo()
+	systemInfo := getSystemInfo()
 	tokenPath := path.Join(aptConfDir, tokenConfFileName)
-	if err != nil {
-		logger.Warning("failed to update 99lastore-token.conf content:", err)
-	}
 	var tokenSlice []string
 	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
 	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
@@ -194,10 +178,12 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
 	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
 	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
+	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
+	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err = ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
 	if err != nil {
 		logger.Warning(err)
 	}

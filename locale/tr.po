@@ -6,15 +6,16 @@
 # Translators:
 # Kaya Zeren <kayazeren@gmail.com>, 2020
 # Serdar Sağlam <teknomobil@msn.com>, 2020
+# meda <ademcal@yahoo.com>, 2022
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-26 14:14+0800\n"
+"POT-Creation-Date: 2021-12-29 10:48+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Serdar Sağlam <teknomobil@msn.com>, 2020\n"
+"Last-Translator: meda <ademcal@yahoo.com>, 2022\n"
 "Language-Team: Turkish (https://www.transifex.com/linuxdeepin/teams/3617/tr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -22,22 +23,22 @@ msgstr ""
 "Language: tr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:58
+#: ../src/lastore-daemon/inhibitor.go:52
 msgid "Installing updates..."
-msgstr ""
+msgstr "Güncellemeler yükleniyor"
 
-#: ../src/lastore-daemon/inhibitor.go:60
+#: ../src/lastore-daemon/inhibitor.go:54
 msgid "Tasks are running..."
 msgstr "Görevler çalışıyor..."
 
-#: ../src/lastore-daemon/inhibitor.go:62
-msgid "Preventing from shutting down"
-msgstr "Kapatılmasını önle"
+#: ../src/lastore-daemon/inhibitor.go:56
+msgid "Preventing the computer from shutting down..."
+msgstr "Bilgisayarın kapanmasını önleniyor..."
 
-#: ../src/lastore-daemon/main.go:139 ../src/lastore-daemon/main.go:143
+#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
 msgid "Control Center"
 msgstr "Kontrol Merkezi"
 
-#: ../src/lastore-daemon/main.go:141
+#: ../src/lastore-daemon/main.go:121
 msgid "App Store"
 msgstr "Uygulama Marketi"

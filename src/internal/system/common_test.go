@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package system
 
 import (
@@ -19,7 +23,7 @@ func TestUpdateType_JobType(t *testing.T) {
 
 func Test_GetCategorySourceMap(t *testing.T) {
 	sourceMap := GetCategorySourceMap()
-	assert.Equal(t, SystemSourceFile, sourceMap[SystemUpdate])
+	assert.Equal(t, SystemSourceDir, sourceMap[SystemUpdate])
 	assert.Equal(t, SecuritySourceFile, sourceMap[OnlySecurityUpdate])
 	assert.Equal(t, UnknownSourceDir, sourceMap[UnknownUpdate])
 }

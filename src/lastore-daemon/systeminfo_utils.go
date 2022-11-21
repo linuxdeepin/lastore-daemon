@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package main
 
 import (
@@ -35,15 +39,17 @@ const (
 )
 
 type SystemInfo struct {
-	SystemName  string
-	ProductType string
-	EditionName string
-	Version     string
-	HardwareId  string
-	Processor   string
-	Arch        string
-	Custom      string
-	SN          string
+	SystemName      string
+	ProductType     string
+	EditionName     string
+	Version         string
+	HardwareId      string
+	Processor       string
+	Arch            string
+	Custom          string
+	SN              string
+	HardwareVersion string
+	OEMID           string
 }
 
 const (
@@ -51,76 +57,63 @@ const (
 	OemCustomState    = "1"
 )
 
-func getSystemInfo() (SystemInfo, error) {
-	versionPath := path.Join(etcDir, osVersionFileName)
-	versionLines, err := loadFile(versionPath)
-	if err != nil {
-		logger.Warning("failed to load os-version file:", err)
-		return SystemInfo{}, err
-	}
-	mapOsVersion := make(map[string]string)
-	for _, item := range versionLines {
-		itemSlice := strings.SplitN(item, "=", 2)
-		if len(itemSlice) < 2 {
-			continue
-		}
-		key := strings.TrimSpace(itemSlice[0])
-		value := strings.TrimSpace(itemSlice[1])
-		mapOsVersion[key] = value
-	}
-	// 判断必要内容是否存在
-	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
-	for _, key := range necessaryKey {
-		if value := mapOsVersion[key]; value == "" {
-			return SystemInfo{}, errors.New("os-version lack necessary content")
-		}
-	}
+func getSystemInfo() SystemInfo {
 	systemInfo := SystemInfo{
 		Custom: OemNotCustomState,
 	}
-	systemInfo.SystemName = mapOsVersion["SystemName"]
-	systemInfo.ProductType = mapOsVersion["ProductType"]
-	systemInfo.EditionName = mapOsVersion["EditionName"]
-	systemInfo.Version = strings.Join([]string{
-		mapOsVersion["MajorVersion"],
-		mapOsVersion["MinorVersion"],
-		mapOsVersion["OsBuild"]},
-		".")
+
+	osVersionInfoMap, err := getOSVersionInfo()
+	if err != nil {
+		logger.Warning("failed to get os-version:", err)
+	} else {
+		systemInfo.SystemName = osVersionInfoMap["SystemName"]
+		systemInfo.ProductType = osVersionInfoMap["ProductType"]
+		systemInfo.EditionName = osVersionInfoMap["EditionName"]
+		systemInfo.Version = strings.Join([]string{
+			osVersionInfoMap["MajorVersion"],
+			osVersionInfoMap["MinorVersion"],
+			osVersionInfoMap["OsBuild"]},
+			".")
+	}
+
 	systemInfo.HardwareId, err = getHardwareId()
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
-		return systemInfo, err
 	}
 
 	systemInfo.Processor, err = getProcessorModelName()
 	if err != nil {
 		logger.Warning("failed to get modelName:", err)
-		return systemInfo, err
+	} else if len(systemInfo.Processor) > 100 {
+		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
 	}
+
 	systemInfo.Arch, err = getArchInfo()
 	if err != nil {
 		logger.Warning("failed to get Arch:", err)
-		return systemInfo, err
 	}
 	systemInfo.SN, err = getSN()
 	if err != nil {
 		logger.Warning("failed to get SN:", err)
-		return systemInfo, err
 	}
 	isCustom, err := getCustomInfo()
 	if err != nil {
 		systemInfo.Custom = OemNotCustomState
-		return systemInfo, err
-	}
-	if isCustom {
+	} else if isCustom {
 		systemInfo.Custom = OemCustomState
 	}
 
-	if len(systemInfo.Processor) > 100 {
-		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
+	systemInfo.HardwareVersion, err = getHardwareVersion()
+	if err != nil {
+		logger.Warning("failed to get HardwareVersion:", err)
 	}
 
-	return systemInfo, nil
+	systemInfo.OEMID, err = getOEMID()
+	if err != nil {
+		logger.Warning("failed to get OEMID:", err)
+	}
+
+	return systemInfo
 }
 
 func loadFile(filepath string) ([]string, error) {
@@ -143,6 +136,33 @@ func loadFile(filepath string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func getOSVersionInfo() (map[string]string, error) {
+	versionPath := path.Join(etcDir, osVersionFileName)
+	versionLines, err := loadFile(versionPath)
+	if err != nil {
+		logger.Warning("failed to load os-version file:", err)
+		return nil, err
+	}
+	osVersionInfoMap := make(map[string]string)
+	for _, item := range versionLines {
+		itemSlice := strings.SplitN(item, "=", 2)
+		if len(itemSlice) < 2 {
+			continue
+		}
+		key := strings.TrimSpace(itemSlice[0])
+		value := strings.TrimSpace(itemSlice[1])
+		osVersionInfoMap[key] = value
+	}
+	// 判断必要内容是否存在
+	necessaryKey := []string{"SystemName", "ProductType", "EditionName", "MajorVersion", "MinorVersion", "OsBuild"}
+	for _, key := range necessaryKey {
+		if value := osVersionInfoMap[key]; value == "" {
+			return nil, errors.New("os-version lack necessary content")
+		}
+	}
+	return osVersionInfoMap, nil
 }
 
 func getHardwareId() (string, error) {
@@ -350,4 +370,22 @@ func verifyOemFile() bool {
 	}
 	//签名认证
 	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed, srBuf) == nil
+}
+
+func getHardwareVersion() (string, error) {
+	res, err := exec.Command("dmidecode", "-s", "system-version").Output()
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
+}
+
+const oemFilePath = "/etc/.oemid"
+
+func getOEMID() (string, error) {
+	content, err := ioutil.ReadFile(oemFilePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

@@ -1,24 +1,12 @@
-/*
- * Copyright (C) 2015 ~ 2017 Deepin Technology Co., Ltd.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -79,12 +67,14 @@ var (
 		printerPath,
 		printerHelperPath,
 		langSelectorPath,
+		controlCenterPath,
 	}
 	allowRemovePackageExecPaths = strv.Strv{
 		appStoreDaemonPath,
 		oldAppStoreDaemonPath,
 		sessionDaemonPath,
 		langSelectorPath,
+		controlCenterPath,
 	}
 )
 
@@ -123,6 +113,7 @@ type Manager struct {
 	autoInstallType          system.UpdateType // 保存需要自动安装的类别
 
 	UpdateMode system.UpdateType `prop:"access:rw"`
+	HardwareId string
 
 	isUpdateSucceed bool
 	canRestore      bool
@@ -130,6 +121,8 @@ type Manager struct {
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
+
+	preUpgradeOSVersion string
 }
 
 /*
@@ -153,6 +146,14 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 		AutoClean:           c.AutoClean,
 		UpdateMode:          c.UpdateMode,
 	}
+	osVersionInfoMap, err := getOSVersionInfo()
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		m.preUpgradeOSVersion = strings.Join(
+			[]string{osVersionInfoMap["MajorVersion"], osVersionInfoMap["MinorVersion"], osVersionInfoMap["OsBuild"]},
+			".")
+	}
 	sysBus := service.Conn()
 	m.apps = apps.NewApps(sysBus)
 	m.initAutoInstall(sysBus)
@@ -160,6 +161,12 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.modifyUpdateMode()
+	hardwareId, err := getHardwareId()
+	if err != nil {
+		logger.Warning("failed to get HardwareId")
+	} else {
+		m.HardwareId = hardwareId
+	}
 	return m
 }
 
@@ -608,6 +615,7 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	if needNotify {
 		jobName = "+notify"
 	}
+	prepareUpdateSource()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	m.do.Unlock()
@@ -875,12 +883,12 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 		job.next.setHooks(map[string]func(){
 			string(system.SucceedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeSucceed, job, updateType)
+					go m.postSystemUpgradeMessage(upgradeSucceed, job.next, updateType)
 				}
 			},
 			string(system.FailedStatus): func() {
 				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeFailed, job, updateType)
+					go m.postSystemUpgradeMessage(upgradeFailed, job.next, updateType)
 				}
 			},
 		})
@@ -1339,13 +1347,13 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 	m.service.DelayAutoQuit()
 	switch eventType {
 	case "AutoCheck":
-		return dbusutil.ToError(m.handleAutoCheckEvent())
+		go m.handleAutoCheckEvent()
 	case "AutoClean":
-		return dbusutil.ToError(m.handleAutoCleanEvent())
+		go m.handleAutoCleanEvent()
 	case "UpdateInfosChanged":
 		m.handleUpdateInfosChanged(false)
 	case "OsVersionChanged":
-		updateTokenConfigFile()
+		go updateTokenConfigFile()
 	default:
 		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
 	}
@@ -1354,7 +1362,31 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
+	var checkNeedUpdateSource = func() bool {
+		upgradeTypeList := []string{
+			system.PrepareDistUpgradeJobType,
+			system.PrepareSystemUpgradeJobType,
+			system.PrepareAppStoreUpgradeJobType,
+			system.PrepareUnknownUpgradeJobType,
+			system.PrepareSecurityUpgradeJobType,
+			system.DistUpgradeJobType,
+			system.SystemUpgradeJobType,
+			system.AppStoreUpgradeJobType,
+			system.SecurityUpgradeJobType,
+			system.UnknownUpgradeJobType,
+		}
+		for _, job := range m.jobList {
+			if job.Status == system.RunningStatus && strv.Strv(upgradeTypeList).Contains(job.Type) {
+				return false
+			}
+		}
+		return true
+	}
 	if m.config.AutoCheckUpdates {
+		if !checkNeedUpdateSource() {
+			logger.Info("lastore is running prepare upgrade or upgrade job, not need check update")
+			return nil
+		}
 		_, err := m.updateSource(m.updater.UpdateNotify, true)
 		if err != nil {
 			logger.Warning(err)
@@ -1436,6 +1468,7 @@ type upgradePostContent struct {
 	UpgradeErrorMsg string   `json:"msg"`
 	TimeStamp       int64    `json:"timestamp"`
 	SourceUrl       []string `json:"sourceUrl"`
+	Version         string   `json:"version"`
 }
 
 const (
@@ -1448,9 +1481,23 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	m.inhibitAutoQuitCountAdd()
 	defer m.inhibitAutoQuitCountSub()
 	var upgradeErrorMsg string
+	var version string
 	if upgradeStatus == upgradeFailed {
-		upgradeErrorMsg = j.Description
+		if j != nil {
+			upgradeErrorMsg = j.Description
+		}
+		version = m.preUpgradeOSVersion
+	} else {
+		infoMap, err := getOSVersionInfo()
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			version = strings.Join(
+				[]string{infoMap["MajorVersion"], infoMap["MinorVersion"], infoMap["OsBuild"]},
+				".")
+		}
 	}
+
 	sn, err := getSN()
 	if err != nil {
 		logger.Warning(err)
@@ -1459,6 +1506,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	if err != nil {
 		logger.Warning(err)
 	}
+
 	sourceFilePath := system.GetCategorySourceMap()[updateType]
 	postContent := &upgradePostContent{
 		SerialNumber:    sn,
@@ -1467,6 +1515,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 		UpgradeErrorMsg: upgradeErrorMsg,
 		TimeStamp:       time.Now().Unix(),
 		SourceUrl:       getUpgradeUrls(sourceFilePath),
+		Version:         version,
 	}
 	content, err := json.Marshal(postContent)
 	if err != nil {
@@ -1476,6 +1525,7 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	client := &http.Client{
 		Timeout: 4 * time.Second,
 	}
+	logger.Debug(postContent)
 	encryptMsg, err := EncryptMsg(content)
 	if err != nil {
 		logger.Warning(err)
@@ -1602,6 +1652,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	}
 	unitMap["watchUpdateInfo"] = []string{
 		"--path-property=PathModified=/var/lib/lastore/update_infos.json",
+		"--property=StartLimitBurst=0",
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
@@ -1611,20 +1662,27 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 
 // systemd计时服务需要根据上一次更新时间而变化
 func (m *Manager) updateAutoCheckSystemUnit() {
+	const autoCheckUnit = "lastoreAutoCheck.timer"
 	systemd := systemd1.NewManager(m.service.Conn())
-	_, err := systemd.StopUnit(0, "lastoreAutoCheck.timer", "replace")
-	if err != nil {
-		logger.Warning(err)
-		return
+	_, err := systemd.GetUnit(0, autoCheckUnit)
+	if err == nil {
+		_, err = systemd.StopUnit(0, autoCheckUnit, "replace")
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
 	}
 	var args []string
 	args = append(args, fmt.Sprintf("--unit=%s", "lastoreAutoCheck"))
 	autoCheckArgs := m.getLastoreSystemUnitMap()["lastoreAutoCheck"]
 	args = append(args, autoCheckArgs...)
 	cmd := exec.Command(run, args...)
+	var errBuffer bytes.Buffer
+	cmd.Stderr = &errBuffer
 	err = cmd.Run()
 	if err != nil {
 		logger.Warning(err)
+		logger.Warning(errBuffer.String())
 	}
 	logger.Debug(cmd.String())
 }
@@ -1644,9 +1702,12 @@ func (m *Manager) startSystemdUnit() {
 		args = append(args, cmdArgs...)
 		cmd := exec.Command(run, args...)
 		logger.Info(cmd.String())
+		var errBuffer bytes.Buffer
+		cmd.Stderr = &errBuffer
 		err := cmd.Run()
 		if err != nil {
 			logger.Warning(err)
+			logger.Warning(errBuffer.String())
 			continue
 		}
 		kf.SetString("UnitName", name, fmt.Sprintf("%s.unit", name))
@@ -1867,6 +1928,28 @@ func (m *Manager) handleOSSignal() {
 		case syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGSEGV:
 			logger.Info("received signal:", sig)
 			m.service.Quit()
+		}
+	}
+}
+
+func prepareUpdateSource() {
+	partialFilePaths := []string{
+		"/var/lib/apt/lists/partial",
+		"/var/lib/lastore/lists/partial",
+		"/var/cache/apt/archives/partial",
+		"/var/cache/lastore/archives/partial",
+	}
+	for _, partialFilePath := range partialFilePaths {
+		infos, err := ioutil.ReadDir(partialFilePath)
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+		for _, info := range infos {
+			err = os.RemoveAll(filepath.Join(partialFilePath, info.Name()))
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 	}
 }
