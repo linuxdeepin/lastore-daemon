@@ -23,20 +23,22 @@ func StartSystemJob(sys system.System, j *Job) error {
 	if err != nil {
 		return err
 	}
-
+	var args []string
+	for key, value := range j.option { // apt 命令执行参数
+		args = append(args, "-o")
+		args = append(args, fmt.Sprintf("%v=%v", key, value))
+	}
 	switch j.Type {
 	case system.DownloadJobType:
-		return sys.Download(j.Id, j.Packages)
+		return sys.DownloadPackages(j.Id, j.Packages, j.environ, args)
+
+	case system.PrepareDistUpgradeJobType:
+		return sys.DownloadSource(j.Id, j.environ, args)
 
 	case system.InstallJobType:
-		return sys.Install(j.Id, j.Packages, j.environ)
+		return sys.Install(j.Id, j.Packages, j.environ, args)
 
 	case system.DistUpgradeJobType:
-		var args []string
-		for key, value := range j.option { // upgradeJobInfo结构体中指定的更新参数
-			args = append(args, "-o")
-			args = append(args, fmt.Sprintf("%v=%v", key, value))
-		}
 		return sys.DistUpgrade(j.Id, j.environ, args)
 
 	case system.RemoveJobType:
@@ -46,14 +48,14 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.UpdateSource(j.Id)
 
 	case system.UpdateJobType:
-		return sys.Install(j.Id, j.Packages, j.environ)
+		return sys.Install(j.Id, j.Packages, j.environ, args)
 
 	case system.CleanJobType:
 		return sys.Clean(j.Id)
 
 	case system.FixErrorJobType:
 		errType := j.Packages[0]
-		return sys.FixError(j.Id, errType, j.environ)
+		return sys.FixError(j.Id, errType, j.environ, args)
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)
 	}
@@ -103,9 +105,8 @@ func TransitionJobState(j *Job, to system.Status) error {
 	}
 	logger.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 
-	j.Status = to
-
-	if j.Status == system.FailedStatus && j.retry > 0 {
+	if to == system.FailedStatus && j.retry > 0 {
+		j.Status = to
 		return nil
 	}
 
@@ -115,6 +116,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 		hookFn()
 		j.PropsMu.Lock()
 	}
+	j.Status = to
 	if NotUseDBus {
 		return nil
 	}

@@ -22,10 +22,12 @@ func TestJobManager(t *testing.T) {
 
 	jobDistUpgrade2, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil)
 	assert.NoError(t, err)
+	err = jm.addJob(jobDistUpgrade2)
 	assert.Equal(t, jm.findJobByType(system.DistUpgradeJobType, nil), jobDistUpgrade2)
 
 	jobDownload, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil)
 	assert.NoError(t, err)
+	err = jm.addJob(jobDownload)
 	assert.Equal(t, jm.findJobByType(system.DownloadJobType, nil), jobDownload)
 
 	jm.MarkStart(jobDistUpgrade2.Id)
@@ -38,6 +40,8 @@ func TestJobManager(t *testing.T) {
 	assert.Equal(t, jm.List().Len(), 1)
 
 	jobDownload2, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil)
+	assert.NoError(t, err)
+	err = jm.addJob(jobDownload2)
 	assert.NoError(t, err)
 	assert.Equal(t, jm.findJobByType(system.DownloadJobType, nil), jobDownload2)
 	jobDownload2.Status = system.FailedStatus

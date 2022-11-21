@@ -5,6 +5,7 @@
 package main
 
 import (
+	"internal/system"
 	"os"
 	"testing"
 	"time"
@@ -56,6 +57,7 @@ func Test_canAutoQuit(t *testing.T) {
 	}
 	assert.False(t, m.canAutoQuit())
 	m.inhibitAutoQuitCount = 0
+	m.config.UpgradeStatus.Status = system.UpgradeReady
 	assert.True(t, m.canAutoQuit())
 }
 

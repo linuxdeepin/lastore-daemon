@@ -63,12 +63,12 @@ func QueryPackageDependencies(pkgId string) []string {
 }
 
 /*
-$ apt-config --format '%f=%v%n' dump  Dir
-Dir=/
-Dir::Cache=var/cache/apt
-Dir::Cache::archives=archives/
-Dir::Cache::srcpkgcache=srcpkgcache.bin
-Dir::Cache::pkgcache=pkgcache.bin
+	$ apt-config --format '%f=%v%n' dump  Dir
+	Dir=/
+	Dir::Cache=var/cache/apt
+	Dir::Cache::archives=archives/
+	Dir::Cache::srcpkgcache=srcpkgcache.bin
+	Dir::Cache::pkgcache=pkgcache.bin
 */
 func GetArchivesDir(configPath string) (string, error) {
 	binAptConfig, _ := exec.LookPath("apt-config")
@@ -147,6 +147,46 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 		return parsePackageSize(lines[0])
 	}
 	return SizeDownloaded, nil
+}
+
+// QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量
+func QuerySourceDownloadSize(updateType UpdateType) (float64, error) {
+	downloadSize := new(float64)
+	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
+		defer func() {
+			if unref != nil {
+				unref()
+			}
+		}()
+		// #nosec G204
+		cmd := exec.Command("/usr/bin/apt-get",
+			[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath,
+				"--print-uris", "--assume-no", "-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
+
+		lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
+			_, _err := parsePackageSize(line)
+			return _err == nil
+		})
+		if err != nil && len(lines) == 0 {
+			return err
+		}
+
+		if len(lines) != 0 {
+			downloadSize1, err := parsePackageSize(lines[0])
+			if err != nil {
+				logger.Warning(err)
+				return err
+			}
+			*downloadSize = downloadSize1
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Warning(err)
+		return SizeDownloaded, nil
+	}
+	return *downloadSize, nil
 }
 
 // QueryPackageInstalled query whether the pkgId installed

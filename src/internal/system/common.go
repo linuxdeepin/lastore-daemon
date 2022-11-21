@@ -5,12 +5,17 @@
 package system
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
@@ -78,7 +83,7 @@ type UpdateType uint64
 const (
 	SystemUpdate       UpdateType = 1 << 0 // 系统更新
 	AppStoreUpdate     UpdateType = 1 << 1 // 应用更新(1050版本中应用更新不开启)
-	SecurityUpdate     UpdateType = 1 << 2 // 1050及以上版本,安全更新项废弃,改为仅安全更新
+	SecurityUpdate     UpdateType = 1 << 2 // 1050及以上版本,安全更新项废弃,改为仅安全更新,1060恢复使用
 	UnknownUpdate      UpdateType = 1 << 3 // 未知来源更新
 	OnlySecurityUpdate UpdateType = 1 << 4 // 仅开启安全更新（该选项开启时，其他更新关闭）
 )
@@ -129,6 +134,7 @@ func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
 		SystemUpdate: SystemSourceDir,
 		//AppStoreUpdate:     AppStoreSourceFile,
+		SecurityUpdate:     SecuritySourceFile,
 		OnlySecurityUpdate: SecuritySourceFile,
 		UnknownUpdate:      UnknownSourceDir,
 	}
@@ -211,4 +217,157 @@ func UpdateSystemSourceDir() error {
 		}
 	}
 	return nil
+}
+
+// CustomSourceWrapper 根据updateType组合source文件,doRealAction完成实际操作,unref用于释放资源
+func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, unref func()) error) error {
+	var sourcePathList []string
+	for _, t := range AllUpdateType() {
+		category := updateType & t
+		if category != 0 {
+			sourcePath := GetCategorySourceMap()[category]
+			sourcePathList = append(sourcePathList, sourcePath)
+		}
+	}
+	if len(sourcePathList) == 1 {
+		// 如果只有一个仓库，证明是单项的更新，可以直接使用默认的文件夹
+		if doRealAction != nil {
+			return doRealAction(GetCategorySourceMap()[updateType], nil)
+		}
+		return errors.New("doRealAction is nil")
+	} else {
+		// 仓库组合的情况，需要重新组合文件
+		// #nosec G301
+		sourceDir, err := ioutil.TempDir("/tmp", "*Source.d")
+		if err != nil {
+			logger.Warning(err)
+		}
+		var allSourceFilePaths []string
+		for _, path := range sourcePathList {
+			fileInfo, err := os.Stat(path)
+			if err != nil {
+				continue
+			}
+			if fileInfo.IsDir() {
+				allSourceDirFileInfos, err := ioutil.ReadDir(path)
+				if err != nil {
+					continue
+				}
+				for _, fileInfo := range allSourceDirFileInfos {
+					name := fileInfo.Name()
+					if strings.HasSuffix(name, ".list") {
+						allSourceFilePaths = append(allSourceFilePaths, filepath.Join(path, name))
+					}
+				}
+			} else {
+				allSourceFilePaths = append(allSourceFilePaths, path)
+			}
+		}
+
+		// 创建对应的软链接
+		for _, filePath := range allSourceFilePaths {
+			linkPath := filepath.Join(sourceDir, filepath.Base(filePath))
+			err := os.Symlink(filePath, linkPath)
+			if err != nil {
+				return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
+			}
+		}
+		unref := func() {
+			err := os.RemoveAll(sourceDir)
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+		if doRealAction != nil {
+			return doRealAction(sourceDir, unref)
+		}
+		return errors.New("doRealAction is nil")
+	}
+}
+
+type UpgradeStatus string
+
+const (
+	UpgradeReady   UpgradeStatus = "ready"
+	UpgradeRunning UpgradeStatus = "running"
+	UpgradeFailed  UpgradeStatus = "failed"
+)
+
+type UpgradeReasonCode uint
+
+const ( // TODO 定义错误码（发通知时使用）
+	NoError UpgradeReasonCode = iota
+	ErrorCode1
+	ErrorCode2
+)
+
+type UpgradeStatusAndReason struct {
+	Status     UpgradeStatus
+	ReasonCode UpgradeReasonCode
+}
+
+func GetGrubRollbackTitle(grubPath string) (string, error) {
+	var rollbackTitle string
+	fileContent, err := ioutil.ReadFile(grubPath)
+	if err != nil {
+		logger.Warning(err)
+		return "", err
+	}
+	sl := bufio.NewScanner(strings.NewReader(string(fileContent)))
+	sl.Split(bufio.ScanLines)
+	needNext := false
+	for sl.Scan() {
+		line := sl.Text()
+		line = strings.TrimSpace(line)
+		if !needNext {
+			needNext = strings.Contains(line, "BEGIN /etc/grub.d/11_deepin_ab_recovery")
+		} else {
+			if strings.HasPrefix(line, "menuentry ") {
+				title, ok := parseTitle(line)
+				if ok {
+					rollbackTitle = title
+				} else {
+					err := fmt.Errorf("parse entry title failed from: %q", line)
+					return "", err
+				}
+			}
+			break
+		}
+	}
+	err = sl.Err()
+	if err != nil {
+		return "", err
+	}
+	return rollbackTitle, nil
+}
+
+var (
+	entryRegexpSingleQuote = regexp.MustCompile(`^ *(menuentry|submenu) +'(.*?)'.*$`)
+	entryRegexpDoubleQuote = regexp.MustCompile(`^ *(menuentry|submenu) +"(.*?)".*$`)
+)
+
+func parseTitle(line string) (string, bool) {
+	line = strings.TrimLeftFunc(line, unicode.IsSpace)
+	if entryRegexpSingleQuote.MatchString(line) {
+		return entryRegexpSingleQuote.FindStringSubmatch(line)[2], true
+	} else if entryRegexpDoubleQuote.MatchString(line) {
+		return entryRegexpDoubleQuote.FindStringSubmatch(line)[2], true
+	} else {
+		return "", false
+	}
+}
+
+func HandleDelayPackage(hold bool, packages []string) {
+	action := "unhold"
+	if hold {
+		action = "hold"
+	}
+	args := []string{
+		action,
+	}
+	args = append(args, packages...)
+	err := exec.Command("apt-mark", args...).Run()
+	if err != nil {
+		logger.Warning(err)
+	}
 }

@@ -23,6 +23,9 @@ const (
 
 	// LockQueue is special. All other queue must wait for LockQueue be emptied.
 	LockQueue = "lock"
+
+	// DelayLockQueue 特殊的队列,用于存放lock队列完成后执行的job
+	DelayLockQueue = "delayLock"
 )
 
 // JobManager
@@ -54,6 +57,7 @@ func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()
 	m.createJobList(DownloadQueue, DownloadQueueCap)
 	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
 	m.createJobList(LockQueue, 1)
+	m.createJobList(DelayLockQueue, 1)
 
 	api.AttachIndicator(m.handleJobProgressInfo)
 	return m
@@ -82,12 +86,13 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	var job *Job
 	switch jobType {
 	case system.DownloadJobType,
-		system.PrepareDistUpgradeJobType,
 		system.PrepareSystemUpgradeJobType,
 		system.PrepareAppStoreUpgradeJobType,
 		system.PrepareSecurityUpgradeJobType,
 		system.PrepareUnknownUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ) // 使用下载任务类型
+	case system.PrepareDistUpgradeJobType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
 	case system.InstallJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
 			DownloadQueue, environ)
@@ -98,12 +103,15 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 
 		job.Id = next.Id
 		job.next = next
+	case system.OnlyInstallJobType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.InstallJobType, DelayLockQueue, environ)
 	case system.RemoveJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 	case system.DistUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
+		job._InitProgressRange(0, 0.99)
 	case system.UpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.CleanJobType:
@@ -145,9 +153,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	defer jm.dispatchMux.Unlock()
 	if notNeedMark {
 		return job, nil
-	}
-	if err := jm.addJob(job); err != nil {
-		return nil, err
 	}
 	return job, jm.markReady(job)
 }
@@ -281,6 +286,7 @@ func (jm *JobManager) dispatch() {
 	lockQueue := jm.queues[LockQueue]
 	jm.startJobsInQueue(lockQueue)
 	jm.startJobsInQueue(jm.queues[DownloadQueue]) // 由于下载任务不会影响到安装和更新,可以在更新时继续下载
+	jm.startJobsInQueue(jm.queues[DelayLockQueue])
 	// wait for LockQueue be idled
 	if len(lockQueue.RunningJobs()) == 0 {
 		jm.startJobsInQueue(jm.queues[SystemChangeQueue])
@@ -338,6 +344,10 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			if ok {
 				// do not retry job
 				job.retry = 0
+				hookFn := job.getHook(string(system.FailedStatus))
+				if hookFn != nil {
+					hookFn()
+				}
 				job.PropsMu.Lock()
 				job.setError(pkgSysErr)
 				_ = job.emitPropChangedStatus(job.Status)
@@ -376,6 +386,10 @@ func (jm *JobManager) addJob(j *Job) error {
 
 	err := queue.Add(j)
 	if err != nil {
+		if strings.Contains(err.Error(), "exists job") {
+			logger.Warning(err)
+			return nil
+		}
 		return err
 	}
 	if !NotUseDBus {

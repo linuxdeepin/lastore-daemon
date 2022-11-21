@@ -23,7 +23,7 @@ var DefaultConfig = Config{
 	UpdateNotify:                true,
 	AutoClean:                   true,
 	MirrorsUrl:                  system.DefaultMirrorsUrl,
-	UpdateMode:                  system.SystemUpdate | system.UnknownUpdate, // 默认不开启安全更新,移除应用更新
+	UpdateMode:                  system.SystemUpdate | system.SecurityUpdate, // 默认打开系统更新和安全更新
 
 	AutoInstallUpdates:    false,
 	AutoInstallUpdateType: system.OnlySecurityUpdate, // 开启状态下,默认只开启安全更新的自动安装
@@ -57,6 +57,8 @@ type Config struct {
 	AutoInstallUpdateType          system.UpdateType
 
 	AllowPostSystemUpgradeMessageVersion []string //只有数组内的系统版本被允许发送更新完成的数据
+
+	UpgradeStatus system.UpgradeStatusAndReason
 }
 
 func NewConfig(fpath string) *Config {
@@ -152,6 +154,11 @@ func (c *Config) SetAutoInstallUpdates(autoInstall bool) error {
 
 func (c *Config) SetAutoInstallUpdateType(updateType system.UpdateType) error {
 	c.AutoInstallUpdateType = updateType
+	return c.save()
+}
+
+func (c *Config) SetUpgradeStatusAndReason(status system.UpgradeStatusAndReason) error {
+	c.UpgradeStatus = status
 	return c.save()
 }
 

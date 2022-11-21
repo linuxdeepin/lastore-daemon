@@ -50,7 +50,10 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 
 func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.distUpgrade(sender)
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
+	jobObj, err := m.distUpgrade(sender, mode)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -190,15 +193,24 @@ func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *db
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
-func (m *Manager) PackagesDownloadSize(packages []string) (size int64, busErr *dbus.Error) {
+func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()
-
-	s, err := system.QueryPackageDownloadSize(packages...)
-	if err != nil || s == system.SizeUnknown {
-		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
+	var err error
+	var size float64
+	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
+		m.PropsMu.RLock()
+		mode := m.UpdateMode
+		m.PropsMu.RUnlock()
+		size, err = system.QuerySourceDownloadSize(mode)
+	} else {
+		size, err = system.QueryPackageDownloadSize(packages...)
 	}
-	return int64(s), dbusutil.ToError(err)
+	if err != nil || size == system.SizeUnknown {
+		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
+	}
+
+	return int64(size), dbusutil.ToError(err)
 }
 
 func (m *Manager) PauseJob(jobId string) *dbus.Error {
@@ -212,9 +224,9 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 	return dbusutil.ToError(err)
 }
 
-func (m *Manager) PrepareDistUpgrade() (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.prepareDistUpgrade()
+	jobObj, err := m.prepareDistUpgrade(sender)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
