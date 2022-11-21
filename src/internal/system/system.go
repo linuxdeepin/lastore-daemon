@@ -34,7 +34,7 @@ const (
 	CleanJobType              = "clean"
 	FixErrorJobType           = "fix_error"
 
-	// 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
+	// UpgradeJobType 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
 	PrepareSystemUpgradeJobType   = "prepare_system_upgrade"
 	PrepareAppStoreUpgradeJobType = "prepare_appstore_upgrade"
 	PrepareSecurityUpgradeJobType = "prepare_security_upgrade"
@@ -84,7 +84,7 @@ type SourceUpgradeInfoMap map[string][]UpgradeInfo
 
 type Architecture string
 
-var NotImplementError = errors.New("not implement")
+var _NotImplementError = errors.New("not implement")
 
 type NotFoundErrorType string
 

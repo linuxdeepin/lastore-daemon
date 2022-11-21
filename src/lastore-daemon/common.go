@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/godbus/dbus"
@@ -248,4 +249,27 @@ func updateSecurityConfigFile(create bool) error {
 		}
 	}
 	return nil
+}
+
+const autoDownloadTimeLayout = "15:04"
+
+var _minDelayTime = 10 * time.Second
+
+// getCustomTimeDuration 按照autoDownloadTimeLayout的格式计算时间差
+func getCustomTimeDuration(presetTime string) time.Duration {
+	t1, err := time.Parse(autoDownloadTimeLayout, presetTime)
+	if err != nil {
+		logger.Warning(err)
+		return _minDelayTime
+	}
+	t2, err := time.Parse(autoDownloadTimeLayout, fmt.Sprintf("%v:%v", time.Now().Hour(), time.Now().Minute()))
+	if err != nil {
+		logger.Warning(err)
+		return _minDelayTime
+	}
+	dur := t1.Sub(t2)
+	if dur < 0 {
+		dur += 24 * time.Hour
+	}
+	return dur
 }

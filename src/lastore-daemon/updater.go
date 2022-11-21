@@ -24,6 +24,11 @@ type ApplicationUpdateInfo struct {
 	CurrentVersion string
 	LastVersion    string
 }
+type idleDownloadConfig struct {
+	IdleDownloadEnabled bool
+	BeginTime           string
+	EndTime             string
+}
 
 type Updater struct {
 	manager             *Manager
@@ -44,6 +49,8 @@ type Updater struct {
 
 	AutoInstallUpdates    bool              `prop:"access:rw"`
 	AutoInstallUpdateType system.UpdateType `prop:"access:rw"`
+
+	IdleDownloadConfig idleDownloadConfig
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
