@@ -28,6 +28,7 @@ func New() system.System {
 	}
 	WaitDpkgLockRelease()
 	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
+	p.initSource()
 	return p
 }
 
@@ -249,12 +250,24 @@ func safeStart(c *aptCommand) error {
 	return nil
 }
 
-func (p *APTSystem) Download(jobId string, packages []string) error {
+func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, args []string) error {
 	err := checkPkgSystemError(false)
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, packages)
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, append(packages, args...))
+	c.setEnv(environ)
+	return c.Start()
+}
+
+func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error {
+	// 无需检查依赖错误
+	//err := checkPkgSystemError(false)
+	//if err != nil {
+	//	return err
+	//}
+	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.indicator, cmdArgs)
+	c.setEnv(environ)
 	return c.Start()
 }
 
@@ -270,13 +283,13 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 	return safeStart(c)
 }
 
-func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string) error {
+func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string, args []string) error {
 	WaitDpkgLockRelease()
 	err := checkPkgSystemError(true)
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, packages)
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, append(packages, args...))
 	c.setEnv(environ)
 	return safeStart(c)
 }
@@ -285,7 +298,11 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 	WaitDpkgLockRelease()
 	err := checkPkgSystemError(true)
 	if err != nil {
-		return err
+		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
+		e, ok := err.(*system.PkgSystemError)
+		if !ok || e.Type != system.ErrTypeDependenciesBroken {
+			return err
+		}
 	}
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, cmdArgs)
 	c.setEnv(environ)
@@ -318,14 +335,25 @@ func (p *APTSystem) Abort(jobId string) error {
 	return system.NotFoundError("abort " + jobId)
 }
 
-func (p *APTSystem) FixError(jobId string, errType string,
-	environ map[string]string) error {
-
+func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error {
 	WaitDpkgLockRelease()
-	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, []string{errType})
+	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, append([]string{errType}, cmdArgs...))
 	c.setEnv(environ)
 	if errType == system.ErrTypeDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
 	}
 	return c.Start()
+}
+
+func (p *APTSystem) initSource() {
+	// apt初始化时执行一次，避免其他apt操作过程中删改软链接导致数据异常
+	err := system.UpdateUnknownSourceDir()
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	err = system.UpdateSystemSourceDir()
+	if err != nil {
+		logger.Warning(err)
+	}
 }

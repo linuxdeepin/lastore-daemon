@@ -22,7 +22,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/godbus/dbus"
-	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
 )
@@ -121,14 +120,21 @@ func NormalizePackageNames(s string) ([]string, error) {
 	return pkgNames, nil
 }
 
-func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[string]string, error) {
+// makeEnvironWithSender 从sender获取 DISPLAY XAUTHORITY DEEPIN_LASTORE_LANG环境变量,从manager的agent获取系统代理(手动)的环境变量
+func makeEnvironWithSender(m *Manager, sender dbus.Sender) (map[string]string, error) {
 	environ := make(map[string]string)
-
-	pid, err := service.GetConnPID(string(sender))
+	var err error
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		environ, err = agent.GetManualProxy(0)
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
+	pid, err := m.service.GetConnPID(string(sender))
 	if err != nil {
 		return nil, err
 	}
-
 	p := procfs.Process(pid)
 	envVars, err := p.Environ()
 	if err != nil {

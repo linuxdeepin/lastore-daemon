@@ -26,6 +26,7 @@ const (
 const (
 	DownloadJobType           = "download"
 	InstallJobType            = "install"
+	OnlyInstallJobType        = "onlyInstall"
 	RemoveJobType             = "remove"
 	UpdateJobType             = "update"
 	DistUpgradeJobType        = "dist_upgrade"
@@ -104,15 +105,16 @@ var ResourceExitError = errors.New("resource exists")
 type Indicator func(JobProgressInfo)
 
 type System interface {
-	Download(jobId string, packages []string) error
-	Install(jobId string, packages []string, environ map[string]string) error
+	DownloadPackages(jobId string, packages []string, environ map[string]string, args []string) error
+	DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error
+	Install(jobId string, packages []string, environ map[string]string, args []string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
 	DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error
 	UpdateSource(jobId string) error
 	Clean(jobId string) error
 	Abort(jobId string) error
 	AttachIndicator(Indicator)
-	FixError(jobId string, errType string, environ map[string]string) error
+	FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error
 }
 
 type PkgSystemError struct {

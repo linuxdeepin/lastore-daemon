@@ -196,16 +196,6 @@ func getSystemArchitectures() []system.Architecture {
 }
 
 func GenerateUpdateInfos(fpath string) error {
-	err := system.UpdateUnknownSourceDir()
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	err = system.UpdateSystemSourceDir()
-	if err != nil {
-		logger.Warning(err)
-	}
-
 	var upgradeInfo []system.UpgradeInfo
 	for category, sourcePath := range system.GetCategorySourceMap() {
 		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)

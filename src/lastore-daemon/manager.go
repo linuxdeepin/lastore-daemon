@@ -27,11 +27,13 @@ import (
 	"github.com/godbus/dbus"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
+	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
 	ofdbus "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.dbus"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
 	"github.com/linuxdeepin/go-lib/strv"
@@ -113,6 +115,7 @@ type Manager struct {
 	loginManager  login1.Manager
 	sysDBusDaemon ofdbus.DBus
 	systemd       systemd1.Manager
+	grub          grub2.Grub2
 }
 
 /*
@@ -141,6 +144,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		signalLoop:          dbusutil.NewSignalLoop(service.Conn(), 10),
 		apps:                apps.NewApps(service.Conn()),
 		systemd:             systemd1.NewManager(service.Conn()),
+		grub:                grub2.NewGrub2(service.Conn()),
 	}
 	m.updatePreUpgradeOSVersion()
 	m.signalLoop.Start()
@@ -156,11 +160,11 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	}
 	m.initDbusSignalListen()
 	m.initAutoInstall(service.Conn())
+	m.handleFailedNotify()
 	return m
 }
 
 func (m *Manager) initDbusSignalListen() {
-
 	m.loginManager.InitSignalExt(m.signalLoop, true)
 	_, err := m.loginManager.ConnectSessionNew(m.handleSessionNew)
 	if err != nil {
@@ -183,6 +187,7 @@ func (m *Manager) initDbusSignalListen() {
 	if err != nil {
 		logger.Warning(err)
 	}
+	m.grub.InitSignalExt(m.signalLoop, true)
 }
 
 func (m *Manager) updatePreUpgradeOSVersion() {
@@ -244,18 +249,22 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 	}
 	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
 
 	m.do.Lock()
+	defer m.do.Unlock()
 	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
-	m.do.Unlock()
-
 	if err != nil {
 		logger.Warningf("UpdatePackage %q error: %v\n", packages, err)
+		return nil, err
 	}
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
+	}
+
 	job.caller = caller
 	return job, err
 }
@@ -267,7 +276,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	}
 
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
@@ -291,11 +300,14 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 	pList := strings.Fields(packages)
 
 	m.do.Lock()
+	defer m.do.Unlock()
 	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
-	m.do.Unlock()
-
 	if err != nil {
 		logger.Warningf("installPackage %q error: %v\n", packages, err)
+		return nil, err
+	}
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
 	}
 	return job, err
 }
@@ -321,17 +333,20 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 		}
 	}
 
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
 
 	m.do.Lock()
+	defer m.do.Unlock()
 	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
-	m.do.Unlock()
-
 	if err != nil {
 		logger.Warningf("removePackage %q error: %v\n", packages, err)
+		return nil, err
+	}
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
 	}
 	return job, err
 }
@@ -355,7 +370,10 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		logger.Warning(err)
 		return
 	}
-	m.updateAutoCheckSystemUnit()
+	err = m.updateAutoCheckSystemUnit()
+	if err != nil {
+		logger.Warning(err)
+	}
 }
 
 func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
@@ -383,6 +401,8 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
+			// TODO 自动下载的逻辑需要替换实现方式 task 214991中完成
+			//m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 			m.inhibitAutoQuitCountSub()
 		}()
 	}
@@ -440,6 +460,7 @@ func prepareUpdateSource() {
 
 func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	m.do.Lock()
+	defer m.do.Unlock()
 	var jobName string
 	if needNotify {
 		jobName = "+notify"
@@ -447,10 +468,12 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	prepareUpdateSource()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
-	m.do.Unlock()
-
 	if err != nil {
 		logger.Warningf("UpdateSource error: %v\n", err)
+		return nil, err
+	}
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
 	}
 	if job != nil {
 		m.PropsMu.Lock()
@@ -488,7 +511,7 @@ func (m *Manager) cancelAllUpdateJob() error {
 	return nil
 }
 
-func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
+func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType) (*Job, error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		logger.Warning(err)
@@ -496,7 +519,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	}
 	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
@@ -509,16 +532,187 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	if len(upgradableApps) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
-
-	m.do.Lock()
-	defer m.do.Unlock()
-
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
+	var job *Job
+	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
+		m.do.Lock()
+		defer m.do.Unlock()
+		job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, nil, environ)
+		if err != nil {
+			logger.Warningf("DistUpgrade error: %v\n", err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		job.caller = caller
+		// 设置apt命令参数
+		info, err := os.Stat(path)
+		if err != nil {
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if info.IsDir() {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": path,
+			}
+		} else {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  path,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
+		// 笔记本电池电量监听
+		isLaptop, err := m.sysPower.HasBattery().Get(0)
+		if isLaptop && err == nil {
+			const unsetNotifyId = "unset"
+			var batteryPercentageNotify sync.Once
+			notifyId := unsetNotifyId
+			// 更新过程中,如果笔记本使用电池,并且电量低于60%时,发送通知,提醒用户有风险
+			_ = m.sysPower.BatteryPercentage().ConnectChanged(func(hasValue bool, value float64) {
+				if !hasValue {
+					return
+				}
+				onBattery, _ := m.sysPower.OnBattery().Get(0)
+				//TODO 60.0的百分比需要改成配置,在task 214989中完成
+				if onBattery && value <= 60.0 && (job.Status == system.RunningStatus) {
+					batteryPercentageNotify.Do(func() {
+						notifyId = m.sendNotify("", "", []string{})
+					})
+				}
+			})
+			_ = m.sysPower.OnBattery().ConnectChanged(func(hasValue bool, value bool) {
+				if !hasValue {
+					return
+				}
+				// 用户连上电源时,需要关闭通知,并重置Once
+				if !value && notifyId != unsetNotifyId {
+					err = m.closeNotify(notifyId)
+					if err != nil {
+						logger.Warning(err)
+					}
+					notifyId = unsetNotifyId
+					batteryPercentageNotify = sync.Once{}
+				}
+			})
+		}
+		// 设置hook
+		job.setHooks(map[string]func(){
+			string(system.RunningStatus): func() {
+				// 开始更新时修改grub默认入口为rollback
+				err := m.changeGrubDefaultEntry(rollbackBootEntry)
+				if err != nil {
+					logger.Warning(err)
+				}
+				// 状态更新为running
+				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeRunning, ReasonCode: system.NoError})
+				if err != nil {
+					logger.Warning(err)
+				}
+				// mask deepin-desktop-base,该包在系统更新完成后最后安装
+				system.HandleDelayPackage(true, []string{
+					"deepin-desktop-base",
+				})
+			},
+			string(system.FailedStatus): func() {
+				// TODO 发送更新失败的通知
+				m.sendNotify("", "", []string{})
+				// 状态更新为failed
+				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.ErrorCode1}) // TODO error code需要定义
+				if err != nil {
+					logger.Warning(err)
+				}
+				// 上报更新失败的信息(如果需要)
+				if m.needPostSystemUpgradeMessage() && ((mode & system.SystemUpdate) != 0) {
+					go m.postSystemUpgradeMessage(upgradeFailed, job, system.SystemUpdate)
+				}
+				// unmask deepin-desktop-base 无需继续安装
+				system.HandleDelayPackage(false, []string{
+					"deepin-desktop-base",
+				})
+				// 更新失败后,十分钟自动关机
+				// TODO 应该前端处理
+				//_ = time.AfterFunc(10*time.Minute, func() {
+				//	err = m.loginManager.PowerOff(0, false)
+				//	if err != nil {
+				//		logger.Warning(err)
+				//	}
+				//})
+			},
+			string(system.SucceedStatus): func() {
+				// 更新成功后修改grub默认入口为当前系统入口
+				err := m.changeGrubDefaultEntry(normalBootEntry)
+				if err != nil {
+					logger.Warning(err)
+				}
+				// 状态更新为ready
+				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
+				if err != nil {
+					logger.Warning(err)
+				}
+				// 系统更新成功后,最后安装deepin-desktop-base包,安装成功后进度更新为100%并变成succeed状态
+				ch := make(chan int, 1)
+				// unmask deepin-desktop-base并安装
+				system.HandleDelayPackage(false, []string{
+					"deepin-desktop-base",
+				})
+				go func() {
+					m.do.Lock()
+					defer m.do.Unlock()
+					installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ)
+					if err != nil {
+						ch <- 1
+						logger.Warning(err)
+					}
+					if installJob != nil {
+						installJob.option = job.option
+						installJob.setHooks(map[string]func(){
+							string(system.FailedStatus): func() {
+								ch <- 1
+							},
+							string(system.SucceedStatus): func() {
+								ch <- 1
+							},
+						})
+						if err := m.jobManager.addJob(installJob); err != nil {
+							logger.Warning(err)
+							ch <- 1
+							return
+						}
+					}
+				}()
+				select {
+				case <-ch:
+					logger.Info("install deepin-desktop-base done,upgrade succeed.")
+				}
+				// 等待deepin-desktop-base安装完成后,状态后续切换
+				job.setPropProgress(1.00)
+				// 上报更新成功的信息(如果需要)
+				if m.needPostSystemUpgradeMessage() && ((mode & system.SystemUpdate) != 0) {
+					go m.postSystemUpgradeMessage(upgradeSucceed, job.next, system.SystemUpdate)
+				}
+			},
+			string(system.EndStatus): func() {
+				// wrapper的资源释放
+				if unref != nil {
+					unref()
+				}
+			},
+		})
+		if err := m.jobManager.addJob(job); err != nil {
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		logger.Warningf("DistUpgrade error: %v\n", err)
+		logger.Warning(err)
 		return nil, err
 	}
-	job.caller = caller
 	cancelErr := m.cancelAllUpdateJob()
 	if cancelErr != nil {
 		logger.Warning(cancelErr)
@@ -527,25 +721,75 @@ func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) prepareDistUpgrade() (*Job, error) {
+func (m *Manager) prepareDistUpgrade(sender dbus.Sender) (*Job, error) {
+	environ, err := makeEnvironWithSender(m, sender)
+	if err != nil {
+		return nil, err
+	}
 	m.ensureUpdateSourceOnce()
 	m.updateJobList()
 
 	m.PropsMu.RLock()
 	upgradableApps := m.UpgradableApps
+	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
 
 	if len(upgradableApps) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
-	if s, err := system.QueryPackageDownloadSize(upgradableApps...); err == nil && s == 0 {
+	if s, err := system.QuerySourceDownloadSize(mode); err == nil && s == 0 {
 		return nil, system.NotFoundError("no need download")
 	}
-
-	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
-	m.do.Unlock()
-
+	var job *Job
+	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
+		m.do.Lock()
+		defer m.do.Unlock()
+		job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ)
+		if err != nil {
+			logger.Warningf("DistUpgrade error: %v\n", err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		// 设置apt命令参数
+		info, err := os.Stat(path)
+		if err != nil {
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if info.IsDir() {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": path,
+			}
+		} else {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  path,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
+		job.setHooks(map[string]func(){
+			string(system.SucceedStatus): func() {
+				//TODO 下载完成需要发送通知
+				m.sendNotify("", "", []string{})
+			},
+			string(system.EndStatus): func() {
+				if unref != nil {
+					unref()
+				}
+			},
+		})
+		if err := m.jobManager.addJob(job); err != nil {
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
 		return nil, err
@@ -579,7 +823,7 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 					jobPaths = append(jobPaths, upgradeJob.next.getPath())
 				}
 			} else {
-				prepareJob, err = m.createPrepareClassifiedUpgradeJob(category)
+				prepareJob, err = m.createPrepareClassifiedUpgradeJob(sender, category)
 				if err != nil {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
@@ -612,10 +856,13 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 	return jobPaths, nil
 }
 
-func (m *Manager) createPrepareClassifiedUpgradeJob(updateType system.UpdateType) (*Job, error) {
+func (m *Manager) createPrepareClassifiedUpgradeJob(sender dbus.Sender, updateType system.UpdateType) (*Job, error) {
 	m.ensureUpdateSourceOnce()
 	m.updateJobList()
-
+	environ, err := makeEnvironWithSender(m, sender)
+	if err != nil {
+		return nil, err
+	}
 	m.updater.PropsMu.RLock()
 	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
 	m.updater.PropsMu.RUnlock()
@@ -630,11 +877,13 @@ func (m *Manager) createPrepareClassifiedUpgradeJob(updateType system.UpdateType
 	jobType := categoryMap[updateType.JobType()].PrepareJobId
 	const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, jobType, classifiedUpdatablePackagesMap[updateType.JobType()], nil)
-	m.do.Unlock()
-
+	defer m.do.Unlock()
+	job, err := m.jobManager.CreateJob(jobName, jobType, classifiedUpdatablePackagesMap[updateType.JobType()], environ)
 	if err != nil {
 		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
+		return nil, err
+	}
+	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
 	return job, nil
@@ -648,7 +897,7 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 	}
 	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
@@ -690,6 +939,9 @@ func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType syst
 	if job.next != nil {
 		job.next.caller = caller
 	}
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
+	}
 	cancelErr := m.cancelAllUpdateJob()
 	if cancelErr != nil {
 		logger.Warning(cancelErr)
@@ -705,14 +957,15 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	}
 
 	m.do.Lock()
+	defer m.do.Unlock()
 	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
-	m.do.Unlock()
-
 	if err != nil {
 		logger.Warningf("CleanArchives error: %v", err)
 		return nil, err
 	}
-
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
+	}
 	err = m.config.UpdateLastCleanTime()
 	if err != nil {
 		return nil, err
@@ -727,7 +980,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 
 func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
@@ -740,12 +993,13 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
-		[]string{errType}, environ)
-	m.do.Unlock()
-
+	defer m.do.Unlock()
+	job, err := m.jobManager.CreateJob("", system.FixErrorJobType, []string{errType}, environ)
 	if err != nil {
 		logger.Warningf("fixError error: %v", err)
+		return nil, err
+	}
+	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
 	return job, err
@@ -1269,7 +1523,8 @@ func (m *Manager) canAutoQuit() bool {
 	m.autoQuitCountMu.Unlock()
 	logger.Info("haveActiveJob", haveActiveJob)
 	logger.Info("inhibitAutoQuitCount", inhibitAutoQuitCount)
-	return !haveActiveJob && inhibitAutoQuitCount == 0
+	logger.Info("upgrade status:", m.config.UpgradeStatus.Status)
+	return !haveActiveJob && inhibitAutoQuitCount == 0 && (m.config.UpgradeStatus.Status == system.UpgradeReady)
 }
 
 // 保存检查过更新的状态
@@ -1607,14 +1862,125 @@ func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
 }
 
 func (m *Manager) handleAutoDownload() {
-	_, err := m.PrepareDistUpgrade()
+	_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 	if err != nil {
 		logger.Warning(err)
 	}
 }
 
 func (m *Manager) handleAbortAutoDownload() {
-	err := m.CleanJob(system.PrepareSystemUpgradeJobType)
+	err := m.CleanJob(system.PrepareDistUpgradeJobType)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+const (
+	grubScriptFile       = "/boot/grub/grub.cfg"
+	normalBootEntryTitle = "UnionTech OS Desktop 20 Pro GNU/Linux"
+)
+
+type bootEntry uint
+
+const (
+	normalBootEntry bootEntry = iota
+	rollbackBootEntry
+)
+
+// changeGrubDefaultEntry 设置grub默认入口
+func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
+	var title string
+	var err error
+	ch := make(chan bool, 1)
+	switch to {
+	case rollbackBootEntry:
+		title, err = system.GetGrubRollbackTitle(grubScriptFile)
+		if err != nil {
+			return err
+		}
+	case normalBootEntry:
+		title = normalBootEntryTitle
+	}
+	logger.Debug("change grub default entry to:", title)
+	defaultEntry, err := m.grub.DefaultEntry().Get(0)
+	if err != nil {
+		return err
+	}
+	if defaultEntry == title {
+		return nil
+	}
+	entrys, err := m.grub.GetSimpleEntryTitles(0)
+	if err != nil {
+		return err
+	}
+	if !strv.Strv(entrys).Contains(title) {
+		return fmt.Errorf("grub no %s entry", title)
+	}
+	err = m.grub.SetDefaultEntry(0, title)
+	if err != nil {
+		return err
+	}
+	_ = m.grub.Updating().ConnectChanged(func(hasValue bool, updating bool) {
+		if !hasValue {
+			return
+		}
+		if !updating {
+			ch <- updating
+		}
+	})
+	defer func() {
+		m.grub.RemoveHandler(proxy.RemovePropertiesChangedHandler)
+	}()
+	updating, _ := m.grub.Updating().Get(0)
+	if updating {
+		for {
+			select {
+			case <-ch:
+				return nil
+			case <-time.After(30 * time.Second):
+				return nil
+			}
+		}
+	} else {
+		return nil
+	}
+}
+
+func (m *Manager) sendNotify(arg0, arg1 string, args []string) string {
+	// TODO 通知相关实现放到task 219769中完成
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		//err := agent.SendNotify(0, arg0, arg1, args)
+		//if err != nil {
+		//	logger.Warning(err)
+		//}
+	}
+	return ""
+}
+
+func (m *Manager) closeNotify(id string) error {
+	// TODO 关闭通知,相关实现放到task 219769中完成
+	return nil
+}
+
+func (m *Manager) handleFailedNotify() {
+	status := m.config.UpgradeStatus
+	// 更新中断的通知(断电,强制关机等)
+	switch status.Status {
+	case system.UpgradeRunning:
+		m.sendNotify("", "", []string{})
+	case system.UpgradeFailed:
+		switch status.ReasonCode {
+		case system.ErrorCode1:
+			m.sendNotify("", "", []string{})
+		case system.ErrorCode2:
+			m.sendNotify("", "", []string{})
+		}
+	}
+	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{
+		Status:     system.UpgradeReady,
+		ReasonCode: system.NoError,
+	})
 	if err != nil {
 		logger.Warning(err)
 	}
