@@ -112,6 +112,7 @@ type Manager struct {
 	userAgents    *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
 	loginManager  login1.Manager
 	sysDBusDaemon ofdbus.DBus
+	systemd       systemd1.Manager
 }
 
 /*
@@ -139,6 +140,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		sysDBusDaemon:       ofdbus.NewDBus(service.Conn()),
 		signalLoop:          dbusutil.NewSignalLoop(service.Conn(), 10),
 		apps:                apps.NewApps(service.Conn()),
+		systemd:             systemd1.NewManager(service.Conn()),
 	}
 	m.updatePreUpgradeOSVersion()
 	m.signalLoop.Start()
@@ -960,7 +962,10 @@ func (m *Manager) handleAutoCheckEvent() error {
 			logger.Warning(err)
 			return err
 		}
-		m.updateAutoCheckSystemUnit()
+		err = m.updateAutoCheckSystemUnit()
+		if err != nil {
+			logger.Warning(err)
+		}
 	}
 	if !m.config.DisableUpdateMetadata {
 		startUpdateMetadataInfoService()
@@ -1120,86 +1125,100 @@ const (
 	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.HandleSystemEvent"
 )
 
+type systemdEventType string
+
+const (
+	AutoCheck          systemdEventType = "AutoCheck"
+	AutoClean          systemdEventType = "AutoClean"
+	UpdateInfosChanged systemdEventType = "UpdateInfosChanged"
+	OsVersionChanged   systemdEventType = "OsVersionChanged"
+	AutoDownload       systemdEventType = "AutoDownload"
+	AbortAutoDownload  systemdEventType = "AbortAutoDownload"
+)
+
 func (m *Manager) getNextUpdateDelay() time.Duration {
 	elapsed := time.Since(m.config.LastCheckTime)
 	remained := m.config.CheckInterval - elapsed
 	if remained < 0 {
-		return 0
+		return _minDelayTime
 	}
 	// ensure delay at least have 10 seconds
-	return remained + time.Second*10
+	return remained + _minDelayTime
 
 }
 
-type lastoreUnitMap map[string][]string
+type UnitName string
+
+const (
+	lastoreOnline            UnitName = "lastoreOnline"
+	lastoreAutoClean         UnitName = "lastoreAutoClean"
+	lastoreAutoCheck         UnitName = "lastoreAutoCheck"
+	lastoreAutoUpdateToken   UnitName = "lastoreAutoUpdateToken"
+	watchOsVersion           UnitName = "watchOsVersion"
+	watchUpdateInfo          UnitName = "watchUpdateInfo"
+	lastoreAutoDownload      UnitName = "lastoreAutoDownload"
+	lastoreAbortAutoDownload UnitName = "lastoreAbortAutoDownload"
+)
+
+type lastoreUnitMap map[UnitName][]string
 
 // 定时任务和文件监听
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
-	unitMap["lastoreOnline"] = []string{
+	unitMap[lastoreOnline] = []string{
 		"/bin/bash",
 		"-c",
-		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, "AutoCheck"), // 等待网络联通后检查更新
+		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
 	}
-	unitMap["lastoreAutoClean"] = []string{
+	unitMap[lastoreAutoClean] = []string{
 		"--on-active=600",
 		"/bin/bash",
 		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoClean"), // 10分钟后自动检查是否需要清理
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoClean), // 10分钟后自动检查是否需要清理
 	}
-	unitMap["lastoreAutoCheck"] = []string{
+	unitMap[lastoreAutoCheck] = []string{
 		fmt.Sprintf("--on-active=%d", m.getNextUpdateDelay()/time.Second),
 		"/bin/bash",
 		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoCheck"), // 根据上次检查时间,设置下一次自动检查时间
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
 	}
-	unitMap["lastoreAutoUpdateToken"] = []string{
+	unitMap[lastoreAutoUpdateToken] = []string{
 		"--on-active=60",
 		"/bin/bash",
 		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 60s后更新token文件
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, OsVersionChanged), // 60s后更新token文件
 	}
-	unitMap["watchOsVersion"] = []string{
+	unitMap[watchOsVersion] = []string{
 		"--path-property=PathModified=/etc/os-version",
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
 	}
-	unitMap["watchUpdateInfo"] = []string{
+	unitMap[watchUpdateInfo] = []string{
 		"--path-property=PathModified=/var/lib/lastore/update_infos.json",
 		"--property=StartLimitBurst=0",
 		"/bin/bash",
 		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), //监听update_infos.json文件
 	}
-	return unitMap
-}
-
-// systemd计时服务需要根据上一次更新时间而变化
-func (m *Manager) updateAutoCheckSystemUnit() {
-	const autoCheckUnit = "lastoreAutoCheck.timer"
-	systemd := systemd1.NewManager(m.service.Conn())
-	_, err := systemd.GetUnit(0, autoCheckUnit)
-	if err == nil {
-		_, err = systemd.StopUnit(0, autoCheckUnit, "replace")
-		if err != nil {
-			logger.Warning(err)
-			return
+	m.updater.PropsMu.RLock()
+	enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+	m.updater.PropsMu.RUnlock()
+	if enable {
+		unitMap[lastoreAutoDownload] = []string{
+			fmt.Sprintf("--on-active=%d", m.getNextAutoDownloadDelay()/time.Second),
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoDownload), // 根据用户设置的自动下载的时间段，设置自动下载开始的时间
+		}
+		unitMap[lastoreAbortAutoDownload] = []string{
+			fmt.Sprintf("--on-active=%d", m.getAbortNextAutoDownloadDelay()/time.Second),
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AbortAutoDownload), // 根据用户设置的自动下载的时间段，终止自动下载
 		}
 	}
-	var args []string
-	args = append(args, fmt.Sprintf("--unit=%s", "lastoreAutoCheck"))
-	autoCheckArgs := m.getLastoreSystemUnitMap()["lastoreAutoCheck"]
-	args = append(args, autoCheckArgs...)
-	cmd := exec.Command(run, args...)
-	var errBuffer bytes.Buffer
-	cmd.Stderr = &errBuffer
-	err = cmd.Run()
-	if err != nil {
-		logger.Warning(err)
-		logger.Warning(errBuffer.String())
-	}
-	logger.Debug(cmd.String())
+	return unitMap
 }
 
 // 开启定时任务和文件监听(通过systemd-run实现)
@@ -1225,7 +1244,7 @@ func (m *Manager) startSystemdUnit() {
 			logger.Warning(errBuffer.String())
 			continue
 		}
-		kf.SetString("UnitName", name, fmt.Sprintf("%s.unit", name))
+		kf.SetString("UnitName", string(name), fmt.Sprintf("%s.unit", name))
 	}
 
 	err := kf.SaveToFile(lastoreUnitCache)
@@ -1509,4 +1528,94 @@ func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.Object
 func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
 	uidStr := strconv.Itoa(int(uid))
 	m.userAgents.removeUser(uidStr)
+}
+
+// 下载中断或者修改下载时间段后,需要更新timer   用户手动中断下载时，需要再第二天的设置实际重新下载   开机时间在自动下载时间段内时，
+func (m *Manager) updateAutoDownloadTimer() error {
+	err := m.updateTimerUnit(lastoreAutoDownload)
+	if err != nil {
+		return err
+	}
+	err = m.updateTimerUnit(lastoreAbortAutoDownload)
+	if err != nil {
+		return err
+	}
+	m.updater.PropsMu.RLock()
+	enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+	m.updater.PropsMu.RUnlock()
+	// 如果关闭闲时更新，需要终止下载job
+	if !enable {
+		m.handleAbortAutoDownload()
+	}
+	return nil
+}
+
+// systemd计时服务需要根据上一次更新时间而变化
+func (m *Manager) updateAutoCheckSystemUnit() error {
+	return m.updateTimerUnit(lastoreAutoClean)
+}
+
+// 重新启动systemd unit,先GetUnit，如果能获取到，就调用StopUnit(replace).如果获取不到,证明已经处理完成,直接重新创建对应unit执行
+func (m *Manager) updateTimerUnit(unitName UnitName) error {
+	timerName := fmt.Sprintf("%s.%s", unitName, "timer")
+	_, err := m.systemd.GetUnit(0, timerName)
+	if err == nil {
+		_, err = m.systemd.StopUnit(0, timerName, "replace")
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+	}
+	var args []string
+	args = append(args, fmt.Sprintf("--unit=%s", unitName))
+	autoCheckArgs, ok := m.getLastoreSystemUnitMap()[unitName]
+	if ok {
+		args = append(args, autoCheckArgs...)
+		cmd := exec.Command(run, args...)
+		var errBuffer bytes.Buffer
+		cmd.Stderr = &errBuffer
+		err = cmd.Run()
+		if err != nil {
+			logger.Warning(err)
+			logger.Warning(errBuffer.String())
+			return errors.New(errBuffer.String())
+		}
+		logger.Debug(cmd.String())
+	}
+	return nil
+}
+
+// getNextAutoDownloadDelay 用配置时间减去当前时间，得到延迟下载任务开始时间.
+func (m *Manager) getNextAutoDownloadDelay() time.Duration {
+	m.updater.PropsMu.RLock()
+	defer m.updater.PropsMu.RUnlock()
+	beginDur := getCustomTimeDuration(m.updater.IdleDownloadConfig.BeginTime)
+	endDur := getCustomTimeDuration(m.updater.IdleDownloadConfig.EndTime)
+	// 如果用户开机时间在自动下载时间段内，则返回默认最小时间(立即开始)
+	if beginDur > endDur {
+		return _minDelayTime
+	} else {
+		return beginDur
+	}
+}
+
+// getAbortNextAutoDownloadDelay 用配置时间减去当前时间，得到终止延迟下载任务的时间.
+func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
+	m.updater.PropsMu.RLock()
+	defer m.updater.PropsMu.RUnlock()
+	return getCustomTimeDuration(m.updater.IdleDownloadConfig.EndTime)
+}
+
+func (m *Manager) handleAutoDownload() {
+	_, err := m.PrepareDistUpgrade()
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+func (m *Manager) handleAbortAutoDownload() {
+	err := m.CleanJob(system.PrepareSystemUpgradeJobType)
+	if err != nil {
+		logger.Warning(err)
+	}
 }

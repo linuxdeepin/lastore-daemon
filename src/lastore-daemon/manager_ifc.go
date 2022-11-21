@@ -87,25 +87,52 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 		return dbusutil.ToError(err)
 	}
 	m.service.DelayAutoQuit()
-	switch eventType {
-	case "AutoCheck":
+	typ := systemdEventType(eventType)
+	switch typ {
+	case AutoCheck:
 		go func() {
 			err := m.handleAutoCheckEvent()
 			if err != nil {
 				logger.Warning(err)
 			}
 		}()
-	case "AutoClean":
+	case AutoClean:
 		go func() {
 			err := m.handleAutoCleanEvent()
 			if err != nil {
 				logger.Warning(err)
 			}
 		}()
-	case "UpdateInfosChanged":
+	case UpdateInfosChanged:
 		m.handleUpdateInfosChanged(false)
-	case "OsVersionChanged":
+	case OsVersionChanged:
 		go updateTokenConfigFile()
+	case AutoDownload:
+		m.updater.PropsMu.RLock()
+		enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+		m.updater.PropsMu.RUnlock()
+		if enable {
+			m.handleAutoDownload()
+			go func() {
+				err := m.updateAutoDownloadTimer()
+				if err != nil {
+					logger.Warning(err)
+				}
+			}()
+		}
+	case AbortAutoDownload:
+		m.updater.PropsMu.RLock()
+		enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+		m.updater.PropsMu.RUnlock()
+		if enable {
+			m.handleAbortAutoDownload()
+			go func() {
+				err := m.updateAutoDownloadTimer()
+				if err != nil {
+					logger.Warning(err)
+				}
+			}()
+		}
 	default:
 		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
 	}

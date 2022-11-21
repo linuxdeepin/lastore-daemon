@@ -43,7 +43,7 @@ func Test_getNextUpdateDelay(t *testing.T) {
 			CheckInterval: 0,
 		},
 	}
-	assert.Equal(t, time.Duration(0), m.getNextUpdateDelay())
+	assert.Equal(t, _minDelayTime, m.getNextUpdateDelay())
 	m.config.CheckInterval = time.Hour * 1
 	assert.True(t, m.getNextUpdateDelay() > time.Second*10)
 }
@@ -52,6 +52,7 @@ func Test_canAutoQuit(t *testing.T) {
 	m := &Manager{
 		jobList:              nil,
 		inhibitAutoQuitCount: 3,
+		config:               NewConfig(""),
 	}
 	assert.False(t, m.canAutoQuit())
 	m.inhibitAutoQuitCount = 0
