@@ -79,7 +79,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		"APT::Status-Fd": "3",
 	}
 
-	if cmdType == system.DownloadJobType {
+	if cmdType == system.DownloadJobType || cmdType == system.PrepareDistUpgradeJobType {
 		options["Debug::NoLocking"] = "1"
 		options["Acquire::Retries"] = "1"
 		args = append(args, "-m")
@@ -92,6 +92,11 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	case system.InstallJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install")
+		args = append(args, "--")
+		args = append(args, cmdArgs...)
+	case system.PrepareDistUpgradeJobType:
+		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
+		args = append(args, "dist-upgrade", "-d", "--allow-change-held-packages")
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DistUpgradeJobType:
@@ -117,14 +122,21 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 
 	case system.FixErrorJobType:
 		errType := cmdArgs[0]
+		var aptOption []string
+		var aptOptionString string
+		if len(cmdArgs) >= 1 {
+			aptOption = cmdArgs[1:]
+			aptOptionString = strings.Join(aptOption, " ")
+		}
 		switch errType {
 		case system.ErrTypeDpkgInterrupted:
 			sh := "dpkg --force-confold --configure -a;" +
-				fmt.Sprintf("apt-get -y -c %s -f install;", system.LastoreAptV2CommonConfPath)
+				fmt.Sprintf("apt-get -y -c %s -f install %s;", system.LastoreAptV2CommonConfPath, aptOptionString)
 			return exec.Command("/bin/sh", "-c", sh) // #nosec G204
 		case system.ErrTypeDependenciesBroken:
 			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 			args = append(args, "-f", "install")
+			args = append(args, aptOption...)
 		default:
 			panic("invalid error type " + errType)
 		}
