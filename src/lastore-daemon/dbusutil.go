@@ -11,6 +11,76 @@ import (
 	"internal/system"
 )
 
+func (v *Manager) setPropJobList(value []dbus.ObjectPath) {
+	v.JobList = value
+	v.emitPropChangedJobList(value)
+}
+
+func (v *Manager) emitPropChangedJobList(value []dbus.ObjectPath) error {
+	return v.service.EmitPropertyChanged(v, "JobList", value)
+}
+
+func (v *Manager) setPropUpgradableApps(value []string) {
+	v.UpgradableApps = value
+	v.emitPropChangedUpgradableApps(value)
+}
+
+func (v *Manager) emitPropChangedUpgradableApps(value []string) error {
+	return v.service.EmitPropertyChanged(v, "UpgradableApps", value)
+}
+
+func (v *Manager) setPropSystemOnChanging(value bool) (changed bool) {
+	if v.SystemOnChanging != value {
+		v.SystemOnChanging = value
+		v.emitPropChangedSystemOnChanging(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedSystemOnChanging(value bool) error {
+	return v.service.EmitPropertyChanged(v, "SystemOnChanging", value)
+}
+
+func (v *Manager) setPropAutoClean(value bool) (changed bool) {
+	if v.AutoClean != value {
+		v.AutoClean = value
+		v.emitPropChangedAutoClean(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedAutoClean(value bool) error {
+	return v.service.EmitPropertyChanged(v, "AutoClean", value)
+}
+
+func (v *Manager) setPropUpdateMode(value system.UpdateType) (changed bool) {
+	if v.UpdateMode != value {
+		v.UpdateMode = value
+		v.emitPropChangedUpdateMode(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedUpdateMode(value system.UpdateType) error {
+	return v.service.EmitPropertyChanged(v, "UpdateMode", value)
+}
+
+func (v *Manager) setPropHardwareId(value string) (changed bool) {
+	if v.HardwareId != value {
+		v.HardwareId = value
+		v.emitPropChangedHardwareId(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedHardwareId(value string) error {
+	return v.service.EmitPropertyChanged(v, "HardwareId", value)
+}
+
 func (v *Updater) setPropAutoCheckUpdates(value bool) (changed bool) {
 	if v.AutoCheckUpdates != value {
 		v.AutoCheckUpdates = value
@@ -114,6 +184,19 @@ func (v *Updater) setPropAutoInstallUpdateType(value system.UpdateType) (changed
 
 func (v *Updater) emitPropChangedAutoInstallUpdateType(value system.UpdateType) error {
 	return v.service.EmitPropertyChanged(v, "AutoInstallUpdateType", value)
+}
+
+func (v *Updater) setPropIdleDownloadConfig(value idleDownloadConfig) (changed bool) {
+	if v.IdleDownloadConfig != value {
+		v.IdleDownloadConfig = value
+		v.emitPropChangedIdleDownloadConfig(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedIdleDownloadConfig(value idleDownloadConfig) error {
+	return v.service.EmitPropertyChanged(v, "IdleDownloadConfig", value)
 }
 
 func (v *Job) setPropId(value string) (changed bool) {
@@ -253,61 +336,4 @@ func (v *Job) setPropCancelable(value bool) (changed bool) {
 
 func (v *Job) emitPropChangedCancelable(value bool) error {
 	return v.service.EmitPropertyChanged(v, "Cancelable", value)
-}
-
-func (v *Manager) setPropJobList(value []dbus.ObjectPath) {
-	v.JobList = value
-	v.emitPropChangedJobList(value)
-}
-
-func (v *Manager) emitPropChangedJobList(value []dbus.ObjectPath) error {
-	return v.service.EmitPropertyChanged(v, "JobList", value)
-}
-
-func (v *Manager) setPropUpgradableApps(value []string) {
-	v.UpgradableApps = value
-	v.emitPropChangedUpgradableApps(value)
-}
-
-func (v *Manager) emitPropChangedUpgradableApps(value []string) error {
-	return v.service.EmitPropertyChanged(v, "UpgradableApps", value)
-}
-
-func (v *Manager) setPropSystemOnChanging(value bool) (changed bool) {
-	if v.SystemOnChanging != value {
-		v.SystemOnChanging = value
-		v.emitPropChangedSystemOnChanging(value)
-		return true
-	}
-	return false
-}
-
-func (v *Manager) emitPropChangedSystemOnChanging(value bool) error {
-	return v.service.EmitPropertyChanged(v, "SystemOnChanging", value)
-}
-
-func (v *Manager) setPropAutoClean(value bool) (changed bool) {
-	if v.AutoClean != value {
-		v.AutoClean = value
-		v.emitPropChangedAutoClean(value)
-		return true
-	}
-	return false
-}
-
-func (v *Manager) emitPropChangedAutoClean(value bool) error {
-	return v.service.EmitPropertyChanged(v, "AutoClean", value)
-}
-
-func (v *Manager) setPropUpdateMode(value system.UpdateType) (changed bool) {
-	if v.UpdateMode != value {
-		v.UpdateMode = value
-		v.emitPropChangedUpdateMode(value)
-		return true
-	}
-	return false
-}
-
-func (v *Manager) emitPropChangedUpdateMode(value system.UpdateType) error {
-	return v.service.EmitPropertyChanged(v, "UpdateMode", value)
 }
