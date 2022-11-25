@@ -106,6 +106,7 @@ func (m UpdateType) JobType() string {
 func AllUpdateType() []UpdateType {
 	return []UpdateType{
 		SystemUpdate,
+		SecurityUpdate,
 		//AppStoreUpdate,
 		OnlySecurityUpdate,
 		UnknownUpdate,
@@ -130,6 +131,7 @@ const (
 	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"        // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 )
 
+// GetCategorySourceMap 缺省更新类型与对应仓库的map
 func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
 		SystemUpdate: SystemSourceDir,

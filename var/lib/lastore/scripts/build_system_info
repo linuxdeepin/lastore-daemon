@@ -11,9 +11,14 @@ function prepare()
         exit 1;
     fi
 
+    if /usr/bin/pgrep build_system_info > /dev/null; then
+        echo "build_system_info is running, please try it later"
+        exit 1;
+    fi
+
     if [ "$(/usr/bin/busctl get-property com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager SystemOnChanging)" != "b false" ]; then
         echo "system is on changing, please try it later"
-        exit -1;
+        exit 1;
     fi
 }
 
