@@ -73,25 +73,24 @@ func (jm *JobManager) List() JobList {
 }
 
 // CreateJob create the job and try starting it
-func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (*Job, error) {
+func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (bool, *Job, error) {
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus, system.PausedStatus:
-			return job, jm.markStart(job)
+			return true, job, jm.markStart(job)
 		default:
-			return job, nil
+			return true, job, nil
 		}
 	}
-	notNeedMark := false
 	var job *Job
 	switch jobType {
-	case system.DownloadJobType,
+	case system.DownloadJobType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ)
+	case system.PrepareDistUpgradeJobType,
 		system.PrepareSystemUpgradeJobType,
 		system.PrepareAppStoreUpgradeJobType,
 		system.PrepareSecurityUpgradeJobType,
 		system.PrepareUnknownUpgradeJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ) // 使用下载任务类型
-	case system.PrepareDistUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
 	case system.InstallJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
@@ -125,36 +124,14 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		system.SecurityUpgradeJobType,
 		system.UnknownUpgradeJobType,
 		system.AppStoreUpgradeJobType:
-		upgradeTypeInfoMap := GetUpgradeInfoMap()
-		info := upgradeTypeInfoMap[jobType]
-		job = jm.findJobById(info.PrepareJobId) // job 为对应下载任务,next为对应安装任务
-		next := NewJob(jm.service, info.UpgradeJobId, jobName, packages, info.UpgradeJobType, LockQueue, environ)
-		next.option = info.Option
-		if job != nil {
-			notNeedMark = true // 如果该job已经在创建,则无需重新markReady
-			switch job.Status {
-			case system.FailedStatus, system.PausedStatus:
-				err := jm.markReady(job)
-				if err != nil {
-					logger.Warning(err)
-				}
-			}
-			job.setPropName(jobName) // 如果找到下载任务,绑定安装任务时,需要去掉"OnlyDownload"的Name字段
-		} else {
-			job = NewJob(jm.service, info.PrepareJobId, jobName, packages, info.PrepareJobType, DownloadQueue, environ) // 新建对应下载任务
-		}
-		job.next = next
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
+		job._InitProgressRange(0, 0.99)
 	default:
-		return nil, system.NotSupportError
+		return false, nil, system.NotSupportError
 	}
 
 	logger.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
-	jm.dispatchMux.Lock()
-	defer jm.dispatchMux.Unlock()
-	if notNeedMark {
-		return job, nil
-	}
-	return job, jm.markReady(job)
+	return false, job, jm.markReady(job)
 }
 
 func (jm *JobManager) markStart(job *Job) error {
@@ -273,7 +250,9 @@ func (jm *JobManager) dispatch() {
 			logger.Infof("Job(%q).next is %v\n", job.Id, job.next)
 			job = job.next
 
+			jm.dispatchMux.Unlock()
 			_ = jm.addJob(job)
+			jm.dispatchMux.Lock()
 
 			_ = jm.markStart(job)
 			job.PropsMu.RLock()
@@ -375,6 +354,8 @@ func (jm *JobManager) createJobList(name string, cap int) {
 }
 
 func (jm *JobManager) addJob(j *Job) error {
+	jm.dispatchMux.Lock()
+	defer jm.dispatchMux.Unlock()
 	if j == nil {
 		return system.NotFoundError("addJob with nil")
 	}
@@ -485,54 +466,44 @@ var genJobId = func() func(string) string {
 
 // 分类更新任务需要创建Job的内容
 type upgradeJobInfo struct {
-	PrepareJobId   string            // 下载Job的Id
-	PrepareJobType string            // 下载Job的类型
-	UpgradeJobId   string            // 更新Job的Id
-	UpgradeJobType string            // 更新Job的类型
-	Option         map[string]string // 更新参数,通常用-o指定
+	PrepareJobId   string // 下载Job的Id
+	PrepareJobType string // 下载Job的类型
+	UpgradeJobId   string // 更新Job的Id
+	UpgradeJobType string // 更新Job的类型
 }
 
-func GetUpgradeInfoMap() map[string]upgradeJobInfo {
-	return map[string]upgradeJobInfo{
-		system.SystemUpgradeJobType: {
+// GetUpgradeInfoMap 更新种类和具体job类型的映射
+func GetUpgradeInfoMap() map[system.UpdateType]upgradeJobInfo {
+	return map[system.UpdateType]upgradeJobInfo{
+		system.SystemUpdate: {
 			PrepareJobId:   genJobId(system.PrepareSystemUpgradeJobType),
-			PrepareJobType: system.DownloadJobType,
+			PrepareJobType: system.PrepareSystemUpgradeJobType,
 			UpgradeJobId:   genJobId(system.SystemUpgradeJobType),
 			UpgradeJobType: system.DistUpgradeJobType,
-			Option: map[string]string{
-				"Dir::Etc::SourceList":  "/dev/null",
-				"Dir::Etc::SourceParts": system.SystemSourceDir,
-			},
 		},
-		system.AppStoreUpgradeJobType: {
-			PrepareJobId:   genJobId(system.PrepareAppStoreUpgradeJobType),
-			PrepareJobType: system.DownloadJobType,
-			UpgradeJobId:   genJobId(system.AppStoreUpgradeJobType),
-			UpgradeJobType: system.InstallJobType,
-			Option: map[string]string{ // 实际不会生效,安装的job类型为install
-				"Dir::Etc::SourceList":  system.AppStoreSourceFile,
-				"Dir::Etc::SourceParts": "/dev/null",
-			},
-		},
-		system.UnknownUpgradeJobType: {
-			PrepareJobId:   genJobId(system.PrepareUnknownUpgradeJobType),
-			PrepareJobType: system.DownloadJobType,
-			UpgradeJobId:   genJobId(system.UnknownUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-			Option: map[string]string{
-				"Dir::Etc::SourceList":  "/dev/null",
-				"Dir::Etc::SourceParts": system.UnknownSourceDir,
-			},
-		},
-		system.SecurityUpgradeJobType: {
+		system.SecurityUpdate: {
 			PrepareJobId:   genJobId(system.PrepareSecurityUpgradeJobType),
-			PrepareJobType: system.DownloadJobType,
+			PrepareJobType: system.PrepareSecurityUpgradeJobType,
 			UpgradeJobId:   genJobId(system.SecurityUpgradeJobType),
 			UpgradeJobType: system.DistUpgradeJobType,
-			Option: map[string]string{
-				"Dir::Etc::SourceList":  system.SecuritySourceFile,
-				"Dir::Etc::SourceParts": "/dev/null",
-			},
+		},
+		system.AppStoreUpdate: {
+			PrepareJobId:   genJobId(system.PrepareAppStoreUpgradeJobType),
+			PrepareJobType: system.PrepareAppStoreUpgradeJobType,
+			UpgradeJobId:   genJobId(system.AppStoreUpgradeJobType),
+			UpgradeJobType: system.InstallJobType,
+		},
+		system.UnknownUpdate: {
+			PrepareJobId:   genJobId(system.PrepareUnknownUpgradeJobType),
+			PrepareJobType: system.PrepareUnknownUpgradeJobType,
+			UpgradeJobId:   genJobId(system.UnknownUpgradeJobType),
+			UpgradeJobType: system.DistUpgradeJobType,
+		},
+		system.OnlySecurityUpdate: {
+			PrepareJobId:   genJobId(system.PrepareSecurityUpgradeJobType),
+			PrepareJobType: system.PrepareSecurityUpgradeJobType,
+			UpgradeJobId:   genJobId(system.SecurityUpgradeJobType),
+			UpgradeJobType: system.DistUpgradeJobType,
 		},
 	}
 }

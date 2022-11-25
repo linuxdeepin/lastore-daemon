@@ -24,7 +24,7 @@ so don't invoke they in inner functions
 
 func (m *Manager) ClassifiedUpgrade(sender dbus.Sender, updateType system.UpdateType) ([]dbus.ObjectPath, *dbus.Error) {
 	m.service.DelayAutoQuit()
-	return m.classifiedUpgrade(sender, updateType, true, false)
+	return m.classifiedUpgrade(sender, updateType, true)
 }
 
 func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
@@ -53,7 +53,7 @@ func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
-	jobObj, err := m.distUpgrade(sender, mode)
+	jobObj, err := m.distUpgrade(sender, mode, false)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -107,7 +107,7 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 			}
 		}()
 	case UpdateInfosChanged:
-		m.handleUpdateInfosChanged(false)
+		m.handleUpdateInfosChanged()
 	case OsVersionChanged:
 		go updateTokenConfigFile()
 	case AutoDownload:
@@ -226,7 +226,10 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 
 func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.prepareDistUpgrade(sender)
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
+	jobObj, err := m.prepareDistUpgrade(sender, mode, false)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -369,13 +372,16 @@ func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages str
 
 func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.updateSource(false, false)
+	jobObj, err := m.updateSource(false)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
 	}
 
 	_ = m.config.UpdateLastCheckTime()
-	m.updateAutoCheckSystemUnit()
+	err = m.updateAutoCheckSystemUnit()
+	if err != nil {
+		logger.Warning(err)
+	}
 	return jobObj.getPath(), nil
 }

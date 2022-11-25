@@ -92,12 +92,10 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	case system.InstallJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install")
-		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.PrepareDistUpgradeJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "dist-upgrade", "-d", "--allow-change-held-packages")
-		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DistUpgradeJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
@@ -107,12 +105,10 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	case system.RemoveJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "autoremove", "--allow-change-held-packages")
-		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.DownloadJobType:
 		args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 		args = append(args, "install", "-d", "--allow-change-held-packages")
-		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
 		sh := "apt-get -y -o APT::Status-Fd=3 update && /var/lib/lastore/scripts/build_system_info -now"

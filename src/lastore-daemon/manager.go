@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/godbus/dbus"
-	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
@@ -92,24 +91,18 @@ type Manager struct {
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
 
-	apps                     apps.Apps
-	sysPower                 power.Power
-	abRecovery               abrecovery.ABRecovery
-	signalLoop               *dbusutil.SignalLoop
-	shouldHandleBackupJobEnd bool
-	autoInstallType          system.UpdateType // 保存需要自动安装的类别
+	apps       apps.Apps
+	sysPower   power.Power
+	signalLoop *dbusutil.SignalLoop
 
 	UpdateMode system.UpdateType `prop:"access:rw"`
 	HardwareId string
 
 	isUpdateSucceed bool
-	canRestore      bool
 
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
-
-	preUpgradeOSVersion string
 
 	userAgents    *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
 	loginManager  login1.Manager
@@ -145,8 +138,8 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		apps:                apps.NewApps(service.Conn()),
 		systemd:             systemd1.NewManager(service.Conn()),
 		grub:                grub2.NewGrub2(service.Conn()),
+		sysPower:            power.NewPower(service.Conn()),
 	}
-	m.updatePreUpgradeOSVersion()
 	m.signalLoop.Start()
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
 	go m.handleOSSignal()
@@ -159,7 +152,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		m.HardwareId = hardwareId
 	}
 	m.initDbusSignalListen()
-	m.initAutoInstall(service.Conn())
 	m.handleFailedNotify()
 	return m
 }
@@ -188,17 +180,6 @@ func (m *Manager) initDbusSignalListen() {
 		logger.Warning(err)
 	}
 	m.grub.InitSignalExt(m.signalLoop, true)
-}
-
-func (m *Manager) updatePreUpgradeOSVersion() {
-	osVersionInfoMap, err := getOSVersionInfo()
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		m.preUpgradeOSVersion = strings.Join(
-			[]string{osVersionInfoMap["MajorVersion"], osVersionInfoMap["MinorVersion"], osVersionInfoMap["OsBuild"]},
-			".")
-	}
 }
 
 // execPath和cmdLine可以有一个为空,其中一个存在即可作为判断调用者的依据
@@ -256,10 +237,13 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
 	if err != nil {
 		logger.Warningf("UpdatePackage %q error: %v\n", packages, err)
 		return nil, err
+	}
+	if isExist {
+		return job, nil
 	}
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
@@ -301,10 +285,13 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
 	if err != nil {
 		logger.Warningf("installPackage %q error: %v\n", packages, err)
 		return nil, err
+	}
+	if isExist {
+		return job, nil
 	}
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
@@ -340,10 +327,13 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
 	if err != nil {
 		logger.Warningf("removePackage %q error: %v\n", packages, err)
 		return nil, err
+	}
+	if isExist {
+		return job, nil
 	}
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
@@ -360,7 +350,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	_, err := m.updateSource(false, false)
+	_, err := m.updateSource(false)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -376,7 +366,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
-func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
+func (m *Manager) handleUpdateInfosChanged() {
 	logger.Info("handleUpdateInfosChanged")
 	infosMap, err := m.SystemUpgradeInfo()
 	if err != nil {
@@ -397,12 +387,10 @@ func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
 		logger.Info("auto download updates")
 		go func() {
 			m.inhibitAutoQuitCountAdd()
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.UpdateMode, false, autoCheck) // 自动下载使用控制中心的配置
+			_, err = m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0])) // 自动下载使用控制中心的配置
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
-			// TODO 自动下载的逻辑需要替换实现方式 task 214991中完成
-			//m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 			m.inhibitAutoQuitCountSub()
 		}()
 	}
@@ -458,7 +446,7 @@ func prepareUpdateSource() {
 	}
 }
 
-func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
+func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 	var jobName string
@@ -467,10 +455,13 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 	}
 	prepareUpdateSource()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
 	if err != nil {
 		logger.Warningf("UpdateSource error: %v\n", err)
 		return nil, err
+	}
+	if isExist {
+		return job, nil
 	}
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
@@ -487,7 +478,7 @@ func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
 				m.PropsMu.Unlock()
 			},
 			string(system.EndStatus): func() {
-				m.handleUpdateInfosChanged(autoCheck)
+				m.handleUpdateInfosChanged()
 			},
 		})
 	}
@@ -511,7 +502,8 @@ func (m *Manager) cancelAllUpdateJob() error {
 	return nil
 }
 
-func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType) (*Job, error) {
+// distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
+func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool) (*Job, error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		logger.Warning(err)
@@ -523,26 +515,44 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType) (*Job,
 	if err != nil {
 		return nil, err
 	}
-
 	m.updateJobList()
 
-	m.PropsMu.RLock()
-	upgradableApps := m.UpgradableApps
-	m.PropsMu.RUnlock()
-	if len(upgradableApps) == 0 {
-		return nil, system.NotFoundError("empty UpgradableApps")
+	if isClassify {
+		m.updater.PropsMu.RLock()
+		classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
+		m.updater.PropsMu.RUnlock()
+		if len(classifiedUpdatablePackagesMap[mode.JobType()]) == 0 {
+			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode.JobType()))
+		}
+	} else {
+		m.PropsMu.RLock()
+		upgradableApps := m.UpgradableApps
+		m.PropsMu.RUnlock()
+		if len(upgradableApps) == 0 {
+			return nil, system.NotFoundError("empty UpgradableApps")
+		}
 	}
+
 	var job *Job
+	var isExist bool
 	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
 		m.do.Lock()
 		defer m.do.Unlock()
-		job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, nil, environ)
+		if isClassify {
+			jobType := GetUpgradeInfoMap()[mode].UpgradeJobId
+			isExist, job, err = m.jobManager.CreateJob("", jobType, nil, environ)
+		} else {
+			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, nil, environ)
+		}
 		if err != nil {
 			logger.Warningf("DistUpgrade error: %v\n", err)
 			if unref != nil {
 				unref()
 			}
 			return err
+		}
+		if isExist {
+			return nil
 		}
 		job.caller = caller
 		// 设置apt命令参数
@@ -661,10 +671,14 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType) (*Job,
 				go func() {
 					m.do.Lock()
 					defer m.do.Unlock()
-					installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ)
+					isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ)
 					if err != nil {
 						ch <- 1
 						logger.Warning(err)
+					}
+					if isExist {
+						ch <- 1
+						return
 					}
 					if installJob != nil {
 						installJob.option = job.option
@@ -701,11 +715,13 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType) (*Job,
 				}
 			},
 		})
-		if err := m.jobManager.addJob(job); err != nil {
-			if unref != nil {
-				unref()
+		if !isClassify { // 分类下载的job需要外部判断是否add
+			if err := m.jobManager.addJob(job); err != nil {
+				if unref != nil {
+					unref()
+				}
+				return err
 			}
-			return err
 		}
 		return nil
 	})
@@ -721,7 +737,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType) (*Job,
 	return job, err
 }
 
-func (m *Manager) prepareDistUpgrade(sender dbus.Sender) (*Job, error) {
+// prepareDistUpgrade isClassify true: mode只能是单类型,创建一个单类型的下载job; false: mode类型不限,创建一个全mode类型的下载job
+func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool) (*Job, error) {
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
@@ -729,28 +746,45 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender) (*Job, error) {
 	m.ensureUpdateSourceOnce()
 	m.updateJobList()
 
-	m.PropsMu.RLock()
-	upgradableApps := m.UpgradableApps
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
-
-	if len(upgradableApps) == 0 {
-		return nil, system.NotFoundError("empty UpgradableApps")
+	if isClassify {
+		m.updater.PropsMu.RLock()
+		classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
+		m.updater.PropsMu.RUnlock()
+		if len(classifiedUpdatablePackagesMap[mode.JobType()]) == 0 {
+			return nil, system.NotFoundError("empty UpgradableApps")
+		}
+	} else {
+		m.PropsMu.RLock()
+		upgradableApps := m.UpgradableApps
+		m.PropsMu.RUnlock()
+		if len(upgradableApps) == 0 {
+			return nil, system.NotFoundError("empty UpgradableApps")
+		}
 	}
 	if s, err := system.QuerySourceDownloadSize(mode); err == nil && s == 0 {
 		return nil, system.NotFoundError("no need download")
 	}
 	var job *Job
+	var isExist bool
 	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
 		m.do.Lock()
 		defer m.do.Unlock()
-		job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ)
+		if isClassify {
+			jobType := GetUpgradeInfoMap()[mode].PrepareJobId
+			const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
+			isExist, job, err = m.jobManager.CreateJob(jobName, jobType, nil, environ)
+		} else {
+			isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ)
+		}
 		if err != nil {
-			logger.Warningf("DistUpgrade error: %v\n", err)
+			logger.Warningf("Prepare DistUpgrade error: %v\n", err)
 			if unref != nil {
 				unref()
 			}
 			return err
+		}
+		if isExist {
+			return nil
 		}
 		// 设置apt命令参数
 		info, err := os.Stat(path)
@@ -798,7 +832,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender) (*Job, error) {
 }
 
 // 根据更新类型,创建对应的下载或下载+安装的job
-func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool, autoCheck bool) ([]dbus.ObjectPath, *dbus.Error) {
+func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool) ([]dbus.ObjectPath, *dbus.Error) {
 	var jobPaths []dbus.ObjectPath
 	var err error
 	var errList []string
@@ -808,7 +842,18 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 		if category != 0 {
 			var upgradeJob, prepareJob *Job
 			if isUpgrade {
-				upgradeJob, err = m.createClassifiedUpgradeJob(sender, category)
+				prepareJob, err = m.prepareDistUpgrade(sender, category, true)
+				if err != nil {
+					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
+						errList = append(errList, err.Error())
+						logger.Warning(err)
+						continue
+					} else {
+						logger.Info(err)
+						// 可能无需下载,因此继续后面安装job的创建
+					}
+				}
+				upgradeJob, err = m.distUpgrade(sender, category, true)
 				if err != nil {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
@@ -817,36 +862,30 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						logger.Info(err)
 					}
 					continue
+				}
+				// 如果需要下载job,则绑定下载和安装job.无需下载job,直接将安装job添加进队列即可
+				if prepareJob != nil {
+					jobPaths = append(jobPaths, prepareJob.getPath())
+					prepareJob.next = upgradeJob
+				} else {
+					if err := m.jobManager.addJob(upgradeJob); err != nil {
+						errList = append(errList, err.Error())
+						logger.Warning(err)
+					}
 				}
 				jobPaths = append(jobPaths, upgradeJob.getPath())
-				if upgradeJob.next != nil {
-					jobPaths = append(jobPaths, upgradeJob.next.getPath())
-				}
 			} else {
-				prepareJob, err = m.createPrepareClassifiedUpgradeJob(sender, category)
+				prepareJob, err = m.prepareDistUpgrade(sender, category, true)
 				if err != nil {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
 						logger.Warning(err)
 					} else {
 						logger.Info(err)
-						if autoCheck && m.categorySupportAutoInstall(category) {
-							go m.handlePackagesDownloaded(sender, category)
-						}
 					}
 					continue
 				}
-				prepareJob.autoCheck = autoCheck
 				jobPaths = append(jobPaths, prepareJob.getPath())
-				if autoCheck {
-					prepareJob.setHooks(map[string]func(){
-						string(system.EndStatus): func() {
-							if m.categorySupportAutoInstall(category) {
-								go m.handlePackagesDownloaded(sender, category)
-							}
-						},
-					})
-				}
 			}
 		}
 	}
@@ -854,100 +893,6 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 		return jobPaths, dbusutil.ToError(errors.New(strings.Join(errList, ",")))
 	}
 	return jobPaths, nil
-}
-
-func (m *Manager) createPrepareClassifiedUpgradeJob(sender dbus.Sender, updateType system.UpdateType) (*Job, error) {
-	m.ensureUpdateSourceOnce()
-	m.updateJobList()
-	environ, err := makeEnvironWithSender(m, sender)
-	if err != nil {
-		return nil, err
-	}
-	m.updater.PropsMu.RLock()
-	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
-	m.updater.PropsMu.RUnlock()
-
-	if len(classifiedUpdatablePackagesMap[updateType.JobType()]) == 0 {
-		return nil, system.NotFoundError("empty UpgradableApps")
-	}
-	if s, err := system.QueryPackageDownloadSize(classifiedUpdatablePackagesMap[updateType.JobType()]...); err == nil && s == 0 {
-		return nil, system.NotFoundError("no need download")
-	}
-	categoryMap := GetUpgradeInfoMap()
-	jobType := categoryMap[updateType.JobType()].PrepareJobId
-	const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
-	m.do.Lock()
-	defer m.do.Unlock()
-	job, err := m.jobManager.CreateJob(jobName, jobType, classifiedUpdatablePackagesMap[updateType.JobType()], environ)
-	if err != nil {
-		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
-		return nil, err
-	}
-	if err := m.jobManager.addJob(job); err != nil {
-		return nil, err
-	}
-	return job, nil
-}
-
-func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType system.UpdateType) (*Job, error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine)
-	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m, sender)
-	if err != nil {
-		return nil, err
-	}
-
-	m.updateJobList()
-
-	m.updater.PropsMu.RLock()
-	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
-	m.updater.PropsMu.RUnlock()
-	if len(classifiedUpdatablePackagesMap[updateType.JobType()]) == 0 {
-		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", updateType.JobType()))
-	}
-
-	m.do.Lock()
-	defer m.do.Unlock()
-	categoryMap := GetUpgradeInfoMap()
-	jobType := categoryMap[updateType.JobType()].UpgradeJobId
-	job, err := m.jobManager.CreateJob("", jobType, classifiedUpdatablePackagesMap[updateType.JobType()], environ)
-	if err != nil {
-		logger.Warningf("DistUpgrade error: %v\n", err)
-		return nil, err
-	}
-	if job.next != nil {
-		job.next.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeSucceed, job.next, updateType)
-				}
-			},
-			string(system.FailedStatus): func() {
-				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeFailed, job.next, updateType)
-				}
-			},
-		})
-	}
-
-	job.caller = caller
-	if job.next != nil {
-		job.next.caller = caller
-	}
-	if err := m.jobManager.addJob(job); err != nil {
-		return nil, err
-	}
-	cancelErr := m.cancelAllUpdateJob()
-	if cancelErr != nil {
-		logger.Warning(cancelErr)
-	}
-
-	return job, err
 }
 
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
@@ -958,10 +903,13 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
 	if err != nil {
 		logger.Warningf("CleanArchives error: %v", err)
 		return nil, err
+	}
+	if isExist {
+		return job, nil
 	}
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
@@ -994,79 +942,18 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	job, err := m.jobManager.CreateJob("", system.FixErrorJobType, []string{errType}, environ)
+	isExist, job, err := m.jobManager.CreateJob("", system.FixErrorJobType, []string{errType}, environ)
 	if err != nil {
 		logger.Warningf("fixError error: %v", err)
 		return nil, err
+	}
+	if isExist {
+		return job, nil
 	}
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
 	return job, err
-}
-
-func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system.UpdateType) {
-	m.inhibitAutoQuitCountAdd()
-	defer m.inhibitAutoQuitCountSub()
-
-	onBattery, err := m.sysPower.OnBattery().Get(0)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	batteryPercentage, err := m.sysPower.BatteryPercentage().Get(0)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	if onBattery && batteryPercentage > 50 || !onBattery {
-		canBackup, err := m.abRecovery.CanBackup(0)
-		if err != nil {
-			logger.Warning(err)
-			return
-		}
-		if canBackup {
-			hasBackedUp, err := m.abRecovery.HasBackedUp().Get(0)
-			if err != nil {
-				logger.Warning(err)
-				return
-			}
-			if hasBackedUp { // 本次开机,已经完成过备份,则无需再进行备份
-				_, err := m.createClassifiedUpgradeJob(sender, updateType)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-			} else {
-				m.PropsMu.Lock()
-				m.autoInstallType |= updateType
-				m.PropsMu.Unlock()
-				isBackingUp, err := m.abRecovery.BackingUp().Get(0)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-				if isBackingUp {
-					return
-				}
-				err = m.abRecovery.StartBackup(0)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-				m.inhibitAutoQuitCountAdd()
-				m.PropsMu.Lock()
-				m.shouldHandleBackupJobEnd = true
-				m.PropsMu.Unlock()
-			}
-		} else {
-			_, err := m.createClassifiedUpgradeJob(sender, updateType)
-			if err != nil {
-				logger.Warning(err)
-				return
-			}
-		}
-	}
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
@@ -1105,44 +992,6 @@ func (m *Manager) modifyUpdateMode() {
 	}
 }
 
-// 初始化自动安装的信号，监听ab备份的状态
-func (m *Manager) initAutoInstall(conn *dbus.Conn) {
-	const jobKindBackup = "backup"
-	m.sysPower = power.NewPower(conn)
-	m.abRecovery = abrecovery.NewABRecovery(conn)
-
-	m.abRecovery.InitSignalExt(m.signalLoop, true)
-	_, _ = m.abRecovery.ConnectJobEnd(func(kind string, success bool, errMsg string) {
-		m.PropsMu.RLock()
-		updateType := m.autoInstallType
-		shouldHandleBackupJobEnd := m.shouldHandleBackupJobEnd
-		m.PropsMu.RUnlock()
-		if kind == jobKindBackup && shouldHandleBackupJobEnd {
-			if success {
-				m.PropsMu.Lock()
-				m.autoInstallType = 0
-				m.shouldHandleBackupJobEnd = false
-				m.PropsMu.Unlock()
-				_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
-				if err != nil {
-					logger.Warning(err)
-				}
-			}
-			m.inhibitAutoQuitCountSub()
-		}
-	})
-	canRestore, err := m.abRecovery.CanRestore(0) // 如果初始化时系统处于可回退状态,则不进行自动安装更新（true： 不自动安装）
-	if err != nil {
-		m.PropsMu.Lock()
-		m.canRestore = true
-		m.PropsMu.Unlock()
-	} else {
-		m.PropsMu.Lock()
-		m.canRestore = canRestore
-		m.PropsMu.Unlock()
-	}
-}
-
 //SystemUpgradeInfo 将update_infos.json数据解析成map
 func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 	r := make(system.SourceUpgradeInfoMap)
@@ -1173,11 +1022,7 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 	autoInstallUpdates := m.updater.AutoInstallUpdates
 	autoInstallUpdateType := m.updater.AutoInstallUpdateType
 	m.updater.PropsMu.RUnlock()
-
-	m.PropsMu.RLock()
-	canRestore := m.canRestore
-	m.PropsMu.RUnlock()
-	return !canRestore && autoInstallUpdates && (autoInstallUpdateType&category != 0)
+	return autoInstallUpdates && (autoInstallUpdateType&category != 0)
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
@@ -1193,6 +1038,7 @@ func (m *Manager) handleAutoCheckEvent() error {
 			system.AppStoreUpgradeJobType,
 			system.SecurityUpgradeJobType,
 			system.UnknownUpgradeJobType,
+			system.OnlyInstallJobType,
 		}
 		for _, job := range m.jobList {
 			if job.Status == system.RunningStatus && strv.Strv(upgradeTypeList).Contains(job.Type) {
@@ -1206,7 +1052,7 @@ func (m *Manager) handleAutoCheckEvent() error {
 			logger.Info("lastore is running prepare upgrade or upgrade job, not need check update")
 			return nil
 		}
-		_, err := m.updateSource(m.updater.UpdateNotify, true)
+		_, err := m.updateSource(m.updater.UpdateNotify)
 		if err != nil {
 			logger.Warning(err)
 			return err
@@ -1304,20 +1150,15 @@ func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType
 	defer m.inhibitAutoQuitCountSub()
 	var upgradeErrorMsg string
 	var version string
-	if upgradeStatus == upgradeFailed {
-		if j != nil {
-			upgradeErrorMsg = j.Description
-		}
-		version = m.preUpgradeOSVersion
+	if upgradeStatus == upgradeFailed && j != nil {
+		upgradeErrorMsg = j.Description
+	}
+	infoMap, err := getOSVersionInfo()
+	if err != nil {
+		logger.Warning(err)
 	} else {
-		infoMap, err := getOSVersionInfo()
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			version = strings.Join(
-				[]string{infoMap["MajorVersion"], infoMap["MinorVersion"], infoMap["OsBuild"]},
-				".")
-		}
+		version = strings.Join(
+			[]string{infoMap["MajorVersion"], infoMap["MinorVersion"], infoMap["OsBuild"]}, ".")
 	}
 
 	sn, err := getSN()
@@ -1585,7 +1426,6 @@ type JobContent struct {
 	// completed bytes per second
 	QueueName string
 	HaveNext  bool
-	AutoCheck bool
 }
 
 // 读取上一次退出时失败和暂停的job,并导出
@@ -1602,7 +1442,8 @@ func (m *Manager) loadCacheJob() {
 		return
 	}
 	for _, j := range jobList {
-		if j.Status == system.FailedStatus {
+		switch j.Status {
+		case system.FailedStatus:
 			failedJob := NewJob(m.service, j.Id, j.Name, j.Packages, j.Type, j.QueueName, j.Environ)
 			failedJob.Description = j.Description
 			failedJob.CreateTime = j.CreateTime
@@ -1613,22 +1454,37 @@ func (m *Manager) loadCacheJob() {
 				logger.Warning(err)
 				continue
 			}
-		} else if j.Status == system.PausedStatus {
+		case system.PausedStatus:
 			var updateType system.UpdateType
+			var isClassified bool
 			switch j.Id {
 			case genJobId(system.PrepareSystemUpgradeJobType), genJobId(system.SystemUpgradeJobType):
 				updateType = system.SystemUpdate
+				isClassified = true
 			case genJobId(system.PrepareSecurityUpgradeJobType), genJobId(system.SecurityUpgradeJobType):
 				updateType = system.OnlySecurityUpdate
+				isClassified = true
 			case genJobId(system.PrepareUnknownUpgradeJobType), genJobId(system.UnknownUpgradeJobType):
 				updateType = system.UnknownUpdate
-			default: // lastore目前是对控制中心提供功能，任务暂停场景只有三种类型的分类更新（下载）
+				isClassified = true
+			case genJobId(system.PrepareDistUpgradeJobType):
+				updateType = m.UpdateMode
+				isClassified = false
+			default: // lastore目前是对控制中心提供功能，任务暂停场景只有三种类型的分类更新（下载）和全量下载
 				continue
 			}
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, j.HaveNext, j.AutoCheck)
-			if err != nil {
-				logger.Warning(err)
-				return
+			if isClassified {
+				_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, j.HaveNext)
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+			} else {
+				_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
 			}
 			pausedJob := m.jobManager.findJobById(j.Id)
 			if pausedJob != nil {
@@ -1638,7 +1494,7 @@ func (m *Manager) loadCacheJob() {
 				}
 				pausedJob.Progress = j.Progress
 			}
-		} else {
+		default:
 			continue
 		}
 	}
@@ -1670,7 +1526,6 @@ func (m *Manager) saveCacheJob() {
 				job.environ,
 				job.queueName,
 				haveNext,
-				job.autoCheck,
 			}
 			needSaveJobs = append(needSaveJobs, needSaveJob)
 		}
@@ -1862,7 +1717,7 @@ func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
 }
 
 func (m *Manager) handleAutoDownload() {
-	_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
+	_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -1887,7 +1742,7 @@ const (
 	rollbackBootEntry
 )
 
-// changeGrubDefaultEntry 设置grub默认入口
+// changeGrubDefaultEntry 设置grub默认入口(社区版可能不需要进行grub设置)
 func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 	var title string
 	var err error
@@ -1920,6 +1775,7 @@ func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 	if err != nil {
 		return err
 	}
+	logger.Info("updating grub default entry to ", title)
 	_ = m.grub.Updating().ConnectChanged(func(hasValue bool, updating bool) {
 		if !hasValue {
 			return
@@ -1931,17 +1787,10 @@ func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 	defer func() {
 		m.grub.RemoveHandler(proxy.RemovePropertiesChangedHandler)
 	}()
-	updating, _ := m.grub.Updating().Get(0)
-	if updating {
-		for {
-			select {
-			case <-ch:
-				return nil
-			case <-time.After(30 * time.Second):
-				return nil
-			}
-		}
-	} else {
+	select {
+	case <-ch:
+		return nil
+	case <-time.After(30 * time.Second):
 		return nil
 	}
 }
