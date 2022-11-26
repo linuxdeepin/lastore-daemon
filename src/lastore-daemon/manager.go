@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"internal/system"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -1261,6 +1262,7 @@ type lastoreUnitMap map[UnitName][]string
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
 	unitMap[lastoreOnline] = []string{
+		fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(3600)),
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
@@ -1272,7 +1274,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoClean), // 10分钟后自动检查是否需要清理
 	}
 	unitMap[lastoreAutoCheck] = []string{
-		fmt.Sprintf("--on-active=%d", m.getNextUpdateDelay()/time.Second),
+		fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(3600)),
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
