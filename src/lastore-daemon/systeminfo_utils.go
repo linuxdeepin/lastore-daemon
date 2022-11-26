@@ -50,6 +50,7 @@ type SystemInfo struct {
 	SN              string
 	HardwareVersion string
 	OEMID           string
+	CustomId        string
 }
 
 const (
@@ -107,7 +108,13 @@ func getSystemInfo() SystemInfo {
 	if err != nil {
 		logger.Warning("failed to get HardwareVersion:", err)
 	}
-
+	c, err := ioutil.ReadFile("/usr/share/deepin/custom/info.json")
+	if err != nil {
+		logger.Warning("failed to get /usr/share/deepin/custom/info.json")
+	} else {
+		//TODO 具体文件格式未提供,后续修改
+		systemInfo.CustomId = string(c)
+	}
 	return systemInfo
 }
 

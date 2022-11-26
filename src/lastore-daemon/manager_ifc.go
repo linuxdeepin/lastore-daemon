@@ -112,7 +112,7 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 		go updateTokenConfigFile()
 	case AutoDownload:
 		m.updater.PropsMu.RLock()
-		enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+		enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled // 如果自动下载关闭,则空闲下载同样会关闭
 		m.updater.PropsMu.RUnlock()
 		if enable {
 			m.handleAutoDownload()
