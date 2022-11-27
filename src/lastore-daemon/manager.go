@@ -1366,8 +1366,8 @@ func (m *Manager) canAutoQuit() bool {
 	m.autoQuitCountMu.Unlock()
 	logger.Info("haveActiveJob", haveActiveJob)
 	logger.Info("inhibitAutoQuitCount", inhibitAutoQuitCount)
-	logger.Info("upgrade status:", m.config.UpgradeStatus.Status)
-	return !haveActiveJob && inhibitAutoQuitCount == 0 && (m.config.UpgradeStatus.Status == system.UpgradeReady)
+	logger.Info("upgrade status:", m.config.upgradeStatus.Status)
+	return !haveActiveJob && inhibitAutoQuitCount == 0 && (m.config.upgradeStatus.Status == system.UpgradeReady)
 }
 
 // 保存检查过更新的状态
@@ -1815,7 +1815,7 @@ func (m *Manager) closeNotify(id string) error {
 }
 
 func (m *Manager) handleFailedNotify() {
-	status := m.config.UpgradeStatus
+	status := m.config.upgradeStatus
 	// 更新中断的通知(断电,强制关机等)
 	switch status.Status {
 	case system.UpgradeRunning:

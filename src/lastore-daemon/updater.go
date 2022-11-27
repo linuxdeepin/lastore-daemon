@@ -64,6 +64,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		UpdateNotify:          config.UpdateNotify,
 		AutoInstallUpdates:    config.AutoInstallUpdates,
 		AutoInstallUpdateType: config.AutoInstallUpdateType,
+		IdleDownloadConfig:    config.idleDownloadConfig,
 	}
 	u.ClassifiedUpdatablePackages = make(map[string][]string)
 	return u

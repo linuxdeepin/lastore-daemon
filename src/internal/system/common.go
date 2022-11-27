@@ -142,7 +142,7 @@ func GetCategorySourceMap() map[UpdateType]string {
 	}
 }
 
-func UpdateUnknownSourceDir() error {
+func UpdateUnknownSourceDir(nonUnknownList strv.Strv) error {
 	// 移除旧版本内容
 	err := os.RemoveAll(CustomSourceDir)
 	if err != nil {
@@ -169,17 +169,19 @@ func UpdateUnknownSourceDir() error {
 		logger.Warning(err)
 		return err
 	}
-	nonUnknownSourceFileList := strv.Strv{
-		AppStoreList,
-		SecurityList,
-		DriverList,
-		UnstableSourceList,
-		HweSourceList,
+	if len(nonUnknownList) == 0 {
+		nonUnknownList = strv.Strv{
+			AppStoreList,
+			SecurityList,
+			DriverList,
+			UnstableSourceList,
+			HweSourceList,
+		}
 	}
 	for _, fileInfo := range sourceDirFileInfos {
 		name := fileInfo.Name()
 		if strings.HasSuffix(name, ".list") {
-			if !nonUnknownSourceFileList.Contains(name) {
+			if !nonUnknownList.Contains(name) {
 				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
 			}
 		}
@@ -196,8 +198,7 @@ func UpdateUnknownSourceDir() error {
 	return nil
 }
 
-func UpdateSystemSourceDir() error {
-
+func UpdateSystemSourceDir(systemSourceList []string) error {
 	err := os.RemoveAll(SystemSourceDir)
 	if err != nil {
 		logger.Warning(err)
@@ -207,11 +208,11 @@ func UpdateSystemSourceDir() error {
 	if err != nil {
 		logger.Warning(err)
 	}
-
-	var systemSourceFilePaths = []string{UnstableSourceFile, SystemSourceFile, HweSourceFile}
-
+	if len(systemSourceList) == 0 {
+		systemSourceList = []string{UnstableSourceFile, SystemSourceFile, HweSourceFile}
+	}
 	// 创建对应的软链接
-	for _, filePath := range systemSourceFilePaths {
+	for _, filePath := range systemSourceList {
 		linkPath := filepath.Join(SystemSourceDir, filepath.Base(filePath))
 		err = os.Symlink(filePath, linkPath)
 		if err != nil {
