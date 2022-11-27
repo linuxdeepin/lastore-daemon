@@ -72,8 +72,8 @@ func main() {
 		_ = os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
 
-	aptImpl := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
+	aptImpl := apt.New(config.systemSourceList, config.nonUnknownList)
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, aptImpl, config)

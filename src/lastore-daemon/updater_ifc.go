@@ -150,8 +150,18 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 }
 
 func (u *Updater) SetIdleDownloadConfig(enable bool, beginTime, endTime string) *dbus.Error {
-	u.setPropIdleDownloadConfig(idleDownloadConfig{
+	changed := u.setPropIdleDownloadConfig(idleDownloadConfig{
 		enable, beginTime, endTime,
 	})
+	if changed {
+		err := u.config.SetIdleDownloadConfig(idleDownloadConfig{
+			enable, beginTime, endTime,
+		})
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+
+	}
 	return dbusutil.ToError(u.manager.updateAutoDownloadTimer())
 }
