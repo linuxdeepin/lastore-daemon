@@ -22,13 +22,13 @@ type APTSystem struct {
 	indicator system.Indicator
 }
 
-func New() system.System {
+func New(systemSourceList []string, nonUnknownList []string) system.System {
 	p := &APTSystem{
 		cmdSet: make(map[string]*aptCommand),
 	}
 	WaitDpkgLockRelease()
 	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
-	p.initSource()
+	p.initSource(systemSourceList, nonUnknownList)
 	return p
 }
 
@@ -345,14 +345,14 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	return c.Start()
 }
 
-func (p *APTSystem) initSource() {
+func (p *APTSystem) initSource(systemSourceList []string, nonUnknownList []string) {
 	// apt初始化时执行一次，避免其他apt操作过程中删改软链接导致数据异常
-	err := system.UpdateUnknownSourceDir()
+	err := system.UpdateUnknownSourceDir(nonUnknownList)
 	if err != nil {
 		logger.Warning(err)
 	}
 
-	err = system.UpdateSystemSourceDir()
+	err = system.UpdateSystemSourceDir(systemSourceList)
 	if err != nil {
 		logger.Warning(err)
 	}

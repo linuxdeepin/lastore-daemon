@@ -19,12 +19,10 @@ func Test_handleAutoCheckEvent(t *testing.T) {
 		config: &Config{
 			AutoCheckUpdates:      false,
 			DisableUpdateMetadata: true,
-			filePath:              "./tempCfgPath",
 		},
 	}
 	err := m.handleAutoCheckEvent()
 	assert.Nil(t, err)
-	_ = os.RemoveAll("./tempCfgPath")
 }
 
 func Test_handleAutoCleanEvent(t *testing.T) {
@@ -57,7 +55,7 @@ func Test_canAutoQuit(t *testing.T) {
 	}
 	assert.False(t, m.canAutoQuit())
 	m.inhibitAutoQuitCount = 0
-	m.config.UpgradeStatus.Status = system.UpgradeReady
+	m.config.upgradeStatus.Status = system.UpgradeReady
 	assert.True(t, m.canAutoQuit())
 }
 

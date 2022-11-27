@@ -1,0 +1,294 @@
+{
+  "magic": "dsg.config.meta",
+  "version": "1.0",
+  "contents": {
+    "use-dsettings": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UseDSettings",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "version": {
+      "value": "1.0",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "Version",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "auto-check-updates": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AutoCheckUpdates",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "disable-update-metadata": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DisableUpdateMetadata",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "auto-download-updates": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AutoDownloadUpdates",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "auto-clean": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AutoClean",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "mirror-source": {
+      "value": "default",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "MirrorSource",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "update-notify": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpdateNotify",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "check-internal": {
+      "value": 604800000000000,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "CheckInterval",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "clean-internal": {
+      "value": 604800000000000,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "CleanInterval",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "update-mode": {
+      "value": 3,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpdateMode",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "clean-internal-cache-over-limit": {
+      "value": 86400000000000,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "CleanIntervalCacheOverLimit",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "appstore-region": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AppstoreRegion",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "last-check-time": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "LastCheckTime",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "last-clean-time": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "LastCleanTime",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "last-check-cache-size-time": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "LastCheckCacheSizeTime",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "repository": {
+      "value": "desktop",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "Repository",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "mirrors-url": {
+      "value": "http://packages.deepin.com/mirrors/community.json",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "MirrorsUrl",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "allow-install-remove-pkg-exec-paths": {
+      "value": [],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AllowInstallRemovePkgExecPaths",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "auto-install-updates": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AutoInstallUpdates",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "auto-install-update-type": {
+      "value": 16,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AutoInstallUpdateType",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "allow-post-system-upgrade-message-version": {
+      "value": [
+        "Professional"
+      ],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "AllowPostSystemUpgradeMessageVersion",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "upgrade-status": {
+      "value": "{\"Status\":\"\",\"ReasonCode\":0}",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpgradeStatus",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "idle-download-config": {
+      "value": "{\"IdleDownloadEnabled\":true,\"BeginTime\":\"17:01\",\"EndTime\":\"22:00\"}",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "IdleDownloadConfig",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "non-unknown-sources": {
+      "value": ["appstore.list","security.list","driver.list","deepin-unstable-source.list","hwe.list"],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "nonUnknownSources",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "system-sources": {
+      "value": ["/etc/apt/sources.list","/etc/apt/sources.list.d/deepin-unstable-source.list","/etc/apt/sources.list.d/hwe.list"],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "systemSources",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    }
+  }
+}
