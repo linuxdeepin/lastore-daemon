@@ -15,6 +15,7 @@ import (
 	lastoreAgent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/gettext"
 )
 
 const (
@@ -37,6 +38,7 @@ type userAgentMap struct {
 type sessionAgentMapItem struct {
 	sessions map[dbus.ObjectPath]login1.Session     // key 是 session 的路径
 	agents   map[dbus.ObjectPath]lastoreAgent.Agent // key 是 agent 的路径
+	lang     string
 }
 
 func newUserAgentMap(service *dbusutil.Service) *userAgentMap {
@@ -177,6 +179,34 @@ func (m *userAgentMap) removeSession(sessionPath dbus.ObjectPath) {
 	}
 }
 
+func (m *userAgentMap) addLang(uid, lang string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	item, ok := m.uidItemMap[uid]
+	if ok {
+		item.lang = lang
+	} else {
+		m.uidItemMap[uid] = &sessionAgentMapItem{lang: lang}
+	}
+
+}
+
+func (m *userAgentMap) getActiveLastoreAgentLang() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.activeUid == "" {
+		return ""
+	}
+
+	item := m.uidItemMap[m.activeUid]
+	if item == nil {
+		return ""
+	}
+	return item.lang
+}
+
 const lastoreAgentPath = "/com/deepin/lastore/agent"
 
 func (m *userAgentMap) getActiveLastoreAgent() lastoreAgent.Agent {
@@ -201,6 +231,7 @@ func (m *userAgentMap) getActiveAgent(path dbus.ObjectPath) lastoreAgent.Agent {
 type sessionAgentMapInfo struct {
 	Sessions []dbus.ObjectPath          // key 是 session 的路径
 	Agents   map[dbus.ObjectPath]string // key 是 agent 的路径, value 是agent 的serviceName(即sender)
+	Lang     string
 }
 
 // userAgentInfoMap 用来持久化数据,数据来源是userAgentMap
@@ -227,6 +258,7 @@ func (m *userAgentMap) getAgentsInfo() *userAgentInfoMap {
 		infoMap.UidInfoMap[uid] = &sessionAgentMapInfo{
 			Sessions: sessions,
 			Agents:   agentsMap,
+			Lang:     item.lang,
 		}
 	}
 	return infoMap
@@ -271,9 +303,10 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 			}
 			item.agents[agentPath] = agent
 		}
-
+		item.lang = uidInfo.Lang
 		agentMap.uidItemMap[uid] = &item
 	}
+	gettext.SetLocale(gettext.LcAll, agentMap.getActiveLastoreAgentLang())
 	return &agentMap
 }
 

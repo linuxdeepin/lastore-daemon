@@ -7,6 +7,7 @@ package system
 import (
 	"errors"
 	"fmt"
+	"os"
 )
 
 const VarLibDir = "/var/lib/lastore"
@@ -51,6 +52,11 @@ const (
 	ErrTypeDependenciesBroken = "dependenciesBroken"
 	ErrTypeUnknown            = "unknown"
 	ErrTypeInvalidSourcesList = "invalidSourceList"
+)
+
+const (
+	NotifyExpireTimeoutDefault = -1
+	NotifyExpireTimeoutNoHide  = 0
 )
 
 type JobProgressInfo struct {
@@ -145,4 +151,12 @@ func (e *JobError) GetType() string {
 
 func (e *JobError) GetDetail() string {
 	return e.Detail
+}
+
+func GetAppStoreAppName() string {
+	_, err := os.Stat("/usr/share/applications/deepin-app-store.desktop")
+	if err == nil {
+		return "deepin-app-store"
+	}
+	return "deepin-appstore"
 }
