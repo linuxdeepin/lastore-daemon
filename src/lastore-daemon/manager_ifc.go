@@ -15,6 +15,7 @@ import (
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/procfs"
 )
 
 /*
@@ -272,6 +273,20 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 		return dbusutil.ToError(err)
 	}
 	m.userAgents.addAgent(uidStr, a)
+	// 更新LANG
+	pid, err := m.service.GetConnPID(string(sender))
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	proc := procfs.Process(pid)
+	envVars, err := proc.Environ()
+	if err != nil {
+		logger.Warningf("failed to get process %d environ: %v", proc, err)
+	} else {
+		m.userAgents.addLang(uidStr, envVars.Get("LANG"))
+	}
 	return nil
 }
 
