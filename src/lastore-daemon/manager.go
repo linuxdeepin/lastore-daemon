@@ -34,6 +34,7 @@ import (
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
+	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
 	"github.com/linuxdeepin/go-lib/strv"
@@ -336,6 +337,25 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	if isExist {
 		return job, nil
 	}
+	job.setHooks(map[string]func(){
+		string(system.SucceedStatus): func() {
+			msg := gettext.Tr("Removed successfully")
+			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+		},
+		string(system.FailedStatus): func() {
+			msg := gettext.Tr("Failed to remove the app")
+			action := []string{
+				"retry",
+				gettext.Tr("Retry"),
+				"cancel",
+				gettext.Tr("Cancel"),
+			}
+			hints := map[string]dbus.Variant{
+				"x-deepin-action-Retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.StartJob,string:%s", job.Id)),
+				"x-deepin-action-Cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.CleanJob,string:%s", job.Id))}
+			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+		},
+	})
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
@@ -480,6 +500,12 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 			},
 			string(system.EndStatus): func() {
 				m.handleUpdateInfosChanged()
+				if len(m.UpgradableApps) > 0 && needNotify && !m.updater.AutoDownloadUpdates {
+					msg := gettext.Tr("Updates Available")
+					action := []string{"update", gettext.Tr("Update Now")}
+					hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update,-p,Checking")}
+					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				}
 			},
 		})
 	}
@@ -578,19 +604,20 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		// 笔记本电池电量监听
 		isLaptop, err := m.sysPower.HasBattery().Get(0)
 		if isLaptop && err == nil {
-			const unsetNotifyId = "unset"
+			var hasSendNotify bool
 			var batteryPercentageNotify sync.Once
-			notifyId := unsetNotifyId
+			var notifyId uint32 = 0
 			// 更新过程中,如果笔记本使用电池,并且电量低于60%时,发送通知,提醒用户有风险
 			_ = m.sysPower.BatteryPercentage().ConnectChanged(func(hasValue bool, value float64) {
 				if !hasValue {
 					return
 				}
 				onBattery, _ := m.sysPower.OnBattery().Get(0)
-				//TODO 60.0的百分比需要改成配置,在task 214989中完成
 				if onBattery && value <= 60.0 && (job.Status == system.RunningStatus) {
 					batteryPercentageNotify.Do(func() {
-						notifyId = m.sendNotify("", "", []string{})
+						msg := gettext.Tr("The battery level is lower than 60%, please charge it")
+						notifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+						hasSendNotify = true
 					})
 				}
 			})
@@ -599,12 +626,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 					return
 				}
 				// 用户连上电源时,需要关闭通知,并重置Once
-				if !value && notifyId != unsetNotifyId {
+				if !value && !hasSendNotify {
 					err = m.closeNotify(notifyId)
 					if err != nil {
 						logger.Warning(err)
 					}
-					notifyId = unsetNotifyId
+					hasSendNotify = false
 					batteryPercentageNotify = sync.Once{}
 				}
 			})
@@ -628,8 +655,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				})
 			},
 			string(system.FailedStatus): func() {
-				// TODO 发送更新失败的通知
-				m.sendNotify("", "", []string{})
+				msg := gettext.Tr("Update failed")
+				m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				// 状态更新为failed
 				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.ErrorCode1}) // TODO error code需要定义
 				if err != nil {
@@ -807,9 +834,25 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			}
 		}
 		job.setHooks(map[string]func(){
+			string(system.RunningStatus): func() {
+				// 如果sender为自己,则为触发自动下载
+				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
+					msg := gettext.Tr("auto downloading")
+					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+				}
+			},
 			string(system.SucceedStatus): func() {
-				//TODO 下载完成需要发送通知
-				m.sendNotify("", "", []string{})
+				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
+					msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
+					action := []string{
+						"updateNow",
+						gettext.Tr("update now"),
+						"ignore",
+						gettext.Tr("ignore"),
+					}
+					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-lock,-t")}
+					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				}
 			},
 			string(system.EndStatus): func() {
 				if unref != nil {
@@ -912,6 +955,13 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	if isExist {
 		return job, nil
 	}
+	job.setHooks(map[string]func(){
+		string(system.EndStatus): func() {
+			// 清理完成的通知
+			msg := gettext.Tr("Package cache wiped")
+			m.sendNotify("dde-control-center", 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+		},
+	})
 	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
@@ -1588,6 +1638,8 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 		}
 		if active {
 			m.userAgents.setActiveUid(uid)
+			// Active的用户切换后,语言环境切换至对应用户的语言环境,用于发通知
+			gettext.SetLocale(gettext.LcAll, m.userAgents.getActiveLastoreAgentLang())
 		}
 	})
 
@@ -1601,6 +1653,7 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 	}
 	if active {
 		m.userAgents.setActiveUid(uid)
+		gettext.SetLocale(gettext.LcAll, m.userAgents.getActiveLastoreAgentLang())
 	}
 }
 
@@ -1797,20 +1850,27 @@ func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 	}
 }
 
-func (m *Manager) sendNotify(arg0, arg1 string, args []string) string {
-	// TODO 通知相关实现放到task 219769中完成
+func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
 	agent := m.userAgents.getActiveLastoreAgent()
 	if agent != nil {
-		//err := agent.SendNotify(0, arg0, arg1, args)
-		//if err != nil {
-		//	logger.Warning(err)
-		//}
+		id, err := agent.SendNotify(0, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			return id
+		}
 	}
-	return ""
+	return 0
 }
 
-func (m *Manager) closeNotify(id string) error {
-	// TODO 关闭通知,相关实现放到task 219769中完成
+func (m *Manager) closeNotify(id uint32) error {
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		err := agent.CloseNotification(0, id)
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
 	return nil
 }
 
@@ -1819,13 +1879,16 @@ func (m *Manager) handleFailedNotify() {
 	// 更新中断的通知(断电,强制关机等)
 	switch status.Status {
 	case system.UpgradeRunning:
-		m.sendNotify("", "", []string{})
+		msg := gettext.Tr("upgrade abort,need rollback")
+		m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 	case system.UpgradeFailed:
 		switch status.ReasonCode {
 		case system.ErrorCode1:
-			m.sendNotify("", "", []string{})
+			msg := gettext.Tr("upgrade failed because xxx")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		case system.ErrorCode2:
-			m.sendNotify("", "", []string{})
+			msg := gettext.Tr("upgrade failed because xxx")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		}
 	}
 	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{
