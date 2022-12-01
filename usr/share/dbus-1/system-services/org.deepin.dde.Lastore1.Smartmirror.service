@@ -1,5 +1,5 @@
 [D-BUS Service]
-Name=org.deepin.lastore1.Smartmirror
+Name=org.deepin.dde.Lastore1.Smartmirror
 Exec=/usr/libexec/lastore-daemon/lastore-smartmirror-daemon
 User=root
 SystemdService=lastore-smartmirror-daemon.service

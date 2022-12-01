@@ -1,7 +1,7 @@
 <node>
-    <interface name="org.deepin.lastore1.Job">
-	<annotation name="org.deepin.DBus.configuration.DefaultServiceName" value="org.deepin.lastore1"/>
-	<annotation name="org.deepin.DBus.configuration.DefaultObjectPath" value="/org/deepin/lastore1/Job"/>
+    <interface name="org.deepin.dde.Lastore1.Job">
+	<annotation name="org.deepin.DBus.configuration.DefaultServiceName" value="org.deepin.dde.Lastore1"/>
+	<annotation name="org.deepin.DBus.configuration.DefaultObjectPath" value="/org/deepin/dde/Lastore1/Job"/>
 	<property name="Id" type="s" access="read"></property>
         <property name="Name" type="s" access="read"></property>
 	<property name="Packages" type="as" access="read"></property>

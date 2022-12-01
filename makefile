@@ -69,8 +69,8 @@ gen_mo:
 	cp -rf locale_categories/mo/* ${DESTDIR}${PREFIX}/usr/share/locale/
 
 gen-xml:
-	qdbus --system org.deepin.lastore1 /org/deepin/lastore1 org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/org.deepin.lastore1.xml
-	qdbus --system org.deepin.lastore1 /org/deepin/lastore1/Job1 org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/org.deepin.lastore1.Job.xml
+	qdbus --system org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/org.deepin.dde.Lastore1.xml
+	qdbus --system org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1/Job1 org.freedesktop.DBus.Introspectable.Introspect > usr/share/dbus-1/interfaces/org.deepin.dde.Lastore1.Job.xml
 
 build-deb:
 	yes | debuild -us -uc
