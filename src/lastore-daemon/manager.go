@@ -30,11 +30,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/godbus/dbus"
-	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
-	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
-	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
-	atomic1 "github.com/linuxdeepin/go-dbus-factory/org.deepin.AtomicUpgrade1"
-	power "github.com/linuxdeepin/go-dbus-factory/org.deepin.system.power1"
+	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
+	abrecovery "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.abrecovery"
+	apps "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.apps1"
+	atomic1 "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.atomicupgrade1"
+	power "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.power1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
@@ -1633,7 +1633,7 @@ const (
 	lastoreUnitCache    = "/tmp/lastoreUnitCache"
 	lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
 	run                 = "systemd-run"
-	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=org.deepin.lastore1 /org/deepin/lastore1 org.deepin.lastore1.Manager.HandleSystemEvent"
+	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager.HandleSystemEvent"
 )
 
 func (m *Manager) getNextUpdateDelay() time.Duration {

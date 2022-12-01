@@ -7,8 +7,9 @@
 package main
 
 import (
-	"github.com/godbus/dbus"
 	"internal/system"
+
+	"github.com/godbus/dbus"
 )
 
 func (v *Updater) setPropAutoCheckUpdates(value bool) (changed bool) {
@@ -69,7 +70,6 @@ func (v *Updater) setPropUpdatableApps(value []string) {
 }
 
 func (v *Updater) emitPropChangedUpdatableApps(value []string) error {
-	v.updaterV20.syncUpdatableApps(value)
 	return v.service.EmitPropertyChanged(v, "UpdatableApps", value)
 }
 
@@ -79,7 +79,6 @@ func (v *Updater) setPropUpdatablePackages(value []string) {
 }
 
 func (v *Updater) emitPropChangedUpdatablePackages(value []string) error {
-	v.updaterV20.syncUpdatablePackages(value)
 	return v.service.EmitPropertyChanged(v, "UpdatablePackages", value)
 }
 

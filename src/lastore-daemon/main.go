@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	dbusServiceName = "org.deepin.lastore1"
+	dbusServiceName = "org.deepin.dde.Lastore1"
 )
 const (
 	etcDir               = "/etc"
@@ -82,10 +82,9 @@ func main() {
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, b, config)
 	updater := NewUpdater(service, manager, config)
-	updater.updaterV20 = NewUpdaterV20(service, manager.updater)
 
 	manager.updater = updater
-	serverObject, err := service.NewServerObject("/org/deepin/lastore1", manager, updater)
+	serverObject, err := service.NewServerObject("/org/deepin/dde/Lastore1", manager, updater)
 	if err != nil {
 		logger.Error("failed to new server manager and updater object:", err)
 		return
@@ -140,18 +139,6 @@ func main() {
 	err = service.RequestName(dbusServiceName)
 	if err != nil {
 		logger.Error("failed to request name:", err)
-		return
-	}
-
-	err = service.Export(dbusPathV20, updater.updaterV20)
-	if err != nil {
-		logger.Error("failed to export V20 path:", err)
-		return
-	}
-
-	err = service.RequestName(dbusServiceNameV20)
-	if err != nil {
-		logger.Error("failed to request V20 name:", err)
 		return
 	}
 
