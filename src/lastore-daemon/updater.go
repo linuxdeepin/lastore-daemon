@@ -57,8 +57,6 @@ type Updater struct {
 
 	AutoInstallUpdates    bool              `prop:"access:rw"`
 	AutoInstallUpdateType system.UpdateType `prop:"access:rw"`
-
-	updaterV20 *UpdaterV20
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {

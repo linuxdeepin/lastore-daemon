@@ -44,7 +44,7 @@ func main() {
 
 	logger.Info("Starting lastore-smartmirror-daemon")
 
-	dbusName := "org.deepin.lastore1.Smartmirror"
+	dbusName := "org.deepin.dde.Lastore1.Smartmirror"
 	hasOwner, err := service.NameHasOwner(dbusName)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	smartmirror := newSmartMirror(service)
-	err = service.Export("/org/deepin/lastore1/Smartmirror", smartmirror)
+	err = service.Export("/org/deepin/dde/Lastore1/Smartmirror", smartmirror)
 	if err != nil {
 		logger.Error("failed to export manager and updater:", err)
 		return
