@@ -274,7 +274,7 @@
       "flags": [
         "global"
       ],
-      "name": "nonUnknownSources",
+      "name": "NonUnknownSources",
       "description": "",
       "permissions": "readwrite",
       "visibility": "private"
@@ -285,7 +285,18 @@
       "flags": [
         "global"
       ],
-      "name": "systemSources",
+      "name": "SystemSources",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "need-download-size":{
+      "value": 0.00,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "NeedDownloadSize",
       "description": "",
       "permissions": "readwrite",
       "visibility": "private"

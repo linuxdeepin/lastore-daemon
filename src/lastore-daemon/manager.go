@@ -97,8 +97,9 @@ type Manager struct {
 	sysPower   power.Power
 	signalLoop *dbusutil.SignalLoop
 
-	UpdateMode system.UpdateType `prop:"access:rw"`
-	HardwareId string
+	UpdateMode       system.UpdateType `prop:"access:rw"`
+	HardwareId       string
+	NeedDownloadSize float64
 
 	isUpdateSucceed bool
 
@@ -141,6 +142,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		systemd:             systemd1.NewManager(service.Conn()),
 		grub:                grub2.NewGrub2(service.Conn()),
 		sysPower:            power.NewPower(service.Conn()),
+		NeedDownloadSize:    c.needDownloadSize,
 	}
 	m.signalLoop.Start()
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
@@ -398,9 +400,21 @@ func (m *Manager) handleUpdateInfosChanged() {
 		}
 		return
 	}
-
+	// 检查更新时,同步修改待下载数据大小
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
+	size, err := system.QuerySourceDownloadSize(mode)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		m.setPropNeedDownloadSize(size)
+		err := m.config.SetNeedDownloadSize(size)
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
 	m.updateUpdatableProp(infosMap)
-
 	m.PropsMu.Lock()
 	isUpdateSucceed := m.isUpdateSucceed
 	m.PropsMu.Unlock()
@@ -497,8 +511,6 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 				m.PropsMu.Lock()
 				m.isUpdateSucceed = true
 				m.PropsMu.Unlock()
-			},
-			string(system.EndStatus): func() {
 				m.handleUpdateInfosChanged()
 				if len(m.UpgradableApps) > 0 && needNotify && !m.updater.AutoDownloadUpdates {
 					msg := gettext.Tr("Updates Available")
@@ -506,6 +518,9 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 					hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update,-p,Checking")}
 					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				}
+			},
+			string(system.FailedStatus): func() {
+				m.handleUpdateInfosChanged()
 			},
 		})
 	}
@@ -853,11 +868,22 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-lock,-t")}
 					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				}
+				size, err := system.QuerySourceDownloadSize(mode)
+				if err != nil {
+					logger.Warning(err)
+				} else {
+					m.setPropNeedDownloadSize(size)
+					err := m.config.SetNeedDownloadSize(size)
+					if err != nil {
+						logger.Warning(err)
+					}
+				}
 			},
 			string(system.EndStatus): func() {
 				if unref != nil {
 					unref()
 				}
+
 			},
 		})
 		if err := m.jobManager.addJob(job); err != nil {
@@ -1022,6 +1048,30 @@ func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Erro
 	if err != nil {
 		logger.Warning(err)
 	}
+	// UpdateMode修改后,一些对外属性需要同步修改
+	infosMap, err := m.SystemUpgradeInfo()
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
+		} else {
+			logger.Error("failed to get upgrade info:", err)
+		}
+	} else {
+		m.updateUpdatableProp(infosMap)
+	}
+	go func() {
+		// 更新待下载大小
+		size, err := system.QuerySourceDownloadSize(writeType)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			m.setPropNeedDownloadSize(size)
+			err := m.config.SetNeedDownloadSize(size)
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+	}()
 	return nil
 }
 
