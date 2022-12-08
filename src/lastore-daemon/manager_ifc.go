@@ -204,6 +204,11 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 		mode := m.UpdateMode
 		m.PropsMu.RUnlock()
 		size, err = system.QuerySourceDownloadSize(mode)
+		m.setPropNeedDownloadSize(size)
+		err := m.config.SetNeedDownloadSize(size)
+		if err != nil {
+			logger.Warning(err)
+		}
 	} else {
 		size, err = system.QueryPackageDownloadSize(packages...)
 	}
