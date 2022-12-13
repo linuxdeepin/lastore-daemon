@@ -1,3 +1,12 @@
+lastore-daemon (6.0.2) stable; urgency=medium
+
+  [ TagBuilder ]
+  * feat: 增加原子更新(Influence: 原子更新)
+  * fix: 原子更新导致服务不能启动问题修复(Task: 208063)(Influence: 原子更新)
+  * feat: 接口更变，增加V23接口(Task: 207483)(Influence: 接口更变)
+
+ -- zhaoyingzhen <zhaoyingzhen@uniontech.com>  Tue, 13 Dec 2022 19:36:36 +0800
+
 lastore-daemon (6.0.1) stable; urgency=medium
 
   [ Deepin Packages Builder ]
