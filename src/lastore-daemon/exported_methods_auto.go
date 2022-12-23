@@ -165,7 +165,7 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 		{
 			Name:   "SetIdleDownloadConfig",
 			Fn:     v.SetIdleDownloadConfig,
-			InArgs: []string{"enable", "beginTime", "endTime"},
+			InArgs: []string{"idleConfig"},
 		},
 		{
 			Name:   "SetMirrorSource",

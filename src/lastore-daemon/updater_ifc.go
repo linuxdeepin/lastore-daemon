@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"internal/system"
 	"os"
 	"time"
@@ -149,14 +150,14 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) SetIdleDownloadConfig(enable bool, beginTime, endTime string) *dbus.Error {
-	changed := u.setPropIdleDownloadConfig(idleDownloadConfig{
-		enable, beginTime, endTime,
-	})
+func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
+	err := json.Unmarshal([]byte(idleConfig), &u.idleDownloadConfigObj)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+	changed := u.setPropIdleDownloadConfig(idleConfig)
 	if changed {
-		err := u.config.SetIdleDownloadConfig(idleDownloadConfig{
-			enable, beginTime, endTime,
-		})
+		err := u.config.SetIdleDownloadConfig(idleConfig)
 		if err != nil {
 			logger.Warning(err)
 			return dbusutil.ToError(err)

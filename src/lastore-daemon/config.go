@@ -45,7 +45,7 @@ type Config struct {
 	dsLastoreManager   ConfigManager.Manager
 	useDSettings       bool
 	upgradeStatus      system.UpgradeStatusAndReason
-	idleDownloadConfig idleDownloadConfig
+	idleDownloadConfig string
 	systemSourceList   []string
 	nonUnknownList     []string
 	needDownloadSize   float64
@@ -321,11 +321,7 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		idleContent := v.Value().(string)
-		err = json.Unmarshal([]byte(idleContent), &c.idleDownloadConfig)
-		if err != nil {
-			logger.Warning(err)
-		}
+		c.idleDownloadConfig = v.Value().(string)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemSourceList)
@@ -475,13 +471,9 @@ func (c *Config) SetUseDSettings(use bool) error {
 	return c.save(dSettingsKeyUseDSettings, use)
 }
 
-func (c *Config) SetIdleDownloadConfig(idle idleDownloadConfig) error {
-	c.idleDownloadConfig = idle
-	v, err := json.Marshal(idle)
-	if err != nil {
-		logger.Warning(err)
-	}
-	return c.save(dSettingsKeyIdleDownloadConfig, string(v))
+func (c *Config) SetIdleDownloadConfig(idleConfig string) error {
+	c.idleDownloadConfig = idleConfig
+	return c.save(dSettingsKeyIdleDownloadConfig, idleConfig)
 }
 
 func (c *Config) SetCheckInterval(interval time.Duration) error {
