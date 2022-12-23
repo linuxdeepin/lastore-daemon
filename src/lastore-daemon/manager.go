@@ -401,19 +401,21 @@ func (m *Manager) handleUpdateInfosChanged() {
 		return
 	}
 	// 检查更新时,同步修改待下载数据大小
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
-	size, err := system.QuerySourceDownloadSize(mode)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		m.setPropNeedDownloadSize(size)
-		err := m.config.SetNeedDownloadSize(size)
+	go func() {
+		m.PropsMu.RLock()
+		mode := m.UpdateMode
+		m.PropsMu.RUnlock()
+		size, err := system.QuerySourceDownloadSize(mode)
 		if err != nil {
 			logger.Warning(err)
+		} else {
+			m.setPropNeedDownloadSize(size)
+			err := m.config.SetNeedDownloadSize(size)
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
-	}
+	}()
 	m.updateUpdatableProp(infosMap)
 	m.PropsMu.Lock()
 	isUpdateSucceed := m.isUpdateSucceed
@@ -1399,7 +1401,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), //监听update_infos.json文件
 	}
 	m.updater.PropsMu.RLock()
-	enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+	enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled
 	m.updater.PropsMu.RUnlock()
 	if enable {
 		unitMap[lastoreAutoDownload] = []string{
@@ -1756,7 +1758,7 @@ func (m *Manager) updateAutoDownloadTimer() error {
 		return err
 	}
 	m.updater.PropsMu.RLock()
-	enable := m.updater.IdleDownloadConfig.IdleDownloadEnabled
+	enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled
 	m.updater.PropsMu.RUnlock()
 	// 如果关闭闲时更新，需要终止下载job
 	if !enable {
@@ -1804,8 +1806,8 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 func (m *Manager) getNextAutoDownloadDelay() time.Duration {
 	m.updater.PropsMu.RLock()
 	defer m.updater.PropsMu.RUnlock()
-	beginDur := getCustomTimeDuration(m.updater.IdleDownloadConfig.BeginTime)
-	endDur := getCustomTimeDuration(m.updater.IdleDownloadConfig.EndTime)
+	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
+	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
 	// 如果用户开机时间在自动下载时间段内，则返回默认最小时间(立即开始)
 	if beginDur > endDur {
 		return _minDelayTime
@@ -1818,7 +1820,7 @@ func (m *Manager) getNextAutoDownloadDelay() time.Duration {
 func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
 	m.updater.PropsMu.RLock()
 	defer m.updater.PropsMu.RUnlock()
-	return getCustomTimeDuration(m.updater.IdleDownloadConfig.EndTime)
+	return getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
 }
 
 func (m *Manager) handleAutoDownload() {

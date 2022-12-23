@@ -50,7 +50,8 @@ type Updater struct {
 	AutoInstallUpdates    bool              `prop:"access:rw"`
 	AutoInstallUpdateType system.UpdateType `prop:"access:rw"`
 
-	IdleDownloadConfig idleDownloadConfig
+	IdleDownloadConfig    string
+	idleDownloadConfigObj idleDownloadConfig
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
