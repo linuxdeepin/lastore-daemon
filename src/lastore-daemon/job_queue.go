@@ -63,6 +63,7 @@ func (l *JobQueue) PendingJobs() JobList {
 	for _, job := range l.jobs {
 		job.PropsMu.RLock()
 		jobStatus := job.Status
+		needReload := job.needReload
 		job.PropsMu.RUnlock()
 
 		switch jobStatus {
@@ -72,7 +73,10 @@ func (l *JobQueue) PendingJobs() JobList {
 			}
 		case system.RunningStatus:
 			numRunning = numRunning + 1
-		case system.ReadyStatus:
+		case system.ReadyStatus, system.ReloadStatus:
+			readyJobs = append(readyJobs, job)
+		}
+		if needReload {
 			readyJobs = append(readyJobs, job)
 		}
 	}

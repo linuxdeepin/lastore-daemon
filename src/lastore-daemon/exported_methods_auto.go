@@ -163,6 +163,11 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"enable"},
 		},
 		{
+			Name:   "SetDownloadSpeedLimit",
+			Fn:     v.SetDownloadSpeedLimit,
+			InArgs: []string{"limitConfig"},
+		},
+		{
 			Name:   "SetIdleDownloadConfig",
 			Fn:     v.SetIdleDownloadConfig,
 			InArgs: []string{"idleConfig"},

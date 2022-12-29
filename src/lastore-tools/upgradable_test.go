@@ -4,9 +4,12 @@
 
 package main
 
-import "internal/system"
-import C "gopkg.in/check.v1"
-import "strings"
+import (
+	"internal/system"
+	"strings"
+
+	C "gopkg.in/check.v1"
+)
 
 func (*testWrap) TestParseApt(c *C.C) {
 	const d = `Reading package lists... Done

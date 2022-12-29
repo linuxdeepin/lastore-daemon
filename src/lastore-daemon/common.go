@@ -131,6 +131,7 @@ func makeEnvironWithSender(m *Manager, sender dbus.Sender) (map[string]string, e
 		if err != nil {
 			logger.Warning(err)
 		}
+		environ = make(map[string]string)
 	}
 	pid, err := m.service.GetConnPID(string(sender))
 	if err != nil {

@@ -7,15 +7,18 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"internal/utils"
 	"io/ioutil"
 	"sync"
 
 	"github.com/godbus/dbus"
 	lastoreAgent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
+	dbus2 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.dbus"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 const (
@@ -84,7 +87,7 @@ func (m *userAgentMap) removeAgent(uid string, agentPath dbus.ObjectPath) error 
 		return errors.New("invalid uid")
 	}
 
-	if _, ok := item.agents[agentPath]; ok {
+	if _, ok := item.agents[agentPath]; !ok {
 		return errors.New("invalid agent path")
 	}
 	delete(item.agents, agentPath)
@@ -249,7 +252,7 @@ func (m *userAgentMap) getAgentsInfo() *userAgentInfoMap {
 	for uid, item := range m.uidItemMap {
 		var sessions []dbus.ObjectPath
 		agentsMap := make(map[dbus.ObjectPath]string)
-		for sessionPath, _ := range item.sessions {
+		for sessionPath := range item.sessions {
 			sessions = append(sessions, sessionPath)
 		}
 		for agentPath, agent := range item.agents {
@@ -281,6 +284,19 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 		logger.Warning(err)
 		return nil
 	}
+	login1Obj := login1.NewManager(service.Conn())
+	sessionInfos, err := login1Obj.ListSessions(0)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	sessionList := strv.Strv{}
+	for _, session := range sessionInfos {
+		if fmt.Sprintf("%v", session.UID) == infoMap.ActiveUid {
+			sessionList = append(sessionList, string(session.Path))
+		}
+	}
+	dbusObj := dbus2.NewDBus(service.Conn())
 	agentMap.activeUid = infoMap.ActiveUid
 	for uid, uidInfo := range infoMap.UidInfoMap {
 		var item sessionAgentMapItem
@@ -288,6 +304,11 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 		item.sessions = make(map[dbus.ObjectPath]login1.Session)
 		item.agents = make(map[dbus.ObjectPath]lastoreAgent.Agent)
 		for _, sessionPath := range uidInfo.Sessions {
+			// 校验sessionPath是否还有效
+			if !sessionList.Contains(string(sessionPath)) {
+				logger.Warningf("record session path:%s is invalid", sessionPath)
+				continue
+			}
 			session, err := login1.NewSession(service.Conn(), sessionPath)
 			if err != nil {
 				logger.Warning(err)
@@ -296,6 +317,12 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 			item.sessions[sessionPath] = session
 		}
 		for agentPath, agentSender := range uidInfo.Agents {
+			// 校验agentSender是否还有效
+			hasOwner, err := dbusObj.NameHasOwner(0, agentSender)
+			if err != nil || !hasOwner {
+				logger.Warningf("record agent name:%s is invalid", agentSender)
+				continue
+			}
 			agent, err := lastoreAgent.NewAgent(service.Conn(), agentSender, agentPath)
 			if err != nil {
 				logger.Warning(err)

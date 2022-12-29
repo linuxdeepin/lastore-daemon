@@ -3,8 +3,9 @@
 package main
 
 import (
-	"github.com/godbus/dbus"
 	"internal/system"
+
+	"github.com/godbus/dbus"
 )
 
 func (v *Updater) setPropAutoCheckUpdates(value bool) (changed bool) {
@@ -123,6 +124,19 @@ func (v *Updater) setPropIdleDownloadConfig(value string) (changed bool) {
 
 func (v *Updater) emitPropChangedIdleDownloadConfig(value string) error {
 	return v.service.EmitPropertyChanged(v, "IdleDownloadConfig", value)
+}
+
+func (v *Updater) setPropDownloadSpeedLimitConfig(value string) (changed bool) {
+	if v.DownloadSpeedLimitConfig != value {
+		v.DownloadSpeedLimitConfig = value
+		v.emitPropChangedDownloadSpeedLimitConfig(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedDownloadSpeedLimitConfig(value string) error {
+	return v.service.EmitPropertyChanged(v, "DownloadSpeedLimitConfig", value)
 }
 
 func (v *Job) setPropId(value string) (changed bool) {

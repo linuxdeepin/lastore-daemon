@@ -4,8 +4,11 @@
 
 package system
 
-import C "gopkg.in/check.v1"
-import "testing"
+import (
+	"testing"
+
+	C "gopkg.in/check.v1"
+)
 
 type testWrap struct{}
 

@@ -21,8 +21,8 @@ import (
 
 	"internal/system"
 
-	debVersion "pault.ag/go/debian/version"
 	"github.com/linuxdeepin/go-lib/log"
+	debVersion "pault.ag/go/debian/version"
 )
 
 const maxElapsed = time.Hour * 24 * 6 // 6 days

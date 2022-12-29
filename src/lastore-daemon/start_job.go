@@ -18,7 +18,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 	}
 	j.PropsMu.Lock()
 	j.setPropDescription("")
-	err := TransitionJobState(j, system.RunningStatus)
+	err := TransitionJobState(j, system.RunningStatus, false)
 	j.PropsMu.Unlock()
 	if err != nil {
 		return err
@@ -67,6 +67,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 			system.RunningStatus,
 			system.PausedStatus,
 			system.EndStatus,
+			system.ReloadStatus,
 		},
 		system.RunningStatus: {
 			system.FailedStatus,
@@ -76,6 +77,7 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		system.FailedStatus: {
 			system.ReadyStatus,
 			system.EndStatus,
+			system.ReloadStatus,
 		},
 		system.SucceedStatus: {
 			system.EndStatus,
@@ -83,6 +85,12 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		system.PausedStatus: {
 			system.ReadyStatus,
 			system.EndStatus,
+			system.ReloadStatus,
+		},
+		system.ReloadStatus: {
+			system.ReadyStatus,
+			system.PausedStatus,
+			system.FailedStatus,
 		},
 	}
 
@@ -99,12 +107,11 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 }
 
 // TransitionJobState 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
-func TransitionJobState(j *Job, to system.Status) error {
+func TransitionJobState(j *Job, to system.Status, inhibitSignalEmit bool) error {
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
 	}
 	logger.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
-
 	if to == system.FailedStatus && j.retry > 0 {
 		j.Status = to
 		return nil
@@ -120,13 +127,15 @@ func TransitionJobState(j *Job, to system.Status) error {
 	if NotUseDBus {
 		return nil
 	}
-	err := j.emitPropChangedStatus(to)
-	if err != nil {
-		logger.Warning(err)
+	if !inhibitSignalEmit {
+		err := j.emitPropChangedStatus(to)
+		if err != nil {
+			logger.Warning(err)
+		}
 	}
 
 	if j.Status == system.SucceedStatus {
-		return TransitionJobState(j, system.EndStatus)
+		return TransitionJobState(j, system.EndStatus, false)
 	}
 	return nil
 }

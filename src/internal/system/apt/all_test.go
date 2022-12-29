@@ -4,9 +4,12 @@
 
 package apt
 
-import "testing"
-import C "gopkg.in/check.v1"
-import "internal/system"
+import (
+	"internal/system"
+	"testing"
+
+	C "gopkg.in/check.v1"
+)
 
 type testWrap struct{}
 

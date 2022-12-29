@@ -162,7 +162,25 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 			logger.Warning(err)
 			return dbusutil.ToError(err)
 		}
-
 	}
 	return dbusutil.ToError(u.manager.updateAutoDownloadTimer())
+}
+
+func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
+	err := json.Unmarshal([]byte(limitConfig), &u.downloadSpeedLimitConfigObj)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+	changed := u.setPropDownloadSpeedLimitConfig(limitConfig)
+	if changed {
+		logger.Info("speed limit: ", u.downloadSpeedLimitConfigObj)
+		err := u.config.SetDownloadSpeedLimitConfig(limitConfig)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		// 当限速配置修改,需要reload所有running paused ready failed的job
+		u.manager.reloadPrepareDistUpgradeJob()
+	}
+	return nil
 }

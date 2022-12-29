@@ -29,8 +29,10 @@ type Job struct {
 
 	Type string
 
-	Status system.Status
-	caller methodCaller
+	Status     system.Status
+	lastStatus system.Status // 用于保存reload前的job状态
+	needReload bool
+	caller     methodCaller
 
 	Progress    float64
 	Description string
@@ -151,12 +153,21 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	}
 
 	if info.Status != j.Status {
-		err := TransitionJobState(j, info.Status)
+		err := TransitionJobState(j, info.Status, false)
 		if err != nil {
 			logger.Warningf("_UpdateInfo: %v\n", err)
 			return false
 		}
 		changed = true
+	}
+	if info.Status == system.PausedStatus && j.needReload {
+		err := TransitionJobState(j, system.ReloadStatus, false)
+		if err != nil {
+			logger.Warningf("_UpdateInfo Reload: %v\n", err)
+		} else {
+			changed = true
+		}
+		j.needReload = false
 	}
 
 	return changed
