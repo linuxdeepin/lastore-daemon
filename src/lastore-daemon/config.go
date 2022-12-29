@@ -42,13 +42,14 @@ type Config struct {
 
 	AllowPostSystemUpgradeMessageVersion []string //只有数组内的系统版本被允许发送更新完成的数据
 
-	dsLastoreManager   ConfigManager.Manager
-	useDSettings       bool
-	upgradeStatus      system.UpgradeStatusAndReason
-	idleDownloadConfig string
-	systemSourceList   []string
-	nonUnknownList     []string
-	needDownloadSize   float64
+	dsLastoreManager         ConfigManager.Manager
+	useDSettings             bool
+	upgradeStatus            system.UpgradeStatusAndReason
+	idleDownloadConfig       string
+	systemSourceList         []string
+	nonUnknownList           []string
+	needDownloadSize         float64
+	downloadSpeedLimitConfig string
 
 	filePath string
 }
@@ -113,6 +114,7 @@ const (
 	dSettingsKeySystemSourceList                     = "system-sources"
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
 	dSettingsKeyNeedDownloadSize                     = "need-download-size"
+	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -350,6 +352,13 @@ func getConfigFromDSettings() *Config {
 		c.needDownloadSize = v.Value().(float64)
 	}
 
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDownloadSpeedLimit)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.downloadSpeedLimitConfig = v.Value().(string)
+	}
+
 	return c
 }
 
@@ -505,6 +514,11 @@ func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
 func (c *Config) SetNeedDownloadSize(size float64) error {
 	c.needDownloadSize = size
 	return c.save(dSettingsKeyNeedDownloadSize, size)
+}
+
+func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
+	c.downloadSpeedLimitConfig = config
+	return c.save(dSettingsKeyDownloadSpeedLimit, config)
 }
 
 func (c *Config) save(key string, v interface{}) error {

@@ -850,6 +850,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				"Dir::Etc::SourceParts": "/dev/null",
 			}
 		}
+		if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
+			job.option["Acquire::http::Dl-Limit"] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
+		}
+
 		job.setHooks(map[string]func(){
 			string(system.RunningStatus): func() {
 				// 如果sender为自己,则为触发自动下载
@@ -885,7 +889,19 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				if unref != nil {
 					unref()
 				}
-
+			},
+			// 在reload状态时,修改job的配置
+			string(system.ReloadStatus): func() {
+				if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
+					if job.option == nil {
+						job.option = make(map[string]string)
+					}
+					job.option["Acquire::http::Dl-Limit"] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
+				} else {
+					if job.option != nil {
+						delete(job.option, "Acquire::http::Dl-Limit")
+					}
+				}
 			},
 		})
 		if err := m.jobManager.addJob(job); err != nil {
@@ -1143,8 +1159,9 @@ func (m *Manager) handleAutoCheckEvent() error {
 			system.UnknownUpgradeJobType,
 			system.OnlyInstallJobType,
 		}
-		for _, job := range m.jobList {
-			if job.Status == system.RunningStatus && strv.Strv(upgradeTypeList).Contains(job.Type) {
+		for _, jobType := range upgradeTypeList {
+			job := m.jobManager.findJobById(genJobId(jobType))
+			if job != nil && job.Status == system.RunningStatus {
 				return false
 			}
 		}
@@ -1949,5 +1966,26 @@ func (m *Manager) handleFailedNotify() {
 	})
 	if err != nil {
 		logger.Warning(err)
+	}
+}
+
+// reloadPrepareDistUpgradeJob 标记下载job状态为reload
+func (m *Manager) reloadPrepareDistUpgradeJob() {
+	// 标记job状态为reload
+	prepareUpgradeTypeList := []string{
+		system.PrepareDistUpgradeJobType,
+		system.PrepareSystemUpgradeJobType,
+		system.PrepareUnknownUpgradeJobType,
+		system.PrepareSecurityUpgradeJobType,
+	}
+	for _, jobType := range prepareUpgradeTypeList {
+		job := m.jobManager.findJobById(genJobId(jobType))
+		if job != nil {
+			//err := m.jobManager.markReload(job)
+			//if err != nil {
+			//	logger.Warning(err)
+			//}
+			job.needReload = true
+		}
 	}
 }

@@ -125,6 +125,19 @@ func (v *Updater) emitPropChangedIdleDownloadConfig(value string) error {
 	return v.service.EmitPropertyChanged(v, "IdleDownloadConfig", value)
 }
 
+func (v *Updater) setPropDownloadSpeedLimitConfig(value string) (changed bool) {
+	if v.DownloadSpeedLimitConfig != value {
+		v.DownloadSpeedLimitConfig = value
+		v.emitPropChangedDownloadSpeedLimitConfig(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedDownloadSpeedLimitConfig(value string) error {
+	return v.service.EmitPropertyChanged(v, "DownloadSpeedLimitConfig", value)
+}
+
 func (v *Job) setPropId(value string) (changed bool) {
 	if v.Id != value {
 		v.Id = value

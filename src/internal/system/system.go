@@ -22,6 +22,7 @@ const (
 	SucceedStatus Status = "succeed"
 	PausedStatus  Status = "paused"
 	EndStatus     Status = "end"
+	ReloadStatus  Status = "reload"
 )
 
 const (

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"internal/system"
 	"io/ioutil"
@@ -30,6 +31,11 @@ type idleDownloadConfig struct {
 	EndTime             string
 }
 
+type downloadSpeedLimitConfig struct {
+	DownloadSpeedLimitEnabled bool
+	LimitSpeed                string
+}
+
 type Updater struct {
 	manager             *Manager
 	service             *dbusutil.Service
@@ -50,24 +56,35 @@ type Updater struct {
 	AutoInstallUpdates    bool              `prop:"access:rw"`
 	AutoInstallUpdateType system.UpdateType `prop:"access:rw"`
 
-	IdleDownloadConfig    string
-	idleDownloadConfigObj idleDownloadConfig
+	IdleDownloadConfig          string
+	idleDownloadConfigObj       idleDownloadConfig
+	DownloadSpeedLimitConfig    string
+	downloadSpeedLimitConfigObj downloadSpeedLimitConfig
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
 	u := &Updater{
-		manager:               m,
-		service:               service,
-		config:                config,
-		AutoCheckUpdates:      config.AutoCheckUpdates,
-		AutoDownloadUpdates:   config.AutoDownloadUpdates,
-		MirrorSource:          config.MirrorSource,
-		UpdateNotify:          config.UpdateNotify,
-		AutoInstallUpdates:    config.AutoInstallUpdates,
-		AutoInstallUpdateType: config.AutoInstallUpdateType,
-		IdleDownloadConfig:    config.idleDownloadConfig,
+		manager:                  m,
+		service:                  service,
+		config:                   config,
+		AutoCheckUpdates:         config.AutoCheckUpdates,
+		AutoDownloadUpdates:      config.AutoDownloadUpdates,
+		MirrorSource:             config.MirrorSource,
+		UpdateNotify:             config.UpdateNotify,
+		AutoInstallUpdates:       config.AutoInstallUpdates,
+		AutoInstallUpdateType:    config.AutoInstallUpdateType,
+		IdleDownloadConfig:       config.idleDownloadConfig,
+		DownloadSpeedLimitConfig: config.downloadSpeedLimitConfig,
 	}
 	u.ClassifiedUpdatablePackages = make(map[string][]string)
+	err := json.Unmarshal([]byte(u.IdleDownloadConfig), &u.idleDownloadConfigObj)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = json.Unmarshal([]byte(u.DownloadSpeedLimitConfig), &u.downloadSpeedLimitConfigObj)
+	if err != nil {
+		logger.Warning(err)
+	}
 	return u
 }
 

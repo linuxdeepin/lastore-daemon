@@ -300,6 +300,17 @@
       "description": "",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "download-speed-limit":{
+      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"0\"}",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "NeedDownloadSize",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }
