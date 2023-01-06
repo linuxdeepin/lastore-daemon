@@ -1,3 +1,12 @@
+lastore-daemon (6.0.4) stable; urgency=medium
+
+  [ TagBuilder ]
+  * fix: 修复处理中断错误失败的问题(Bug: 119803)(Influence: 控制中心修复中断错误)
+  * fix: 修复更新内容显示异常问题(Bug: 120969)(Influence: 更新内容显示)
+  * fix: 修复关闭更新选项依旧有可更新通知的问题(Bug: 122295)(Influence: 更新通知)
+
+ -- lvpeilong <lvpeilong@uniontech.com>  Fri, 06 Jan 2023 15:46:43 +0800
+
 lastore-daemon (6.0.3) stable; urgency=medium
 
   [ TagBuilder ]
