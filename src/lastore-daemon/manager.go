@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"internal/system"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -24,6 +23,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"internal/system"
 
 	"github.com/godbus/dbus"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
@@ -97,9 +98,8 @@ type Manager struct {
 	sysPower   power.Power
 	signalLoop *dbusutil.SignalLoop
 
-	UpdateMode       system.UpdateType `prop:"access:rw"`
-	HardwareId       string
-	NeedDownloadSize float64
+	UpdateMode system.UpdateType `prop:"access:rw"`
+	HardwareId string
 
 	isUpdateSucceed bool
 
@@ -142,7 +142,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		systemd:             systemd1.NewManager(service.Conn()),
 		grub:                grub2.NewGrub2(service.Conn()),
 		sysPower:            power.NewPower(service.Conn()),
-		NeedDownloadSize:    c.needDownloadSize,
 	}
 	m.signalLoop.Start()
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
@@ -400,23 +399,22 @@ func (m *Manager) handleUpdateInfosChanged() {
 		}
 		return
 	}
+	m.updateUpdatableProp(infosMap)
 	// 检查更新时,同步修改待下载数据大小
 	go func() {
 		m.PropsMu.RLock()
-		mode := m.UpdateMode
+		packages := m.UpgradableApps
 		m.PropsMu.RUnlock()
-		size, err := system.QuerySourceDownloadSize(mode)
+		size, err := system.QueryPackageDownloadSize(packages...)
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			m.setPropNeedDownloadSize(size)
-			err := m.config.SetNeedDownloadSize(size)
+			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
 			if err != nil {
 				logger.Warning(err)
 			}
 		}
 	}()
-	m.updateUpdatableProp(infosMap)
 	m.PropsMu.Lock()
 	isUpdateSucceed := m.isUpdateSucceed
 	m.PropsMu.Unlock()
@@ -874,12 +872,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-lock,-t")}
 					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				}
-				size, err := system.QuerySourceDownloadSize(mode)
+				m.PropsMu.RLock()
+				packages := m.UpgradableApps
+				m.PropsMu.RUnlock()
+				size, err := system.QueryPackageDownloadSize(packages...)
 				if err != nil {
 					logger.Warning(err)
 				} else {
-					m.setPropNeedDownloadSize(size)
-					err := m.config.SetNeedDownloadSize(size)
+					err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
 					if err != nil {
 						logger.Warning(err)
 					}
@@ -1078,13 +1078,14 @@ func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Erro
 		m.updateUpdatableProp(infosMap)
 	}
 	go func() {
-		// 更新待下载大小
-		size, err := system.QuerySourceDownloadSize(writeType)
+		m.PropsMu.RLock()
+		packages := m.UpgradableApps
+		m.PropsMu.RUnlock()
+		size, err := system.QueryPackageDownloadSize(packages...)
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			m.setPropNeedDownloadSize(size)
-			err := m.config.SetNeedDownloadSize(size)
+			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
 			if err != nil {
 				logger.Warning(err)
 			}

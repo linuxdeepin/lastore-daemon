@@ -7,11 +7,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"internal/system"
 	"io/ioutil"
 	"os/exec"
 	"path"
 	"sync"
+
+	"internal/system"
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"

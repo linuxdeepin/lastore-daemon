@@ -6,8 +6,10 @@ package main
 
 import (
 	"encoding/json"
-	"internal/system"
+	"sync"
 	"time"
+
+	"internal/system"
 
 	"github.com/godbus/dbus"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
@@ -15,6 +17,13 @@ import (
 
 const MinCheckInterval = time.Minute
 const ConfigVersion = "0.1"
+
+// 由于lastore-daemon会闲时退出,dde-session-shell和dde-control-center需要获取实时状态时需要从dconfig获取,而不是从lastore-daemon获取
+type lastoreDaemonStatus uint32
+
+const (
+	canUpgrade lastoreDaemonStatus = 1 << 0
+)
 
 type Config struct {
 	Version               string
@@ -50,8 +59,10 @@ type Config struct {
 	nonUnknownList           []string
 	needDownloadSize         float64
 	downloadSpeedLimitConfig string
+	lastoreDaemonStatus      lastoreDaemonStatus
 
 	filePath string
+	statusMu sync.RWMutex
 }
 
 func NewConfig(fpath string) *Config {
@@ -81,6 +92,7 @@ func NewConfig(fpath string) *Config {
 		_ = dc.SetCheckInterval(time.Hour * 24 * 7)
 		_ = dc.SetCleanInterval(time.Hour * 24 * 7)
 	}
+
 	return dc
 }
 
@@ -115,6 +127,7 @@ const (
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
 	dSettingsKeyNeedDownloadSize                     = "need-download-size"
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
+	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -358,6 +371,13 @@ func getConfigFromDSettings() *Config {
 		c.downloadSpeedLimitConfig = v.Value().(string)
 	}
 
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastoreDaemonStatus)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.lastoreDaemonStatus = lastoreDaemonStatus(v.Value().(float64))
+	}
+
 	return c
 }
 
@@ -510,14 +530,39 @@ func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
 	return c.save(dSettingsKeyAllowInstallRemovePkgExecPaths, paths)
 }
 
-func (c *Config) SetNeedDownloadSize(size float64) error {
-	c.needDownloadSize = size
-	return c.save(dSettingsKeyNeedDownloadSize, size)
-}
+//func (c *Config) SetNeedDownloadSize(size float64) error {
+//	c.needDownloadSize = size
+//	return c.save(dSettingsKeyNeedDownloadSize, size)
+//}
 
 func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
 	c.downloadSpeedLimitConfig = config
 	return c.save(dSettingsKeyDownloadSpeedLimit, config)
+}
+
+func (c *Config) SetLastoreDaemonStatus(status lastoreDaemonStatus) error {
+	c.statusMu.Lock()
+	c.lastoreDaemonStatus = status
+	c.statusMu.Unlock()
+	return c.save(dSettingsKeyLastoreDaemonStatus, status)
+}
+
+// UpdateLastoreDaemonStatus isSet: true 该位置1; false 该位清零
+func (c *Config) UpdateLastoreDaemonStatus(status lastoreDaemonStatus, isSet bool) error {
+	c.statusMu.Lock()
+	if isSet {
+		c.lastoreDaemonStatus |= status
+	} else {
+		c.lastoreDaemonStatus &= ^status
+	}
+	c.statusMu.Unlock()
+	return c.save(dSettingsKeyLastoreDaemonStatus, c.lastoreDaemonStatus)
+}
+
+func (c *Config) GetLastoreDaemonStatus() uint32 {
+	c.statusMu.RLock()
+	defer c.statusMu.RUnlock()
+	return uint32(c.lastoreDaemonStatus)
 }
 
 func (c *Config) save(key string, v interface{}) error {

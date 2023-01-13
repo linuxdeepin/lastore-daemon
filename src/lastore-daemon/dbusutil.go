@@ -347,16 +347,3 @@ func (v *Manager) setPropHardwareId(value string) (changed bool) {
 func (v *Manager) emitPropChangedHardwareId(value string) error {
 	return v.service.EmitPropertyChanged(v, "HardwareId", value)
 }
-
-func (v *Manager) setPropNeedDownloadSize(value float64) (changed bool) {
-	if v.NeedDownloadSize != value {
-		v.NeedDownloadSize = value
-		v.emitPropChangedNeedDownloadSize(value)
-		return true
-	}
-	return false
-}
-
-func (v *Manager) emitPropChangedNeedDownloadSize(value float64) error {
-	return v.service.EmitPropertyChanged(v, "NeedDownloadSize", value)
-}

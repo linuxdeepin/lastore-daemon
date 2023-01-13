@@ -6,10 +6,11 @@ package main
 
 import (
 	"fmt"
-	"internal/system"
-	"internal/utils"
 	"strconv"
 	"strings"
+
+	"internal/system"
+	"internal/utils"
 
 	"github.com/godbus/dbus"
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
@@ -204,10 +205,16 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 		mode := m.UpdateMode
 		m.PropsMu.RUnlock()
 		size, err = system.QuerySourceDownloadSize(mode)
-		m.setPropNeedDownloadSize(size)
-		err := m.config.SetNeedDownloadSize(size)
 		if err != nil {
 			logger.Warning(err)
+		} else {
+			m.PropsMu.Lock()
+			updatablePackages := m.UpgradableApps
+			m.PropsMu.Unlock()
+			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(updatablePackages) != 0)
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 	} else {
 		size, err = system.QueryPackageDownloadSize(packages...)
