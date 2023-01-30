@@ -127,7 +127,7 @@ func QueryFileCacheSize(path string) (float64, error) {
 
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
-func QueryPackageDownloadSize(packages ...string) (float64, error) {
+func QueryPackageDownloadSize(containDownloaded bool, packages ...string) (float64, error) {
 	if len(packages) == 0 {
 		return SizeDownloaded, NotFoundError("hasn't any packages")
 	}
@@ -136,7 +136,7 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
 
 	lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
-		_, _err := parsePackageSize(line)
+		_, _, _err := parsePackageSize(line)
 		return _err == nil
 	})
 	if err != nil && len(lines) == 0 {
@@ -144,13 +144,18 @@ func QueryPackageDownloadSize(packages ...string) (float64, error) {
 	}
 
 	if len(lines) != 0 {
-		return parsePackageSize(lines[0])
+		needDownloadSize, allSize, err := parsePackageSize(lines[0])
+		if containDownloaded {
+			return allSize, err
+		} else {
+			return needDownloadSize, err
+		}
 	}
 	return SizeDownloaded, nil
 }
 
 // QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量
-func QuerySourceDownloadSize(updateType UpdateType) (float64, error) {
+func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (float64, error) {
 	downloadSize := new(float64)
 	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
 		defer func() {
@@ -160,11 +165,10 @@ func QuerySourceDownloadSize(updateType UpdateType) (float64, error) {
 		}()
 		// #nosec G204
 		cmd := exec.Command("/usr/bin/apt-get",
-			[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath,
-				"--print-uris", "--assume-no", "-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
+			[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no", "-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
 
 		lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
-			_, _err := parsePackageSize(line)
+			_, _, _err := parsePackageSize(line)
 			return _err == nil
 		})
 		if err != nil && len(lines) == 0 {
@@ -172,12 +176,16 @@ func QuerySourceDownloadSize(updateType UpdateType) (float64, error) {
 		}
 
 		if len(lines) != 0 {
-			downloadSize1, err := parsePackageSize(lines[0])
+			needDownloadSize, allSize, err := parsePackageSize(lines[0])
 			if err != nil {
 				logger.Warning(err)
 				return err
 			}
-			*downloadSize = downloadSize1
+			if containDownloaded {
+				*downloadSize = allSize
+			} else {
+				*downloadSize = needDownloadSize
+			}
 			return nil
 		}
 		return nil
@@ -297,8 +305,7 @@ func guestBasePackageName(pkgId string) string {
 }
 
 // see the apt code of command-line/apt-get.c:895
-var __ReDownloadSize__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,.]+ [kMGTPEZY]?B)? of archives")
-
+var __ReDownloadSize__ = regexp.MustCompile("Need to get ([0-9,.]+) ([kMGTPEZY]?)B(/[0-9,.]+)?[ ]?([kMGTPEZY]?)B? of archives")
 var __unitTable__ = map[byte]float64{
 	'k': 1000,
 	'M': 1000 * 1000,
@@ -313,20 +320,52 @@ var __unitTable__ = map[byte]float64{
 const SizeDownloaded = 0
 const SizeUnknown = -1
 
-func parsePackageSize(line string) (float64, error) {
+// parsePackageSize return args[0] 当前需要下载的大小 args[1] 当前更新下载总量 args[2] error
+func parsePackageSize(line string) (float64, float64, error) {
 	ms := __ReDownloadSize__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
-	case 3, 4:
-		l := strings.Replace(string(ms[1]), ",", "", -1)
-		size, err := strconv.ParseFloat(l, 64)
+	case 5:
+		logger.Info("query download info:", string(ms[0]))
+		// ms[0] 匹配的字符串
+		// ms[1] 待下载大小
+		// ms[2] 待下载单位(可以为空,为空时单位为B)
+		// ms[3] 全部更新大小(可以为空,为空时可以认为和ms[1]相同)
+		// ms[4] 全部更新单位(可以为空,为空时可以认为和ms[2]相同)
+		var allDownloadSize float64
+		var allDownloadUnit byte
+		var needDownloadUnit byte
+		needDownloadStr := strings.Replace(string(ms[1]), ",", "", -1)
+		needDownloadSize, err := strconv.ParseFloat(needDownloadStr, 64)
 		if err != nil {
-			return SizeUnknown, fmt.Errorf("%q invalid : %v err", l, err)
+			return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid : %v err", needDownloadStr, err)
 		}
-		if len(ms[2]) == 0 {
-			return size, nil
+		if len(ms[2]) != 0 {
+			needDownloadUnit = ms[2][0]
 		}
-		unit := ms[2][0]
-		return size * __unitTable__[unit], nil
+		if len(ms[3]) > 0 {
+			allDownloadStr := strings.Replace(string(ms[3]), "/", "", -1)
+			allDownloadStr = strings.Replace(allDownloadStr, ",", "", -1)
+			allDownloadSize, err = strconv.ParseFloat(allDownloadStr, 64)
+			if err != nil {
+				logger.Warning(err)
+				return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid : %v err", needDownloadStr, err)
+			}
+			if len(ms[4]) != 0 {
+				allDownloadUnit = ms[4][0]
+			}
+		} else {
+			allDownloadSize = needDownloadSize
+			allDownloadUnit = needDownloadUnit
+		}
+		if len(ms[2]) != 0 {
+			needDownloadSize = needDownloadSize * __unitTable__[needDownloadUnit]
+		}
+		if len(ms[4]) != 0 {
+			allDownloadSize = allDownloadSize * __unitTable__[allDownloadUnit]
+		}
+		logger.Infof("need download size:%v %v", needDownloadSize, needDownloadUnit)
+		logger.Infof("all download size:%v %v", allDownloadSize, allDownloadUnit)
+		return needDownloadSize, allDownloadSize, nil
 	}
-	return SizeUnknown, fmt.Errorf("%q invalid", line)
+	return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid", line)
 }

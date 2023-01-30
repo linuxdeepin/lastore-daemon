@@ -352,8 +352,8 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 				gettext.Tr("Cancel"),
 			}
 			hints := map[string]dbus.Variant{
-				"x-deepin-action-Retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.StartJob,string:%s", job.Id)),
-				"x-deepin-action-Cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.CleanJob,string:%s", job.Id))}
+				"x-deepin-action-retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.StartJob,string:%s", job.Id)),
+				"x-deepin-action-cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.CleanJob,string:%s", job.Id))}
 			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 		},
 	})
@@ -405,7 +405,7 @@ func (m *Manager) handleUpdateInfosChanged() {
 		m.PropsMu.RLock()
 		packages := m.UpgradableApps
 		m.PropsMu.RUnlock()
-		size, err := system.QueryPackageDownloadSize(packages...)
+		size, err := system.QueryPackageDownloadSize(false, packages...)
 		if err != nil {
 			logger.Warning(err)
 		} else {
@@ -804,7 +804,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			return nil, system.NotFoundError("empty UpgradableApps")
 		}
 	}
-	if s, err := system.QuerySourceDownloadSize(mode); err == nil && s == 0 {
+	if s, err := system.QuerySourceDownloadSize(mode, false); err == nil && s == 0 {
 		return nil, system.NotFoundError("no need download")
 	}
 	var job *Job
@@ -875,7 +875,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				m.PropsMu.RLock()
 				packages := m.UpgradableApps
 				m.PropsMu.RUnlock()
-				size, err := system.QueryPackageDownloadSize(packages...)
+				size, err := system.QueryPackageDownloadSize(false, packages...)
 				if err != nil {
 					logger.Warning(err)
 				} else {
@@ -1066,31 +1066,6 @@ func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Erro
 	if err != nil {
 		logger.Warning(err)
 	}
-	// UpdateMode修改后,一些对外属性需要同步修改
-	infosMap, err := m.SystemUpgradeInfo()
-	if err != nil {
-		if os.IsNotExist(err) {
-			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
-		} else {
-			logger.Error("failed to get upgrade info:", err)
-		}
-	} else {
-		m.updateUpdatableProp(infosMap)
-	}
-	go func() {
-		m.PropsMu.RLock()
-		packages := m.UpgradableApps
-		m.PropsMu.RUnlock()
-		size, err := system.QueryPackageDownloadSize(packages...)
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-	}()
 	return nil
 }
 
@@ -1989,4 +1964,36 @@ func (m *Manager) reloadPrepareDistUpgradeJob() {
 			job.needReload = true
 		}
 	}
+}
+
+func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
+	// UpdateMode修改后,一些对外属性需要同步修改
+	infosMap, err := m.SystemUpgradeInfo()
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
+		} else {
+			logger.Error("failed to get upgrade info:", err)
+		}
+	} else {
+		m.updateUpdatableProp(infosMap)
+	}
+	go func() {
+		m.PropsMu.RLock()
+		packages := m.UpgradableApps
+		m.PropsMu.RUnlock()
+		size, err := system.QueryPackageDownloadSize(false, packages...)
+		if err != nil {
+			logger.Warning(err)
+			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, false)
+			if err != nil {
+				logger.Warning(err)
+			}
+		} else {
+			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+	}()
 }

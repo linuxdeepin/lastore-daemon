@@ -73,7 +73,13 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:    "PackagesDownloadSize",
 			Fn:      v.PackagesDownloadSize,
 			InArgs:  []string{"packages"},
-			OutArgs: []string{"size"},
+			OutArgs: []string{"outArg0"},
+		},
+		{
+			Name:    "PackagesSize",
+			Fn:      v.PackagesSize,
+			InArgs:  []string{"packages"},
+			OutArgs: []string{"outArg0"},
 		},
 		{
 			Name:   "PauseJob",

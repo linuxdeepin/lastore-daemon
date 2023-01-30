@@ -195,6 +195,29 @@ func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *db
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
+func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
+	m.service.DelayAutoQuit()
+	m.ensureUpdateSourceOnce()
+	var err error
+	var size float64
+	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
+		m.PropsMu.RLock()
+		mode := m.UpdateMode
+		m.PropsMu.RUnlock()
+		size, err = system.QuerySourceDownloadSize(mode, true)
+		if err != nil {
+			logger.Warning(err)
+		}
+	} else {
+		size, err = system.QueryPackageDownloadSize(true, packages...)
+	}
+	if err != nil || size == system.SizeUnknown {
+		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
+	}
+
+	return int64(size), dbusutil.ToError(err)
+}
+
 func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()
@@ -204,7 +227,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 		m.PropsMu.RLock()
 		mode := m.UpdateMode
 		m.PropsMu.RUnlock()
-		size, err = system.QuerySourceDownloadSize(mode)
+		size, err = system.QuerySourceDownloadSize(mode, false)
 		if err != nil {
 			logger.Warning(err)
 		} else {
@@ -217,7 +240,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 			}
 		}
 	} else {
-		size, err = system.QueryPackageDownloadSize(packages...)
+		size, err = system.QueryPackageDownloadSize(false, packages...)
 	}
 	if err != nil || size == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)

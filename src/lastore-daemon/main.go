@@ -7,12 +7,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"internal/system"
-	"internal/system/apt"
-	"internal/utils"
 	"os"
 	"path"
 	"time"
+
+	"internal/system"
+	"internal/system/apt"
+	"internal/utils"
 
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -96,6 +97,10 @@ func main() {
 	err = serverObject.SetWriteCallback(manager, "UpdateMode", manager.updateModeWriteCallback)
 	if err != nil {
 		logger.Error("failed to set write cb for property UpdateMode:", err)
+	}
+	err = serverObject.ConnectChanged(manager, "UpdateMode", manager.afterUpdateModeChanged)
+	if err != nil {
+		logger.Error("failed to connect changed for property UpdateMode:", err)
 	}
 	manager.handleUpdateInfosChanged()
 	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况
