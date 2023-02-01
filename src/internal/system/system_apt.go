@@ -363,8 +363,6 @@ func parsePackageSize(line string) (float64, float64, error) {
 		if len(ms[4]) != 0 {
 			allDownloadSize = allDownloadSize * __unitTable__[allDownloadUnit]
 		}
-		logger.Infof("need download size:%v %v", needDownloadSize, needDownloadUnit)
-		logger.Infof("all download size:%v %v", allDownloadSize, allDownloadUnit)
 		return needDownloadSize, allDownloadSize, nil
 	}
 	return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid", line)

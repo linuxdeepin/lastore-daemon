@@ -621,7 +621,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		if isLaptop && err == nil {
 			var hasSendNotify bool
 			var batteryPercentageNotify sync.Once
-			var notifyId uint32 = 0
+			var lowPowerNotifyId uint32 = 0
 			// 更新过程中,如果笔记本使用电池,并且电量低于60%时,发送通知,提醒用户有风险
 			_ = m.sysPower.BatteryPercentage().ConnectChanged(func(hasValue bool, value float64) {
 				if !hasValue {
@@ -631,23 +631,37 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if onBattery && value <= 60.0 && (job.Status == system.RunningStatus) {
 					batteryPercentageNotify.Do(func() {
 						msg := gettext.Tr("The battery level is lower than 60%, please charge it")
-						notifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+						lowPowerNotifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 						hasSendNotify = true
 					})
 				}
 			})
-			_ = m.sysPower.OnBattery().ConnectChanged(func(hasValue bool, value bool) {
+			_ = m.sysPower.OnBattery().ConnectChanged(func(hasValue bool, onBattery bool) {
 				if !hasValue {
 					return
 				}
+				var needConnectNotifyId uint32 = 0
+				if onBattery && !hasSendNotify {
+					// TODO 翻译
+					msg := gettext.Tr("需要在1分钟内连接电源")
+					needConnectNotifyId = m.sendNotify("dde-control-center", 0, "TBD-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+				}
 				// 用户连上电源时,需要关闭通知,并重置Once
-				if !value && !hasSendNotify {
-					err = m.closeNotify(notifyId)
-					if err != nil {
-						logger.Warning(err)
+				if !onBattery {
+					if !hasSendNotify {
+						err = m.closeNotify(lowPowerNotifyId)
+						if err != nil {
+							logger.Warning(err)
+						}
+						hasSendNotify = false
+						batteryPercentageNotify = sync.Once{}
 					}
-					hasSendNotify = false
-					batteryPercentageNotify = sync.Once{}
+					if needConnectNotifyId != 0 {
+						err = m.closeNotify(needConnectNotifyId)
+						if err != nil {
+							logger.Warning(err)
+						}
+					}
 				}
 			})
 		}
@@ -673,10 +687,24 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				msg := gettext.Tr("Update failed")
 				m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				// 状态更新为failed
-				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.ErrorCode1}) // TODO error code需要定义
+				var errorContent = struct {
+					ErrType   string
+					ErrDetail string
+				}{}
+				err := json.Unmarshal([]byte(job.Description), &errorContent)
 				if err != nil {
 					logger.Warning(err)
+					err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.ErrorUnknown})
+					if err != nil {
+						logger.Warning(err)
+					}
+				} else {
+					err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.UpgradeReasonType(errorContent.ErrType)})
+					if err != nil {
+						logger.Warning(err)
+					}
 				}
+
 				// 上报更新失败的信息(如果需要)
 				if m.needPostSystemUpgradeMessage() && ((mode & system.SystemUpdate) != 0) {
 					go m.postSystemUpgradeMessage(upgradeFailed, job, system.SystemUpdate)
@@ -685,14 +713,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
 				})
-				// 更新失败后,十分钟自动关机
-				// TODO 应该前端处理
-				//_ = time.AfterFunc(10*time.Minute, func() {
-				//	err = m.loginManager.PowerOff(0, false)
-				//	if err != nil {
-				//		logger.Warning(err)
-				//	}
-				//})
 			},
 			string(system.SucceedStatus): func() {
 				// 更新成功后修改grub默认入口为当前系统入口
@@ -1357,7 +1377,8 @@ type lastoreUnitMap map[UnitName][]string
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
 	unitMap[lastoreOnline] = []string{
-		fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(3600)),
+		// 随机数范围0-21600，时间为0-6小时
+		fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(21600)),
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
@@ -1369,7 +1390,8 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoClean), // 10分钟后自动检查是否需要清理
 	}
 	unitMap[lastoreAutoCheck] = []string{
-		fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(3600)),
+		// 随机数范围0-21600，时间为0-6小时
+		fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(21600)),
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
@@ -1928,11 +1950,17 @@ func (m *Manager) handleFailedNotify() {
 		m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 	case system.UpgradeFailed:
 		switch status.ReasonCode {
-		case system.ErrorCode1:
-			msg := gettext.Tr("upgrade failed because xxx")
+		case system.ErrorDpkgError:
+			msg := gettext.Tr("upgrade failed because an error occurred during dpkg installation, need rollback")
 			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		case system.ErrorCode2:
-			msg := gettext.Tr("upgrade failed because xxx")
+		case system.ErrorPkgNotFound:
+			msg := gettext.Tr("upgrade failed because unable to locate package, need rollback")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		case system.ErrorNoInstallationCandidate:
+			msg := gettext.Tr("upgrade failed because has no installation candidate")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		case system.ErrorUnknown:
+			msg := gettext.Tr("upgrade failed, need rollback")
 			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		}
 	}

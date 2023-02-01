@@ -273,12 +273,13 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	switch {
 	case strings.Contains(stdErrStr, "Failed to fetch"):
 		return &system.JobError{
-			Type:   "fetchFailed",
+			Type:   string(system.ErrorFetchFailed),
 			Detail: stdErrStr,
 		}
 
-	case strings.Contains(stdErrStr, "Sub-process /usr/bin/dpkg"+
-		" returned an error code"):
+	case strings.Contains(stdErrStr, "Sub-process /usr/bin/dpkg returned an error code"),
+		strings.Contains(stdErrStr, "Sub-process /usr/bin/dpkg received a segmentation fault."),
+		strings.Contains(stdErrStr, "Sub-process /usr/bin/dpkg exited unexpectedly"):
 		idx := strings.Index(stdOutStr, "\ndpkg:")
 		var detail string
 		if idx == -1 {
@@ -288,13 +289,13 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 		}
 
 		return &system.JobError{
-			Type:   "dpkgError",
+			Type:   string(system.ErrorDpkgError),
 			Detail: detail,
 		}
 
 	case strings.Contains(stdErrStr, "Unable to locate package"):
 		return &system.JobError{
-			Type:   "pkgNotFound",
+			Type:   string(system.ErrorPkgNotFound),
 			Detail: stdErrStr,
 		}
 
@@ -310,31 +311,31 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			detail = stdOutStr[idx:]
 		}
 		return &system.JobError{
-			Type:   "unmetDependencies",
+			Type:   string(system.ErrorUnmetDependencies),
 			Detail: detail,
 		}
 
 	case strings.Contains(stdErrStr, "has no installation candidate"):
 		return &system.JobError{
-			Type:   "noInstallationCandidate",
+			Type:   string(system.ErrorNoInstallationCandidate),
 			Detail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "You don't have enough free space"):
 		return &system.JobError{
-			Type:   "insufficientSpace",
+			Type:   string(system.ErrorInsufficientSpace),
 			Detail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "There were unauthenticated packages"):
 		return &system.JobError{
-			Type:   "unauthenticatedPackages",
+			Type:   string(system.ErrorUnauthenticatedPackages),
 			Detail: stdErrStr,
 		}
 
 	default:
 		return &system.JobError{
-			Type:   "unknown",
+			Type:   string(system.ErrorUnknown),
 			Detail: stdErrStr,
 		}
 	}

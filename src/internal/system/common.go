@@ -296,17 +296,23 @@ const (
 	UpgradeFailed  UpgradeStatus = "failed"
 )
 
-type UpgradeReasonCode uint
+type UpgradeReasonType string
 
-const ( // TODO 定义错误码（发通知时使用）
-	NoError UpgradeReasonCode = iota
-	ErrorCode1
-	ErrorCode2
+const (
+	NoError                      UpgradeReasonType = "NoError"
+	ErrorUnknown                 UpgradeReasonType = "ErrorUnknown"
+	ErrorFetchFailed             UpgradeReasonType = "fetchFailed"
+	ErrorDpkgError               UpgradeReasonType = "dpkgError"
+	ErrorPkgNotFound             UpgradeReasonType = "pkgNotFound"
+	ErrorUnmetDependencies       UpgradeReasonType = "unmetDependencies"
+	ErrorNoInstallationCandidate UpgradeReasonType = "noInstallationCandidate"
+	ErrorInsufficientSpace       UpgradeReasonType = "insufficientSpace"
+	ErrorUnauthenticatedPackages UpgradeReasonType = "unauthenticatedPackages"
 )
 
 type UpgradeStatusAndReason struct {
 	Status     UpgradeStatus
-	ReasonCode UpgradeReasonCode
+	ReasonCode UpgradeReasonType
 }
 
 func GetGrubRollbackTitle(grubPath string) (string, error) {
