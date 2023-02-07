@@ -354,6 +354,8 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 					logger.Warning(err)
 					continue
 				}
+				job.needReload = false
+				continue
 			}
 		}
 		if jobStatus == system.ReloadStatus { // 对reload状态的job进行处理，还原至reload前的状态
@@ -366,6 +368,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 					logger.Warning(err)
 				}
 				job.PropsMu.Unlock()
+				continue
 			case system.ReadyStatus:
 				logger.Info("recover ready")
 				err := jm.markReady(job)

@@ -232,6 +232,9 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
+	if updateType&AppStoreUpdate != 0 {
+		updateType &= ^AppStoreUpdate
+	}
 	if len(sourcePathList) == 1 {
 		// 如果只有一个仓库，证明是单项的更新，可以直接使用默认的文件夹
 		if doRealAction != nil {
