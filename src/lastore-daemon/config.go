@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/linuxdeepin/go-lib/dbusutil"
 	"sync"
 	"time"
 
@@ -22,7 +23,8 @@ const ConfigVersion = "0.1"
 type lastoreDaemonStatus uint32
 
 const (
-	canUpgrade lastoreDaemonStatus = 1 << 0
+	canUpgrade    lastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
+	disableUpdate lastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
 )
 
 type Config struct {
@@ -63,6 +65,9 @@ type Config struct {
 
 	filePath string
 	statusMu sync.RWMutex
+
+	dsettingsChangedCbMap   map[string]func(lastoreDaemonStatus, interface{})
+	dsettingsChangedCbMapMu sync.Mutex
 }
 
 func NewConfig(fpath string) *Config {
@@ -149,7 +154,9 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 		return c
 	}
-
+	systemSigLoop := dbusutil.NewSignalLoop(sysBus, 10)
+	systemSigLoop.Start()
+	c.dsLastoreManager.InitSignalExt(systemSigLoop, true)
 	//从DSettings获取所有内容，更新config
 	v, err := c.dsLastoreManager.Value(0, dSettingsKeyUseDSettings)
 	if err != nil {
@@ -371,13 +378,34 @@ func getConfigFromDSettings() *Config {
 		c.downloadSpeedLimitConfig = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastoreDaemonStatus)
+	updateLastoreDaemonStatus := func() {
+		v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastoreDaemonStatus)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			c.lastoreDaemonStatus = lastoreDaemonStatus(v.Value().(float64))
+		}
+	}
+	updateLastoreDaemonStatus()
+	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
+		switch key {
+		case dSettingsKeyLastoreDaemonStatus:
+			oldStatus := c.lastoreDaemonStatus
+			updateLastoreDaemonStatus()
+			newStatus := c.lastoreDaemonStatus
+			if (oldStatus & disableUpdate) != (newStatus & disableUpdate) {
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(disableUpdate, c.lastoreDaemonStatus)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
+		}
+	})
 	if err != nil {
 		logger.Warning(err)
-	} else {
-		c.lastoreDaemonStatus = lastoreDaemonStatus(v.Value().(float64))
 	}
-
 	return c
 }
 
@@ -404,6 +432,15 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetMirrorsUrl(oldConfig.MirrorsUrl)
 	_ = c.SetAllowInstallRemovePkgExecPaths(oldConfig.AllowInstallRemovePkgExecPaths)
 	return
+}
+
+func (c *Config) connectConfigChanged(key string, cb func(lastoreDaemonStatus, interface{})) {
+	if c.dsettingsChangedCbMap == nil {
+		c.dsettingsChangedCbMap = make(map[string]func(lastoreDaemonStatus, interface{}))
+	}
+	c.dsettingsChangedCbMapMu.Lock()
+	c.dsettingsChangedCbMap[key] = cb
+	c.dsettingsChangedCbMapMu.Unlock()
 }
 
 func (c *Config) UpdateLastCheckTime() error {
@@ -559,10 +596,10 @@ func (c *Config) UpdateLastoreDaemonStatus(status lastoreDaemonStatus, isSet boo
 	return c.save(dSettingsKeyLastoreDaemonStatus, c.lastoreDaemonStatus)
 }
 
-func (c *Config) GetLastoreDaemonStatus() uint32 {
+func (c *Config) getLastoreDaemonStatus() lastoreDaemonStatus {
 	c.statusMu.RLock()
 	defer c.statusMu.RUnlock()
-	return uint32(c.lastoreDaemonStatus)
+	return c.lastoreDaemonStatus
 }
 
 func (c *Config) save(key string, v interface{}) error {

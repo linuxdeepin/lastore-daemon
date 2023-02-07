@@ -155,6 +155,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		m.HardwareId = hardwareId
 	}
 	m.initDbusSignalListen()
+	m.initDSettingsChangedHandle()
 	m.handleFailedNotify()
 	return m
 }
@@ -183,6 +184,7 @@ func (m *Manager) initDbusSignalListen() {
 		logger.Warning(err)
 	}
 	m.grub.InitSignalExt(m.signalLoop, true)
+	m.sysPower.InitSignalExt(m.signalLoop, true)
 }
 
 // execPath和cmdLine可以有一个为空,其中一个存在即可作为判断调用者的依据
@@ -776,6 +778,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if unref != nil {
 					unref()
 				}
+				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
 			},
 		})
 		if !isClassify { // 分类下载的job需要外部判断是否add
@@ -1376,25 +1379,34 @@ type lastoreUnitMap map[UnitName][]string
 // 定时任务和文件监听
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
-	unitMap[lastoreOnline] = []string{
-		// 随机数范围0-21600，时间为0-6小时
-		fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(21600)),
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
+	if (m.config.getLastoreDaemonStatus() & disableUpdate) == 0 { // 更新禁用未开启时
+		unitMap[lastoreOnline] = []string{
+			// 随机数范围0-21600，时间为0-6小时
+			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(21600)),
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
+		}
+		unitMap[lastoreAutoCheck] = []string{
+			// 随机数范围0-21600，时间为0-6小时
+			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(21600)),
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
+		}
+		unitMap[watchUpdateInfo] = []string{
+			"--path-property=PathModified=/var/lib/lastore/update_infos.json",
+			"--property=StartLimitBurst=0",
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), //监听update_infos.json文件
+		}
 	}
 	unitMap[lastoreAutoClean] = []string{
 		"--on-active=600",
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoClean), // 10分钟后自动检查是否需要清理
-	}
-	unitMap[lastoreAutoCheck] = []string{
-		// 随机数范围0-21600，时间为0-6小时
-		fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(21600)),
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
 	}
 	unitMap[lastoreAutoUpdateToken] = []string{
 		"--on-active=60",
@@ -1407,13 +1419,6 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		"/bin/bash",
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
-	}
-	unitMap[watchUpdateInfo] = []string{
-		"--path-property=PathModified=/var/lib/lastore/update_infos.json",
-		"--property=StartLimitBurst=0",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), //监听update_infos.json文件
 	}
 	m.updater.PropsMu.RLock()
 	enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled
@@ -1985,10 +1990,6 @@ func (m *Manager) reloadPrepareDistUpgradeJob() {
 	for _, jobType := range prepareUpgradeTypeList {
 		job := m.jobManager.findJobById(genJobId(jobType))
 		if job != nil {
-			//err := m.jobManager.markReload(job)
-			//if err != nil {
-			//	logger.Warning(err)
-			//}
 			job.needReload = true
 		}
 	}
@@ -2024,4 +2025,14 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 			}
 		}
 	}()
+}
+
+func (m *Manager) initDSettingsChangedHandle() {
+	m.config.connectConfigChanged(dSettingsKeyLastoreDaemonStatus, func(bit lastoreDaemonStatus, value interface{}) {
+		if bit == disableUpdate {
+			m.updateTimerUnit(lastoreOnline)
+			m.updateTimerUnit(lastoreAutoCheck)
+			m.updateTimerUnit(watchUpdateInfo)
+		}
+	})
 }
