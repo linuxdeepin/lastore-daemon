@@ -118,6 +118,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 
 	case system.FixErrorJobType:
 		errType := cmdArgs[0]
+		// FixError 需要加上apt参数项
 		var aptOption []string
 		var aptOptionString string
 		if len(cmdArgs) >= 1 {

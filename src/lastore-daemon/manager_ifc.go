@@ -273,7 +273,7 @@ func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, b
 }
 
 func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.Error {
-	logger.Info("RegisterAgent:", path)
+	logger.Infof("Register lastore agent form %v, sender:%v.", path, sender)
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil {
 		logger.Warning(err)

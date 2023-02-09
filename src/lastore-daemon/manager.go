@@ -514,7 +514,7 @@ func (m *Manager) updateSource(needNotify bool) (*Job, error) {
 				m.isUpdateSucceed = true
 				m.PropsMu.Unlock()
 				m.handleUpdateInfosChanged()
-				if len(m.UpgradableApps) > 0 && needNotify && !m.updater.AutoDownloadUpdates {
+				if len(m.UpgradableApps) > 0 && !m.updater.AutoDownloadUpdates {
 					msg := gettext.Tr("Updates Available")
 					action := []string{"update", gettext.Tr("Update Now")}
 					hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update,-p,Checking")}
@@ -1959,6 +1959,9 @@ func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 }
 
 func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
+	if !m.updater.UpdateNotify {
+		return 0
+	}
 	agent := m.userAgents.getActiveLastoreAgent()
 	if agent != nil {
 		id, err := agent.SendNotify(0, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout)

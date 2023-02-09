@@ -157,6 +157,7 @@ func QueryPackageDownloadSize(containDownloaded bool, packages ...string) (float
 // QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量
 func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (float64, error) {
 	downloadSize := new(float64)
+	defer logger.Debugf("source size is:%v, contain downloaded package:%v", *downloadSize, containDownloaded)
 	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
 		defer func() {
 			if unref != nil {
@@ -335,6 +336,7 @@ func parsePackageSize(line string) (float64, float64, error) {
 		var allDownloadSize float64
 		var allDownloadUnit byte
 		var needDownloadUnit byte
+		defer logger.Infof("need download size:%vB;all download size:%vB", needDownloadUnit, allDownloadSize)
 		needDownloadStr := strings.Replace(string(ms[1]), ",", "", -1)
 		needDownloadSize, err := strconv.ParseFloat(needDownloadStr, 64)
 		if err != nil {

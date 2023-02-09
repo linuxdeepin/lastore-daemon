@@ -6,9 +6,10 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/linuxdeepin/go-lib/dbusutil"
 	"sync"
 	"time"
+
+	"github.com/linuxdeepin/go-lib/dbusutil"
 
 	"internal/system"
 
@@ -232,6 +233,10 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
+		if (c.UpdateMode & system.OnlySecurityUpdate) != 0 {
+			c.UpdateMode &= ^system.OnlySecurityUpdate
+			c.UpdateMode |= system.SecurityUpdate
+		}
 		c.UpdateMode = system.UpdateType(v.Value().(float64))
 	}
 

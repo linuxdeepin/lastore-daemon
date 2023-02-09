@@ -21,15 +21,6 @@ import (
 	"github.com/linuxdeepin/go-lib/strv"
 )
 
-const (
-	AutoCleanDone   = "AutoCleanDone"
-	AppRemove       = "AppRemove"
-	CanUpdate       = "CanUpdate"
-	AutoDownloading = "AutoDownloading"
-	CanUpgrade      = "CanUpgrade"
-	UpgradeFailed   = "UpgradeFailed"
-)
-
 const userAgentRecordPath = "/tmp/lastoreAgentCache"
 
 type userAgentMap struct {
@@ -284,6 +275,7 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 		logger.Warning(err)
 		return nil
 	}
+	logger.Info("record agent info:", infoMap)
 	login1Obj := login1.NewManager(service.Conn())
 	sessionInfos, err := login1Obj.ListSessions(0)
 	if err != nil {
@@ -301,7 +293,6 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 	agentMap.uidItemMap = make(map[string]*sessionAgentMapItem, 1)
 	for uid, uidInfo := range infoMap.UidInfoMap {
 		var item sessionAgentMapItem
-		agentMap.uidItemMap = make(map[string]*sessionAgentMapItem)
 		item.sessions = make(map[dbus.ObjectPath]login1.Session)
 		item.agents = make(map[dbus.ObjectPath]lastoreAgent.Agent)
 		for _, sessionPath := range uidInfo.Sessions {

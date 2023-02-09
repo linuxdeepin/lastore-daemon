@@ -76,7 +76,7 @@ func (jm *JobManager) List() JobList {
 func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (bool, *Job, error) {
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
-		case system.FailedStatus, system.PausedStatus:
+		case system.FailedStatus:
 			return true, job, jm.markStart(job)
 		default:
 			return true, job, nil
