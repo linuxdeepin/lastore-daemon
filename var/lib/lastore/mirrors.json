@@ -204,6 +204,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "UFPR",
+    "name": "[BR]Federal University of Parana",
+    "url": "https://deepin.c3sl.ufpr.br/deepin/",
+    "name_locale": {
+      "zh_CN": "[BR] 巴拉那联邦大学",
+      "zh_TW": "[BR] 巴拉那聯邦大學"
+    },
+    "weight": 2155,
+    "country": "BR",
+    "adjust_delay": 0
+  },
+  {
     "id": "USP",
     "name": "[BR] University of Sao Paulo",
     "url": "http://sft.if.usp.br/deepin/",
