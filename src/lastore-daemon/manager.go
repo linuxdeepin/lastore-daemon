@@ -827,8 +827,42 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			return nil, system.NotFoundError("empty UpgradableApps")
 		}
 	}
-	if s, err := system.QuerySourceDownloadSize(mode, false); err == nil && s == 0 {
+	var needDownloadSize float64
+	if needDownloadSize, err = system.QuerySourceDownloadSize(mode, false); err == nil && needDownloadSize == 0 {
 		return nil, system.NotFoundError("no need download")
+	}
+	// 下载前检查/var分区的磁盘空间是否足够下载,
+	isInsufficientSpace := false
+	content, err := exec.Command("/bin/sh", []string{
+		"-c",
+		"df -BK --output='avail' /var|awk 'NR==2'",
+	}...).CombinedOutput()
+	if err != nil {
+		logger.Warning(string(content))
+	} else {
+		spaceStr := strings.Replace(string(content), "K", "", -1)
+		spaceStr = strings.TrimSpace(spaceStr)
+		spaceNum, err := strconv.Atoi(spaceStr)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			spaceNum = spaceNum * 1024
+			isInsufficientSpace = spaceNum < int(needDownloadSize)
+		}
+	}
+	if isInsufficientSpace {
+		dbusError := struct {
+			ErrType string
+			Detail  string
+		}{
+			string(system.ErrorInsufficientSpace),
+			"You don't have enough free space to download",
+		}
+		msg := gettext.Tr("You don't have enough free space to download")
+		m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		logger.Warning(dbusError.Detail)
+		errStr, _ := json.Marshal(dbusError)
+		return nil, dbusutil.ToError(errors.New(string(errStr)))
 	}
 	var job *Job
 	var isExist bool
@@ -874,13 +908,15 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 		if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
 			job.option["Acquire::http::Dl-Limit"] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
 		}
-
+		var sendAutoDownloadOnce sync.Once
 		job.setHooks(map[string]func(){
 			string(system.RunningStatus): func() {
 				// 如果sender为自己,则为触发自动下载
 				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
-					msg := gettext.Tr("auto downloading")
-					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					sendAutoDownloadOnce.Do(func() {
+						msg := gettext.Tr("auto downloading")
+						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					})
 				}
 			},
 			string(system.SucceedStatus): func() {
@@ -1996,6 +2032,11 @@ func (m *Manager) reloadPrepareDistUpgradeJob() {
 }
 
 func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
+	// UpdateMode修改后，需要先清零，然后再根据实际状态判断是否可以安装更新
+	err := m.config.UpdateLastoreDaemonStatus(canUpgrade, false)
+	if err != nil {
+		logger.Warning(err)
+	}
 	// UpdateMode修改后,一些对外属性需要同步修改
 	infosMap, err := m.SystemUpgradeInfo()
 	if err != nil {
@@ -2030,9 +2071,9 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 func (m *Manager) initDSettingsChangedHandle() {
 	m.config.connectConfigChanged(dSettingsKeyLastoreDaemonStatus, func(bit lastoreDaemonStatus, value interface{}) {
 		if bit == disableUpdate {
-			m.updateTimerUnit(lastoreOnline)
-			m.updateTimerUnit(lastoreAutoCheck)
-			m.updateTimerUnit(watchUpdateInfo)
+			_ = m.updateTimerUnit(lastoreOnline)
+			_ = m.updateTimerUnit(lastoreAutoCheck)
+			_ = m.updateTimerUnit(watchUpdateInfo)
 		}
 	})
 }
