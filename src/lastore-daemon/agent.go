@@ -298,6 +298,7 @@ func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *use
 	}
 	dbusObj := dbus2.NewDBus(service.Conn())
 	agentMap.activeUid = infoMap.ActiveUid
+	agentMap.uidItemMap = make(map[string]*sessionAgentMapItem, 1)
 	for uid, uidInfo := range infoMap.UidInfoMap {
 		var item sessionAgentMapItem
 		agentMap.uidItemMap = make(map[string]*sessionAgentMapItem)

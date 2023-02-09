@@ -262,10 +262,12 @@ func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ ma
 
 func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error {
 	// 无需检查依赖错误
-	//err := checkPkgSystemError(false)
-	//if err != nil {
-	//	return err
-	//}
+	/*
+		err := checkPkgSystemError(false)
+		if err != nil {
+			return err
+		}
+	*/
 	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.indicator, cmdArgs)
 	c.setEnv(environ)
 	return c.Start()
