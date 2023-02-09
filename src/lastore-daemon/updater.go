@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"sync"
+	"time"
 
 	"internal/system"
 
@@ -61,6 +62,8 @@ type Updater struct {
 	idleDownloadConfigObj       idleDownloadConfig
 	DownloadSpeedLimitConfig    string
 	downloadSpeedLimitConfigObj downloadSpeedLimitConfig
+
+	setDownloadSpeedLimitTimer *time.Timer
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {

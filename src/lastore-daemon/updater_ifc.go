@@ -169,18 +169,33 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 	err := json.Unmarshal([]byte(limitConfig), &u.downloadSpeedLimitConfigObj)
 	if err != nil {
+		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	changed := u.setPropDownloadSpeedLimitConfig(limitConfig)
-	if changed {
-		logger.Info("speed limit: ", u.downloadSpeedLimitConfigObj)
-		err := u.config.SetDownloadSpeedLimitConfig(limitConfig)
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
-		}
-		// 当限速配置修改,需要reload所有running paused ready failed的job
-		u.manager.reloadPrepareDistUpgradeJob()
+	if u.setDownloadSpeedLimitTimer == nil {
+		u.setDownloadSpeedLimitTimer = time.AfterFunc(time.Second, func() {
+			config, err := json.Marshal(u.downloadSpeedLimitConfigObj)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+			changed := u.setPropDownloadSpeedLimitConfig(string(config))
+			if changed {
+				logger.Info("speed limit: ", u.downloadSpeedLimitConfigObj)
+				err := u.config.SetDownloadSpeedLimitConfig(string(config))
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+				// 当限速配置修改,需要reload所有running paused ready failed的job
+				u.manager.reloadPrepareDistUpgradeJob()
+			}
+			logger.Info("update limit config")
+			return
+		})
+	} else {
+		u.setDownloadSpeedLimitTimer.Reset(time.Second)
+		logger.Info("reset limit timer")
 	}
 	return nil
 }
