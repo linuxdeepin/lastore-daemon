@@ -265,19 +265,28 @@ var _minDelayTime = 10 * time.Second
 
 // getCustomTimeDuration 按照autoDownloadTimeLayout的格式计算时间差
 func getCustomTimeDuration(presetTime string) time.Duration {
-	t1, err := time.Parse(autoDownloadTimeLayout, presetTime)
+	presetTimer, err := time.Parse(autoDownloadTimeLayout, presetTime)
 	if err != nil {
 		logger.Warning(err)
 		return _minDelayTime
 	}
-	t2, err := time.Parse(autoDownloadTimeLayout, fmt.Sprintf("%v:%v", time.Now().Hour(), time.Now().Minute()))
+	var timeStr string
+	if time.Now().Minute() < 10 {
+		timeStr = fmt.Sprintf("%v:0%v", time.Now().Hour(), time.Now().Minute())
+	} else {
+		timeStr = fmt.Sprintf("%v:%v", time.Now().Hour(), time.Now().Minute())
+	}
+	nowTimer, err := time.Parse(autoDownloadTimeLayout, timeStr)
 	if err != nil {
 		logger.Warning(err)
 		return _minDelayTime
 	}
-	dur := t1.Sub(t2)
+	dur := presetTimer.Sub(nowTimer)
 	if dur < 0 {
 		dur += 24 * time.Hour
+	}
+	if dur < _minDelayTime {
+		dur = _minDelayTime
 	}
 	return dur
 }

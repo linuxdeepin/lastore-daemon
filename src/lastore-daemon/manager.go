@@ -112,6 +112,7 @@ type Manager struct {
 	sysDBusDaemon ofdbus.DBus
 	systemd       systemd1.Manager
 	grub          grub2.Grub2
+	isDownloading bool
 }
 
 /*
@@ -420,7 +421,10 @@ func (m *Manager) handleUpdateInfosChanged() {
 	m.PropsMu.Lock()
 	isUpdateSucceed := m.isUpdateSucceed
 	m.PropsMu.Unlock()
-	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed {
+	m.updater.PropsMu.RLock()
+	enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled
+	m.updater.PropsMu.RUnlock()
+	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed && !enable {
 		logger.Info("auto download updates")
 		go func() {
 			m.inhibitAutoQuitCountAdd()
@@ -624,33 +628,26 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			var hasSendNotify bool
 			var batteryPercentageNotify sync.Once
 			var lowPowerNotifyId uint32 = 0
-			// 更新过程中,如果笔记本使用电池,并且电量低于60%时,发送通知,提醒用户有风险
-			_ = m.sysPower.BatteryPercentage().ConnectChanged(func(hasValue bool, value float64) {
-				if !hasValue {
-					return
-				}
-				onBattery, _ := m.sysPower.OnBattery().Get(0)
-				if onBattery && value <= 60.0 && (job.Status == system.RunningStatus) {
+			var needConnectNotifyId uint32 = 0
+			onBatteryGlobal, _ := m.sysPower.OnBattery().Get(0)
+			batteryPercentage, _ := m.sysPower.BatteryPercentage().Get(0)
+			handleSysPowerBatteryEvent := func() {
+				if onBatteryGlobal && batteryPercentage <= 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) {
 					batteryPercentageNotify.Do(func() {
 						msg := gettext.Tr("The battery level is lower than 60%, please charge it")
 						lowPowerNotifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 						hasSendNotify = true
 					})
 				}
-			})
-			_ = m.sysPower.OnBattery().ConnectChanged(func(hasValue bool, onBattery bool) {
-				if !hasValue {
-					return
-				}
-				var needConnectNotifyId uint32 = 0
-				if onBattery && !hasSendNotify {
+
+				if onBatteryGlobal && !hasSendNotify {
 					// TODO 翻译
 					msg := gettext.Tr("需要在1分钟内连接电源")
 					needConnectNotifyId = m.sendNotify("dde-control-center", 0, "TBD-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
 				// 用户连上电源时,需要关闭通知,并重置Once
-				if !onBattery {
-					if !hasSendNotify {
+				if !onBatteryGlobal {
+					if hasSendNotify {
 						err = m.closeNotify(lowPowerNotifyId)
 						if err != nil {
 							logger.Warning(err)
@@ -665,6 +662,22 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 						}
 					}
 				}
+			}
+			// 更新过程中,如果笔记本使用电池,并且电量低于60%时,发送通知,提醒用户有风险
+			handleSysPowerBatteryEvent()
+			_ = m.sysPower.BatteryPercentage().ConnectChanged(func(hasValue bool, value float64) {
+				if !hasValue {
+					return
+				}
+				batteryPercentage = value
+				handleSysPowerBatteryEvent()
+			})
+			_ = m.sysPower.OnBattery().ConnectChanged(func(hasValue bool, onBattery bool) {
+				if !hasValue {
+					return
+				}
+				onBatteryGlobal = onBattery
+				handleSysPowerBatteryEvent()
 			})
 		}
 		// 设置hook
@@ -910,7 +923,15 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 		}
 		var sendAutoDownloadOnce sync.Once
 		job.setHooks(map[string]func(){
+			string(system.ReadyStatus): func() {
+				m.PropsMu.Lock()
+				m.isDownloading = true
+				m.PropsMu.Unlock()
+			},
 			string(system.RunningStatus): func() {
+				m.PropsMu.Lock()
+				m.isDownloading = true
+				m.PropsMu.Unlock()
 				// 如果sender为自己,则为触发自动下载
 				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
 					sendAutoDownloadOnce.Do(func() {
@@ -944,10 +965,18 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 					}
 				}
 			},
+			string(system.FailedStatus): func() {
+				m.PropsMu.Lock()
+				m.isDownloading = false
+				m.PropsMu.Unlock()
+			},
 			string(system.EndStatus): func() {
 				if unref != nil {
 					unref()
 				}
+				m.PropsMu.Lock()
+				m.isDownloading = false
+				m.PropsMu.Unlock()
 			},
 			// 在reload状态时,修改job的配置
 			string(system.ReloadStatus): func() {
@@ -1758,6 +1787,7 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 	active, err := session.Active().Get(0)
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
 	if active {
 		m.userAgents.setActiveUid(uid)
@@ -1864,6 +1894,12 @@ func (m *Manager) getNextAutoDownloadDelay() time.Duration {
 	defer m.updater.PropsMu.RUnlock()
 	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
 	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
+	// 如果下载或者自动下载已经开始,下一次的开始时间应该为第二天时间
+	m.PropsMu.Lock()
+	defer m.PropsMu.Unlock()
+	if m.isDownloading {
+		return beginDur
+	}
 	// 如果用户开机时间在自动下载时间段内，则返回默认最小时间(立即开始)
 	if beginDur > endDur {
 		return _minDelayTime
@@ -1876,7 +1912,14 @@ func (m *Manager) getNextAutoDownloadDelay() time.Duration {
 func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
 	m.updater.PropsMu.RLock()
 	defer m.updater.PropsMu.RUnlock()
-	return getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
+	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
+	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
+	// 如果用户开机时间在自动下载时间段内,且立即开始的时间(_minDelayTime)大于结束时间,则结束时间为两倍最小时间
+	if beginDur > endDur && endDur <= _minDelayTime {
+		return _minDelayTime * 2
+	} else {
+		return endDur
+	}
 }
 
 func (m *Manager) handleAutoDownload() {

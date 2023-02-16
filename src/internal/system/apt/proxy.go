@@ -302,7 +302,7 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 	if err != nil {
 		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
 		e, ok := err.(*system.PkgSystemError)
-		if !ok || e.Type != system.ErrTypeDependenciesBroken {
+		if !ok || (ok && e.Type != system.ErrTypeDependenciesBroken) {
 			return err
 		}
 	}

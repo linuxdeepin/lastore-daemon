@@ -235,56 +235,69 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 	if updateType&AppStoreUpdate != 0 {
 		updateType &= ^AppStoreUpdate
 	}
-	if len(sourcePathList) == 1 {
+	switch len(sourcePathList) {
+	case 0:
+		return fmt.Errorf("failed to match %v source", updateType)
+	case 1:
 		// 如果只有一个仓库，证明是单项的更新，可以直接使用默认的文件夹
 		if doRealAction != nil {
 			return doRealAction(GetCategorySourceMap()[updateType], nil)
 		}
 		return errors.New("doRealAction is nil")
-	} else {
-		// 仓库组合的情况，需要重新组合文件
-		// #nosec G301
-		sourceDir, err := ioutil.TempDir("/tmp", "*Source.d")
-		if err != nil {
-			logger.Warning(err)
-		}
-		var allSourceFilePaths []string
-		for _, path := range sourcePathList {
-			fileInfo, err := os.Stat(path)
-			if err != nil {
-				continue
+	default:
+		if doRealAction != nil {
+			// 仓库组合的情况，需要重新组合文件
+			var beforeDoRealErr error
+			var sourceDir string
+			// #nosec G301
+			sourceDir, beforeDoRealErr = ioutil.TempDir("/tmp", "*Source.d")
+			if beforeDoRealErr != nil {
+				logger.Warning(beforeDoRealErr)
+				return beforeDoRealErr
 			}
-			if fileInfo.IsDir() {
-				allSourceDirFileInfos, err := ioutil.ReadDir(path)
+			unref := func() {
+				err := os.RemoveAll(sourceDir)
 				if err != nil {
+					logger.Warning(err)
+				}
+			}
+			defer func() {
+				if beforeDoRealErr != nil {
+					unref()
+				}
+			}()
+			var allSourceFilePaths []string
+			for _, path := range sourcePathList {
+				var fileInfo os.FileInfo
+				fileInfo, beforeDoRealErr = os.Stat(path)
+				if beforeDoRealErr != nil {
 					continue
 				}
-				for _, fileInfo := range allSourceDirFileInfos {
-					name := fileInfo.Name()
-					if strings.HasSuffix(name, ".list") {
-						allSourceFilePaths = append(allSourceFilePaths, filepath.Join(path, name))
+				if fileInfo.IsDir() {
+					var allSourceDirFileInfos []os.FileInfo
+					allSourceDirFileInfos, beforeDoRealErr = ioutil.ReadDir(path)
+					if beforeDoRealErr != nil {
+						continue
 					}
+					for _, fileInfo := range allSourceDirFileInfos {
+						name := fileInfo.Name()
+						if strings.HasSuffix(name, ".list") {
+							allSourceFilePaths = append(allSourceFilePaths, filepath.Join(path, name))
+						}
+					}
+				} else {
+					allSourceFilePaths = append(allSourceFilePaths, path)
 				}
-			} else {
-				allSourceFilePaths = append(allSourceFilePaths, path)
 			}
-		}
 
-		// 创建对应的软链接
-		for _, filePath := range allSourceFilePaths {
-			linkPath := filepath.Join(sourceDir, filepath.Base(filePath))
-			err := os.Symlink(filePath, linkPath)
-			if err != nil {
-				return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
+			// 创建对应的软链接
+			for _, filePath := range allSourceFilePaths {
+				linkPath := filepath.Join(sourceDir, filepath.Base(filePath))
+				beforeDoRealErr = os.Symlink(filePath, linkPath)
+				if beforeDoRealErr != nil {
+					return fmt.Errorf("create symlink for %q failed: %v", filePath, beforeDoRealErr)
+				}
 			}
-		}
-		unref := func() {
-			err := os.RemoveAll(sourceDir)
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-		if doRealAction != nil {
 			return doRealAction(sourceDir, unref)
 		}
 		return errors.New("doRealAction is nil")

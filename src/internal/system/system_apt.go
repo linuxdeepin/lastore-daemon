@@ -336,7 +336,6 @@ func parsePackageSize(line string) (float64, float64, error) {
 		var allDownloadSize float64
 		var allDownloadUnit byte
 		var needDownloadUnit byte
-		defer logger.Infof("need download size:%vB;all download size:%vB", needDownloadUnit, allDownloadSize)
 		needDownloadStr := strings.Replace(string(ms[1]), ",", "", -1)
 		needDownloadSize, err := strconv.ParseFloat(needDownloadStr, 64)
 		if err != nil {
@@ -362,6 +361,7 @@ func parsePackageSize(line string) (float64, float64, error) {
 		}
 		needDownloadSize = needDownloadSize * __unitTable__[needDownloadUnit]
 		allDownloadSize = allDownloadSize * __unitTable__[allDownloadUnit]
+		logger.Infof("need download size:%vB;all download size:%vB", needDownloadSize, allDownloadSize)
 		return needDownloadSize, allDownloadSize, nil
 	}
 	return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid", line)

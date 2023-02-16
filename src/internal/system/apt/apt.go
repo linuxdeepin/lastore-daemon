@@ -117,11 +117,14 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		return exec.Command("/usr/bin/lastore-apt-clean")
 
 	case system.FixErrorJobType:
-		errType := cmdArgs[0]
+		var errType string
+		if len(cmdArgs) >= 1 {
+			errType = cmdArgs[0]
+		}
 		// FixError 需要加上apt参数项
 		var aptOption []string
 		var aptOptionString string
-		if len(cmdArgs) >= 1 {
+		if len(cmdArgs) > 1 {
 			aptOption = cmdArgs[1:]
 			aptOptionString = strings.Join(aptOption, " ")
 		}

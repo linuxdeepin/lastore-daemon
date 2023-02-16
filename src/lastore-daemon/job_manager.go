@@ -116,7 +116,10 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.CleanJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
 	case system.FixErrorJobType:
-		errType := packages[0]
+		var errType string
+		if len(packages) >= 1 {
+			errType = packages[0]
+		}
 		jobId := jobType + "_" + errType
 		job = NewJob(jm.service, jobId, jobName, packages, jobType,
 			LockQueue, environ)
