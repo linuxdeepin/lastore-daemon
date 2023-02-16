@@ -64,6 +64,7 @@ type Updater struct {
 	downloadSpeedLimitConfigObj downloadSpeedLimitConfig
 
 	setDownloadSpeedLimitTimer *time.Timer
+	setIdleDownloadConfigTimer *time.Timer
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {

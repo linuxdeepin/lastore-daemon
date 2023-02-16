@@ -153,17 +153,36 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 	err := json.Unmarshal([]byte(idleConfig), &u.idleDownloadConfigObj)
 	if err != nil {
+		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	changed := u.setPropIdleDownloadConfig(idleConfig)
-	if changed {
-		err := u.config.SetIdleDownloadConfig(idleConfig)
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
-		}
+
+	if u.setIdleDownloadConfigTimer == nil {
+		u.setIdleDownloadConfigTimer = time.AfterFunc(time.Second, func() {
+			config, err := json.Marshal(u.idleDownloadConfigObj)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+			changed := u.setPropIdleDownloadConfig(string(config))
+			if changed {
+				err = u.config.SetIdleDownloadConfig(string(config))
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+				err = u.manager.updateAutoDownloadTimer()
+				if err != nil {
+					logger.Warning(err)
+					return
+				}
+			}
+		})
+	} else {
+		u.setIdleDownloadConfigTimer.Reset(time.Second)
+		logger.Info("reset idle timer")
 	}
-	return dbusutil.ToError(u.manager.updateAutoDownloadTimer())
+	return nil
 }
 
 func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
