@@ -258,7 +258,7 @@
       "visibility": "private"
     },
     "idle-download-config": {
-      "value": "{\"IdleDownloadEnabled\":true,\"BeginTime\":\"17:00\",\"EndTime\":\"22:00\"}",
+      "value": "{\"IdleDownloadEnabled\":true,\"BeginTime\":\"17:00\",\"EndTime\":\"20:00\"}",
       "serial": 0,
       "flags": [
         "global"
@@ -291,7 +291,7 @@
       "visibility": "private"
     },
     "download-speed-limit":{
-      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"0\"}",
+      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"10240\"}",
       "serial": 0,
       "flags": [
         "global"
