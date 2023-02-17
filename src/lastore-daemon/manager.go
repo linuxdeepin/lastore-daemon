@@ -375,7 +375,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	_, err := m.updateSource(false)
+	_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), false)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -487,16 +487,20 @@ func prepareUpdateSource() {
 	}
 }
 
-func (m *Manager) updateSource(needNotify bool) (*Job, error) {
+func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error) {
 	m.do.Lock()
 	defer m.do.Unlock()
 	var jobName string
 	if needNotify {
 		jobName = "+notify"
 	}
+	environ, err := makeEnvironWithSender(m, sender)
+	if err != nil {
+		return nil, err
+	}
 	prepareUpdateSource()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, environ)
 	if err != nil {
 		logger.Warningf("UpdateSource error: %v\n", err)
 		return nil, err
@@ -1236,7 +1240,7 @@ func (m *Manager) handleAutoCheckEvent() error {
 			logger.Info("lastore is running prepare upgrade or upgrade job, not need check update")
 			return nil
 		}
-		_, err := m.updateSource(m.updater.UpdateNotify)
+		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), m.updater.UpdateNotify)
 		if err != nil {
 			logger.Warning(err)
 			return err

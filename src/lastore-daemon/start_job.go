@@ -45,7 +45,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.Remove(j.Id, j.Packages, j.environ)
 
 	case system.UpdateSourceJobType:
-		return sys.UpdateSource(j.Id)
+		return sys.UpdateSource(j.Id, j.environ)
 
 	case system.UpdateJobType:
 		return sys.Install(j.Id, j.Packages, j.environ, args)

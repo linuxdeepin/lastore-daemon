@@ -130,8 +130,8 @@ func makeEnvironWithSender(m *Manager, sender dbus.Sender) (map[string]string, e
 		environ, err = agent.GetManualProxy(0)
 		if err != nil {
 			logger.Warning(err)
+			environ = make(map[string]string)
 		}
-		environ = make(map[string]string)
 	}
 	pid, err := m.service.GetConnPID(string(sender))
 	if err != nil {

@@ -311,7 +311,7 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 	return safeStart(c)
 }
 
-func (p *APTSystem) UpdateSource(jobId string) error {
+func (p *APTSystem) UpdateSource(jobId string, environ map[string]string) error {
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
 	c.atExitFn = func() bool {
 		if c.exitCode == ExitSuccess &&
@@ -322,6 +322,7 @@ func (p *APTSystem) UpdateSource(jobId string) error {
 		}
 		return false
 	}
+	c.setEnv(environ)
 	return c.Start()
 }
 

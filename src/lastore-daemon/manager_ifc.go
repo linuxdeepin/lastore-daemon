@@ -420,9 +420,9 @@ func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages str
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.updateSource(false)
+	jobObj, err := m.updateSource(sender, false)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
