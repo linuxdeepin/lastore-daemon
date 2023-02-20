@@ -956,17 +956,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-lock,-t")}
 					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				}
-				m.PropsMu.RLock()
-				packages := m.UpgradableApps
-				m.PropsMu.RUnlock()
-				size, err := system.QueryPackageDownloadSize(false, packages...)
+				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, true)
 				if err != nil {
 					logger.Warning(err)
-				} else {
-					err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
-					if err != nil {
-						logger.Warning(err)
-					}
 				}
 			},
 			string(system.FailedStatus): func() {
