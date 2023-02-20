@@ -635,6 +635,16 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			var needConnectNotifyId uint32 = 0
 			onBatteryGlobal, _ := m.sysPower.OnBattery().Get(0)
 			batteryPercentage, _ := m.sysPower.BatteryPercentage().Get(0)
+			if onBatteryGlobal && batteryPercentage <= 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) {
+				msg := gettext.Tr("请插入电源后再开始更新")
+				_ = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+				powerError := errors.New("inhibit dist-upgrade because low power")
+				logger.Warningf("DistUpgrade error: %v\n", powerError)
+				if unref != nil {
+					unref()
+				}
+				return powerError
+			}
 			handleSysPowerBatteryEvent := func() {
 				if onBatteryGlobal && batteryPercentage <= 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) {
 					batteryPercentageNotify.Do(func() {
@@ -964,7 +974,26 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			string(system.FailedStatus): func() {
 				m.PropsMu.Lock()
 				m.isDownloading = false
+				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
+				var errorContent = struct {
+					ErrType   string
+					ErrDetail string
+				}{}
+				err = json.Unmarshal([]byte(job.Description), &errorContent)
+				if err == nil {
+					if errorContent.ErrType == string(system.ErrorInsufficientSpace) {
+						var msg string
+						size, err := system.QueryPackageDownloadSize(false, packages...)
+						if err != nil {
+							logger.Warning(err)
+							msg = gettext.Tr("更新包下载失败，请为下载目录释放空间")
+						} else {
+							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%v空间"), size/1000*1000*1000)
+						}
+						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					}
+				}
 			},
 			string(system.EndStatus): func() {
 				if unref != nil {

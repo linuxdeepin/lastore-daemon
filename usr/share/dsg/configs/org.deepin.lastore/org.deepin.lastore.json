@@ -113,7 +113,7 @@
       "visibility": "private"
     },
     "update-mode": {
-      "value": 3,
+      "value": 5,
       "serial": 0,
       "flags": [
         "global"
