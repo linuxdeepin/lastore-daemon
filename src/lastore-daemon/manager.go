@@ -955,6 +955,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				}
 			},
 			string(system.SucceedStatus): func() {
+				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, true)
+				if err != nil {
+					logger.Warning(err)
+				}
 				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
 					msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
 					action := []string{
@@ -963,12 +967,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 						"ignore",
 						gettext.Tr("ignore"),
 					}
-					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-lock,-t")}
+					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
 					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-				}
-				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, true)
-				if err != nil {
-					logger.Warning(err)
 				}
 			},
 			string(system.FailedStatus): func() {
