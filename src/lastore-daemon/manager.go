@@ -522,15 +522,21 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.isUpdateSucceed = true
 				m.PropsMu.Unlock()
 				m.handleUpdateInfosChanged()
-				if len(m.UpgradableApps) > 0 && !m.updater.AutoDownloadUpdates {
-					msg := gettext.Tr("Updates Available")
-					action := []string{"update", gettext.Tr("Update Now")}
-					hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update,-p,Checking")}
-					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				if len(m.UpgradableApps) > 0 {
+					m.reportLog(updateStatus, true, "")
+					if !m.updater.AutoDownloadUpdates {
+						msg := gettext.Tr("Updates Available")
+						action := []string{"update", gettext.Tr("Update Now")}
+						hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update,-p,Checking")}
+						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					}
+				} else {
+					m.reportLog(updateStatus, false, "")
 				}
 			},
 			string(system.FailedStatus): func() {
 				m.handleUpdateInfosChanged()
+				m.reportLog(updateStatus, false, job.Description)
 			},
 		})
 	}
@@ -738,6 +744,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if m.needPostSystemUpgradeMessage() && ((mode & system.SystemUpdate) != 0) {
 					go m.postSystemUpgradeMessage(upgradeFailed, job, system.SystemUpdate)
 				}
+				m.reportLog(upgradeStatus, false, job.Description)
 				// unmask deepin-desktop-base 无需继续安装
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
@@ -799,6 +806,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if m.needPostSystemUpgradeMessage() && ((mode & system.SystemUpdate) != 0) {
 					go m.postSystemUpgradeMessage(upgradeSucceed, job.next, system.SystemUpdate)
 				}
+				m.reportLog(upgradeStatus, true, "")
 			},
 			string(system.EndStatus): func() {
 				// wrapper的资源释放
@@ -970,12 +978,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
 					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				}
+				m.reportLog(downloadStatus, true, "")
 			},
 			string(system.FailedStatus): func() {
 				m.PropsMu.Lock()
 				m.isDownloading = false
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
+				m.reportLog(downloadStatus, false, job.Description)
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
@@ -2083,6 +2093,48 @@ func (m *Manager) handleFailedNotify() {
 	if err != nil {
 		logger.Warning(err)
 	}
+}
+
+type reportCategory uint32
+
+const (
+	updateStatus reportCategory = iota
+	downloadStatus
+	upgradeStatus
+)
+
+type reportLogInfo struct {
+	Tid    int
+	Result bool
+	Reason string
+}
+
+func (m *Manager) reportLog(category reportCategory, status bool, description string) {
+	go func() {
+		agent := m.userAgents.getActiveLastoreAgent()
+		if agent != nil {
+			logInfo := reportLogInfo{
+				Result: status,
+				Reason: description,
+			}
+			switch category {
+			case updateStatus:
+				logInfo.Tid = 1000600002
+			case downloadStatus:
+				logInfo.Tid = 1000600003
+			case upgradeStatus:
+				logInfo.Tid = 1000600004
+			}
+			infoContent, err := json.Marshal(logInfo)
+			if err != nil {
+				logger.Warning(err)
+			}
+			err = agent.ReportLog(0, string(infoContent))
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+	}()
 }
 
 // reloadPrepareDistUpgradeJob 标记下载job状态为reload
