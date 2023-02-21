@@ -411,11 +411,10 @@ func (m *Manager) handleUpdateInfosChanged() {
 		size, err := system.QueryPackageDownloadSize(false, packages...)
 		if err != nil {
 			logger.Warning(err)
-		} else {
-			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
-			if err != nil {
-				logger.Warning(err)
-			}
+		}
+		err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
+		if err != nil {
+			logger.Warning(err)
 		}
 	}()
 	m.PropsMu.Lock()
