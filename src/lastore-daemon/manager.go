@@ -799,6 +799,10 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				case <-ch:
 					logger.Info("install deepin-desktop-base done,upgrade succeed.")
 				}
+				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, false)
+				if err != nil {
+					logger.Warning(err)
+				}
 				// 等待deepin-desktop-base安装完成后,状态后续切换
 				job.setPropProgress(1.00)
 				// 上报更新成功的信息(如果需要)
