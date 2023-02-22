@@ -522,10 +522,12 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.handleUpdateInfosChanged()
 				if len(m.UpgradableApps) > 0 {
 					m.reportLog(updateStatus, true, "")
-					if !m.updater.AutoDownloadUpdates {
+					// 开启自动下载时触发自动下载,发自动下载通知
+					// 关闭自动下载且为自动触发时,发可更新的通知
+					if !m.updater.AutoDownloadUpdates && sender == dbus.Sender(m.service.Conn().Names()[0]) {
 						msg := gettext.Tr("Updates Available")
 						action := []string{"update", gettext.Tr("Update Now")}
-						hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update,-p,Checking")}
+						hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update")}
 						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
