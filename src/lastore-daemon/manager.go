@@ -157,7 +157,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	}
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
-	m.handleFailedNotify()
 	return m
 }
 
