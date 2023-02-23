@@ -286,10 +286,10 @@ func (jm *JobManager) dispatch() {
 	// 2. Try starting jobs with ReadyStatus
 	lockQueue := jm.queues[LockQueue]
 	jm.startJobsInQueue(lockQueue)
-	jm.startJobsInQueue(jm.queues[DownloadQueue]) // 由于下载任务不会影响到安装和更新,可以在更新时继续下载
 	jm.startJobsInQueue(jm.queues[DelayLockQueue])
 	// wait for LockQueue be idled
 	if len(lockQueue.RunningJobs()) == 0 {
+		jm.startJobsInQueue(jm.queues[DownloadQueue])
 		jm.startJobsInQueue(jm.queues[SystemChangeQueue])
 	}
 

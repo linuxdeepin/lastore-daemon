@@ -59,7 +59,7 @@ func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 		if err != nil {
 			logger.Infof("Enable shutdown...: fd:%d, err:%s\n", m.inhibitFd, err)
 		} else {
-			logger.Infof("Enable shutdown...")
+			logger.Info("Enable shutdown...")
 		}
 		m.inhibitFd = -1
 	}
