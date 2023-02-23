@@ -1874,11 +1874,11 @@ func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
 
 // 下载中断或者修改下载时间段后,需要更新timer   用户手动中断下载时，需要再第二天的设置实际重新下载   开机时间在自动下载时间段内时，
 func (m *Manager) updateAutoDownloadTimer() error {
-	err := m.updateTimerUnit(lastoreAutoDownload)
+	err := m.updateTimerUnit(lastoreAbortAutoDownload)
 	if err != nil {
 		return err
 	}
-	err = m.updateTimerUnit(lastoreAbortAutoDownload)
+	err = m.updateTimerUnit(lastoreAutoDownload)
 	if err != nil {
 		return err
 	}
@@ -1905,7 +1905,6 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 		_, err = m.systemd.StopUnit(0, timerName, "replace")
 		if err != nil {
 			logger.Warning(err)
-			return err
 		}
 	}
 	var args []string
@@ -1933,6 +1932,9 @@ func (m *Manager) getNextAutoDownloadDelay() time.Duration {
 	defer m.updater.PropsMu.RUnlock()
 	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
 	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
+	defer func() {
+		logger.Debug("auto download begin time duration:", beginDur)
+	}()
 	// 如果下载或者自动下载已经开始,下一次的开始时间应该为第二天时间
 	m.PropsMu.Lock()
 	defer m.PropsMu.Unlock()
@@ -1941,10 +1943,9 @@ func (m *Manager) getNextAutoDownloadDelay() time.Duration {
 	}
 	// 如果用户开机时间在自动下载时间段内，则返回默认最小时间(立即开始)
 	if beginDur > endDur {
-		return _minDelayTime
-	} else {
-		return beginDur
+		beginDur = _minDelayTime
 	}
+	return beginDur
 }
 
 // getAbortNextAutoDownloadDelay 用配置时间减去当前时间，得到终止延迟下载任务的时间.
@@ -1953,12 +1954,14 @@ func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
 	defer m.updater.PropsMu.RUnlock()
 	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
 	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
+	defer func() {
+		logger.Debug("auto download end time duration:", endDur)
+	}()
 	// 如果用户开机时间在自动下载时间段内,且立即开始的时间(_minDelayTime)大于结束时间,则结束时间为两倍最小时间
 	if beginDur > endDur && endDur <= _minDelayTime {
-		return _minDelayTime * 2
-	} else {
-		return endDur
+		endDur = _minDelayTime * 2
 	}
+	return endDur
 }
 
 func (m *Manager) handleAutoDownload() {
