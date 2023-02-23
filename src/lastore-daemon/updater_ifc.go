@@ -115,7 +115,21 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 	if u.AutoDownloadUpdates == enable {
 		return nil
 	}
-
+	u.PropsMu.Lock()
+	idleDownloadConfigObj := u.idleDownloadConfigObj
+	u.PropsMu.Unlock()
+	if !enable && idleDownloadConfigObj.IdleDownloadEnabled == true {
+		idleDownloadConfigObj.IdleDownloadEnabled = false
+		idleDownloadByte, err := json.Marshal(idleDownloadConfigObj)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			err = u.SetIdleDownloadConfig(string(idleDownloadByte))
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
 	// save the config to disk
 	err := u.config.SetAutoDownloadUpdates(enable)
 	if err != nil {
