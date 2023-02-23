@@ -158,7 +158,7 @@ func getConfigFromDSettings() *Config {
 	systemSigLoop := dbusutil.NewSignalLoop(sysBus, 10)
 	systemSigLoop.Start()
 	c.dsLastoreManager.InitSignalExt(systemSigLoop, true)
-	//从DSettings获取所有内容，更新config
+	// 从DSettings获取所有内容，更新config
 	v, err := c.dsLastoreManager.Value(0, dSettingsKeyUseDSettings)
 	if err != nil {
 		logger.Warning(err)
@@ -426,6 +426,10 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetAutoClean(oldConfig.AutoClean)
 	_ = c.SetMirrorSource(oldConfig.MirrorSource)
 	_ = c.SetAppstoreRegion(oldConfig.AppstoreRegion)
+	if (oldConfig.UpdateMode & system.OnlySecurityUpdate) != 0 {
+		oldConfig.UpdateMode &= ^system.OnlySecurityUpdate
+		oldConfig.UpdateMode |= system.SecurityUpdate
+	}
 	_ = c.SetUpdateMode(oldConfig.UpdateMode)
 	_ = c.SetCleanIntervalCacheOverLimit(oldConfig.CleanIntervalCacheOverLimit)
 	_ = c.SetAutoInstallUpdates(oldConfig.AutoInstallUpdates)
