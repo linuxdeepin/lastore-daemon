@@ -27,6 +27,7 @@ import (
 	"internal/system"
 
 	"github.com/godbus/dbus"
+	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
@@ -112,6 +113,7 @@ type Manager struct {
 	sysDBusDaemon ofdbus.DBus
 	systemd       systemd1.Manager
 	grub          grub2.Grub2
+	abObj         abrecovery.ABRecovery
 	isDownloading bool
 }
 
@@ -143,6 +145,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		systemd:             systemd1.NewManager(service.Conn()),
 		grub:                grub2.NewGrub2(service.Conn()),
 		sysPower:            power.NewPower(service.Conn()),
+		abObj:               abrecovery.NewABRecovery(service.Conn()),
 	}
 	m.signalLoop.Start()
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
@@ -2096,8 +2099,16 @@ func (m *Manager) handleFailedNotify() {
 	// 更新中断的通知(断电,强制关机等)
 	switch status.Status {
 	case system.UpgradeRunning:
-		msg := gettext.Tr("upgrade abort,need rollback")
-		m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		// config失效时,无法回滚,提示重新更新
+		valid, err := m.abObj.ConfigValid().Get(0)
+		if err != nil || !valid {
+			msg := gettext.Tr("upgrade abort,need try to upgrade again")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+
+		} else {
+			msg := gettext.Tr("upgrade abort,need rollback")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		}
 	case system.UpgradeFailed:
 		switch status.ReasonCode {
 		case system.ErrorDpkgError:
