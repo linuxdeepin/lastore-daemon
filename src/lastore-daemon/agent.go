@@ -166,7 +166,9 @@ func (m *userAgentMap) removeSession(sessionPath dbus.ObjectPath) {
 	for _, item := range m.uidItemMap {
 		for sPath, session := range item.sessions {
 			if sPath == sessionPath {
-				session.RemoveAllHandlers()
+				if session != nil {
+					session.RemoveAllHandlers()
+				}
 				delete(item.sessions, sPath)
 			}
 		}
