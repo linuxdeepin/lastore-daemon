@@ -967,7 +967,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
 					sendAutoDownloadOnce.Do(func() {
 						msg := gettext.Tr("auto downloading")
-						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+						action := []string{
+							"checkNow",
+							gettext.Tr("check now"),
+						}
+						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,update")}
+						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					})
 				}
 			},
