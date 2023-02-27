@@ -1001,14 +1001,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				}{}
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
-					if errorContent.ErrType == string(system.ErrorInsufficientSpace) {
+					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						var msg string
 						size, err := system.QueryPackageDownloadSize(false, packages...)
 						if err != nil {
 							logger.Warning(err)
 							msg = gettext.Tr("更新包下载失败，请为下载目录释放空间")
 						} else {
-							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%v空间"), size/1000*1000*1000)
+							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%v空间"), size/(1000*1000*1000))
 						}
 						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
