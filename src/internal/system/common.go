@@ -324,6 +324,7 @@ const (
 	ErrorNoInstallationCandidate UpgradeReasonType = "noInstallationCandidate"
 	ErrorInsufficientSpace       UpgradeReasonType = "insufficientSpace"
 	ErrorUnauthenticatedPackages UpgradeReasonType = "unauthenticatedPackages"
+	ErrorOperationNotPermitted   UpgradeReasonType = "operationNotPermitted"
 )
 
 type UpgradeStatusAndReason struct {

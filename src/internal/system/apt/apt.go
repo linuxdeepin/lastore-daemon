@@ -276,6 +276,12 @@ func (c *aptCommand) atExit() {
 func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	switch {
 	case strings.Contains(stdErrStr, "Failed to fetch"):
+		if strings.Contains(stdErrStr, "rename failed, Operation not permitted") {
+			return &system.JobError{
+				Type:   string(system.ErrorOperationNotPermitted),
+				Detail: stdErrStr,
+			}
+		}
 		return &system.JobError{
 			Type:   string(system.ErrorFetchFailed),
 			Detail: stdErrStr,
