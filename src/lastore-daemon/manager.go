@@ -638,12 +638,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		// 笔记本电池电量监听
 		isLaptop, err := m.sysPower.HasBattery().Get(0)
 		if isLaptop && err == nil {
-			var hasSendNotify bool
-			var batteryPercentageNotify sync.Once
 			var lowPowerNotifyId uint32 = 0
 			var needConnectNotifyId uint32 = 0
+			var handleSysPowerBatteryEventMu sync.Mutex
 			onBatteryGlobal, _ := m.sysPower.OnBattery().Get(0)
 			batteryPercentage, _ := m.sysPower.BatteryPercentage().Get(0)
+			/* 是否可以开始更新目前由前端管控
 			if onBatteryGlobal && batteryPercentage <= 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) {
 				msg := gettext.Tr("请插入电源后再开始更新")
 				_ = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
@@ -654,34 +654,35 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				}
 				return powerError
 			}
+			*/
 			handleSysPowerBatteryEvent := func() {
-				if onBatteryGlobal && batteryPercentage <= 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) {
-					batteryPercentageNotify.Do(func() {
-						msg := gettext.Tr("The battery level is lower than 60%, please charge it")
-						lowPowerNotifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-						hasSendNotify = true
-					})
+				handleSysPowerBatteryEventMu.Lock()
+				defer handleSysPowerBatteryEventMu.Unlock()
+				if onBatteryGlobal && batteryPercentage < 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) && lowPowerNotifyId == 0 {
+					msg := gettext.Tr("The battery level is lower than 60%, please charge it")
+					lowPowerNotifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
-
-				if onBatteryGlobal && !hasSendNotify {
+				if onBatteryGlobal && lowPowerNotifyId == 0 && needConnectNotifyId == 0 {
 					// TODO 翻译
 					msg := gettext.Tr("需要在1分钟内连接电源")
 					needConnectNotifyId = m.sendNotify("dde-control-center", 0, "TBD-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
-				// 用户连上电源时,需要关闭通知,并重置Once
+				// 用户连上电源时,需要关闭通知
 				if !onBatteryGlobal {
-					if hasSendNotify {
+					if lowPowerNotifyId != 0 {
 						err = m.closeNotify(lowPowerNotifyId)
 						if err != nil {
 							logger.Warning(err)
+						} else {
+							lowPowerNotifyId = 0
 						}
-						hasSendNotify = false
-						batteryPercentageNotify = sync.Once{}
 					}
 					if needConnectNotifyId != 0 {
 						err = m.closeNotify(needConnectNotifyId)
 						if err != nil {
 							logger.Warning(err)
+						} else {
+							needConnectNotifyId = 0
 						}
 					}
 				}
@@ -693,14 +694,14 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 					return
 				}
 				batteryPercentage = value
-				handleSysPowerBatteryEvent()
+				go handleSysPowerBatteryEvent()
 			})
 			_ = m.sysPower.OnBattery().ConnectChanged(func(hasValue bool, onBattery bool) {
 				if !hasValue {
 					return
 				}
 				onBatteryGlobal = onBattery
-				handleSysPowerBatteryEvent()
+				go handleSysPowerBatteryEvent()
 			})
 		}
 		// 设置hook
