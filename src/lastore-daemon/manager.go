@@ -1216,7 +1216,7 @@ func (m *Manager) modifyUpdateMode() {
 	}
 }
 
-//SystemUpgradeInfo 将update_infos.json数据解析成map
+// SystemUpgradeInfo 将update_infos.json数据解析成map
 func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 	r := make(system.SourceUpgradeInfoMap)
 
@@ -1299,7 +1299,7 @@ func (m *Manager) handleAutoCheckEvent() error {
 }
 
 func (m *Manager) handleAutoCleanEvent() error {
-	const MaxCacheSize = 500.0 //size MB
+	const MaxCacheSize = 500.0 // size MB
 	doClean := func() error {
 		logger.Debug("call doClean")
 
@@ -1505,7 +1505,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 			"--property=StartLimitBurst=0",
 			"/bin/bash",
 			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), //监听update_infos.json文件
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), // 监听update_infos.json文件
 		}
 	}
 	unitMap[lastoreAutoClean] = []string{
@@ -1896,7 +1896,26 @@ func (m *Manager) updateAutoDownloadTimer() error {
 
 // systemd计时服务需要根据上一次更新时间而变化
 func (m *Manager) updateAutoCheckSystemUnit() error {
+	err := m.stopTimerUnit(lastoreOnline)
+	if err != nil {
+		logger.Warning(err)
+	}
 	return m.updateTimerUnit(lastoreAutoCheck)
+}
+
+func (m *Manager) stopTimerUnit(unitName UnitName) error {
+	timerName := fmt.Sprintf("%s.%s", unitName, "timer")
+	_, err := m.systemd.GetUnit(0, timerName)
+	if err == nil {
+		_, err = m.systemd.StopUnit(0, timerName, "replace")
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+	} else {
+		return err
+	}
+	return nil
 }
 
 // 重新启动systemd unit,先GetUnit，如果能获取到，就调用StopUnit(replace).如果获取不到,证明已经处理完成,直接重新创建对应unit执行
