@@ -316,8 +316,10 @@ func (p *APTSystem) UpdateSource(jobId string, environ map[string]string) error 
 	c.atExitFn = func() bool {
 		if c.exitCode == ExitSuccess &&
 			bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
-
-			c.indicateFailed("IndexDownloadFailed", c.stderr.String(), false)
+			if bytes.Contains(c.stderr.Bytes(), []byte("No space left on device")) {
+				c.indicateFailed(string(system.ErrorInsufficientSpace), c.stderr.String(), false)
+			}
+			c.indicateFailed(string(system.ErrorIndexDownloadFailed), c.stderr.String(), false)
 			return true
 		}
 		return false

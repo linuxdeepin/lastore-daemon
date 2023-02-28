@@ -282,6 +282,12 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 				Detail: stdErrStr,
 			}
 		}
+		if strings.Contains(stdErrStr, "No space left on device") {
+			return &system.JobError{
+				Type:   string(system.ErrorInsufficientSpace),
+				Detail: stdErrStr,
+			}
+		}
 		return &system.JobError{
 			Type:   string(system.ErrorFetchFailed),
 			Detail: stdErrStr,
@@ -331,7 +337,7 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Detail: stdErrStr,
 		}
 
-	case strings.Contains(stdErrStr, "You don't have enough free space"):
+	case strings.Contains(stdErrStr, "You don't have enough free space") || strings.Contains(stdErrStr, "No space left on device"):
 		return &system.JobError{
 			Type:   string(system.ErrorInsufficientSpace),
 			Detail: stdErrStr,
