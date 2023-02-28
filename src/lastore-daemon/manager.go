@@ -897,8 +897,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			string(system.ErrorInsufficientSpace),
 			"You don't have enough free space to download",
 		}
-		msg := gettext.Tr("You don't have enough free space to download")
-		m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		if string(sender) == m.service.Conn().Names()[0] {
+			msg := gettext.Tr("You don't have enough free space to download")
+			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		}
 		logger.Warning(dbusError.Detail)
 		errStr, _ := json.Marshal(dbusError)
 		return nil, dbusutil.ToError(errors.New(string(errStr)))
