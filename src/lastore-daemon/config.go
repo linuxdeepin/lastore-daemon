@@ -52,7 +52,7 @@ type Config struct {
 	AutoInstallUpdates             bool
 	AutoInstallUpdateType          system.UpdateType
 
-	AllowPostSystemUpgradeMessageVersion []string //只有数组内的系统版本被允许发送更新完成的数据
+	AllowPostSystemUpgradeMessageVersion []string // 只有数组内的系统版本被允许发送更新完成的数据
 
 	dsLastoreManager         ConfigManager.Manager
 	useDSettings             bool
@@ -91,7 +91,7 @@ func NewConfig(fpath string) *Config {
 	if dc.Repository == "" || dc.MirrorSource == "" {
 		info := system.DetectDefaultRepoInfo(system.RepoInfos)
 		_ = dc.SetRepository(info.Name)
-		_ = dc.SetMirrorSource("default") //info.Mirror
+		_ = dc.SetMirrorSource("default") // info.Mirror
 	}
 	if dc.Version == "" {
 		_ = dc.SetVersion(ConfigVersion)
@@ -131,7 +131,6 @@ const (
 	dSettingsKeyIdleDownloadConfig                   = "idle-download-config"
 	dSettingsKeySystemSourceList                     = "system-sources"
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
-	dSettingsKeyNeedDownloadSize                     = "need-download-size"
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 )
@@ -369,13 +368,6 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyNeedDownloadSize)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.needDownloadSize = v.Value().(float64)
-	}
-
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDownloadSpeedLimit)
 	if err != nil {
 		logger.Warning(err)
@@ -576,10 +568,10 @@ func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
 	return c.save(dSettingsKeyAllowInstallRemovePkgExecPaths, paths)
 }
 
-//func (c *Config) SetNeedDownloadSize(size float64) error {
+// func (c *Config) SetNeedDownloadSize(size float64) error {
 //	c.needDownloadSize = size
 //	return c.save(dSettingsKeyNeedDownloadSize, size)
-//}
+// }
 
 func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
 	c.downloadSpeedLimitConfig = config

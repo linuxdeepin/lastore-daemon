@@ -258,7 +258,7 @@
       "visibility": "private"
     },
     "idle-download-config": {
-      "value": "{\"IdleDownloadEnabled\":true,\"BeginTime\":\"17:00\",\"EndTime\":\"20:00\"}",
+      "value": "{\"IdleDownloadEnabled\":false,\"BeginTime\":\"17:00\",\"EndTime\":\"20:00\"}",
       "serial": 0,
       "flags": [
         "global"
