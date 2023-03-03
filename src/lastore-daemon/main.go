@@ -129,7 +129,6 @@ func main() {
 	}
 	manager.PropsMu.RUnlock()
 	manager.startSystemdUnit()
-	manager.handleFailedNotify()
 	logger.Info("Started service at system bus")
 	autoQuitTime := 60 * time.Second
 	if logger.GetLogLevel() == log.LevelDebug {

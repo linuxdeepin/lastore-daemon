@@ -525,13 +525,13 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.handleUpdateInfosChanged()
 				if len(m.UpgradableApps) > 0 {
 					m.reportLog(updateStatus, true, "")
-					// 开启自动下载时触发自动下载,发自动下载通知
-					// 关闭自动下载且为自动触发时,发可更新的通知
-					if !m.updater.AutoDownloadUpdates && sender == dbus.Sender(m.service.Conn().Names()[0]) {
-						msg := gettext.Tr("Updates Available")
+					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
+					// 关闭自动下载时,发可更新的通知;
+					if !m.updater.AutoDownloadUpdates {
+						msg := gettext.Tr("New system edition available")
 						action := []string{"update", gettext.Tr("Update Now")}
 						hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update")}
-						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
 					m.reportLog(updateStatus, false, "")
@@ -539,6 +539,20 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 			},
 			string(system.FailedStatus): func() {
 				m.handleUpdateInfosChanged()
+				// 网络问题检查更新失败,需要发通知
+				var errorContent = struct {
+					ErrType   string
+					ErrDetail string
+				}{}
+				err = json.Unmarshal([]byte(job.Description), &errorContent)
+				if err == nil {
+					if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
+						msg := gettext.Tr("检测更新失败，请检查网络设置")
+						action := []string{"checkNow", gettext.Tr("check now")}
+						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					}
+				}
 				m.reportLog(updateStatus, false, job.Description)
 			},
 		})
@@ -643,7 +657,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		isLaptop, err := m.sysPower.HasBattery().Get(0)
 		if isLaptop && err == nil {
 			var lowPowerNotifyId uint32 = 0
-			var needConnectNotifyId uint32 = 0
 			var handleSysPowerBatteryEventMu sync.Mutex
 			onBatteryGlobal, _ := m.sysPower.OnBattery().Get(0)
 			batteryPercentage, _ := m.sysPower.BatteryPercentage().Get(0)
@@ -664,12 +677,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				defer handleSysPowerBatteryEventMu.Unlock()
 				if onBatteryGlobal && batteryPercentage < 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) && lowPowerNotifyId == 0 {
 					msg := gettext.Tr("The battery level is lower than 60%, please charge it")
-					lowPowerNotifyId = m.sendNotify("dde-control-center", 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-				}
-				if onBatteryGlobal && lowPowerNotifyId == 0 && needConnectNotifyId == 0 {
-					// TODO 翻译
-					msg := gettext.Tr("需要在1分钟内连接电源")
-					needConnectNotifyId = m.sendNotify("dde-control-center", 0, "TBD-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+					lowPowerNotifyId = m.sendNotify(updateNotifyShow, 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
 				// 用户连上电源时,需要关闭通知
 				if !onBatteryGlobal {
@@ -679,14 +687,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 							logger.Warning(err)
 						} else {
 							lowPowerNotifyId = 0
-						}
-					}
-					if needConnectNotifyId != 0 {
-						err = m.closeNotify(needConnectNotifyId)
-						if err != nil {
-							logger.Warning(err)
-						} else {
-							needConnectNotifyId = 0
 						}
 					}
 				}
@@ -727,8 +727,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				})
 			},
 			string(system.FailedStatus): func() {
-				msg := gettext.Tr("Update failed")
-				m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				// 状态更新为failed
 				var errorContent = struct {
 					ErrType   string
@@ -905,10 +903,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			string(system.ErrorInsufficientSpace),
 			"You don't have enough free space to download",
 		}
-		if string(sender) == m.service.Conn().Names()[0] {
-			msg := gettext.Tr("You don't have enough free space to download")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		}
+		msg := fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%vG空间"), needDownloadSize/(1000*1000*1000))
+		m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		logger.Warning(dbusError.Detail)
 		errStr, _ := json.Marshal(dbusError)
 		return nil, dbusutil.ToError(errors.New(string(errStr)))
@@ -968,35 +964,30 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				m.PropsMu.Lock()
 				m.isDownloading = true
 				m.PropsMu.Unlock()
-				// 如果sender为自己,则为触发自动下载
-				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
-					sendAutoDownloadOnce.Do(func() {
-						msg := gettext.Tr("auto downloading")
-						action := []string{
-							"checkNow",
-							gettext.Tr("check now"),
-						}
-						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,update")}
-						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-					})
-				}
+				sendAutoDownloadOnce.Do(func() {
+					msg := gettext.Tr("New system edition available, auto downloading")
+					action := []string{
+						"checkNow",
+						gettext.Tr("check now"),
+					}
+					hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,update")}
+					m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				})
 			},
 			string(system.SucceedStatus): func() {
 				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, true)
 				if err != nil {
 					logger.Warning(err)
 				}
-				if sender == dbus.Sender(m.service.Conn().Names()[0]) {
-					msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
-					action := []string{
-						"updateNow",
-						gettext.Tr("update now"),
-						"ignore",
-						gettext.Tr("ignore"),
-					}
-					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
-					m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
+				action := []string{
+					"updateNow",
+					gettext.Tr("update now"),
+					"ignore",
+					gettext.Tr("ignore"),
 				}
+				hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
+				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				m.reportLog(downloadStatus, true, "")
 			},
 			string(system.FailedStatus): func() {
@@ -1019,9 +1010,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 							logger.Warning(err)
 							msg = gettext.Tr("更新包下载失败，请为下载目录释放空间")
 						} else {
-							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%v空间"), size/(1000*1000*1000))
+							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%vG空间"), size/(1000*1000*1000))
 						}
-						m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
 				}
 			},
@@ -1146,7 +1137,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 		string(system.EndStatus): func() {
 			// 清理完成的通知
 			msg := gettext.Tr("Package cache wiped")
-			m.sendNotify("dde-control-center", 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			m.sendNotify(updateNotifyShow, 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 		},
 	})
 	if err := m.jobManager.addJob(job); err != nil {
@@ -2052,6 +2043,11 @@ func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 	}
 }
 
+const (
+	updateNotifyShow         = "dde-control-center"          // 无论控制中心状态，都需要发送的通知
+	updateNotifyShowOptional = "dde-control-center-optional" // 根据控制中心更新模块焦点状态,选择性的发通知(由dde-session-daemon的lastore agent判断后控制)
+)
+
 func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
 	if !m.updater.UpdateNotify {
 		return 0
@@ -2077,46 +2073,6 @@ func (m *Manager) closeNotify(id uint32) error {
 		}
 	}
 	return nil
-}
-
-func (m *Manager) handleFailedNotify() {
-	status := m.config.upgradeStatus
-	// 更新中断的通知(断电,强制关机等)
-	switch status.Status {
-	case system.UpgradeRunning:
-		// config失效时,无法回滚,提示重新更新
-		valid, err := m.abObj.ConfigValid().Get(0)
-		if err != nil || !valid {
-			msg := gettext.Tr("upgrade abort,need try to upgrade again")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-
-		} else {
-			msg := gettext.Tr("upgrade abort,need rollback")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		}
-	case system.UpgradeFailed:
-		switch status.ReasonCode {
-		case system.ErrorDpkgError:
-			msg := gettext.Tr("upgrade failed because an error occurred during dpkg installation, need rollback")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		case system.ErrorPkgNotFound:
-			msg := gettext.Tr("upgrade failed because unable to locate package, need rollback")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		case system.ErrorNoInstallationCandidate:
-			msg := gettext.Tr("upgrade failed because has no installation candidate")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		case system.ErrorUnknown:
-			msg := gettext.Tr("upgrade failed, need rollback")
-			m.sendNotify("dde-control-center", 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		}
-	}
-	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{
-		Status:     system.UpgradeReady,
-		ReasonCode: system.NoError,
-	})
-	if err != nil {
-		logger.Warning(err)
-	}
 }
 
 type reportCategory uint32
