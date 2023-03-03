@@ -509,15 +509,14 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	if isExist {
 		return job, nil
 	}
-	if err := m.jobManager.addJob(job); err != nil {
-		return nil, err
-	}
 	if job != nil {
-		m.PropsMu.Lock()
-		m.updateSourceOnce = true
-		m.isUpdateSucceed = false
-		m.PropsMu.Unlock()
 		job.setHooks(map[string]func(){
+			string(system.RunningStatus): func() {
+				m.PropsMu.Lock()
+				m.updateSourceOnce = true
+				m.isUpdateSucceed = false
+				m.PropsMu.Unlock()
+			},
 			string(system.SucceedStatus): func() {
 				m.PropsMu.Lock()
 				m.isUpdateSucceed = true
@@ -542,6 +541,10 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.reportLog(updateStatus, false, job.Description)
 			},
 		})
+	}
+	if err := m.jobManager.addJob(job); err != nil {
+		logger.Warning(err)
+		return nil, err
 	}
 	return job, err
 }
@@ -1259,33 +1262,7 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
-	var checkNeedUpdateSource = func() bool {
-		upgradeTypeList := []string{
-			system.PrepareDistUpgradeJobType,
-			system.PrepareSystemUpgradeJobType,
-			system.PrepareAppStoreUpgradeJobType,
-			system.PrepareUnknownUpgradeJobType,
-			system.PrepareSecurityUpgradeJobType,
-			system.DistUpgradeJobType,
-			system.SystemUpgradeJobType,
-			system.AppStoreUpgradeJobType,
-			system.SecurityUpgradeJobType,
-			system.UnknownUpgradeJobType,
-			system.OnlyInstallJobType,
-		}
-		for _, jobType := range upgradeTypeList {
-			job := m.jobManager.findJobById(genJobId(jobType))
-			if job != nil && job.Status == system.RunningStatus {
-				return false
-			}
-		}
-		return true
-	}
 	if m.config.AutoCheckUpdates {
-		if !checkNeedUpdateSource() {
-			logger.Info("lastore is running prepare upgrade or upgrade job, not need check update")
-			return nil
-		}
 		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), m.updater.UpdateNotify)
 		if err != nil {
 			logger.Warning(err)

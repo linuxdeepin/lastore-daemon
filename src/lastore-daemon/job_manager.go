@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"internal/system"
 	"sort"
 	"strconv"
@@ -447,6 +448,9 @@ func (jm *JobManager) addJob(j *Job) error {
 	if !ok {
 		return system.NotFoundError("addJob with queue " + queueName)
 	}
+	if j.Id == genJobId(system.UpdateSourceJobType) && (len(jm.queues[DownloadQueue].RunningJobs()) != 0 || len(jm.queues[DelayLockQueue].RunningJobs()) != 0 || len(jm.queues[LockQueue].RunningJobs()) != 0) {
+		return errors.New("download or install running, not need check update")
+	}
 
 	err := queue.Add(j)
 	if err != nil {
@@ -464,6 +468,7 @@ func (jm *JobManager) addJob(j *Job) error {
 			return err
 		}
 	}
+	logger.Infof("Add job with %q %q %q %+v %+v\n", j.Name, j.Type, j.Packages, j.option, j.environ)
 	jm.markDirty()
 	return nil
 }
