@@ -409,8 +409,9 @@ func (m *Manager) handleUpdateInfosChanged() {
 	go func() {
 		m.PropsMu.RLock()
 		packages := m.UpgradableApps
+		updateMode := m.UpdateMode
 		m.PropsMu.RUnlock()
-		size, err := system.QueryPackageDownloadSize(false, packages...)
+		size, err := system.QueryPackageDownloadSize(updateMode, false, packages...)
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -1001,6 +1002,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			string(system.FailedStatus): func() {
 				m.PropsMu.Lock()
 				m.isDownloading = false
+				updateMode := m.UpdateMode
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
 				m.reportLog(downloadStatus, false, job.Description)
@@ -1012,7 +1014,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				if err == nil {
 					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						var msg string
-						size, err := system.QueryPackageDownloadSize(false, packages...)
+						size, err := system.QueryPackageDownloadSize(updateMode, false, packages...)
 						if err != nil {
 							logger.Warning(err)
 							msg = gettext.Tr("更新包下载失败，请为下载目录释放空间")
@@ -2196,8 +2198,9 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 	go func() {
 		m.PropsMu.RLock()
 		packages := m.UpgradableApps
+		updateMode := m.UpdateMode
 		m.PropsMu.RUnlock()
-		size, err := system.QueryPackageDownloadSize(false, packages...)
+		size, err := system.QueryPackageDownloadSize(updateMode, false, packages...)
 		if err != nil {
 			logger.Warning(err)
 			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, false)

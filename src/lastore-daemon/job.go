@@ -83,7 +83,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 }
 
 func (j *Job) initDownloadSize() {
-	s, err := system.QueryPackageDownloadSize(false, j.Packages...)
+	s, err := system.QueryPackageDownloadSize(system.AllUpdate, false, j.Packages...)
 	if err != nil {
 		logger.Warningf("initDownloadSize failed: %v", err)
 		return

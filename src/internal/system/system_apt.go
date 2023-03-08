@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 )
 
 const (
@@ -127,31 +129,62 @@ func QueryFileCacheSize(path string) (float64, error) {
 
 // QueryPackageDownloadSize parsing the total size of download archives when installing
 // the packages.
-func QueryPackageDownloadSize(containDownloaded bool, packages ...string) (float64, error) {
+func QueryPackageDownloadSize(updateType UpdateType, containDownloaded bool, packages ...string) (float64, error) {
 	if len(packages) == 0 {
 		return SizeDownloaded, NotFoundError("hasn't any packages")
 	}
-	// #nosec G204
-	cmd := exec.Command("/usr/bin/apt-get",
-		append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--print-uris", "--assume-no", "install", "--"}, packages...)...)
-
-	lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
-		_, _, _err := parsePackageSize(line)
-		return _err == nil
-	})
-	if err != nil && len(lines) == 0 {
-		return SizeUnknown, fmt.Errorf("Run:%v failed-->%v", cmd.Args, err)
-	}
-
-	if len(lines) != 0 {
-		needDownloadSize, allSize, err := parsePackageSize(lines[0])
-		if containDownloaded {
-			return allSize, err
+	downloadSize := new(float64)
+	defer logger.Debugf("packages size is:%v, contain downloaded package:%v", *downloadSize, containDownloaded)
+	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
+		defer func() {
+			if unref != nil {
+				unref()
+			}
+		}()
+		var cmd *exec.Cmd
+		if utils2.IsDir(path) {
+			// #nosec G204
+			cmd = exec.Command("/usr/bin/apt-get",
+				append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath,
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path),
+					"--print-uris", "--assume-no", "install", "--"}, packages...)...)
 		} else {
-			return needDownloadSize, err
+			// #nosec G204
+			cmd = exec.Command("/usr/bin/apt-get",
+				append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath,
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null"),
+					"--print-uris", "--assume-no", "install", "--"}, packages...)...)
 		}
+
+		lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
+			_, _, _err := parsePackageSize(line)
+			return _err == nil
+		})
+		if err != nil && len(lines) == 0 {
+			return fmt.Errorf("run:%v failed-->%v", cmd.Args, err)
+		}
+
+		if len(lines) != 0 {
+			needDownloadSize, allSize, err := parsePackageSize(lines[0])
+			if err != nil {
+				logger.Warning(err)
+				return err
+			}
+			if containDownloaded {
+				*downloadSize = allSize
+			} else {
+				*downloadSize = needDownloadSize
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Warning(err)
+		return SizeDownloaded, nil
 	}
-	return SizeDownloaded, nil
+	return *downloadSize, nil
 }
 
 // QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量
@@ -164,9 +197,20 @@ func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (flo
 				unref()
 			}
 		}()
-		// #nosec G204
-		cmd := exec.Command("/usr/bin/apt-get",
-			[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no", "-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
+		var cmd *exec.Cmd
+		if utils2.IsDir(path) {
+			// #nosec G204
+			cmd = exec.Command("/usr/bin/apt-get",
+				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
+		} else {
+			// #nosec G204
+			cmd = exec.Command("/usr/bin/apt-get",
+				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}...)
+		}
 
 		lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
 			_, _, _err := parsePackageSize(line)
@@ -187,7 +231,6 @@ func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (flo
 			} else {
 				*downloadSize = needDownloadSize
 			}
-			return nil
 		}
 		return nil
 	})

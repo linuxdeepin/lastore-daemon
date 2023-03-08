@@ -86,6 +86,7 @@ const (
 	SecurityUpdate     UpdateType = 1 << 2 // 1050及以上版本,安全更新项废弃,改为仅安全更新,1060恢复使用
 	UnknownUpdate      UpdateType = 1 << 3 // 未知来源更新
 	OnlySecurityUpdate UpdateType = 1 << 4 // 仅开启安全更新（该选项开启时，其他更新关闭）
+	AllUpdate          UpdateType = SystemUpdate | SecurityUpdate | UnknownUpdate
 )
 
 func (m UpdateType) JobType() string {
@@ -107,7 +108,7 @@ func AllUpdateType() []UpdateType {
 	return []UpdateType{
 		SystemUpdate,
 		SecurityUpdate,
-		//AppStoreUpdate,
+		// AppStoreUpdate,
 		OnlySecurityUpdate,
 		UnknownUpdate,
 	}
@@ -135,7 +136,7 @@ const (
 func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
 		SystemUpdate: SystemSourceDir,
-		//AppStoreUpdate:     AppStoreSourceFile,
+		// AppStoreUpdate:     AppStoreSourceFile,
 		SecurityUpdate:     SecuritySourceFile,
 		OnlySecurityUpdate: SecuritySourceFile,
 		UnknownUpdate:      UnknownSourceDir,

@@ -200,16 +200,17 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 	m.ensureUpdateSourceOnce()
 	var err error
 	var size float64
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
 	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
-		m.PropsMu.RLock()
-		mode := m.UpdateMode
-		m.PropsMu.RUnlock()
 		size, err = system.QuerySourceDownloadSize(mode, true)
 		if err != nil {
 			logger.Warning(err)
 		}
 	} else {
-		size, err = system.QueryPackageDownloadSize(true, packages...)
+		// 查询包(可能不止一个)的大小,即使当前开启的仓库没有包含该包,依旧返回该包的大小
+		size, err = system.QueryPackageDownloadSize(system.AllUpdate, true, packages...)
 	}
 	if err != nil || size == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
@@ -223,10 +224,10 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	m.ensureUpdateSourceOnce()
 	var err error
 	var size float64
+	m.PropsMu.RLock()
+	mode := m.UpdateMode
+	m.PropsMu.RUnlock()
 	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
-		m.PropsMu.RLock()
-		mode := m.UpdateMode
-		m.PropsMu.RUnlock()
 		size, err = system.QuerySourceDownloadSize(mode, false)
 		if err != nil {
 			logger.Warning(err)
@@ -240,7 +241,8 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 			}
 		}
 	} else {
-		size, err = system.QueryPackageDownloadSize(false, packages...)
+		// 查询包(可能不止一个)需要下载的大小,如果当前打开的仓库没有该包,则返回0
+		size, err = system.QueryPackageDownloadSize(mode, false, packages...)
 	}
 	if err != nil || size == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
