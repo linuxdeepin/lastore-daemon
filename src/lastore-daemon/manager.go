@@ -552,6 +552,10 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
+					if strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) {
+						msg := gettext.Tr("检测更新失败，请清理磁盘空间")
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					}
 				}
 				m.reportLog(updateStatus, false, job.Description)
 			},
