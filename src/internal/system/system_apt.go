@@ -182,7 +182,7 @@ func QueryPackageDownloadSize(updateType UpdateType, containDownloaded bool, pac
 	})
 	if err != nil {
 		logger.Warning(err)
-		return SizeDownloaded, nil
+		return SizeDownloaded, err
 	}
 	return *downloadSize, nil
 }
