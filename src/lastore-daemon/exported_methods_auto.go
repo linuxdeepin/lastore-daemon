@@ -30,6 +30,12 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
+			Name:    "DistUpgradePartly",
+			Fn:      v.DistUpgradePartly,
+			InArgs:  []string{"mode", "needBackup"},
+			OutArgs: []string{"job"},
+		},
+		{
 			Name:    "FixError",
 			Fn:      v.FixError,
 			InArgs:  []string{"errType"},
@@ -90,6 +96,18 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:    "PrepareDistUpgrade",
 			Fn:      v.PrepareDistUpgrade,
 			OutArgs: []string{"job"},
+		},
+		{
+			Name:    "PrepareDistUpgradePartly",
+			Fn:      v.PrepareDistUpgradePartly,
+			InArgs:  []string{"mode"},
+			OutArgs: []string{"job"},
+		},
+		{
+			Name:    "QueryAllSizeWithSource",
+			Fn:      v.QueryAllSizeWithSource,
+			InArgs:  []string{"mode"},
+			OutArgs: []string{"outArg0"},
 		},
 		{
 			Name:   "RegisterAgent",

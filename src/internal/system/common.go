@@ -109,7 +109,7 @@ func AllUpdateType() []UpdateType {
 		SystemUpdate,
 		SecurityUpdate,
 		// AppStoreUpdate,
-		OnlySecurityUpdate,
+		// OnlySecurityUpdate,
 		UnknownUpdate,
 	}
 }
@@ -399,3 +399,34 @@ func HandleDelayPackage(hold bool, packages []string) {
 		logger.Warning(err)
 	}
 }
+
+type UpdateModeStatus string
+
+const (
+	NotDownload   UpdateModeStatus = "notDownload" // 包含了有更新没下载和无更新两种情况
+	IsDownloading UpdateModeStatus = "isDownloading"
+	DownloadPause UpdateModeStatus = "downloadPause"
+	DownloadErr   UpdateModeStatus = "downloadFailed"
+	CanUpgrade    UpdateModeStatus = "downloaded" // Downloaded
+	Upgrading     UpdateModeStatus = "upgrading"
+	UpgradeErr    UpdateModeStatus = "upgradeFailed"
+	Upgraded      UpdateModeStatus = "needReboot" // need reboot
+)
+
+type ABStatus string
+
+const (
+	NotBackup ABStatus = "notBackup"
+	// NotSupportBackup ABStatus = "notSupportBackup"
+	BackingUp    ABStatus = "backingUp"
+	BackupFailed ABStatus = "backupFailed"
+	HasBackedUp  ABStatus = "hasBackedUp"
+)
+
+type ABErrorType string
+
+const (
+	NoABError    ABErrorType = "noError"
+	CanNotBackup ABErrorType = "canNotBackup"
+	OtherError   ABErrorType = "otherError"
+)

@@ -83,7 +83,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 }
 
 func (j *Job) initDownloadSize() {
-	s, err := system.QueryPackageDownloadSize(system.AllUpdate, false, j.Packages...)
+	s, _, err := system.QueryPackageDownloadSize(system.AllUpdate, j.Packages...)
 	if err != nil {
 		logger.Warningf("initDownloadSize failed: %v", err)
 		return
@@ -219,5 +219,22 @@ func (j *Job) getHook(name string) func() {
 func (j *Job) setHooks(hooks map[string]func()) {
 	j.hooksMu.Lock()
 	j.hooks = hooks
+	j.hooksMu.Unlock()
+}
+
+func (j *Job) wrapHooks(appendHooks map[string]func()) {
+	hooks := j.hooks
+	j.hooksMu.Lock()
+	for key, fn := range appendHooks {
+		f, ok := hooks[key]
+		if ok {
+			hooks[key] = func() {
+				f()
+				fn()
+			}
+		} else {
+			hooks[key] = fn
+		}
+	}
 	j.hooksMu.Unlock()
 }

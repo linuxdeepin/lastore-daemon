@@ -24,8 +24,9 @@ const ConfigVersion = "0.1"
 type lastoreDaemonStatus uint32
 
 const (
-	canUpgrade    lastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
-	disableUpdate lastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
+	canUpgrade            lastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
+	disableUpdate         lastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
+	runningUpgradeBackend lastoreDaemonStatus = 1 << 2 // 是否处于后台更新状态
 )
 
 type Config struct {
@@ -39,6 +40,7 @@ type Config struct {
 	CheckInterval         time.Duration
 	CleanInterval         time.Duration
 	UpdateMode            system.UpdateType
+	CheckUpdateMode       system.UpdateType
 
 	// 缓存大小超出限制时的清理时间间隔
 	CleanIntervalCacheOverLimit    time.Duration
@@ -63,6 +65,7 @@ type Config struct {
 	needDownloadSize         float64
 	downloadSpeedLimitConfig string
 	lastoreDaemonStatus      lastoreDaemonStatus
+	updateStatus             string
 
 	filePath string
 	statusMu sync.RWMutex
@@ -71,12 +74,12 @@ type Config struct {
 	dsettingsChangedCbMapMu sync.Mutex
 }
 
-func NewConfig(fpath string) *Config {
+func NewConfig(configPath string) *Config {
 	dc := getConfigFromDSettings()
-	dc.filePath = fpath
+	dc.filePath = configPath
 	if !dc.useDSettings { // 从config文件迁移至DSettings
 		var c *Config
-		err := system.DecodeJson(fpath, &c)
+		err := system.DecodeJson(configPath, &c)
 		if err != nil {
 			logger.Debugf("Can't load config file: %v\n", err)
 		} else {
@@ -116,6 +119,7 @@ const (
 	dSettingsKeyCheckInterval                        = "check-internal"
 	dSettingsKeyCleanInterval                        = "clean-internal"
 	dSettingsKeyUpdateMode                           = "update-mode"
+	dSettingsKeyCheckUpdateMode                      = "check-update-mode"
 	dSettingsKeyCleanIntervalCacheOverLimit          = "clean-internal-cache-over-limit"
 	dSettingsKeyAppstoreRegion                       = "appstore-region"
 	dSettingsKeyLastCheckTime                        = "last-check-time"
@@ -133,6 +137,7 @@ const (
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
+	dSettingsKeyUpdateStatus                         = "update-status"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -403,6 +408,20 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckUpdateMode)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.CheckUpdateMode = system.UpdateType(v.Value().(float64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateStatus)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.updateStatus = v.Value().(string)
+	}
 	return c
 }
 
@@ -418,10 +437,6 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetAutoClean(oldConfig.AutoClean)
 	_ = c.SetMirrorSource(oldConfig.MirrorSource)
 	_ = c.SetAppstoreRegion(oldConfig.AppstoreRegion)
-	if (oldConfig.UpdateMode & system.OnlySecurityUpdate) != 0 {
-		oldConfig.UpdateMode &= ^system.OnlySecurityUpdate
-		oldConfig.UpdateMode |= system.SecurityUpdate
-	}
 	_ = c.SetUpdateMode(oldConfig.UpdateMode)
 	_ = c.SetCleanIntervalCacheOverLimit(oldConfig.CleanIntervalCacheOverLimit)
 	_ = c.SetAutoInstallUpdates(oldConfig.AutoInstallUpdates)
@@ -502,6 +517,11 @@ func (c *Config) SetAppstoreRegion(region string) error {
 func (c *Config) SetUpdateMode(mode system.UpdateType) error {
 	c.UpdateMode = mode
 	return c.save(dSettingsKeyUpdateMode, mode)
+}
+
+func (c *Config) SetCheckUpdateMode(mode system.UpdateType) error {
+	c.CheckUpdateMode = mode
+	return c.save(dSettingsKeyCheckUpdateMode, mode)
 }
 
 func (c *Config) SetCleanIntervalCacheOverLimit(duration time.Duration) error {
@@ -601,6 +621,17 @@ func (c *Config) getLastoreDaemonStatus() lastoreDaemonStatus {
 	c.statusMu.RLock()
 	defer c.statusMu.RUnlock()
 	return c.lastoreDaemonStatus
+}
+
+func (c *Config) getLastoreDaemonStatusByBit(key lastoreDaemonStatus) lastoreDaemonStatus {
+	c.statusMu.RLock()
+	defer c.statusMu.RUnlock()
+	return c.lastoreDaemonStatus & key
+}
+
+func (c *Config) SetUpdateStatus(status string) error {
+	c.updateStatus = status
+	return c.save(dSettingsKeyUpdateStatus, status)
 }
 
 func (c *Config) save(key string, v interface{}) error {

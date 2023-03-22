@@ -29,6 +29,8 @@ const (
 	DelayLockQueue = "delayLock"
 )
 
+var JobExistError = errors.New("job is exist")
+
 // JobManager
 // 1. maintain DownloadQueue and SystemchangeQueue
 // 2. Create, Delete and Pause Jobs and schedule they.
@@ -288,9 +290,10 @@ func (jm *JobManager) dispatch() {
 	lockQueue := jm.queues[LockQueue]
 	jm.startJobsInQueue(lockQueue)
 	jm.startJobsInQueue(jm.queues[DelayLockQueue])
+	jm.startJobsInQueue(jm.queues[DownloadQueue])
 	// wait for LockQueue be idled
 	if len(lockQueue.RunningJobs()) == 0 {
-		jm.startJobsInQueue(jm.queues[DownloadQueue])
+
 		jm.startJobsInQueue(jm.queues[SystemChangeQueue])
 	}
 
@@ -340,12 +343,13 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			logger.Infof("need reload  %v job status:%v", job.Id, jobStatus)
 			switch jobStatus {
 			case system.RunningStatus:
+				job.PropsMu.Lock()
 				err := jm.pauseJob(job)
 				if err != nil {
 					logger.Warning(err)
+					job.PropsMu.Unlock()
 					continue
 				}
-				job.PropsMu.Lock()
 				job.lastStatus = system.RunningStatus
 				job.PropsMu.Unlock()
 				continue
@@ -389,10 +393,12 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 				}
 			case system.PausedStatus:
 				logger.Info("recover paused")
+				job.PropsMu.Lock()
 				err := jm.pauseJob(job)
 				if err != nil {
 					logger.Warning(err)
 				}
+				job.PropsMu.Unlock()
 				continue
 			}
 		}
@@ -448,7 +454,7 @@ func (jm *JobManager) addJob(j *Job) error {
 	if !ok {
 		return system.NotFoundError("addJob with queue " + queueName)
 	}
-	if j.Id == genJobId(system.UpdateSourceJobType) && (len(jm.queues[DownloadQueue].RunningJobs()) != 0 || len(jm.queues[DelayLockQueue].RunningJobs()) != 0 || len(jm.queues[LockQueue].RunningJobs()) != 0) {
+	if (j.Id == genJobId(system.UpdateSourceJobType) || j.Id == genJobId(system.DistUpgradeJobType)) && (len(jm.queues[DownloadQueue].RunningJobs()) != 0 || len(jm.queues[DelayLockQueue].RunningJobs()) != 0 || len(jm.queues[LockQueue].RunningJobs()) != 0) {
 		return errors.New("download or install running, not need check update")
 	}
 

@@ -127,14 +127,16 @@ func QueryFileCacheSize(path string) (float64, error) {
 	return 0, nil
 }
 
-// QueryPackageDownloadSize parsing the total size of download archives when installing
-// the packages.
-func QueryPackageDownloadSize(updateType UpdateType, containDownloaded bool, packages ...string) (float64, error) {
+// QueryPackageDownloadSize parsing the total size of download archives when installing the packages.
+// return arg0:需要下载的量;arg1:所有包的大小;arg2:error
+func QueryPackageDownloadSize(updateType UpdateType, packages ...string) (float64, float64, error) {
+	startTime := time.Now()
 	if len(packages) == 0 {
-		return SizeDownloaded, NotFoundError("hasn't any packages")
+		return SizeDownloaded, SizeDownloaded, NotFoundError("hasn't any packages")
 	}
 	downloadSize := new(float64)
-	defer logger.Debugf("packages size is:%v, contain downloaded package:%v", *downloadSize, containDownloaded)
+	allPackageSize := new(float64)
+	defer logger.Debugf("need download size:%v ,all package size:%v", *downloadSize, *allPackageSize)
 	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
 		defer func() {
 			if unref != nil {
@@ -172,25 +174,25 @@ func QueryPackageDownloadSize(updateType UpdateType, containDownloaded bool, pac
 				logger.Warning(err)
 				return err
 			}
-			if containDownloaded {
-				*downloadSize = allSize
-			} else {
-				*downloadSize = needDownloadSize
-			}
+			*allPackageSize = allSize
+			*downloadSize = needDownloadSize
 		}
 		return nil
 	})
 	if err != nil {
 		logger.Warning(err)
-		return SizeDownloaded, err
+		return SizeDownloaded, SizeDownloaded, err
 	}
-	return *downloadSize, nil
+	logger.Debug("end QueryPackageDownloadSize duration:", time.Now().Sub(startTime))
+	return *downloadSize, *allPackageSize, nil
 }
 
-// QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量
-func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (float64, error) {
+// QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量,return arg0:需要下载的量;arg1:所有包的大小;arg2:error
+func QuerySourceDownloadSize(updateType UpdateType) (float64, float64, error) {
+	startTime := time.Now()
 	downloadSize := new(float64)
-	defer logger.Debugf("source size is:%v, contain downloaded package:%v", *downloadSize, containDownloaded)
+	allPackageSize := new(float64)
+	defer logger.Debugf("need download size:%v ,all package size:%v", *downloadSize, *allPackageSize)
 	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
 		defer func() {
 			if unref != nil {
@@ -217,7 +219,7 @@ func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (flo
 			return _err == nil
 		})
 		if err != nil && len(lines) == 0 {
-			return err
+			return fmt.Errorf("run:%v failed-->%v", cmd.Args, err)
 		}
 
 		if len(lines) != 0 {
@@ -226,19 +228,17 @@ func QuerySourceDownloadSize(updateType UpdateType, containDownloaded bool) (flo
 				logger.Warning(err)
 				return err
 			}
-			if containDownloaded {
-				*downloadSize = allSize
-			} else {
-				*downloadSize = needDownloadSize
-			}
+			*downloadSize = needDownloadSize
+			*allPackageSize = allSize
 		}
 		return nil
 	})
 	if err != nil {
 		logger.Warning(err)
-		return SizeDownloaded, nil
+		return SizeDownloaded, SizeDownloaded, nil
 	}
-	return *downloadSize, nil
+	logger.Debug("end QuerySourceDownloadSize duration:", time.Now().Sub(startTime))
+	return *downloadSize, *allPackageSize, nil
 }
 
 // QueryPackageInstalled query whether the pkgId installed

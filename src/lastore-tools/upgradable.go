@@ -195,7 +195,7 @@ func getSystemArchitectures() []system.Architecture {
 	return r
 }
 
-func GenerateUpdateInfos(fpath string) error {
+func GenerateUpdateInfos(outputPath string) error {
 	var upgradeInfo []system.UpgradeInfo
 	for category, sourcePath := range system.GetCategorySourceMap() {
 		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)
@@ -212,7 +212,7 @@ func GenerateUpdateInfos(fpath string) error {
 					updateInfoErr.Type = "unknown"
 					updateInfoErr.Detail = err.Error()
 				}
-				return writeData(fpath, updateInfoErr)
+				return writeData(outputPath, updateInfoErr)
 			}
 		} else {
 			upgradeInfo = append(upgradeInfo, mapUpgradeInfo(
@@ -222,5 +222,5 @@ func GenerateUpdateInfos(fpath string) error {
 				category.JobType())...)
 		}
 	}
-	return writeData(fpath, upgradeInfo)
+	return writeData(outputPath, upgradeInfo)
 }

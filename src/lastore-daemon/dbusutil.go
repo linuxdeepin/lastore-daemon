@@ -3,9 +3,8 @@
 package main
 
 import (
-	"internal/system"
-
 	"github.com/godbus/dbus"
+	"internal/system"
 )
 
 func (v *Updater) setPropAutoCheckUpdates(value bool) (changed bool) {
@@ -333,6 +332,32 @@ func (v *Manager) setPropUpdateMode(value system.UpdateType) (changed bool) {
 
 func (v *Manager) emitPropChangedUpdateMode(value system.UpdateType) error {
 	return v.service.EmitPropertyChanged(v, "UpdateMode", value)
+}
+
+func (v *Manager) setPropCheckUpdateMode(value system.UpdateType) (changed bool) {
+	if v.CheckUpdateMode != value {
+		v.CheckUpdateMode = value
+		v.emitPropChangedCheckUpdateMode(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedCheckUpdateMode(value system.UpdateType) error {
+	return v.service.EmitPropertyChanged(v, "CheckUpdateMode", value)
+}
+
+func (v *Manager) setPropUpdateStatus(value string) (changed bool) {
+	if v.UpdateStatus != value {
+		v.UpdateStatus = value
+		v.emitPropChangedUpdateStatus(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedUpdateStatus(value string) error {
+	return v.service.EmitPropertyChanged(v, "UpdateStatus", value)
 }
 
 func (v *Manager) setPropHardwareId(value string) (changed bool) {

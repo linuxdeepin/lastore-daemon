@@ -290,3 +290,7 @@ func getCustomTimeDuration(presetTime string) time.Duration {
 	}
 	return dur
 }
+
+func isFirstBoot() bool {
+	return !system.NormalFileExists(lastoreUnitCache)
+}

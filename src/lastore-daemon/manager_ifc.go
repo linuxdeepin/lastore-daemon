@@ -5,9 +5,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"internal/system"
 	"internal/utils"
@@ -55,8 +57,8 @@ func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
-	jobObj, err := m.distUpgrade(sender, mode, false)
-	if err != nil {
+	jobObj, err := m.distUpgrade(sender, mode, false, true)
+	if err != nil && err != JobExistError {
 		return "/", dbusutil.ToError(err)
 	}
 	return jobObj.getPath(), nil
@@ -109,7 +111,8 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 			}
 		}()
 	case UpdateInfosChanged:
-		m.handleUpdateInfosChanged()
+		logger.Info("UpdateInfos Changed")
+		// m.handleUpdateInfosChanged()
 	case OsVersionChanged:
 		go updateTokenConfigFile()
 	case AutoDownload:
@@ -199,24 +202,24 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()
 	var err error
-	var size float64
+	var allPackageSize float64
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
 	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
-		size, err = system.QuerySourceDownloadSize(mode, true)
+		_, allPackageSize, err = system.QuerySourceDownloadSize(mode)
 		if err != nil {
 			logger.Warning(err)
 		}
 	} else {
 		// 查询包(可能不止一个)的大小,即使当前开启的仓库没有包含该包,依旧返回该包的大小
-		size, err = system.QueryPackageDownloadSize(system.AllUpdate, true, packages...)
+		_, allPackageSize, err = system.QueryPackageDownloadSize(system.AllUpdate, packages...)
 	}
-	if err != nil || size == system.SizeUnknown {
-		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
+	if err != nil || allPackageSize == system.SizeUnknown {
+		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), allPackageSize, err)
 	}
 
-	return int64(size), dbusutil.ToError(err)
+	return int64(allPackageSize), dbusutil.ToError(err)
 }
 
 func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
@@ -228,21 +231,13 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
 	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
-		size, err = system.QuerySourceDownloadSize(mode, false)
+		size, _, err = system.QuerySourceDownloadSize(mode)
 		if err != nil {
 			logger.Warning(err)
-		} else {
-			m.PropsMu.Lock()
-			updatablePackages := m.UpgradableApps
-			m.PropsMu.Unlock()
-			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(updatablePackages) != 0)
-			if err != nil {
-				logger.Warning(err)
-			}
 		}
 	} else {
 		// 查询包(可能不止一个)需要下载的大小,如果当前打开的仓库没有该包,则返回0
-		size, err = system.QueryPackageDownloadSize(mode, false, packages...)
+		size, _, err = system.QueryPackageDownloadSize(mode, packages...)
 	}
 	if err != nil || size == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
@@ -265,7 +260,7 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.PropsMu.RLock()
-	mode := m.UpdateMode
+	mode := m.CheckUpdateMode
 	m.PropsMu.RUnlock()
 	jobObj, err := m.prepareDistUpgrade(sender, mode, false)
 	if err != nil {
@@ -391,8 +386,9 @@ func (m *Manager) StartJob(jobId string) *dbus.Error {
 
 	if err != nil {
 		logger.Warningf("StartJob %q error: %v\n", jobId, err)
+		return dbusutil.ToError(err)
 	}
-	return dbusutil.ToError(err)
+	return nil
 }
 
 func (m *Manager) UnRegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.Error {
@@ -434,6 +430,183 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr 
 	err = m.updateAutoCheckSystemUnit()
 	if err != nil {
 		logger.Warning(err)
+	}
+	return jobObj.getPath(), nil
+}
+
+func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
+	// 创建job，但是不添加到任务队列中
+	var upgradeJob *Job
+	var createJobErr error
+	var startJobErr error
+	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false)
+	if createJobErr != nil {
+		logger.Warning(createJobErr)
+		return "", dbusutil.ToError(createJobErr)
+	}
+	var inhibitFd dbus.UnixFD = -1
+	why := Tr("Installing updates...")
+	inhibit := func(enable bool) {
+		if enable {
+			if inhibitFd == -1 {
+				fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
+				if err != nil {
+					logger.Infof("prevent shutdown failed: fd:%v, err:%v\n", fd, err)
+				} else {
+					logger.Infof("prevent shutdown: fd:%v\n", fd)
+					inhibitFd = fd
+				}
+			}
+		} else {
+			if inhibitFd == -1 {
+				err := syscall.Close(int(inhibitFd))
+				if err != nil {
+					logger.Infof("enable shutdown failed: fd:%d, err:%s\n", inhibitFd, err)
+				} else {
+					logger.Info("enable shutdown")
+					inhibitFd = -1
+				}
+			}
+		}
+	}
+	// 开始更新job
+	startUpgrade := func() error {
+		m.inhibitAutoQuitCountSub()
+		m.do.Lock()
+		defer m.do.Unlock()
+		return m.jobManager.MarkStart(upgradeJob.Id)
+	}
+
+	// 对hook进行包装:增加配置状态更新的操作
+	upgradeJob.wrapHooks(map[string]func(){
+		string(system.EndStatus): func() {
+			m.statusManager.setRunningUpgradeStatus(false)
+		},
+		string(system.SucceedStatus): func() {
+			inhibit(false)
+		},
+		string(system.FailedStatus): func() {
+			inhibit(false)
+		},
+	})
+	m.updateJobList()
+	// 将job的状态修改为pause,并添加到队列中,但是不开始
+	upgradeJob.Status = system.PausedStatus
+	err := m.jobManager.addJob(upgradeJob)
+	if err != nil {
+		logger.Warning(err)
+		return "", dbusutil.ToError(err)
+	}
+	m.inhibitAutoQuitCountAdd() // 开始备份前add，结束备份后sub(无论是否成功)
+	var abHandler dbusutil.SignalHandlerId
+	var canBackup bool
+	var hasBackedUp bool
+	var abErr error
+	inhibit(true)
+	defer func() {
+		// 没有开始更新提前结束时，需要处理抑制锁和job
+		if abErr != nil || startJobErr != nil {
+			inhibit(false)
+			err = m.CleanJob(upgradeJob.Id)
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+	}()
+	m.statusManager.setRunningUpgradeStatus(true)
+	if needBackup {
+		m.statusManager.setABStatus(system.NotBackup, system.NoABError)
+		canBackup, abErr = m.abObj.CanBackup(0)
+		if abErr != nil || !canBackup {
+			logger.Info("can not backup,", abErr)
+			// m.sendNotify()
+			m.inhibitAutoQuitCountSub()
+			m.statusManager.setRunningUpgradeStatus(false)
+			m.statusManager.setABStatus(system.BackupFailed, system.CanNotBackup)
+			abErr = errors.New("can not backup")
+			return "", dbusutil.ToError(abErr)
+		}
+		hasBackedUp, err = m.abObj.HasBackedUp().Get(0)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			m.statusManager.setABStatus(system.HasBackedUp, system.NoABError)
+		}
+		if !hasBackedUp {
+			// 没有备份过，先备份再更新
+			abErr = m.abObj.StartBackup(0)
+			if abErr != nil {
+				logger.Warning(abErr)
+				// m.sendNotify()
+				m.inhibitAutoQuitCountSub()
+				m.statusManager.setRunningUpgradeStatus(false)
+				m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
+				return "", dbusutil.ToError(abErr)
+			}
+			m.statusManager.setABStatus(system.BackingUp, system.NoABError)
+			abHandler, err = m.abObj.ConnectJobEnd(func(kind string, success bool, errMsg string) {
+				if kind == "backup" {
+					m.abObj.RemoveHandler(abHandler)
+					if success {
+						m.statusManager.setABStatus(system.HasBackedUp, system.NoABError)
+						// 开始更新
+						startJobErr = startUpgrade()
+						if startJobErr != nil {
+							logger.Warning(startJobErr)
+							// m.sendNotify()
+						} else {
+							// m.sendNotify()
+						}
+					} else {
+						m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
+						logger.Warning("ab backup failed:", errMsg)
+						// m.sendNotify()
+					}
+				}
+			})
+			if err != nil {
+				logger.Warning(err)
+			}
+		} else {
+			// 备份过可以直接更新
+			startJobErr = startUpgrade()
+		}
+	} else {
+		// 无需备份,直接更新
+		startJobErr = startUpgrade()
+	}
+	if startJobErr != nil {
+		logger.Warning(startJobErr)
+		return "", dbusutil.ToError(startJobErr)
+	}
+	return upgradeJob.getPath(), nil
+}
+
+func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
+	var sourcePathList []string
+	for _, t := range system.AllUpdateType() {
+		category := mode & t
+		if category != 0 {
+			sourcePath := system.GetCategorySourceMap()[category]
+			sourcePathList = append(sourcePathList, sourcePath)
+		}
+	}
+	_, allSize, err := system.QuerySourceDownloadSize(mode)
+	if err != nil || allSize == system.SizeUnknown {
+		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
+	} else {
+		logger.Infof("%v size is:%v M", strings.Join(sourcePathList, " and "), int64(allSize/(1000*1000)))
+	}
+
+	return int64(allSize), dbusutil.ToError(err)
+}
+
+func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.UpdateType) (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
+	jobObj, err := m.prepareDistUpgrade(sender, mode, false)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
 	}
 	return jobObj.getPath(), nil
 }

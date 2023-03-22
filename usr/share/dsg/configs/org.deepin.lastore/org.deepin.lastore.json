@@ -123,6 +123,17 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "check-update-mode": {
+      "value": 5,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "CheckUpdateMode",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "clean-internal-cache-over-limit": {
       "value": 86400000000000,
       "serial": 0,
@@ -309,6 +320,17 @@
       ],
       "name": "LastoreDaemonStatus",
       "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "update-status":{
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpdateStatus",
+      "description": "The status of each updated item",
       "permissions": "readwrite",
       "visibility": "private"
     }

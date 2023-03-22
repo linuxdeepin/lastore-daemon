@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2018 - 2023 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -99,10 +99,12 @@ type Manager struct {
 	sysPower   power.Power
 	signalLoop *dbusutil.SignalLoop
 
-	UpdateMode system.UpdateType `prop:"access:rw"`
-	HardwareId string
+	UpdateMode      system.UpdateType `prop:"access:rw"` // 更新设置的内容
+	CheckUpdateMode system.UpdateType `prop:"access:rw"` // 检查更新选中的内容
+	UpdateStatus    string            // 每一个更新项的状态 json字符串
+	statusManager   *updateModeStatusManager
 
-	isUpdateSucceed bool
+	HardwareId string
 
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
@@ -136,7 +138,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		SystemArchitectures: archs,
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
-		UpdateMode:          c.UpdateMode,
 		userAgents:          newUserAgentMap(service),
 		loginManager:        login1.NewManager(service.Conn()),
 		sysDBusDaemon:       ofdbus.NewDBus(service.Conn()),
@@ -151,7 +152,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
 	go m.handleOSSignal()
 	m.updateJobList()
-	m.modifyUpdateMode()
+	m.initStatusManager()
 	hardwareId, err := getHardwareId()
 	if err != nil {
 		logger.Warning("failed to get HardwareId")
@@ -165,6 +166,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 
 func (m *Manager) initDbusSignalListen() {
 	m.loginManager.InitSignalExt(m.signalLoop, true)
+	m.abObj.InitSignalExt(m.signalLoop, true)
 	_, err := m.loginManager.ConnectSessionNew(m.handleSessionNew)
 	if err != nil {
 		logger.Warning(err)
@@ -343,10 +345,15 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	if isExist {
 		return job, nil
 	}
+	var notifyId uint32
 	job.setHooks(map[string]func(){
+		string(system.RunningStatus): func() {
+			msg := fmt.Sprintf(gettext.Tr("Removing %v"), packages)
+			notifyId = m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		},
 		string(system.SucceedStatus): func() {
 			msg := gettext.Tr("Removed successfully")
-			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			m.sendNotify(system.GetAppStoreAppName(), notifyId, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 		},
 		string(system.FailedStatus): func() {
 			msg := gettext.Tr("Failed to remove the app")
@@ -359,7 +366,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 			hints := map[string]dbus.Variant{
 				"x-deepin-action-retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.StartJob,string:%s", job.Id)),
 				"x-deepin-action-cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.CleanJob,string:%s", job.Id))}
-			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			m.sendNotify(system.GetAppStoreAppName(), notifyId, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 		},
 	})
 	if err := m.jobManager.addJob(job); err != nil {
@@ -393,7 +400,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
-func (m *Manager) handleUpdateInfosChanged() {
+func (m *Manager) handleUpdateInfosChanged(calledByUpdateSource bool) {
 	logger.Info("handleUpdateInfosChanged")
 	infosMap, err := m.SystemUpgradeInfo()
 	if err != nil {
@@ -405,32 +412,26 @@ func (m *Manager) handleUpdateInfosChanged() {
 		return
 	}
 	m.updateUpdatableProp(infosMap)
-	// 检查更新时,同步修改待下载数据大小
-	go func() {
-		m.PropsMu.RLock()
-		packages := m.UpgradableApps
-		updateMode := m.UpdateMode
-		m.PropsMu.RUnlock()
-		size, err := system.QueryPackageDownloadSize(updateMode, false, packages...)
-		if err != nil {
-			logger.Warning(err)
-		}
-		err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}()
-	m.PropsMu.Lock()
-	isUpdateSucceed := m.isUpdateSucceed
-	m.PropsMu.Unlock()
+
+	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
+	if calledByUpdateSource {
+		m.statusManager.updateModeStatusBySize(m.UpdateMode)
+		m.statusManager.updateCheckCanUpgradeByEachStatus()
+	} else {
+		go func() {
+			m.statusManager.updateModeStatusBySize(m.UpdateMode)
+			m.statusManager.updateCheckCanUpgradeByEachStatus()
+		}()
+	}
+
 	m.updater.PropsMu.RLock()
 	enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled
 	m.updater.PropsMu.RUnlock()
-	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed && !enable {
+	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && calledByUpdateSource && !enable {
 		logger.Info("auto download updates")
 		go func() {
 			m.inhibitAutoQuitCountAdd()
-			_, err = m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0])) // 自动下载使用控制中心的配置
+			_, err = m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
@@ -515,14 +516,10 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 			string(system.RunningStatus): func() {
 				m.PropsMu.Lock()
 				m.updateSourceOnce = true
-				m.isUpdateSucceed = false
 				m.PropsMu.Unlock()
 			},
 			string(system.SucceedStatus): func() {
-				m.PropsMu.Lock()
-				m.isUpdateSucceed = true
-				m.PropsMu.Unlock()
-				m.handleUpdateInfosChanged()
+				m.handleUpdateInfosChanged(true)
 				if len(m.UpgradableApps) > 0 {
 					m.reportLog(updateStatus, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
@@ -538,8 +535,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				}
 			},
 			string(system.FailedStatus): func() {
-				m.handleUpdateInfosChanged()
-				// 网络问题检查更新失败,需要发通知
+				// 网络问题检查更新失败和空间不足下载索引失败,需要发通知
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
@@ -552,7 +548,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
-					if strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) {
+					if strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) || strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						msg := gettext.Tr("检测更新失败，请清理磁盘空间")
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
@@ -568,6 +564,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	return job, err
 }
 
+// 安装更新时,需要退出所有检查更新的job
 func (m *Manager) cancelAllUpdateJob() error {
 	var updateJobIds []string
 	for _, job := range m.jobManager.List() {
@@ -586,7 +583,8 @@ func (m *Manager) cancelAllUpdateJob() error {
 }
 
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
-func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool) (*Job, error) {
+// needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
+func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool) (*Job, error) {
 	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
 	if err != nil {
 		logger.Warning(err)
@@ -635,7 +633,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			return err
 		}
 		if isExist {
-			return nil
+			return JobExistError
 		}
 		job.caller = caller
 		// 设置apt命令参数
@@ -725,6 +723,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if err != nil {
 					logger.Warning(err)
 				}
+				m.statusManager.setUpdateStatus(mode, system.Upgrading)
 				// mask deepin-desktop-base,该包在系统更新完成后最后安装
 				system.HandleDelayPackage(true, []string{
 					"deepin-desktop-base",
@@ -755,6 +754,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 					go m.postSystemUpgradeMessage(upgradeFailed, job, system.SystemUpdate)
 				}
 				m.reportLog(upgradeStatus, false, job.Description)
+				m.statusManager.setUpdateStatus(mode, system.UpgradeErr)
 				// unmask deepin-desktop-base 无需继续安装
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
@@ -810,10 +810,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				case <-ch:
 					logger.Info("install deepin-desktop-base done,upgrade succeed.")
 				}
-				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, false)
-				if err != nil {
-					logger.Warning(err)
-				}
+				m.statusManager.setUpdateStatus(mode, system.Upgraded)
 				// 等待deepin-desktop-base安装完成后,状态后续切换
 				job.setPropProgress(1.00)
 				// 上报更新成功的信息(如果需要)
@@ -830,7 +827,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
 			},
 		})
-		if !isClassify { // 分类下载的job需要外部判断是否add
+		if needAdd { // 分类下载的job需要外部判断是否add
 			if err := m.jobManager.addJob(job); err != nil {
 				if unref != nil {
 					unref()
@@ -840,7 +837,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		}
 		return nil
 	})
-	if err != nil {
+	if err != nil && err != JobExistError { // exist的err通过最后的return返回即可
 		logger.Warning(err)
 		return nil, err
 	}
@@ -877,7 +874,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 		}
 	}
 	var needDownloadSize float64
-	if needDownloadSize, err = system.QuerySourceDownloadSize(mode, false); err == nil && needDownloadSize == 0 {
+	if needDownloadSize, _, err = system.QuerySourceDownloadSize(mode); err == nil && needDownloadSize == 0 {
 		return nil, system.NotFoundError("no need download")
 	}
 	// 下载前检查/var分区的磁盘空间是否足够下载,
@@ -895,7 +892,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			spaceNum = spaceNum * 1024
+			spaceNum = spaceNum * 1000
 			isInsufficientSpace = spaceNum < int(needDownloadSize)
 		}
 	}
@@ -968,8 +965,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				m.PropsMu.Lock()
 				m.isDownloading = true
 				m.PropsMu.Unlock()
+				m.statusManager.setUpdateStatus(mode, system.IsDownloading)
 				sendAutoDownloadOnce.Do(func() {
-					msg := gettext.Tr("New system edition available, auto downloading")
+					msg := gettext.Tr("New system edition available, downloading")
 					action := []string{
 						"checkNow",
 						gettext.Tr("check now"),
@@ -978,11 +976,11 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 					m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				})
 			},
+			string(system.PausedStatus): func() {
+				m.statusManager.setUpdateStatus(mode, system.DownloadPause)
+			},
 			string(system.SucceedStatus): func() {
-				err = m.config.UpdateLastoreDaemonStatus(canUpgrade, true)
-				if err != nil {
-					logger.Warning(err)
-				}
+				m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
 				msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
 				action := []string{
 					"updateNow",
@@ -997,10 +995,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			string(system.FailedStatus): func() {
 				m.PropsMu.Lock()
 				m.isDownloading = false
-				updateMode := m.UpdateMode
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
 				m.reportLog(downloadStatus, false, job.Description)
+				m.statusManager.setUpdateStatus(mode, system.DownloadErr)
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
@@ -1009,7 +1007,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				if err == nil {
 					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						var msg string
-						size, err := system.QueryPackageDownloadSize(updateMode, false, packages...)
+						size, _, err := system.QueryPackageDownloadSize(mode, packages...)
 						if err != nil {
 							logger.Warning(err)
 							msg = gettext.Tr("更新包下载失败，请为下载目录释放空间")
@@ -1023,6 +1021,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 			string(system.EndStatus): func() {
 				if unref != nil {
 					unref()
+				}
+				// pause->end  status更新为未下载.用于适配取消下载的状态
+				if job.Status == system.PausedStatus {
+					m.statusManager.setUpdateStatus(mode, system.NotDownload)
 				}
 				m.PropsMu.Lock()
 				m.isDownloading = false
@@ -1079,8 +1081,8 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						// 可能无需下载,因此继续后面安装job的创建
 					}
 				}
-				upgradeJob, err = m.distUpgrade(sender, category, true)
-				if err != nil {
+				upgradeJob, err = m.distUpgrade(sender, category, true, false)
+				if err != nil && err != JobExistError {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
 						logger.Warning(err)
@@ -1190,39 +1192,17 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
-	writeType := system.UpdateType(pw.Value.(uint64))
-
-	if writeType&system.OnlySecurityUpdate != 0 { // 如果更新类别包含仅安全更新，关闭其它更新项
-		writeType = system.OnlySecurityUpdate
-	}
-	pw.Value = writeType
-	err := m.config.SetUpdateMode(writeType)
-	if err != nil {
-		logger.Warning(err)
-	}
-	err = updateSecurityConfigFile(writeType == system.OnlySecurityUpdate)
-	if err != nil {
-		logger.Warning(err)
-	}
+	writeMode := system.UpdateType(pw.Value.(uint64))
+	newMode := m.statusManager.setUpdateMode(writeMode)
+	pw.Value = newMode
 	return nil
 }
 
-func (m *Manager) modifyUpdateMode() {
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
-	if mode&system.OnlySecurityUpdate != 0 { // 如果更新类别包含仅安全更新，关闭其它更新项
-		mode = system.OnlySecurityUpdate
-	}
-	m.setPropUpdateMode(mode)
-	err := m.config.SetUpdateMode(mode)
-	if err != nil {
-		logger.Warning(err)
-	}
-	err = updateSecurityConfigFile(mode == system.OnlySecurityUpdate)
-	if err != nil {
-		logger.Warning(err)
-	}
+func (m *Manager) checkUpdateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	writeType := system.UpdateType(pw.Value.(uint64))
+	newMode := m.statusManager.setCheckMode(writeType)
+	pw.Value = newMode
+	return nil
 }
 
 // SystemUpgradeInfo 将update_infos.json数据解析成map
@@ -1323,7 +1303,7 @@ func (m *Manager) handleAutoCleanEvent() error {
 			logger.Warning(err)
 			return err
 		}
-		cacheSize := size / 1024.0
+		cacheSize := size / 1000.0
 		if cacheSize > MaxCacheSize {
 			remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
 			logger.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
@@ -1534,7 +1514,7 @@ func (m *Manager) startSystemdUnit() {
 	m.lastoreUnitCacheMu.Lock()
 	defer m.lastoreUnitCacheMu.Unlock()
 
-	if system.NormalFileExists(lastoreUnitCache) {
+	if !isFirstBoot() {
 		return
 	}
 	kf := keyfile.NewKeyFile()
@@ -1681,7 +1661,7 @@ func (m *Manager) loadCacheJob() {
 				updateType = system.UnknownUpdate
 				isClassified = true
 			case genJobId(system.PrepareDistUpgradeJobType):
-				updateType = m.UpdateMode
+				updateType = m.CheckUpdateMode
 				isClassified = false
 			default: // lastore目前是对控制中心提供功能，任务暂停场景只有三种类型的分类更新（下载）和全量下载
 				continue
@@ -1701,12 +1681,15 @@ func (m *Manager) loadCacheJob() {
 			}
 			pausedJob := m.jobManager.findJobById(j.Id)
 			if pausedJob != nil {
+				pausedJob.PropsMu.Lock()
 				err := m.jobManager.pauseJob(pausedJob)
 				if err != nil {
 					logger.Warning(err)
 				}
 				pausedJob.Progress = j.Progress
+				pausedJob.PropsMu.Unlock()
 			}
+
 		default:
 			continue
 		}
@@ -2016,11 +1999,11 @@ func (m *Manager) changeGrubDefaultEntry(to bootEntry) error {
 	if defaultEntry == title {
 		return nil
 	}
-	entrys, err := m.grub.GetSimpleEntryTitles(0)
+	entryTitles, err := m.grub.GetSimpleEntryTitles(0)
 	if err != nil {
 		return err
 	}
-	if !strv.Strv(entrys).Contains(title) {
+	if !strv.Strv(entryTitles).Contains(title) {
 		return fmt.Errorf("grub no %s entry", title)
 	}
 	err = m.grub.SetDefaultEntry(0, title)
@@ -2139,40 +2122,24 @@ func (m *Manager) reloadPrepareDistUpgradeJob() {
 }
 
 func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
-	// UpdateMode修改后，需要先清零，然后再根据实际状态判断是否可以安装更新
-	err := m.config.UpdateLastoreDaemonStatus(canUpgrade, false)
-	if err != nil {
-		logger.Warning(err)
-	}
-	// UpdateMode修改后,一些对外属性需要同步修改
-	infosMap, err := m.SystemUpgradeInfo()
-	if err != nil {
-		if os.IsNotExist(err) {
-			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
-		} else {
-			logger.Error("failed to get upgrade info:", err)
-		}
-	} else {
-		m.updateUpdatableProp(infosMap)
-	}
-	go func() {
-		m.PropsMu.RLock()
-		packages := m.UpgradableApps
-		updateMode := m.UpdateMode
-		m.PropsMu.RUnlock()
-		size, err := system.QueryPackageDownloadSize(updateMode, false, packages...)
-		if err != nil {
-			logger.Warning(err)
-			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, false)
-			if err != nil {
-				logger.Warning(err)
-			}
-		} else {
-			err = m.config.UpdateLastoreDaemonStatus(canUpgrade, size == 0 && len(packages) != 0)
-			if err != nil {
-				logger.Warning(err)
+	m.PropsMu.RLock()
+	updateType := m.UpdateMode
+	m.PropsMu.RUnlock()
+	// UpdateMode修改后,一些对外属性需要同步修改(主要是和UpdateMode有关的数据)
+	func() {
+		var updatableApps []string
+		packagesMap := m.updater.ClassifiedUpdatablePackages
+		for _, t := range system.AllUpdateType() {
+			if updateType&t != 0 {
+				packages, ok := packagesMap[t.JobType()]
+				if ok {
+					updatableApps = append(updatableApps, packages...)
+				}
 			}
 		}
+		m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
+		m.updater.setUpdatablePackages(updatableApps)
+		m.updater.updateUpdatableApps()
 	}()
 }
 
@@ -2184,4 +2151,28 @@ func (m *Manager) initDSettingsChangedHandle() {
 			_ = m.updateTimerUnit(watchUpdateInfo)
 		}
 	})
+}
+
+func (m *Manager) initStatusManager() {
+	logger.Info("start initStatusManager:", time.Now())
+	startTime := time.Now()
+	m.statusManager = newStatusManager(m.config, func(newStatus string) {
+		m.PropsMu.Lock()
+		m.setPropUpdateStatus(newStatus)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.registerChangedHandler(handlerKeyUpdateMode, func(value interface{}) {
+		v := value.(system.UpdateType)
+		m.PropsMu.Lock()
+		m.setPropUpdateMode(v)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.registerChangedHandler(handlerKeyCheckMode, func(value interface{}) {
+		v := value.(system.UpdateType)
+		m.PropsMu.Lock()
+		m.setPropCheckUpdateMode(v)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.initModifyData()
+	logger.Info("end initStatusManager duration:", time.Now().Sub(startTime))
 }
