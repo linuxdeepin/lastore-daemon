@@ -132,7 +132,7 @@ func main() {
 		logger.Warning(err)
 	}
 	manager.PropsMu.RUnlock()
-	manager.startSystemdUnit()
+	manager.startOfflineTask()
 	logger.Info("Started service at system bus")
 	autoQuitTime := 60 * time.Second
 	if logger.GetLogLevel() == log.LevelDebug {

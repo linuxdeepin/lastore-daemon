@@ -25,7 +25,7 @@ func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []Application
 		if repeatCount > 5 {
 			break
 		}
-		uInfosMap, err = u.manager.SystemUpgradeInfo()
+		uInfosMap, err = SystemUpgradeInfo()
 		if os.IsNotExist(err) {
 			time.Sleep(1 * time.Second)
 			repeatCount++

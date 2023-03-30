@@ -83,75 +83,13 @@ func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
 }
 
 func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
-	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-	if uid != 0 {
-		err = fmt.Errorf("%q is not allowed to trigger system event", uid)
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-	m.service.DelayAutoQuit()
-	typ := systemdEventType(eventType)
-	switch typ {
-	case AutoCheck:
-		go func() {
-			err := m.handleAutoCheckEvent()
-			if err != nil {
-				logger.Warning(err)
-			}
-		}()
-	case AutoClean:
-		go func() {
-			err := m.handleAutoCleanEvent()
-			if err != nil {
-				logger.Warning(err)
-			}
-		}()
-	case UpdateInfosChanged:
-		logger.Info("UpdateInfos Changed")
-		// m.handleUpdateInfosChanged()
-	case OsVersionChanged:
-		go updateTokenConfigFile()
-	case AutoDownload:
-		m.updater.PropsMu.RLock()
-		enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled // 如果自动下载关闭,则空闲下载同样会关闭
-		m.updater.PropsMu.RUnlock()
-		if enable {
-			m.handleAutoDownload()
-			go func() {
-				err := m.updateAutoDownloadTimer()
-				if err != nil {
-					logger.Warning(err)
-				}
-			}()
-		}
-	case AbortAutoDownload:
-		m.updater.PropsMu.RLock()
-		enable := m.updater.idleDownloadConfigObj.IdleDownloadEnabled
-		m.updater.PropsMu.RUnlock()
-		if enable {
-			m.handleAbortAutoDownload()
-			go func() {
-				err := m.updateAutoDownloadTimer()
-				if err != nil {
-					logger.Warning(err)
-				}
-			}()
-		}
-	default:
-		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
-	}
-
-	return nil
+	return dbusutil.ToError(m.handleSystemEvent(sender, eventType))
 }
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
+	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
@@ -317,7 +255,7 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 	if err != nil {
 		logger.Warningf("failed to get process %d environ: %v", proc, err)
 	} else {
-		m.userAgents.addLang(uidStr, envVars.Get("LANG"))
+		m.userAgents.addLang(uidStr, getLang(envVars))
 	}
 	return nil
 }
@@ -325,7 +263,7 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
+	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
@@ -426,11 +364,6 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr 
 		return "/", dbusutil.ToError(err)
 	}
 
-	_ = m.config.UpdateLastCheckTime()
-	err = m.updateAutoCheckSystemUnit()
-	if err != nil {
-		logger.Warning(err)
-	}
 	return jobObj.getPath(), nil
 }
 

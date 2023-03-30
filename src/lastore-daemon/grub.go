@@ -1,0 +1,96 @@
+// SPDX-FileCopyrightText: 2018 - 2023 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package main
+
+import (
+	"fmt"
+	"internal/system"
+	"time"
+
+	"github.com/godbus/dbus"
+	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
+	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
+	"github.com/linuxdeepin/go-lib/strv"
+)
+
+const (
+	grubScriptFile       = "/boot/grub/grub.cfg"
+	normalBootEntryTitle = "UnionTech OS Desktop 20 Pro GNU/Linux"
+)
+
+type bootEntry uint
+
+const (
+	normalBootEntry bootEntry = iota
+	rollbackBootEntry
+)
+
+type grubManager struct {
+	grub grub2.Grub2
+}
+
+func newGrubManager(sysBus *dbus.Conn, loop *dbusutil.SignalLoop) *grubManager {
+	m := &grubManager{
+		grub: grub2.NewGrub2(sysBus),
+	}
+	m.grub.InitSignalExt(loop, true)
+	return m
+}
+
+// changeGrubDefaultEntry 设置grub默认入口(社区版可能不需要进行grub设置)
+func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
+	var title string
+	var err error
+	ch := make(chan bool, 1)
+	switch to {
+	case rollbackBootEntry:
+		title, err = system.GetGrubRollbackTitle(grubScriptFile)
+		if err != nil {
+			return err
+		}
+	case normalBootEntry:
+		title = normalBootEntryTitle
+	}
+	logger.Debug("change grub default entry to:", title)
+	defaultEntry, err := m.grub.DefaultEntry().Get(0)
+	if err != nil {
+		return err
+	}
+	if defaultEntry == title {
+		return nil
+	}
+	entryTitles, err := m.grub.GetSimpleEntryTitles(0)
+	if err != nil {
+		return err
+	}
+	if !strv.Strv(entryTitles).Contains(title) {
+		return fmt.Errorf("grub no %s entry", title)
+	}
+	err = m.grub.SetDefaultEntry(0, title)
+	if err != nil {
+		return err
+	}
+	logger.Info("updating grub default entry to ", title)
+	_ = m.grub.Updating().ConnectChanged(func(hasValue bool, updating bool) {
+		if !hasValue {
+			return
+		}
+		if !updating {
+			ch <- updating
+		}
+	})
+	defer func() {
+		m.grub.RemoveHandler(proxy.RemovePropertiesChangedHandler)
+	}()
+	select {
+	case <-ch:
+		logger.Info("successfully updated grub default entry")
+		return nil
+	case <-time.After(30 * time.Second):
+		logger.Warning("timeout while waiting for grub to update")
+		return nil
+	}
+}

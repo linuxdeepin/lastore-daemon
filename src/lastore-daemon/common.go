@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"internal/system"
 	"io/ioutil"
@@ -22,8 +23,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/godbus/dbus"
+	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 var _tokenUpdateMu sync.Mutex
@@ -291,8 +294,108 @@ func getCustomTimeDuration(presetTime string) time.Duration {
 	return dur
 }
 
-func isFirstBoot() bool {
-	return !system.NormalFileExists(lastoreUnitCache)
+const (
+	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
+	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
+	printerPath           = "/usr/bin/dde-printer"
+	printerHelperPath     = "/usr/bin/dde-printer-helper"
+	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
+	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
+	controlCenterPath     = "/usr/bin/dde-control-center"
+	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
+)
+
+var (
+	allowInstallPackageExecPaths = strv.Strv{
+		appStoreDaemonPath,
+		oldAppStoreDaemonPath,
+		printerPath,
+		printerHelperPath,
+		langSelectorPath,
+		controlCenterPath,
+	}
+	allowRemovePackageExecPaths = strv.Strv{
+		appStoreDaemonPath,
+		oldAppStoreDaemonPath,
+		sessionDaemonPath,
+		langSelectorPath,
+		controlCenterPath,
+	}
+)
+
+// execPath和cmdLine可以有一个为空,其中一个存在即可作为判断调用者的依据
+func getExecutablePathAndCmdline(service *dbusutil.Service, sender dbus.Sender) (string, string, error) {
+	pid, err := service.GetConnPID(string(sender))
+	if err != nil {
+		return "", "", err
+	}
+
+	proc := procfs.Process(pid)
+
+	execPath, err := proc.Exe()
+	if err != nil {
+		// 当调用者在使用过程中发生了更新,则在获取该进程的exe时,会出现lstat xxx (deleted)此类的error,如果发生的是覆盖,则该路径依旧存在,因此增加以下判断
+		pErr, ok := err.(*os.PathError)
+		if ok {
+			if os.IsNotExist(pErr.Err) {
+				errExecPath := strings.Replace(pErr.Path, "(deleted)", "", -1)
+				oldExecPath := strings.TrimSpace(errExecPath)
+				if system.NormalFileExists(oldExecPath) {
+					execPath = oldExecPath
+					err = nil
+				}
+			}
+		}
+	}
+
+	cmdLine, err1 := proc.Cmdline()
+	if err != nil && err1 != nil {
+		return "", "", errors.New(strings.Join([]string{
+			err.Error(),
+			err1.Error(),
+		}, ";"))
+	}
+	return execPath, strings.Join(cmdLine, " "), nil
+}
+
+// 根据类型过滤数据
+func getFilterInfosMap(infosMap system.SourceUpgradeInfoMap, updateType system.UpdateType) system.SourceUpgradeInfoMap {
+	r := make(system.SourceUpgradeInfoMap)
+	for _, t := range system.AllUpdateType() {
+		category := updateType & t
+		if category != 0 {
+			info, ok := infosMap[t.JobType()]
+			if ok {
+				r[t.JobType()] = info
+			}
+		}
+	}
+	return r
+}
+
+// SystemUpgradeInfo 将update_infos.json数据解析成map
+func SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
+	r := make(system.SourceUpgradeInfoMap)
+
+	filename := path.Join(system.VarLibDir, "update_infos.json")
+	var updateInfosList []system.UpgradeInfo
+	err := system.DecodeJson(filename, &updateInfosList)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, err
+		}
+
+		var updateInfoErr system.UpdateInfoError
+		err2 := system.DecodeJson(filename, &updateInfoErr)
+		if err2 == nil {
+			return nil, &updateInfoErr
+		}
+		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
+	}
+	for _, info := range updateInfosList {
+		r[info.Category] = append(r[info.Category], info)
+	}
+	return r, nil
 }
 
 func cleanAllCache() {

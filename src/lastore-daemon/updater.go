@@ -251,3 +251,15 @@ func (u *Updater) autoInstallUpdatesWriteCallback(pw *dbusutil.PropertyWrite) *d
 func (u *Updater) autoInstallUpdatesSuitesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	return dbusutil.ToError(u.config.SetAutoInstallUpdateType(system.UpdateType(pw.Value.(uint64))))
 }
+
+func (u *Updater) getIdleDownloadEnabled() bool {
+	u.PropsMu.RLock()
+	defer u.PropsMu.RUnlock()
+	return u.idleDownloadConfigObj.IdleDownloadEnabled
+}
+
+func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []string {
+	u.PropsMu.RLock()
+	defer u.PropsMu.RUnlock()
+	return u.ClassifiedUpdatablePackages[updateType.JobType()]
+}

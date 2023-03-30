@@ -370,7 +370,6 @@ func parsePackageSize(line string) (float64, float64, error) {
 	ms := __ReDownloadSize__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
 	case 5:
-		logger.Info("query download info:", string(ms[0]))
 		// ms[0] 匹配的字符串
 		// ms[1] 待下载大小
 		// ms[2] 待下载单位(可以为空,为空时单位为B)
@@ -404,7 +403,6 @@ func parsePackageSize(line string) (float64, float64, error) {
 		}
 		needDownloadSize = needDownloadSize * __unitTable__[needDownloadUnit]
 		allDownloadSize = allDownloadSize * __unitTable__[allDownloadUnit]
-		logger.Infof("need download size:%vB;all download size:%vB", needDownloadSize, allDownloadSize)
 		return needDownloadSize, allDownloadSize, nil
 	}
 	return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid", line)
