@@ -747,6 +747,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 					if err != nil {
 						logger.Warning(err)
 					}
+					if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
+						// 包损坏，需要下apt-get clean，然后重试更新
+						cleanAllCache()
+						msg := gettext.Tr("Deb package error, requires re-downloading.")
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					}
 				}
 
 				// 上报更新失败的信息(如果需要)
@@ -1014,6 +1020,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 						} else {
 							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%vG空间"), size/(1000*1000*1000))
 						}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					}
+					if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
+						// 下载更新失败，需要apt-get clean后重新下载
+						cleanAllCache()
+						msg := gettext.Tr("Deb package error, requires re-downloading.")
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
 				}

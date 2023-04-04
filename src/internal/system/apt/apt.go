@@ -111,7 +111,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
-		sh := "apt-get -y -o APT::Status-Fd=3 update && /var/lib/lastore/scripts/build_system_info -now"
+		sh := "apt-get -y -o APT::Status-Fd=3 update --fix-missing && /var/lib/lastore/scripts/build_system_info -now"
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
@@ -346,6 +346,36 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	case strings.Contains(stdErrStr, "There were unauthenticated packages"):
 		return &system.JobError{
 			Type:   string(system.ErrorUnauthenticatedPackages),
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "I/O error"):
+		return &system.JobError{
+			Type:   string(system.ErrorIO),
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "don't have permission to access"):
+		return &system.JobError{
+			Type:   string(system.ErrorOperationNotPermitted),
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "dpkg: error processing") && strings.Contains(stdErrStr, "--unpack"):
+		return &system.JobError{
+			Type:   string(system.ErrorDamagePackage),
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "Hash Sum mismatch"):
+		return &system.JobError{
+			Type:   string(system.ErrorDamagePackage),
+			Detail: stdErrStr,
+		}
+
+	case strings.Contains(stdErrStr, "Corrupted file"):
+		return &system.JobError{
+			Type:   string(system.ErrorDamagePackage),
 			Detail: stdErrStr,
 		}
 

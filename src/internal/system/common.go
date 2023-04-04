@@ -327,6 +327,8 @@ const (
 	ErrorUnauthenticatedPackages UpgradeReasonType = "unauthenticatedPackages"
 	ErrorOperationNotPermitted   UpgradeReasonType = "operationNotPermitted"
 	ErrorIndexDownloadFailed     UpgradeReasonType = "IndexDownloadFailed"
+	ErrorIO                      UpgradeReasonType = "ioError"
+	ErrorDamagePackage           UpgradeReasonType = "damagePackage" // 包损坏,需要删除后重新下载或者安装
 )
 
 type UpgradeStatusAndReason struct {

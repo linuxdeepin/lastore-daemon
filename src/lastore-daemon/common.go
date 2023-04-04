@@ -294,3 +294,10 @@ func getCustomTimeDuration(presetTime string) time.Duration {
 func isFirstBoot() bool {
 	return !system.NormalFileExists(lastoreUnitCache)
 }
+
+func cleanAllCache() {
+	err := exec.Command("apt-get", "clean", "-c", system.LastoreAptV2CommonConfPath).Run()
+	if err != nil {
+		logger.Warning(err)
+	}
+}
