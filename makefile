@@ -1,5 +1,7 @@
 PBUILDER_PKG = pbuilder-satisfydepends-dummy
 
+GOPKG_PREFIX = github.com/linuxdeepin/lastore-daemon
+
 pwd := ${shell pwd}
 GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
 
@@ -9,12 +11,22 @@ export GO111MODULE=off
 
 all:  build
 
+TEST = \
+	${GOPKG_PREFIX}/src/internal/system \
+	${GOPKG_PREFIX}/src/internal/system/apt \
+	${GOPKG_PREFIX}/src/internal/utils \
+	${GOPKG_PREFIX}/src/internal/querydesktop \
+	${GOPKG_PREFIX}/src/lastore-daemon \
+	${GOPKG_PREFIX}/src/lastore-smartmirror \
+	${GOPKG_PREFIX}/src/lastore-tools \
+	${GOPKG_PREFIX}/src/lastore-smartmirror-daemon
+
 build:
-	${GoPath} ${GOBUILD} -o bin/lastore-daemon ${GOBUILD_OPTIONS} lastore-daemon
-	${GoPath} ${GOBUILD} -o bin/lastore-tools ${GOBUILD_OPTIONS} lastore-tools
-	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} lastore-smartmirror || echo "build failed, disable smartmirror support "
-	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon ${GOBUILD_OPTIONS} lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
-	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean ${GOBUILD_OPTIONS} lastore-apt-clean
+	${GoPath} ${GOBUILD} -o bin/lastore-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-daemon
+	${GoPath} ${GOBUILD} -o bin/lastore-tools ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-tools
+	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror || echo "build failed, disable smartmirror support "
+	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
+	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-apt-clean
 
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
@@ -29,10 +41,7 @@ test:
 			echo 1; \
 		fi; \
 	fi) \
-	${GoPath} ${GOTEST} internal/system internal/system/apt \
-	internal/utils	internal/querydesktop \
-	lastore-daemon  lastore-smartmirror  lastore-tools \
-	lastore-smartmirror-daemon
+	${GoPath} ${GOTEST} ${TEST}
 
 test-coverage:
 	env ${GoPath} go test -cover -v ./src/... | awk '$$1 ~ "^(ok|\\?)" {print $$2","$$5}' | sed "s:${CURDIR}::g" | sed 's/files\]/0\.0%/g' > coverage.csv
