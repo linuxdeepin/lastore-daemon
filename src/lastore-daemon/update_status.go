@@ -341,8 +341,8 @@ func (m *updateModeStatusManager) updateCheckCanUpgradeByEachStatus() {
 			checkCanUpgrade = false
 			break
 		} else {
-			// 可更新条件:至少存在一项为可更新,且其他项为更新完成
-			// TODO: 是否包含或更新失败.包含更新失败的情况下,如果进行模态更新,只更新可更新部分,不更新已经更新失败的部分
+			// 可更新条件:至少存在一项为可更新,且其他项为更新完成或更新失败
+			// 包含更新失败的情况下,如果进行模态更新,只更新可更新部分,不更新已经更新失败的部分
 			if status == system.CanUpgrade {
 				checkCanUpgrade = true
 			} else if status != system.Upgraded && status != system.UpgradeErr {
@@ -352,4 +352,74 @@ func (m *updateModeStatusManager) updateCheckCanUpgradeByEachStatus() {
 		}
 	}
 	m.updateCanUpgradeStatus(checkCanUpgrade)
+}
+
+// 根据check和status判断,排除不能下载的类型
+func (m *updateModeStatusManager) getCanPrepareDistUpgradeMode(origin system.UpdateType) system.UpdateType {
+	m.statusMapMu.Lock()
+	defer m.statusMapMu.Unlock()
+	var canPrepareUpgradeMode system.UpdateType
+	checkMode := m.checkMode
+	for _, typ := range system.AllUpdateType() {
+		if origin&typ == 0 {
+			continue
+		}
+		// 先检查该项是否选中,未选中则无需判断
+		if checkMode&typ == 0 {
+			continue
+		}
+		// 判断该项的状态是否为可更新
+		status, ok := m.updateModeStatusObj[typ.JobType()]
+		if !ok {
+			continue
+		} else {
+			// 可下载类型判断条件：该类型为未下载(如果不存在可下载的会在size或package查询中判断),或正在下载
+			if status == system.NotDownload || status == system.IsDownloading {
+				canPrepareUpgradeMode |= typ
+			}
+		}
+	}
+	return canPrepareUpgradeMode
+}
+
+// 根据check和status判断,排除不能更新的类型
+func (m *updateModeStatusManager) getCanDistUpgradeMode(origin system.UpdateType) system.UpdateType {
+	m.statusMapMu.Lock()
+	defer m.statusMapMu.Unlock()
+	var canUpgradeMode system.UpdateType
+	var upgradeFailedMode system.UpdateType
+	checkMode := m.checkMode
+	canUpgradeCount := 0
+	upgradeFailedCount := 0
+	for _, typ := range system.AllUpdateType() {
+		if origin&typ == 0 {
+			continue
+		}
+		// 先检查该项是否选中,未选中则无需判断
+		if checkMode&typ == 0 {
+			continue
+		}
+		// 判断该项的状态是否为可更新
+		status, ok := m.updateModeStatusObj[typ.JobType()]
+		if !ok {
+			continue
+		} else {
+			// 可安装类型判断条件：该类型为可安装、正在安装或安装失败
+			// 如果全都为更新失败,那么属于重试更新->可以更新
+			// 如果可更新和更新失败都有,那么只能可更新项去更新
+			if status == system.CanUpgrade || status == system.Upgrading {
+				canUpgradeCount++
+				canUpgradeMode |= typ
+			}
+			if status == system.UpgradeErr {
+				upgradeFailedCount++
+				upgradeFailedMode |= typ
+			}
+		}
+	}
+	if upgradeFailedCount > 0 {
+		return upgradeFailedMode
+	} else {
+		return canUpgradeMode
+	}
 }

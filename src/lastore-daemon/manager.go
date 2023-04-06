@@ -316,7 +316,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
-func (m *Manager) handleUpdateInfosChanged(calledByUpdateSource bool) {
+func (m *Manager) handleUpdateInfosChanged(sync bool) {
 	logger.Info("handle UpdateInfos Changed")
 	infosMap, err := SystemUpgradeInfo()
 	if err != nil {
@@ -330,7 +330,7 @@ func (m *Manager) handleUpdateInfosChanged(calledByUpdateSource bool) {
 	m.updateUpdatableProp(infosMap)
 
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
-	if calledByUpdateSource {
+	if sync {
 		m.statusManager.updateModeStatusBySize(m.UpdateMode)
 		m.statusManager.updateCheckCanUpgradeByEachStatus()
 	} else {
@@ -340,7 +340,7 @@ func (m *Manager) handleUpdateInfosChanged(calledByUpdateSource bool) {
 		}()
 	}
 
-	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && calledByUpdateSource && !m.updater.getIdleDownloadEnabled() {
+	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && sync && !m.updater.getIdleDownloadEnabled() {
 		logger.Info("auto download updates")
 		go func() {
 			m.inhibitAutoQuitCountAdd()
@@ -496,7 +496,7 @@ func (m *Manager) cancelAllUpdateJob() error {
 
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
 // needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
-func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool) (*Job, error) {
+func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool, needAdd bool) (*Job, error) {
 	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
@@ -509,18 +509,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		return nil, err
 	}
 	m.updateJobList()
-
-	if isClassify {
-		if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
-			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode.JobType()))
-		}
-	} else {
-		m.PropsMu.RLock()
-		upgradableApps := m.UpgradableApps
-		m.PropsMu.RUnlock()
-		if len(upgradableApps) == 0 {
-			return nil, system.NotFoundError("empty UpgradableApps")
-		}
+	mode := m.statusManager.getCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
+	if mode == 0 {
+		return nil, errors.New("don't exit can distUpgrade mode")
+	}
+	if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
+		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
 	}
 
 	var job *Job
@@ -768,25 +762,19 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 }
 
 // prepareDistUpgrade isClassify true: mode只能是单类型,创建一个单类型的下载job; false: mode类型不限,创建一个全mode类型的下载job
-func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool) (*Job, error) {
+func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool) (*Job, error) {
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
 	m.ensureUpdateSourceOnce()
 	m.updateJobList()
-
-	if isClassify {
-		if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
-			return nil, system.NotFoundError("empty UpgradableApps")
-		}
-	} else {
-		m.PropsMu.RLock()
-		upgradableApps := m.UpgradableApps
-		m.PropsMu.RUnlock()
-		if len(upgradableApps) == 0 {
-			return nil, system.NotFoundError("empty UpgradableApps")
-		}
+	mode := m.statusManager.getCanPrepareDistUpgradeMode(origin) // 正在下载的状态会包含其中,会在创建job中找到对应job(由于不追加下载,因此直接返回之前的job) TODO 如果需要追加下载,需要根据前后path的差异,reload该job
+	if mode == 0 {
+		return nil, errors.New("don't exit can prepareDistUpgrade mode")
+	}
+	if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
+		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 	var needDownloadSize float64
 	if needDownloadSize, _, err = system.QuerySourceDownloadSize(mode); err == nil && needDownloadSize == 0 {
@@ -898,7 +886,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, mode system.UpdateType,
 				m.statusManager.setUpdateStatus(mode, system.DownloadPause)
 			},
 			string(system.SucceedStatus): func() {
-				m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
+				// 有可能一个模块下载完后，其他模块由于有相同的包，状态同样变化
+				m.statusManager.updateModeStatusBySize(m.UpdateMode)
+				m.statusManager.updateCheckCanUpgradeByEachStatus()
+				// m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
 				msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
 				action := []string{
 					"updateNow",
@@ -1523,15 +1514,7 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 	m.PropsMu.RUnlock()
 	// UpdateMode修改后,一些对外属性需要同步修改(主要是和UpdateMode有关的数据)
 	func() {
-		var updatableApps []string
-		for _, t := range system.AllUpdateType() {
-			if updateType&t != 0 {
-				packages := m.updater.getUpdatablePackagesByType(t)
-				if len(packages) > 0 {
-					updatableApps = append(updatableApps, packages...)
-				}
-			}
-		}
+		updatableApps := m.updater.getUpdatablePackagesByType(updateType)
 		m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
 		m.updater.setUpdatablePackages(updatableApps)
 		m.updater.updateUpdatableApps()

@@ -223,18 +223,21 @@ func (j *Job) setHooks(hooks map[string]func()) {
 }
 
 func (j *Job) wrapHooks(appendHooks map[string]func()) {
-	hooks := j.hooks
 	j.hooksMu.Lock()
+	defer j.hooksMu.Unlock()
+	if j.hooks == nil {
+		j.hooks = appendHooks
+		return
+	}
 	for key, fn := range appendHooks {
-		f, ok := hooks[key]
+		f, ok := j.hooks[key]
 		if ok {
-			hooks[key] = func() {
+			j.hooks[key] = func() {
 				f()
 				fn()
 			}
 		} else {
-			hooks[key] = fn
+			j.hooks[key] = fn
 		}
 	}
-	j.hooksMu.Unlock()
 }

@@ -261,5 +261,14 @@ func (u *Updater) getIdleDownloadEnabled() bool {
 func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []string {
 	u.PropsMu.RLock()
 	defer u.PropsMu.RUnlock()
-	return u.ClassifiedUpdatablePackages[updateType.JobType()]
+	var updatableApps []string
+	for _, t := range system.AllUpdateType() {
+		if updateType&t != 0 {
+			packages := u.ClassifiedUpdatablePackages[updateType.JobType()]
+			if len(packages) > 0 {
+				updatableApps = append(updatableApps, packages...)
+			}
+		}
+	}
+	return updatableApps
 }

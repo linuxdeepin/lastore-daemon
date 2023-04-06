@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"sync"
 	"time"
 
 	"github.com/godbus/dbus"
@@ -44,7 +45,6 @@ func newGrubManager(sysBus *dbus.Conn, loop *dbusutil.SignalLoop) *grubManager {
 func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	var title string
 	var err error
-	ch := make(chan bool, 1)
 	switch to {
 	case rollbackBootEntry:
 		title, err = system.GetGrubRollbackTitle(grubScriptFile)
@@ -73,24 +73,25 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	if err != nil {
 		return err
 	}
+	var wg sync.WaitGroup
+	wg.Add(1)
 	logger.Info("updating grub default entry to ", title)
+	timer := time.AfterFunc(30*time.Second, func() {
+		logger.Warning("timeout while waiting for grub to update")
+		wg.Done()
+	})
+
 	_ = m.grub.Updating().ConnectChanged(func(hasValue bool, updating bool) {
 		if !hasValue {
 			return
 		}
 		if !updating {
-			ch <- updating
+			logger.Info("successfully updated grub default entry to", title)
+			wg.Done()
 		}
 	})
-	defer func() {
-		m.grub.RemoveHandler(proxy.RemovePropertiesChangedHandler)
-	}()
-	select {
-	case <-ch:
-		logger.Info("successfully updated grub default entry")
-		return nil
-	case <-time.After(30 * time.Second):
-		logger.Warning("timeout while waiting for grub to update")
-		return nil
-	}
+	wg.Wait()
+	timer.Stop()
+	m.grub.RemoveHandler(proxy.RemovePropertiesChangedHandler)
+	return nil
 }
