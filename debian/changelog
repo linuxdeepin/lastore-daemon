@@ -1,3 +1,9 @@
+lastore-daemon (6.1.0.0) stable; urgency=medium
+
+  * 集成到obs构建
+
+ -- myml <wurongjie@deepin.com>  Thu, 6 Apr 2023 14:10:00 +0800
+
 lastore-daemon (6.0.5.1) stable; urgency=medium
 
   [ TagBuilder ]
