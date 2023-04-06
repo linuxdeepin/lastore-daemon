@@ -5,8 +5,8 @@
 package main
 
 import (
-	"internal/dstore"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/dstore"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 // writeData 把数据 data 序列化为 JSON 格式写入 fpath 路径的文件。

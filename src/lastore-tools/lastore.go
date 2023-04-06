@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"internal/dstore"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/dstore"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	"github.com/codegangsta/cli"
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 	lastore "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.lastore1"
 )
 

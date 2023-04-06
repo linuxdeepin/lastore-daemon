@@ -5,8 +5,8 @@
 package main
 
 import (
-	"internal/system"
-	"internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
-	"internal/mirrors"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/mirrors"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/codegangsta/cli"
 	"github.com/linuxdeepin/go-lib/log"

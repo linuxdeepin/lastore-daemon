@@ -6,7 +6,7 @@ package main
 
 import (
 	"bytes"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"io/ioutil"
 	"path/filepath"
 	"testing"

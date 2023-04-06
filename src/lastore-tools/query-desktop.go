@@ -7,7 +7,7 @@ package main
 import (
 	"fmt"
 
-	"internal/querydesktop"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/querydesktop"
 
 	"github.com/codegangsta/cli"
 )

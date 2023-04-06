@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"sync"
 	"time"
 

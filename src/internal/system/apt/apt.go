@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"os"
 	"os/exec"
 	"strings"

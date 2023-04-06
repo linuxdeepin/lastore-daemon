@@ -6,7 +6,7 @@ package main
 
 import (
 	"fmt"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
 // StartSystemJob start job

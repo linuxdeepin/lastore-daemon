@@ -5,8 +5,8 @@
 package main
 
 import (
-	"internal/system"
-	"internal/utils/fixme/pkg_recommend"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils/fixme/pkg_recommend"
 	"strings"
 	"testing"
 
