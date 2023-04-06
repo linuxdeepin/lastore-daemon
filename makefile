@@ -2,8 +2,10 @@ PBUILDER_PKG = pbuilder-satisfydepends-dummy
 
 GOPKG_PREFIX = github.com/linuxdeepin/lastore-daemon
 
+GOPATH_DIR = gopath
+
 pwd := ${shell pwd}
-GoPath := GOPATH=${pwd}:${pwd}/vendor:${GOPATH}
+GoPath := GOPATH=${pwd}:${pwd}/vendor:${CURDIR}/${GOPATH_DIR}:${GOPATH}
 
 GOBUILD = go build
 GOTEST = go test -v
@@ -21,7 +23,12 @@ TEST = \
 	${GOPKG_PREFIX}/src/lastore-tools \
 	${GOPKG_PREFIX}/src/lastore-smartmirror-daemon
 
-build:
+prepare:
+	@mkdir -p out/bin
+	@mkdir -p ${GOPATH_DIR}/src/$(dir ${GOPKG_PREFIX});
+	@ln -snf ../../../.. ${GOPATH_DIR}/src/${GOPKG_PREFIX};
+
+build: prepare
 	${GoPath} ${GOBUILD} -o bin/lastore-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-daemon
 	${GoPath} ${GOBUILD} -o bin/lastore-tools ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-tools
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror || echo "build failed, disable smartmirror support "
