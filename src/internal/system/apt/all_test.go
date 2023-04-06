@@ -6,7 +6,7 @@ package apt
 
 import "testing"
 import C "gopkg.in/check.v1"
-import "internal/system"
+import "github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 type testWrap struct{}
 
