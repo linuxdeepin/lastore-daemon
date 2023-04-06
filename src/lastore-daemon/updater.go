@@ -6,13 +6,13 @@ package main
 
 import (
 	"fmt"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"io/ioutil"
 	"os/exec"
 	"path"
 	"sync"
 
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/strv"
 )

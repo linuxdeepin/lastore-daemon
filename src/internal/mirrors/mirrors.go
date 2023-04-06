@@ -7,8 +7,8 @@ package mirrors
 import (
 	"encoding/json"
 	"fmt"
-	"internal/system"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 	"io/ioutil"
 	"net/http"
 	"os"

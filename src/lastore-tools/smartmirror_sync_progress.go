@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 	"io"
 	"net/http"
 	"strings"

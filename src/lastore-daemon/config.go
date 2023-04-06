@@ -5,7 +5,7 @@
 package main
 
 import (
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"path/filepath"
 	"time"
 )

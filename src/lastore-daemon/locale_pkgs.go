@@ -5,7 +5,7 @@
 package main
 
 import (
-	"internal/utils/fixme/pkg_recommend"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils/fixme/pkg_recommend"
 )
 
 func QueryEnhancedLocalePackages(checker func(string) bool, lang string, pkgs ...string) []string {

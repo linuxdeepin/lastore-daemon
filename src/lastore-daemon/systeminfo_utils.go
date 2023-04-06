@@ -13,14 +13,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 
 	hhardware "github.com/jouyouyun/hardware"
 )

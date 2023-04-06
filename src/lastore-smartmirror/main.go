@@ -14,9 +14,9 @@ import (
 	"fmt"
 	"os"
 
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 )
 
 func main() {

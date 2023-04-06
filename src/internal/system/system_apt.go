@@ -13,7 +13,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 	"os"
 	"os/exec"
 	"path"

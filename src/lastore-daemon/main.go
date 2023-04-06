@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"internal/system"
-	"internal/system/apt"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -42,7 +42,7 @@ func Tr(text string) string {
 
 var logger = log.NewLogger("lastore/lastore-daemon")
 
-//go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,github.com/godbus/dbus updater.go job.go manager.go
+//go:generate dbusutil-gen -type Updater,Job,Manager -output dbusutil.go -import internal/system,github.com/godbus/dbus/v5 updater.go job.go manager.go
 //go:generate dbusutil-gen em -type Manager,Updater
 
 func main() {

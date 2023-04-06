@@ -5,8 +5,8 @@
 package querydesktop
 
 import (
-	"internal/system"
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 	"path"
 	"strings"
 )

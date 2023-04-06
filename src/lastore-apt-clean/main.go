@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	debVersion "pault.ag/go/debian/version"
 	"github.com/linuxdeepin/go-lib/log"

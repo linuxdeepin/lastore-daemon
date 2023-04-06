@@ -5,14 +5,14 @@
 package main
 
 import (
-	"internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"os"
 	"path"
 	"time"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 )
 
 type ApplicationInfo struct {

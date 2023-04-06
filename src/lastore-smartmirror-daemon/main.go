@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/log"
