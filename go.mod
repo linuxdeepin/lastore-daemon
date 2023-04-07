@@ -2,12 +2,6 @@ module github.com/linuxdeepin/lastore-daemon
 
 go 1.20
 
-replace github.com/linuxdeepin/go-lib => github.com/Decodetalkers/go-lib v0.0.0-20230404025406-a17a10117d09
-
-replace github.com/linuxdeepin/go-dbus-factory => github.com/Decodetalkers/go-dbus-factory v0.0.0-20230404030011-0eb743393708
-
-replace github.com/linuxdeepin/dde-api => github.com/Decodetalkers/dde-api v0.0.0-20230404030416-afbfa3d5be94
-
 // TODO: use origin one
 replace github.com/codegangsta/cli => github.com/urfave/cli v1.22.12
 
@@ -16,9 +10,9 @@ require (
 	github.com/go-ini/ini v1.67.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jouyouyun/hardware v0.1.8
-	github.com/linuxdeepin/dde-api v0.0.0-00010101000000-000000000000
-	github.com/linuxdeepin/go-dbus-factory v0.0.0-20230208033821-bda82fd6525e
-	github.com/linuxdeepin/go-lib v0.0.0-00010101000000-000000000000
+	github.com/linuxdeepin/dde-api v0.0.0-20230407015108-8b16b3779328
+	github.com/linuxdeepin/go-dbus-factory v0.0.0-20230407013947-6ff704a21ca7
+	github.com/linuxdeepin/go-lib v0.0.0-20230406092403-b4b4282fc513
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.6
 	github.com/stretchr/testify v1.8.2
