@@ -18,6 +18,7 @@ import (
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/procfs"
 )
 
@@ -453,7 +454,13 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 		canBackup, abErr = m.abObj.CanBackup(0)
 		if abErr != nil || !canBackup {
 			logger.Info("can not backup,", abErr)
-			// m.sendNotify()
+
+			msg := gettext.Tr("备份失败")
+			action := []string{"continue", gettext.Tr("继续更新")}
+			hints := map[string]dbus.Variant{"x-deepin-action-continue": dbus.MakeVariant(
+				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+			m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+
 			m.inhibitAutoQuitCountSub()
 			m.statusManager.setRunningUpgradeStatus(false)
 			m.statusManager.setABStatus(system.BackupFailed, system.CanNotBackup)
@@ -471,7 +478,16 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 			abErr = m.abObj.StartBackup(0)
 			if abErr != nil {
 				logger.Warning(abErr)
-				// m.sendNotify()
+
+				msg := gettext.Tr("备份失败")
+				action := []string{"backup", gettext.Tr("重新备份"), "continue", gettext.Tr("继续更新")}
+				hints := map[string]dbus.Variant{
+					"x-deepin-action-backup": dbus.MakeVariant(
+						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
+					"x-deepin-action-continue": dbus.MakeVariant(
+						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+
 				m.inhibitAutoQuitCountSub()
 				m.statusManager.setRunningUpgradeStatus(false)
 				m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
@@ -487,14 +503,22 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 						startJobErr = startUpgrade()
 						if startJobErr != nil {
 							logger.Warning(startJobErr)
-							// m.sendNotify()
-						} else {
-							// m.sendNotify()
 						}
 					} else {
 						m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
 						logger.Warning("ab backup failed:", errMsg)
-						// m.sendNotify()
+
+						msg := gettext.Tr("备份失败")
+						action := []string{"backup", gettext.Tr("重新备份"), "continue", gettext.Tr("继续更新")}
+						hints := map[string]dbus.Variant{
+							"x-deepin-action-backup": dbus.MakeVariant(
+								fmt.Sprintf("dbus-send,--system,--print-reply,"+
+									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
+							"x-deepin-action-continue": dbus.MakeVariant(
+								fmt.Sprintf("dbus-send,--system,--print-reply,"+
+									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+
 					}
 				}
 			})

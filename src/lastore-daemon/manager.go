@@ -437,9 +437,10 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
 					if !m.updater.AutoDownloadUpdates {
-						msg := gettext.Tr("New system edition available")
-						action := []string{"update", gettext.Tr("Update Now")}
-						hints := map[string]dbus.Variant{"x-deepin-action-update": dbus.MakeVariant("dde-control-center,-m,update")}
+						// msg := gettext.Tr("New system edition available")
+						msg := gettext.Tr("检查到有新系统版本")
+						action := []string{"check", gettext.Tr("查看")}
+						hints := map[string]dbus.Variant{"x-deepin-action-check": dbus.MakeVariant("dde-control-center,-m,update")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
@@ -456,7 +457,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				if err == nil {
 					if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
 						msg := gettext.Tr("检测更新失败，请检查网络设置")
-						action := []string{"checkNow", gettext.Tr("check now")}
+						action := []string{"checkNow", gettext.Tr("查看")}
 						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
@@ -580,8 +581,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 			handleSysPowerBatteryEvent := func() {
 				handleSysPowerBatteryEventMu.Lock()
 				defer handleSysPowerBatteryEventMu.Unlock()
+				if job.Status != system.RunningStatus {
+					return
+				}
 				if onBatteryGlobal && batteryPercentage < 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) && lowPowerNotifyId == 0 {
-					msg := gettext.Tr("The battery level is lower than 60%, please charge it")
+					msg := gettext.Tr("电池电量低于60%，为保障更新成功，请及时接入电源")
 					lowPowerNotifyId = m.sendNotify(updateNotifyShow, 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
 				// 用户连上电源时,需要关闭通知
@@ -653,8 +657,23 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 					if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
 						// 包损坏，需要下apt-get clean，然后重试更新
 						cleanAllCache()
-						msg := gettext.Tr("Deb package error, requires re-downloading.")
-						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+						msg := gettext.Tr("部分文件损坏，此次更新失败，请重新更新")
+						action := []string{"retry", gettext.Tr("重试")}
+						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant(
+							"dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.UpdateSource")}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					} else if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
+						// 空间不足
+						msg := gettext.Tr("磁盘空间不足，此次更新失败，请尝试重启，以避免影响系统正常使用")
+						action := []string{"reboot", gettext.Tr("重启")}
+						hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					} else {
+						// 其他原因
+						msg := gettext.Tr("此次更新失败，请尝试重启，以避免影响系统正常使用")
+						action := []string{"reboot", gettext.Tr("重启")}
+						hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
 
@@ -682,44 +701,44 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 					logger.Warning(err)
 				}
 				// 系统更新成功后,最后安装deepin-desktop-base包,安装成功后进度更新为100%并变成succeed状态
-				ch := make(chan int, 1)
+				var wg sync.WaitGroup
 				// unmask deepin-desktop-base并安装
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
 				})
+				wg.Add(1)
 				go func() {
 					m.do.Lock()
 					defer m.do.Unlock()
 					isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ)
 					if err != nil {
-						ch <- 1
+						wg.Done()
 						logger.Warning(err)
+						return
 					}
 					if isExist {
-						ch <- 1
+						wg.Done()
 						return
 					}
 					if installJob != nil {
 						installJob.option = job.option
-						installJob.setHooks(map[string]func(){
+						installJob.wrapHooks(map[string]func(){
 							string(system.FailedStatus): func() {
-								ch <- 1
+								wg.Done()
 							},
 							string(system.SucceedStatus): func() {
-								ch <- 1
+								wg.Done()
 							},
 						})
 						if err := m.jobManager.addJob(installJob); err != nil {
 							logger.Warning(err)
-							ch <- 1
+							wg.Done()
 							return
 						}
 					}
 				}()
-				select {
-				case <-ch:
-					logger.Info("install deepin-desktop-base done,upgrade succeed.")
-				}
+				wg.Wait()
+				logger.Info("install deepin-desktop-base done,upgrade succeed.")
 				m.statusManager.setUpdateStatus(mode, system.Upgraded)
 				// 等待deepin-desktop-base安装完成后,状态后续切换
 				job.setPropProgress(1.00)
@@ -807,7 +826,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.ErrorInsufficientSpace),
 			"You don't have enough free space to download",
 		}
-		msg := fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%vG空间"), needDownloadSize/(1000*1000*1000))
+		msg := fmt.Sprintf(gettext.Tr("更新包下载失败，请释放%vG空间"), needDownloadSize/(1000*1000*1000))
 		m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		logger.Warning(dbusError.Detail)
 		errStr, _ := json.Marshal(dbusError)
@@ -873,10 +892,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				m.PropsMu.Unlock()
 				m.statusManager.setUpdateStatus(mode, system.IsDownloading)
 				sendAutoDownloadOnce.Do(func() {
-					msg := gettext.Tr("New system edition available, downloading")
+					msg := gettext.Tr("N检查到有新系统版本，正在为您下载...")
 					action := []string{
 						"checkNow",
-						gettext.Tr("check now"),
+						gettext.Tr("查看"),
 					}
 					hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,update")}
 					m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
@@ -893,9 +912,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
 				action := []string{
 					"updateNow",
-					gettext.Tr("update now"),
+					gettext.Tr("立即更新"),
 					"ignore",
-					gettext.Tr("ignore"),
+					gettext.Tr("忽略"),
 				}
 				hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
 				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
@@ -919,17 +938,25 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						size, _, err := system.QueryPackageDownloadSize(mode, packages...)
 						if err != nil {
 							logger.Warning(err)
-							msg = gettext.Tr("更新包下载失败，请为下载目录释放空间")
+							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请释放%vG空间"), needDownloadSize/(1000*1000*1000))
 						} else {
-							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请为下载目录释放%vG空间"), size/(1000*1000*1000))
+							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请释放%vG空间"), size/(1000*1000*1000))
 						}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
-					}
-					if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
+					} else if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
 						// 下载更新失败，需要apt-get clean后重新下载
 						cleanAllCache()
-						msg := gettext.Tr("Deb package error, requires re-downloading.")
-						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+						msg := gettext.Tr("部分文件损坏，此次更新失败，请重新更新")
+						action := []string{"retry", gettext.Tr("重试")}
+						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant(
+							"dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.UpdateSource")}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					} else if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
+						// 网络原因下载更新失败
+						msg := gettext.Tr("更新下失败，请检查网络设置")
+						action := []string{"checkNow", gettext.Tr("查看")}
+						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
 			},
