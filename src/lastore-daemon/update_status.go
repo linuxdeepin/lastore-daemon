@@ -112,6 +112,18 @@ func filterMode(updateMode, checkMode system.UpdateType) (system.UpdateType, sys
 			}
 		}
 	}
+	// 将仅安全更新迁移为安全更新
+	if updateMode&system.OnlySecurityUpdate != 0 {
+		err := updateSecurityConfigFile(false)
+		if err != nil {
+			logger.Warning(err)
+		}
+		res0 |= system.SecurityUpdate
+	}
+	if checkMode&system.OnlySecurityUpdate != 0 {
+		res1 |= system.SecurityUpdate
+	}
+
 	return res0, res1
 }
 
@@ -259,11 +271,12 @@ func (m *updateModeStatusManager) setCheckMode(mode system.UpdateType) system.Up
 	if m.checkModeChangedCallback != nil {
 		m.checkModeChangedCallback(m.checkMode)
 	}
-	// check的内容修改后，canUpgrade的状态要随之修改
+	// check的内容修改后,canUpgrade的状态要随之修改
 	m.updateCheckCanUpgradeByEachStatus()
 	return m.checkMode
 }
 
+// 单项计算
 func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType) {
 	// 该处的处理,不会将更新项的状态修改为Upgraded.该状态只有可能在DistUpgrade中处理
 	m.statusMapMu.Lock()
@@ -283,6 +296,7 @@ func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 			if err != nil {
 				logger.Warning(err)
 			} else {
+				logger.Infof("currentMode:%v,needDownloadSize:%v,allPackageSize:%v,oldStatus:%v.", currentMode, needDownloadSize, allPackageSize, oldStatus)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {
 					if oldStatus != system.Upgraded {

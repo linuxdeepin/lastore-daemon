@@ -24,6 +24,6 @@ func TestUpdateType_JobType(t *testing.T) {
 func Test_GetCategorySourceMap(t *testing.T) {
 	sourceMap := GetCategorySourceMap()
 	assert.Equal(t, SystemSourceDir, sourceMap[SystemUpdate])
-	assert.Equal(t, SecuritySourceFile, sourceMap[OnlySecurityUpdate])
+	assert.Equal(t, SecuritySourceFile, sourceMap[SecurityUpdate])
 	assert.Equal(t, UnknownSourceDir, sourceMap[UnknownUpdate])
 }

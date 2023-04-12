@@ -111,17 +111,24 @@ func TransitionJobState(j *Job, to system.Status, inhibitSignalEmit bool) error 
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
 	}
+	// 如果是连续下载的job,那么running->succeed或succeed->end不需要发信号
+	if j.next != nil && ((j.Status == system.SucceedStatus && to == system.EndStatus) || (j.Status == system.RunningStatus && to == system.SucceedStatus)) {
+		inhibitSignalEmit = true
+	}
 	logger.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 	if to == system.FailedStatus && j.retry > 0 {
 		j.Status = to
 		return nil
 	}
-
-	hookFn := j.getHook(string(to))
-	if hookFn != nil {
-		j.PropsMu.Unlock()
-		hookFn()
-		j.PropsMu.Lock()
+	if to == system.PausedStatus && inhibitSignalEmit {
+		logger.Info("reload job,don't need handle pause hook")
+	} else {
+		hookFn := j.getHook(string(to))
+		if hookFn != nil {
+			j.PropsMu.Unlock()
+			hookFn()
+			j.PropsMu.Lock()
+		}
 	}
 	j.Status = to
 	if NotUseDBus {

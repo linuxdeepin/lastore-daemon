@@ -404,3 +404,5 @@ func cleanAllCache() {
 		logger.Warning(err)
 	}
 }
+
+const aptLimitKey = "Acquire::http::Dl-Limit"

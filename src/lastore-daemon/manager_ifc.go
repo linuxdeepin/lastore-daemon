@@ -446,6 +446,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 			if err != nil {
 				logger.Warning(err)
 			}
+			m.statusManager.setRunningUpgradeStatus(false)
 		}
 	}()
 	m.statusManager.setRunningUpgradeStatus(true)

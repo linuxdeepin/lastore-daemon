@@ -137,9 +137,15 @@ func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
 		SystemUpdate: SystemSourceDir,
 		// AppStoreUpdate:     AppStoreSourceFile,
-		SecurityUpdate:     SecuritySourceFile,
-		OnlySecurityUpdate: SecuritySourceFile,
-		UnknownUpdate:      UnknownSourceDir,
+		SecurityUpdate: SecuritySourceFile,
+		// OnlySecurityUpdate: SecuritySourceFile,
+		UnknownUpdate: UnknownSourceDir,
+	}
+}
+
+func GetCategorySourceList() []string {
+	return []string{
+		SystemSourceDir, SecuritySourceFile, UnknownSourceDir,
 	}
 }
 

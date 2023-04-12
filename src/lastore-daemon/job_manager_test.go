@@ -16,18 +16,18 @@ func TestJobManager(t *testing.T) {
 	jm := NewJobManager(nil, apt.New(nil, nil), nil)
 
 	// 空包只走流程
-	_, _, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil)
+	_, _, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, jm.findJobByType(system.DistUpgradeJobType, nil), (*Job)(nil))
 
-	_, jobDistUpgrade2, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil)
+	_, jobDistUpgrade2, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil, nil)
 	assert.NoError(t, err)
 	err = jm.addJob(jobDistUpgrade2)
 	assert.NoError(t, err)
 	err = jm.addJob(jobDistUpgrade2)
 	assert.Equal(t, jm.findJobByType(system.DistUpgradeJobType, nil), jobDistUpgrade2)
 
-	_, jobDownload, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil)
+	_, jobDownload, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil, nil)
 	assert.NoError(t, err)
 	err = jm.addJob(jobDownload)
 	assert.NoError(t, err)
@@ -43,7 +43,7 @@ func TestJobManager(t *testing.T) {
 	jm.removeJob(jobDownload.Id, DownloadQueue)
 	assert.Equal(t, jm.List().Len(), 1)
 
-	_, jobDownload2, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil)
+	_, jobDownload2, err := jm.CreateJob(system.DownloadJobType, system.DownloadJobType, nil, nil, nil)
 	assert.NoError(t, err)
 	err = jm.addJob(jobDownload2)
 	assert.NoError(t, err)

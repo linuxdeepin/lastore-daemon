@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/utils"
 )
 
 const (
@@ -76,7 +77,7 @@ func (jm *JobManager) List() JobList {
 }
 
 // CreateJob create the job and try starting it
-func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string) (bool, *Job, error) {
+func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, environ map[string]string, jobArgc map[string]interface{}) (bool, *Job, error) {
 	if job := jm.findJobByType(jobType, packages); job != nil {
 		switch job.Status {
 		case system.FailedStatus:
@@ -89,12 +90,42 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	switch jobType {
 	case system.DownloadJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType, DownloadQueue, environ)
-	case system.PrepareDistUpgradeJobType,
-		system.PrepareSystemUpgradeJobType,
+	case system.PrepareSystemUpgradeJobType,
 		system.PrepareAppStoreUpgradeJobType,
 		system.PrepareSecurityUpgradeJobType,
 		system.PrepareUnknownUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
+	case system.PrepareDistUpgradeJobType:
+		var jobList []*Job
+		mode, ok := jobArgc["UpdateMode"].(system.UpdateType)
+		if ok {
+			for _, typ := range system.AllUpdateType() {
+				if typ&mode != 0 {
+					partJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
+					if utils.IsDir(system.GetCategorySourceMap()[typ]) {
+						partJob.option = map[string]string{
+							"Dir::Etc::SourceList":  "/dev/null",
+							"Dir::Etc::SourceParts": system.GetCategorySourceMap()[typ],
+						}
+					} else {
+						partJob.option = map[string]string{
+							"Dir::Etc::SourceList":  system.GetCategorySourceMap()[typ],
+							"Dir::Etc::SourceParts": "/dev/null",
+						}
+					}
+					if len(jobList) >= 1 {
+						jobList[len(jobList)-1].next = partJob
+					}
+					jobList = append(jobList, partJob)
+				}
+			}
+			job = jobList[0]
+			for i, j := range jobList {
+				j._InitProgressRange(float64(i)*(1.0/float64(len(jobList))), float64(i+1)*(1.0/float64(len(jobList))))
+			}
+		} else {
+			job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
+		}
 	case system.InstallJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
 			DownloadQueue, environ)
@@ -135,7 +166,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	default:
 		return false, nil, system.NotSupportError
 	}
-
 	logger.Infof("CreateJob with %q %q %q %+v\n", jobName, jobType, packages, environ)
 	return false, job, jm.markReady(job)
 }
@@ -273,6 +303,20 @@ func (jm *JobManager) dispatch() {
 		_ = jm.removeJob(job.Id, job.queueName)
 		if job.next != nil {
 			logger.Infof("Job(%q).next is %v\n", job.Id, job.next)
+			// 部分属性需要继承
+			if job.next.option == nil {
+				job.next.option = make(map[string]string)
+			}
+
+			if job.option != nil {
+				// 上一个job无论是否存在该配置，都需要传递给下一个job
+				v, ok := job.option[aptLimitKey]
+				if ok {
+					job.next.option[aptLimitKey] = v
+				} else {
+					delete(job.next.option, aptLimitKey)
+				}
+			}
 			job = job.next
 
 			jm.dispatchMux.Unlock()

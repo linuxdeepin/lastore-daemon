@@ -176,7 +176,7 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ, nil)
 	if err != nil {
 		logger.Warningf("UpdatePackage %q error: %v\n", packages, err)
 		return nil, err
@@ -224,7 +224,7 @@ func (m *Manager) installPkg(jobName, packages string, environ map[string]string
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, nil)
 	if err != nil {
 		logger.Warningf("installPackage %q error: %v\n", packages, err)
 		return nil, err
@@ -262,7 +262,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ, nil)
 	if err != nil {
 		logger.Warningf("removePackage %q error: %v\n", packages, err)
 		return nil, err
@@ -410,7 +410,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	}
 	prepareUpdateSource()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, environ, nil)
 	if err != nil {
 		logger.Warningf("UpdateSource error: %v\n", err)
 		return nil, err
@@ -522,9 +522,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 		defer m.do.Unlock()
 		if isClassify {
 			jobType := GetUpgradeInfoMap()[mode].UpgradeJobId
-			isExist, job, err = m.jobManager.CreateJob("", jobType, nil, environ)
+			isExist, job, err = m.jobManager.CreateJob("", jobType, nil, environ, nil)
 		} else {
-			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, nil, environ)
+			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, nil, environ, nil)
 		}
 		if err != nil {
 			logger.Warningf("DistUpgrade error: %v\n", err)
@@ -724,7 +724,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 				go func() {
 					m.do.Lock()
 					defer m.do.Unlock()
-					isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ)
+					isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ, nil)
 					if err != nil {
 						wg.Done()
 						logger.Warning(err)
@@ -848,53 +848,44 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	}
 	var job *Job
 	var isExist bool
-	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
-		m.do.Lock()
-		defer m.do.Unlock()
-		if isClassify {
-			jobType := GetUpgradeInfoMap()[mode].PrepareJobId
-			if jobType == "" {
-				return fmt.Errorf("invalid args: %v", mode)
-			}
-			const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
-			isExist, job, err = m.jobManager.CreateJob(jobName, jobType, nil, environ)
-		} else {
-			isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ)
+
+	// 新的下载处理方式
+	m.do.Lock()
+	defer m.do.Unlock()
+	if isClassify {
+		jobType := GetUpgradeInfoMap()[mode].PrepareJobId
+		if jobType == "" {
+			return nil, fmt.Errorf("invalid args: %v", mode)
 		}
-		if err != nil {
-			logger.Warningf("Prepare DistUpgrade error: %v\n", err)
-			if unref != nil {
-				unref()
-			}
-			return err
+		const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
+		isExist, job, err = m.jobManager.CreateJob(jobName, jobType, nil, environ, nil)
+	} else {
+		option := map[string]interface{}{
+			"UpdateMode": mode,
 		}
-		if isExist {
-			return nil
-		}
-		// 设置apt命令参数
-		info, err := os.Stat(path)
-		if err != nil {
-			if unref != nil {
-				unref()
-			}
-			return err
-		}
-		if info.IsDir() {
-			job.option = map[string]string{
-				"Dir::Etc::SourceList":  "/dev/null",
-				"Dir::Etc::SourceParts": path,
-			}
-		} else {
-			job.option = map[string]string{
-				"Dir::Etc::SourceList":  path,
-				"Dir::Etc::SourceParts": "/dev/null",
-			}
-		}
+		isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ, option)
+	}
+	if err != nil {
+		logger.Warningf("Prepare DistUpgrade error: %v\n", err)
+		return nil, err
+	}
+	if isExist {
+		return job, nil
+	}
+	currentJob := job
+	var sendDownloadingOnce sync.Once
+	// 遍历job和所有next
+	var downloadJobList []*Job
+	for currentJob != nil {
+		downloadJobList = append(downloadJobList, currentJob)
+		currentJob = currentJob.next
+	}
+	for i, downloadJob := range downloadJobList {
+		j := downloadJob
 		if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
-			job.option["Acquire::http::Dl-Limit"] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
+			j.option[aptLimitKey] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
 		}
-		var sendAutoDownloadOnce sync.Once
-		job.setHooks(map[string]func(){
+		j.setHooks(map[string]func(){
 			string(system.ReadyStatus): func() {
 				m.PropsMu.Lock()
 				m.isDownloading = true
@@ -905,7 +896,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				m.isDownloading = true
 				m.PropsMu.Unlock()
 				m.statusManager.setUpdateStatus(mode, system.IsDownloading)
-				sendAutoDownloadOnce.Do(func() {
+				sendDownloadingOnce.Do(func() {
 					msg := gettext.Tr("New version available! Downloading...")
 					action := []string{
 						"view",
@@ -918,35 +909,18 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.PausedStatus): func() {
 				m.statusManager.setUpdateStatus(mode, system.DownloadPause)
 			},
-			string(system.SucceedStatus): func() {
-				// 有可能一个模块下载完后，其他模块由于有相同的包，状态同样变化
-				m.statusManager.updateModeStatusBySize(m.UpdateMode)
-				m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
-				m.statusManager.updateCheckCanUpgradeByEachStatus()
-				// m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
-				msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
-				action := []string{
-					"updateNow",
-					gettext.Tr("Update Now"),
-					"ignore",
-					gettext.Tr("Dismiss"),
-				}
-				hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
-				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-				m.messageManager.reportLog(downloadStatus, true, "")
-			},
 			string(system.FailedStatus): func() {
 				m.PropsMu.Lock()
 				m.isDownloading = false
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
-				m.messageManager.reportLog(downloadStatus, false, job.Description)
+				m.messageManager.reportLog(downloadStatus, false, j.Description)
 				m.statusManager.setUpdateStatus(mode, system.DownloadErr)
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
 				}{}
-				err = json.Unmarshal([]byte(job.Description), &errorContent)
+				err = json.Unmarshal([]byte(j.Description), &errorContent)
 				if err == nil {
 					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						var msg string
@@ -974,44 +948,60 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				}
 			},
 			string(system.EndStatus): func() {
-				if unref != nil {
-					unref()
-				}
 				// pause->end  status更新为未下载.用于适配取消下载的状态
-				if job.Status == system.PausedStatus {
+				if j.Status == system.PausedStatus || m.statusManager.getUpdateStatus(mode) == system.DownloadPause {
 					m.statusManager.setUpdateStatus(mode, system.NotDownload)
 				}
-				m.PropsMu.Lock()
-				m.isDownloading = false
-				m.PropsMu.Unlock()
 			},
 			// 在reload状态时,修改job的配置
 			string(system.ReloadStatus): func() {
+				logger.Infof("job reload option:%+v", j.option)
 				if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
-					if job.option == nil {
-						job.option = make(map[string]string)
+					if j.option == nil {
+						j.option = make(map[string]string)
 					}
-					job.option["Acquire::http::Dl-Limit"] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
+					j.option[aptLimitKey] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
 				} else {
-					if job.option != nil {
-						delete(job.option, "Acquire::http::Dl-Limit")
+					if j.option != nil {
+						delete(j.option, aptLimitKey)
 					}
 				}
 			},
 		})
-		if err := m.jobManager.addJob(job); err != nil {
-			if unref != nil {
-				unref()
-			}
-			return err
+		// 应该只有最后一个处理
+		if i == len(downloadJobList)-1 {
+			j.wrapHooks(map[string]func(){
+				string(system.SucceedStatus): func() {
+					// 有可能一个模块下载完后，其他模块由于有相同的包，状态同样变化
+					m.statusManager.updateModeStatusBySize(system.AllUpdate)
+					// 按每个仓库下载，就不会存在该场景：
+					// 两个仓库存在相同包但是版本不同，可能存在一个仓库下载好一个仓库未下载的场景，因此
+					// m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
+					m.statusManager.updateCheckCanUpgradeByEachStatus()
+					msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
+					action := []string{
+						"updateNow",
+						gettext.Tr("Update Now"),
+						"ignore",
+						gettext.Tr("Dismiss"),
+					}
+					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
+					m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					m.messageManager.reportLog(downloadStatus, true, "")
+				},
+				string(system.EndStatus): func() {
+					m.PropsMu.Lock()
+					m.isDownloading = false
+					m.PropsMu.Unlock()
+				},
+			})
 		}
-		return nil
-	})
-	if err != nil {
-		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
+	}
+
+	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
-	return job, err
+	return job, nil
 }
 
 // 根据更新类型,创建对应的下载或下载+安装的job
@@ -1086,7 +1076,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil, nil)
 	if err != nil {
 		logger.Warningf("CleanArchives error: %v", err)
 		return nil, err
@@ -1132,7 +1122,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 	m.do.Lock()
 	defer m.do.Unlock()
-	isExist, job, err := m.jobManager.CreateJob("", system.FixErrorJobType, []string{errType}, environ)
+	isExist, job, err := m.jobManager.CreateJob("", system.FixErrorJobType, []string{errType}, environ, nil)
 	if err != nil {
 		logger.Warningf("fixError error: %v", err)
 		return nil, err

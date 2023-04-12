@@ -192,7 +192,6 @@ func QuerySourceDownloadSize(updateType UpdateType) (float64, float64, error) {
 	startTime := time.Now()
 	downloadSize := new(float64)
 	allPackageSize := new(float64)
-	defer logger.Debugf("need download size:%v ,all package size:%v", *downloadSize, *allPackageSize)
 	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
 		defer func() {
 			if unref != nil {
