@@ -4,41 +4,163 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# pan93412 <pan93412@gmail.com>, 2020
 # copy0401 copy0401 <copy0401@gmail.com>, 2020
-# Cindy0514, 2021
+# pan93412 <pan93412@gmail.com>, 2023
+# Maggie Liu <maggie.liufei@gmail.com>, 2023
+# 凡凡不想平凡 <freddy4212@gmail.com>, 2023
+# deepiner, 2023
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-29 10:48+0800\n"
+"POT-Creation-Date: 2023-04-11 17:54+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Cindy0514, 2021\n"
-"Language-Team: Chinese (Taiwan) (https://www.transifex.com/linuxdeepin/teams/3617/zh_TW/)\n"
+"Last-Translator: deepiner, 2023\n"
+"Language-Team: Chinese (Taiwan) (https://app.transifex.com/linuxdeepin/teams/3617/zh_TW/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: zh_TW\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
+#: ../src/lastore-daemon/inhibitor.go:44
 msgid "Installing updates..."
 msgstr "正在安裝更新..."
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:46
 msgid "Tasks are running..."
 msgstr "任務運行中..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
-msgid "Preventing the computer from shutting down..."
+#: ../src/lastore-daemon/inhibitor.go:48
+msgid "Preventing from shutting down"
 msgstr "正在阻止關機..."
 
-#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
+#: ../src/lastore-daemon/main.go:161 ../src/lastore-daemon/main.go:165
 msgid "Control Center"
 msgstr "控制中心"
 
-#: ../src/lastore-daemon/main.go:121
+#: ../src/lastore-daemon/main.go:163
 msgid "App Store"
 msgstr "應用程式商店"
+
+#: ../src/lastore-daemon/manager.go:275
+msgid "Removed successfully"
+msgstr "移除成功"
+
+#: ../src/lastore-daemon/manager.go:279
+msgid "Failed to remove the app"
+msgstr "移除失敗"
+
+#: ../src/lastore-daemon/manager.go:282
+msgid "Retry"
+msgstr "重試"
+
+#: ../src/lastore-daemon/manager.go:284
+msgid "Cancel"
+msgstr "取消"
+
+#: ../src/lastore-daemon/manager.go:436
+msgid "New version available!"
+msgstr "檢查到有新系統版本"
+
+#: ../src/lastore-daemon/manager.go:437 ../src/lastore-daemon/manager.go:455
+#: ../src/lastore-daemon/manager.go:910 ../src/lastore-daemon/manager.go:967
+msgid "View"
+msgstr "瀏覽"
+
+#: ../src/lastore-daemon/manager.go:454
+msgid "Failed to check for updates. Please check your network."
+msgstr "檢測更新失敗，請檢查網路設定"
+
+#: ../src/lastore-daemon/manager.go:460
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr "檢測更新失敗，請清理磁碟空間"
+
+#: ../src/lastore-daemon/manager.go:583
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr "電池電量低於60%，為保障更新成功，請及時接入電源"
+
+#: ../src/lastore-daemon/manager.go:659 ../src/lastore-daemon/manager.go:960
+msgid "Updates failed: damaged files. Please update again."
+msgstr "部分文件損壞，此次更新失敗，請重新更新"
+
+#: ../src/lastore-daemon/manager.go:660 ../src/lastore-daemon/manager.go:961
+msgid "Try Again"
+msgstr "重試"
+
+#: ../src/lastore-daemon/manager.go:666
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr "磁碟空間不足，此次更新失敗，請嘗試重啟，以避免影響系統正常使用"
+
+#: ../src/lastore-daemon/manager.go:667 ../src/lastore-daemon/manager.go:680
+msgid "Reboot"
+msgstr "重啟"
+
+#: ../src/lastore-daemon/manager.go:671
+msgid "Updates failed: insufficient disk space."
+msgstr "磁碟空間不足，此次更新失敗"
+
+#: ../src/lastore-daemon/manager.go:679
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr "此次更新失敗，請嘗試重啟，以避免影響系統正常使用"
+
+#: ../src/lastore-daemon/manager.go:684
+msgid "Updates failed."
+msgstr "此次更新失敗"
+
+#: ../src/lastore-daemon/manager.go:841 ../src/lastore-daemon/manager.go:955
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr "更新包下載失敗，請釋放%n GB空間"
+
+#: ../src/lastore-daemon/manager.go:907
+msgid "New version available! Downloading..."
+msgstr "檢查到有新系統版本，正在為您下載..."
+
+#: ../src/lastore-daemon/manager.go:924
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr "更新包已下載完成，您可以在關機或重啟時安裝更新"
+
+#: ../src/lastore-daemon/manager.go:927
+msgid "Update Now"
+msgstr "立刻更新"
+
+#: ../src/lastore-daemon/manager.go:929
+msgid "Dismiss"
+msgstr "忽略"
+
+#: ../src/lastore-daemon/manager.go:966
+msgid "Downloading updates failed. Please check your network."
+msgstr "更新包下載失敗，請檢查網路設定"
+
+#: ../src/lastore-daemon/manager.go:1097
+msgid "Package cache wiped"
+msgstr "已清除軟體包快取"
+
+#: ../src/lastore-daemon/manager_ifc.go:383
+msgid "Backing up and installing updates..."
+msgstr "備份和安裝更新中..."
+
+#: ../src/lastore-daemon/manager_ifc.go:458
+#: ../src/lastore-daemon/manager_ifc.go:482
+#: ../src/lastore-daemon/manager_ifc.go:511
+msgid "Backup failed!"
+msgstr "備份失敗"
+
+#: ../src/lastore-daemon/manager_ifc.go:459
+#: ../src/lastore-daemon/manager_ifc.go:483
+#: ../src/lastore-daemon/manager_ifc.go:512
+msgid "Proceed to Update"
+msgstr "繼續更新"
+
+#: ../src/lastore-daemon/manager_ifc.go:483
+#: ../src/lastore-daemon/manager_ifc.go:512
+msgid "Back Up Again"
+msgstr "重新備份"

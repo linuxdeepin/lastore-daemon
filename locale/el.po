@@ -5,39 +5,163 @@
 # 
 # Translators:
 # 457d8bb295cd215bf4b5d4421a7e6f2f_dbd70dd <547531d7e05a062719580f89832ccbd9_785821>, 2020
-# Rosserex <superiorgravelgr@gmail.com>, 2021
+# 79353a696ad19dc202b261b3067b7640_bec941e, 2023
+# Tsvetan Bankov <emerge.life@gmail.com>, 2023
+# Rosserex <superiorgravelgr@gmail.com>, 2023
+# deepiner, 2023
+# Maggie Liu <maggie.liufei@gmail.com>, 2023
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-29 10:48+0800\n"
+"POT-Creation-Date: 2023-04-11 17:54+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Rosserex <superiorgravelgr@gmail.com>, 2021\n"
-"Language-Team: Greek (https://www.transifex.com/linuxdeepin/teams/3617/el/)\n"
+"Last-Translator: Maggie Liu <maggie.liufei@gmail.com>, 2023\n"
+"Language-Team: Greek (https://app.transifex.com/linuxdeepin/teams/3617/el/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: el\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
+#: ../src/lastore-daemon/inhibitor.go:44
 msgid "Installing updates..."
 msgstr "Εγκατάσταση ενημερώσεων..."
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:46
 msgid "Tasks are running..."
 msgstr "Υπάρχουν εργασίες που τρέχουν..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
-msgid "Preventing the computer from shutting down..."
-msgstr ""
+#: ../src/lastore-daemon/inhibitor.go:48
+msgid "Preventing from shutting down"
+msgstr "Αποτρέπουν την απενεργοποίηση"
 
-#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
+#: ../src/lastore-daemon/main.go:161 ../src/lastore-daemon/main.go:165
 msgid "Control Center"
 msgstr "Κέντρο Ελέγχου"
 
-#: ../src/lastore-daemon/main.go:121
+#: ../src/lastore-daemon/main.go:163
 msgid "App Store"
 msgstr "App Store"
+
+#: ../src/lastore-daemon/manager.go:275
+msgid "Removed successfully"
+msgstr "Επιτυχής κατάργηση"
+
+#: ../src/lastore-daemon/manager.go:279
+msgid "Failed to remove the app"
+msgstr "Αποτυχία κατάργησης εφαρμογής"
+
+#: ../src/lastore-daemon/manager.go:282
+msgid "Retry"
+msgstr "Επανάληψη"
+
+#: ../src/lastore-daemon/manager.go:284
+msgid "Cancel"
+msgstr "Ακύρωση"
+
+#: ../src/lastore-daemon/manager.go:436
+msgid "New version available!"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:437 ../src/lastore-daemon/manager.go:455
+#: ../src/lastore-daemon/manager.go:910 ../src/lastore-daemon/manager.go:967
+msgid "View"
+msgstr "Εμφάνιση"
+
+#: ../src/lastore-daemon/manager.go:454
+msgid "Failed to check for updates. Please check your network."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:460
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:583
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:659 ../src/lastore-daemon/manager.go:960
+msgid "Updates failed: damaged files. Please update again."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:660 ../src/lastore-daemon/manager.go:961
+msgid "Try Again"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:666
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:667 ../src/lastore-daemon/manager.go:680
+msgid "Reboot"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:671
+msgid "Updates failed: insufficient disk space."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:679
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:684
+msgid "Updates failed."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:841 ../src/lastore-daemon/manager.go:955
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:907
+msgid "New version available! Downloading..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:924
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:927
+msgid "Update Now"
+msgstr "Ενημέρωση Τώρα"
+
+#: ../src/lastore-daemon/manager.go:929
+msgid "Dismiss"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:966
+msgid "Downloading updates failed. Please check your network."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:1097
+msgid "Package cache wiped"
+msgstr "Προσωρινή μνήμη πακέτων (cache) διαγράφηκε"
+
+#: ../src/lastore-daemon/manager_ifc.go:383
+msgid "Backing up and installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:458
+#: ../src/lastore-daemon/manager_ifc.go:482
+#: ../src/lastore-daemon/manager_ifc.go:511
+msgid "Backup failed!"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:459
+#: ../src/lastore-daemon/manager_ifc.go:483
+#: ../src/lastore-daemon/manager_ifc.go:512
+msgid "Proceed to Update"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:483
+#: ../src/lastore-daemon/manager_ifc.go:512
+msgid "Back Up Again"
+msgstr ""
