@@ -380,25 +380,25 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 		return "", dbusutil.ToError(createJobErr)
 	}
 	var inhibitFd dbus.UnixFD = -1
-	why := Tr("Installing updates...")
+	why := Tr("Backing up and installing updates...")
 	inhibit := func(enable bool) {
 		if enable {
 			if inhibitFd == -1 {
 				fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
 				if err != nil {
-					logger.Infof("prevent shutdown failed: fd:%v, err:%v\n", fd, err)
+					logger.Infof("DistUpgradePartly:prevent shutdown failed: fd:%v, err:%v\n", fd, err)
 				} else {
-					logger.Infof("prevent shutdown: fd:%v\n", fd)
+					logger.Infof("DistUpgradePartly:prevent shutdown: fd:%v\n", fd)
 					inhibitFd = fd
 				}
 			}
 		} else {
-			if inhibitFd == -1 {
+			if inhibitFd != -1 {
 				err := syscall.Close(int(inhibitFd))
 				if err != nil {
-					logger.Infof("enable shutdown failed: fd:%d, err:%s\n", inhibitFd, err)
+					logger.Infof("DistUpgradePartly:enable shutdown failed: fd:%d, err:%s\n", inhibitFd, err)
 				} else {
-					logger.Info("enable shutdown")
+					logger.Info("DistUpgradePartly:enable shutdown")
 					inhibitFd = -1
 				}
 			}
@@ -455,8 +455,8 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 		if abErr != nil || !canBackup {
 			logger.Info("can not backup,", abErr)
 
-			msg := gettext.Tr("备份失败")
-			action := []string{"continue", gettext.Tr("继续更新")}
+			msg := gettext.Tr("Backup failed!")
+			action := []string{"continue", gettext.Tr("Proceed to Update")}
 			hints := map[string]dbus.Variant{"x-deepin-action-continue": dbus.MakeVariant(
 				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
 			m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
@@ -479,8 +479,8 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 			if abErr != nil {
 				logger.Warning(abErr)
 
-				msg := gettext.Tr("备份失败")
-				action := []string{"backup", gettext.Tr("重新备份"), "continue", gettext.Tr("继续更新")}
+				msg := gettext.Tr("Backup failed!")
+				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
 				hints := map[string]dbus.Variant{
 					"x-deepin-action-backup": dbus.MakeVariant(
 						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
@@ -508,8 +508,8 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 						m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
 						logger.Warning("ab backup failed:", errMsg)
 
-						msg := gettext.Tr("备份失败")
-						action := []string{"backup", gettext.Tr("重新备份"), "continue", gettext.Tr("继续更新")}
+						msg := gettext.Tr("Backup failed!")
+						action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
 						hints := map[string]dbus.Variant{
 							"x-deepin-action-backup": dbus.MakeVariant(
 								fmt.Sprintf("dbus-send,--system,--print-reply,"+

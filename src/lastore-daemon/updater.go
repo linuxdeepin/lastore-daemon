@@ -264,7 +264,7 @@ func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []str
 	var updatableApps []string
 	for _, t := range system.AllUpdateType() {
 		if updateType&t != 0 {
-			packages := u.ClassifiedUpdatablePackages[updateType.JobType()]
+			packages := u.ClassifiedUpdatablePackages[t.JobType()]
 			if len(packages) > 0 {
 				updatableApps = append(updatableApps, packages...)
 			}

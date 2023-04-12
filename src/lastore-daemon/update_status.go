@@ -299,8 +299,8 @@ func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 						}
 					}
 					if needDownloadSize > 0 {
-						if oldStatus == system.CanUpgrade || oldStatus == system.UpgradeErr {
-							// 如果状态为可更新、更新失败,需要迁移到未下载;更新中状态不变
+						if oldStatus == system.CanUpgrade || oldStatus == system.UpgradeErr || oldStatus == system.Upgraded || oldStatus == system.DownloadErr {
+							// 如果状态为可更新、更新失败、更新完成,需要迁移到未下载;更新中状态不变
 							newStatus = system.NotDownload
 						}
 					}
@@ -374,7 +374,7 @@ func (m *updateModeStatusManager) getCanPrepareDistUpgradeMode(origin system.Upd
 			continue
 		} else {
 			// 可下载类型判断条件：该类型为未下载(如果不存在可下载的会在size或package查询中判断),或正在下载
-			if status == system.NotDownload || status == system.IsDownloading {
+			if status == system.NotDownload || status == system.IsDownloading || status == system.DownloadPause {
 				canPrepareUpgradeMode |= typ
 			}
 		}

@@ -270,15 +270,10 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	if isExist {
 		return job, nil
 	}
-	var notifyId uint32
 	job.setHooks(map[string]func(){
-		string(system.RunningStatus): func() {
-			msg := fmt.Sprintf(gettext.Tr("Removing %v"), packages)
-			notifyId = m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		},
 		string(system.SucceedStatus): func() {
 			msg := gettext.Tr("Removed successfully")
-			m.sendNotify(system.GetAppStoreAppName(), notifyId, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 		},
 		string(system.FailedStatus): func() {
 			msg := gettext.Tr("Failed to remove the app")
@@ -291,7 +286,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 			hints := map[string]dbus.Variant{
 				"x-deepin-action-retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.StartJob,string:%s", job.Id)),
 				"x-deepin-action-cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.CleanJob,string:%s", job.Id))}
-			m.sendNotify(system.GetAppStoreAppName(), notifyId, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 		},
 	})
 	if err := m.jobManager.addJob(job); err != nil {
@@ -429,6 +424,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.PropsMu.Lock()
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
+				// 检查更新需要重置备份状态,主要是处理备份失败后再检查更新,会直接显示失败的场景
+				m.statusManager.setABStatus(system.NotBackup, system.NoABError)
 			},
 			string(system.SucceedStatus): func() {
 				m.handleUpdateInfosChanged(true)
@@ -438,9 +435,9 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					// 关闭自动下载时,发可更新的通知;
 					if !m.updater.AutoDownloadUpdates {
 						// msg := gettext.Tr("New system edition available")
-						msg := gettext.Tr("检查到有新系统版本")
-						action := []string{"check", gettext.Tr("查看")}
-						hints := map[string]dbus.Variant{"x-deepin-action-check": dbus.MakeVariant("dde-control-center,-m,update")}
+						msg := gettext.Tr("New version available!")
+						action := []string{"view", gettext.Tr("View")}
+						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
@@ -456,13 +453,13 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
 					if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
-						msg := gettext.Tr("检测更新失败，请检查网络设置")
-						action := []string{"checkNow", gettext.Tr("查看")}
-						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
+						msg := gettext.Tr("Failed to check for updates. Please check your network.")
+						action := []string{"view", gettext.Tr("View")}
+						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,network")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 					if strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) || strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
-						msg := gettext.Tr("检测更新失败，请清理磁盘空间")
+						msg := gettext.Tr("Failed to check for updates. Please clean up your disk first.")
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
 				}
@@ -585,7 +582,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 					return
 				}
 				if onBatteryGlobal && batteryPercentage < 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) && lowPowerNotifyId == 0 {
-					msg := gettext.Tr("电池电量低于60%，为保障更新成功，请及时接入电源")
+					msg := gettext.Tr("The battery capacity is lower than 60%. To get successful updates, please plug in.")
 					lowPowerNotifyId = m.sendNotify(updateNotifyShow, 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
 				// 用户连上电源时,需要关闭通知
@@ -654,25 +651,42 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 					if err != nil {
 						logger.Warning(err)
 					}
+					canBackup, abErr := m.abObj.CanBackup(0)
+					if abErr != nil {
+						canBackup = false
+					}
 					if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
 						// 包损坏，需要下apt-get clean，然后重试更新
 						cleanAllCache()
-						msg := gettext.Tr("部分文件损坏，此次更新失败，请重新更新")
-						action := []string{"retry", gettext.Tr("重试")}
-						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant(
-							"dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.UpdateSource")}
+						msg := gettext.Tr("Updates failed: damaged files. Please update again.")
+						action := []string{"retry", gettext.Tr("Try Again")}
+						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					} else if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						// 空间不足
-						msg := gettext.Tr("磁盘空间不足，此次更新失败，请尝试重启，以避免影响系统正常使用")
-						action := []string{"reboot", gettext.Tr("重启")}
+						// 已备份
+						msg := gettext.Tr("Updates failed: insufficient disk space. Please reboot to avoid the effect on your system.")
+						action := []string{"reboot", gettext.Tr("Reboot")}
 						hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
+						// 未备份
+						if !canBackup {
+							msg = gettext.Tr("Updates failed: insufficient disk space.")
+							action = []string{}
+							hints = nil
+						}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					} else {
 						// 其他原因
-						msg := gettext.Tr("此次更新失败，请尝试重启，以避免影响系统正常使用")
-						action := []string{"reboot", gettext.Tr("重启")}
+						// 已备份
+						msg := gettext.Tr("Updates failed. Please reboot to avoid the effect on your system.")
+						action := []string{"reboot", gettext.Tr("Reboot")}
 						hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
+						// 未备份
+						if !canBackup {
+							msg = gettext.Tr("Updates failed.")
+							action = []string{}
+							hints = nil
+						}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
@@ -826,7 +840,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.ErrorInsufficientSpace),
 			"You don't have enough free space to download",
 		}
-		msg := fmt.Sprintf(gettext.Tr("更新包下载失败，请释放%vG空间"), needDownloadSize/(1000*1000*1000))
+		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %n GB disk space first."), needDownloadSize/(1000*1000*1000))
 		m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		logger.Warning(dbusError.Detail)
 		errStr, _ := json.Marshal(dbusError)
@@ -892,12 +906,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				m.PropsMu.Unlock()
 				m.statusManager.setUpdateStatus(mode, system.IsDownloading)
 				sendAutoDownloadOnce.Do(func() {
-					msg := gettext.Tr("N检查到有新系统版本，正在为您下载...")
+					msg := gettext.Tr("New version available! Downloading...")
 					action := []string{
-						"checkNow",
-						gettext.Tr("查看"),
+						"view",
+						gettext.Tr("View"),
 					}
-					hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,update")}
+					hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
 					m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				})
 			},
@@ -907,14 +921,15 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.SucceedStatus): func() {
 				// 有可能一个模块下载完后，其他模块由于有相同的包，状态同样变化
 				m.statusManager.updateModeStatusBySize(m.UpdateMode)
+				m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
 				m.statusManager.updateCheckCanUpgradeByEachStatus()
 				// m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
-				msg := gettext.Tr("Newer version updates were downloaded successfully. You can install them when shut down or reboot the system")
+				msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
 				action := []string{
 					"updateNow",
-					gettext.Tr("立即更新"),
+					gettext.Tr("Update Now"),
 					"ignore",
-					gettext.Tr("忽略"),
+					gettext.Tr("Dismiss"),
 				}
 				hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
 				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
@@ -938,24 +953,22 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						size, _, err := system.QueryPackageDownloadSize(mode, packages...)
 						if err != nil {
 							logger.Warning(err)
-							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请释放%vG空间"), needDownloadSize/(1000*1000*1000))
-						} else {
-							msg = fmt.Sprintf(gettext.Tr("更新包下载失败，请释放%vG空间"), size/(1000*1000*1000))
+							size = needDownloadSize
 						}
+						msg = fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %n GB disk space first."), size/(1000*1000*1000))
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					} else if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
 						// 下载更新失败，需要apt-get clean后重新下载
 						cleanAllCache()
-						msg := gettext.Tr("部分文件损坏，此次更新失败，请重新更新")
-						action := []string{"retry", gettext.Tr("重试")}
-						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant(
-							"dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.UpdateSource")}
+						msg := gettext.Tr("Updates failed: damaged files. Please update again.")
+						action := []string{"retry", gettext.Tr("Try Again")}
+						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					} else if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
 						// 网络原因下载更新失败
-						msg := gettext.Tr("更新下失败，请检查网络设置")
-						action := []string{"checkNow", gettext.Tr("查看")}
-						hints := map[string]dbus.Variant{"x-deepin-action-checkNow": dbus.MakeVariant("dde-control-center,-m,network")}
+						msg := gettext.Tr("Downloading updates failed. Please check your network.")
+						action := []string{"view", gettext.Tr("View")}
+						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,network")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
