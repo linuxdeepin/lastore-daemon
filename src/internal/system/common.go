@@ -411,7 +411,8 @@ func HandleDelayPackage(hold bool, packages []string) {
 type UpdateModeStatus string
 
 const (
-	NotDownload   UpdateModeStatus = "notDownload" // 包含了有更新没下载和无更新两种情况
+	NoUpdate      UpdateModeStatus = "noUpdate"    // 无更新
+	NotDownload   UpdateModeStatus = "notDownload" // 包含了有更新没下载
 	IsDownloading UpdateModeStatus = "isDownloading"
 	DownloadPause UpdateModeStatus = "downloadPause"
 	DownloadErr   UpdateModeStatus = "downloadFailed"

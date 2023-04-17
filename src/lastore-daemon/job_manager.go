@@ -498,7 +498,7 @@ func (jm *JobManager) addJob(j *Job) error {
 	if !ok {
 		return system.NotFoundError("addJob with queue " + queueName)
 	}
-	if (j.Id == genJobId(system.UpdateSourceJobType) || j.Id == genJobId(system.DistUpgradeJobType)) && (len(jm.queues[DownloadQueue].RunningJobs()) != 0 || len(jm.queues[DelayLockQueue].RunningJobs()) != 0 || len(jm.queues[LockQueue].RunningJobs()) != 0) {
+	if (j.Id == genJobId(system.UpdateSourceJobType)) && (len(jm.queues[DownloadQueue].RunningJobs()) != 0 || len(jm.queues[DelayLockQueue].RunningJobs()) != 0 || len(jm.queues[LockQueue].RunningJobs()) != 0) {
 		return errors.New("download or install running, not need check update")
 	}
 

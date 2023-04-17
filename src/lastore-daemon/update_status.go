@@ -96,6 +96,7 @@ func (m *updateModeStatusManager) initModifyData() {
 		}
 		m.syncUpdateStatusNoLock()
 	}
+	m.setRunningUpgradeStatus(false)
 	m.statusMapMu.Unlock()
 }
 
@@ -300,21 +301,28 @@ func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {
 					if oldStatus != system.Upgraded {
-						newStatus = system.NotDownload
+						newStatus = system.NoUpdate
 					}
 				} else {
 					// allPackageSize > 0 需要更新
-					// needDownloadSize > 0 可能有3种状态: 没下载,下载中;或者是安装更新完成后仓库又有推送
 					// needDownloadSize == 0 可能有3种状态: 可更新,更新中,更新失败;
 					if needDownloadSize == 0 {
-						if oldStatus == system.NotDownload || oldStatus == system.IsDownloading || oldStatus == system.Upgraded {
-							// 如果为未下载、下载中、更新完成状态,需要迁移到未安装状态
+						if oldStatus == system.NotDownload ||
+							oldStatus == system.IsDownloading ||
+							oldStatus == system.Upgraded ||
+							oldStatus == system.NoUpdate {
+							// 如果为未下载、下载中、更新完成、无更新内容状态,需要迁移到可更新状态
 							newStatus = system.CanUpgrade
 						}
 					}
+					// needDownloadSize > 0 可能有3种状态: 没下载,下载中;或者是安装更新完成后仓库又有推送
 					if needDownloadSize > 0 {
-						if oldStatus == system.CanUpgrade || oldStatus == system.UpgradeErr || oldStatus == system.Upgraded || oldStatus == system.DownloadErr {
-							// 如果状态为可更新、更新失败、更新完成,需要迁移到未下载;更新中状态不变
+						if oldStatus == system.CanUpgrade ||
+							oldStatus == system.UpgradeErr ||
+							oldStatus == system.Upgraded ||
+							oldStatus == system.DownloadErr ||
+							oldStatus == system.NoUpdate {
+							// 如果状态为可更新、更新失败、更新完成、下载失败、无更新内容,需要迁移到未下载;更新中、下载中状态不变
 							newStatus = system.NotDownload
 						}
 					}
@@ -355,11 +363,11 @@ func (m *updateModeStatusManager) updateCheckCanUpgradeByEachStatus() {
 			checkCanUpgrade = false
 			break
 		} else {
-			// 可更新条件:至少存在一项为可更新,且其他项为更新完成或更新失败
+			// 可更新条件:至少存在一项为可更新,且其他项为更新完成或更新失败或无更新内容
 			// 包含更新失败的情况下,如果进行模态更新,只更新可更新部分,不更新已经更新失败的部分
 			if status == system.CanUpgrade {
 				checkCanUpgrade = true
-			} else if status != system.Upgraded && status != system.UpgradeErr {
+			} else if status != system.Upgraded && status != system.UpgradeErr && status != system.NoUpdate {
 				checkCanUpgrade = false
 				break
 			}
