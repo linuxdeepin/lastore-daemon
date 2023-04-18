@@ -314,12 +314,13 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 func (p *APTSystem) UpdateSource(jobId string, environ map[string]string) error {
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
 	c.atExitFn = func() bool {
-		if c.exitCode == ExitSuccess &&
-			bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
+		// 无网络时检查更新失败,exitCode为0,空间不足(不确定exit code)导致需要特殊处理
+		if c.exitCode == ExitSuccess && bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
 			if bytes.Contains(c.stderr.Bytes(), []byte("No space left on device")) {
 				c.indicateFailed(string(system.ErrorInsufficientSpace), c.stderr.String(), false)
+			} else {
+				c.indicateFailed(string(system.ErrorIndexDownloadFailed), c.stderr.String(), false)
 			}
-			c.indicateFailed(string(system.ErrorIndexDownloadFailed), c.stderr.String(), false)
 			return true
 		}
 		return false

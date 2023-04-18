@@ -452,13 +452,13 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				}{}
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
-					if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
+					if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) || strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) {
 						msg := gettext.Tr("Failed to check for updates. Please check your network.")
 						action := []string{"view", gettext.Tr("View")}
 						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,network")}
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
-					if strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) || strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
+					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
 						msg := gettext.Tr("Failed to check for updates. Please clean up your disk first.")
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
