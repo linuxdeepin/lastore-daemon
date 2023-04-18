@@ -326,11 +326,11 @@ func (m *Manager) handleUpdateInfosChanged(sync bool) {
 
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
-		m.statusManager.updateModeStatusBySize(m.UpdateMode)
+		m.statusManager.updateModeStatusBySize(system.AllUpdate)
 		m.statusManager.updateCheckCanUpgradeByEachStatus()
 	} else {
 		go func() {
-			m.statusManager.updateModeStatusBySize(m.UpdateMode)
+			m.statusManager.updateModeStatusBySize(system.AllUpdate)
 			m.statusManager.updateCheckCanUpgradeByEachStatus()
 		}()
 	}

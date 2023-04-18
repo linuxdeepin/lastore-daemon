@@ -72,9 +72,7 @@ func (m *updateModeStatusManager) initModifyData() {
 		logger.Warning(err)
 		m.updateModeStatusObj = make(map[string]system.UpdateModeStatus)
 		for _, typ := range system.AllUpdateType() {
-			if m.updateMode&typ != 0 {
-				m.updateModeStatusObj[typ.JobType()] = system.NotDownload
-			}
+			m.updateModeStatusObj[typ.JobType()] = system.NotDownload
 		}
 		m.abStatus = system.NotBackup
 		m.abError = system.NoABError
@@ -335,7 +333,7 @@ func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 	}
 	wg.Wait()
 	m.syncUpdateStatusNoLock()
-
+	logger.Infof("status:%+v", m.updateModeStatusObj)
 }
 
 func (m *updateModeStatusManager) updateCanUpgradeStatus(can bool) {
