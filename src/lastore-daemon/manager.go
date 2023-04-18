@@ -950,7 +950,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			},
 			string(system.EndStatus): func() {
 				// pause->end  status更新为未下载.用于适配取消下载的状态
-				if j.Status == system.PausedStatus || m.statusManager.GetUpdateStatus(mode) == system.DownloadPause {
+				// if j.Status == system.PausedStatus || m.statusManager.GetUpdateStatus(mode) == system.DownloadPause {
+				// 	m.statusManager.SetUpdateStatus(mode, system.NotDownload)
+				// 	m.statusManager.UpdateModeAllStatusBySize()
+				// }
+				// 除了下载完成和下载失败之外,其他的情况都要先把状态设置成未下载.然后通过size进行状态修正
+				if m.statusManager.GetUpdateStatus(mode) != system.CanUpgrade && m.statusManager.GetUpdateStatus(mode) != system.DownloadErr {
 					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
 					m.statusManager.UpdateModeAllStatusBySize()
 				}
