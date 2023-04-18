@@ -122,16 +122,16 @@ func (m *userAgentMap) addUser(uid string) {
 func (m *userAgentMap) removeUser(uid string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	item, ok := m.uidItemMap[uid]
+	// session的handlers移除由session信号处理，此处不再处理。重复remove会导致go-lib的崩溃
+	_, ok := m.uidItemMap[uid]
 	if !ok {
 		return
 	}
 
-	for sessionPath, session := range item.sessions {
-		session.RemoveAllHandlers()
-		delete(item.sessions, sessionPath)
-	}
+	// for sessionPath, session := range item.sessions {
+	// 	session.RemoveAllHandlers()
+	// 	delete(item.sessions, sessionPath)
+	// }
 	delete(m.uidItemMap, uid)
 }
 
