@@ -714,45 +714,48 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 				if err != nil {
 					logger.Warning(err)
 				}
-				// 系统更新成功后,最后安装deepin-desktop-base包,安装成功后进度更新为100%并变成succeed状态
-				var wg sync.WaitGroup
 				// unmask deepin-desktop-base并安装
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
 				})
-				wg.Add(1)
-				go func() {
-					m.do.Lock()
-					defer m.do.Unlock()
-					isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ, nil)
-					if err != nil {
-						wg.Done()
-						logger.Warning(err)
-						return
-					}
-					if isExist {
-						wg.Done()
-						return
-					}
-					if installJob != nil {
-						installJob.option = job.option
-						installJob.wrapHooks(map[string]func(){
-							string(system.FailedStatus): func() {
-								wg.Done()
-							},
-							string(system.SucceedStatus): func() {
-								wg.Done()
-							},
-						})
-						if err := m.jobManager.addJob(installJob); err != nil {
+				// 只处理系统更新
+				if mode&system.SystemUpdate != 0 {
+					// 系统更新成功后,最后安装deepin-desktop-base包,安装成功后进度更新为100%并变成succeed状态
+					var wg sync.WaitGroup
+					wg.Add(1)
+					go func() {
+						m.do.Lock()
+						defer m.do.Unlock()
+						isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ, nil)
+						if err != nil {
+							wg.Done()
 							logger.Warning(err)
+							return
+						}
+						if isExist {
 							wg.Done()
 							return
 						}
-					}
-				}()
-				wg.Wait()
-				logger.Info("install deepin-desktop-base done,upgrade succeed.")
+						if installJob != nil {
+							installJob.option = job.option
+							installJob.wrapHooks(map[string]func(){
+								string(system.FailedStatus): func() {
+									wg.Done()
+								},
+								string(system.SucceedStatus): func() {
+									wg.Done()
+								},
+							})
+							if err := m.jobManager.addJob(installJob); err != nil {
+								logger.Warning(err)
+								wg.Done()
+								return
+							}
+						}
+					}()
+					wg.Wait()
+					logger.Info("install deepin-desktop-base done,upgrade succeed.")
+				}
 				m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 				// 等待deepin-desktop-base安装完成后,状态后续切换
 				job.setPropProgress(1.00)
