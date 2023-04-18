@@ -415,7 +415,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	// 对hook进行包装:增加配置状态更新的操作
 	upgradeJob.wrapHooks(map[string]func(){
 		string(system.EndStatus): func() {
-			m.statusManager.setRunningUpgradeStatus(false)
+			m.statusManager.SetRunningUpgradeStatus(false)
 		},
 		string(system.SucceedStatus): func() {
 			inhibit(false)
@@ -446,12 +446,12 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 			if err != nil {
 				logger.Warning(err)
 			}
-			m.statusManager.setRunningUpgradeStatus(false)
+			m.statusManager.SetRunningUpgradeStatus(false)
 		}
 	}()
-	m.statusManager.setRunningUpgradeStatus(true)
+	m.statusManager.SetRunningUpgradeStatus(true)
 	if needBackup {
-		m.statusManager.setABStatus(system.NotBackup, system.NoABError)
+		m.statusManager.SetABStatus(system.NotBackup, system.NoABError)
 		canBackup, abErr = m.abObj.CanBackup(0)
 		if abErr != nil || !canBackup {
 			logger.Info("can not backup,", abErr)
@@ -463,8 +463,8 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 			m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 			m.inhibitAutoQuitCountSub()
-			m.statusManager.setRunningUpgradeStatus(false)
-			m.statusManager.setABStatus(system.BackupFailed, system.CanNotBackup)
+			m.statusManager.SetRunningUpgradeStatus(false)
+			m.statusManager.SetABStatus(system.BackupFailed, system.CanNotBackup)
 			abErr = errors.New("can not backup")
 			return "", dbusutil.ToError(abErr)
 		}
@@ -472,7 +472,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			m.statusManager.setABStatus(system.HasBackedUp, system.NoABError)
+			m.statusManager.SetABStatus(system.HasBackedUp, system.NoABError)
 		}
 		if !hasBackedUp {
 			// 没有备份过，先备份再更新
@@ -490,23 +490,23 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 				m.inhibitAutoQuitCountSub()
-				m.statusManager.setRunningUpgradeStatus(false)
-				m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
+				m.statusManager.SetRunningUpgradeStatus(false)
+				m.statusManager.SetABStatus(system.BackupFailed, system.OtherError)
 				return "", dbusutil.ToError(abErr)
 			}
-			m.statusManager.setABStatus(system.BackingUp, system.NoABError)
+			m.statusManager.SetABStatus(system.BackingUp, system.NoABError)
 			abHandler, err = m.abObj.ConnectJobEnd(func(kind string, success bool, errMsg string) {
 				if kind == "backup" {
 					m.abObj.RemoveHandler(abHandler)
 					if success {
-						m.statusManager.setABStatus(system.HasBackedUp, system.NoABError)
+						m.statusManager.SetABStatus(system.HasBackedUp, system.NoABError)
 						// 开始更新
 						startJobErr = startUpgrade()
 						if startJobErr != nil {
 							logger.Warning(startJobErr)
 						}
 					} else {
-						m.statusManager.setABStatus(system.BackupFailed, system.OtherError)
+						m.statusManager.SetABStatus(system.BackupFailed, system.OtherError)
 						logger.Warning("ab backup failed:", errMsg)
 
 						msg := gettext.Tr("Backup failed!")

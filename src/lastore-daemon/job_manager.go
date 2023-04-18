@@ -99,29 +99,40 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		var jobList []*Job
 		mode, ok := jobArgc["UpdateMode"].(system.UpdateType)
 		if ok {
-			for _, typ := range system.AllUpdateType() {
-				if typ&mode != 0 {
-					partJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
-					if utils.IsDir(system.GetCategorySourceMap()[typ]) {
-						partJob.option = map[string]string{
-							"Dir::Etc::SourceList":  "/dev/null",
-							"Dir::Etc::SourceParts": system.GetCategorySourceMap()[typ],
-						}
-					} else {
-						partJob.option = map[string]string{
-							"Dir::Etc::SourceList":  system.GetCategorySourceMap()[typ],
-							"Dir::Etc::SourceParts": "/dev/null",
-						}
+			var allDownloadSize float64
+			var holderSize float64
+			sizeMap, ok := jobArgc["DownloadSize"].(map[string]float64)
+			if ok {
+				for _, typ := range system.AllUpdateType() {
+					if typ&mode != 0 {
+						allDownloadSize += sizeMap[typ.JobType()]
 					}
-					if len(jobList) >= 1 {
-						jobList[len(jobList)-1].next = partJob
-					}
-					jobList = append(jobList, partJob)
 				}
-			}
-			job = jobList[0]
-			for i, j := range jobList {
-				j._InitProgressRange(float64(i)*(1.0/float64(len(jobList))), float64(i+1)*(1.0/float64(len(jobList))))
+				for _, typ := range system.AllUpdateType() {
+					if typ&mode != 0 {
+						partJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
+						if utils.IsDir(system.GetCategorySourceMap()[typ]) {
+							partJob.option = map[string]string{
+								"Dir::Etc::SourceList":  "/dev/null",
+								"Dir::Etc::SourceParts": system.GetCategorySourceMap()[typ],
+							}
+						} else {
+							partJob.option = map[string]string{
+								"Dir::Etc::SourceList":  system.GetCategorySourceMap()[typ],
+								"Dir::Etc::SourceParts": "/dev/null",
+							}
+						}
+						if len(jobList) >= 1 {
+							jobList[len(jobList)-1].next = partJob
+						}
+						jobList = append(jobList, partJob)
+						partJob._InitProgressRange(holderSize/allDownloadSize, (holderSize+sizeMap[typ.JobType()])/allDownloadSize)
+						holderSize += sizeMap[typ.JobType()]
+					}
+				}
+				job = jobList[0]
+			} else {
+				job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
 			}
 		} else {
 			job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)

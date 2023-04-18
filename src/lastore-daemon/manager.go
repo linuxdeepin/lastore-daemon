@@ -326,12 +326,12 @@ func (m *Manager) handleUpdateInfosChanged(sync bool) {
 
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
-		m.statusManager.updateModeStatusBySize(system.AllUpdate)
-		m.statusManager.updateCheckCanUpgradeByEachStatus()
+		m.statusManager.UpdateModeAllStatusBySize()
+		m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 	} else {
 		go func() {
-			m.statusManager.updateModeStatusBySize(system.AllUpdate)
-			m.statusManager.updateCheckCanUpgradeByEachStatus()
+			m.statusManager.UpdateModeAllStatusBySize()
+			m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 		}()
 	}
 
@@ -425,7 +425,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				// 检查更新需要重置备份状态,主要是处理备份失败后再检查更新,会直接显示失败的场景
-				m.statusManager.setABStatus(system.NotBackup, system.NoABError)
+				m.statusManager.SetABStatus(system.NotBackup, system.NoABError)
 			},
 			string(system.SucceedStatus): func() {
 				m.handleUpdateInfosChanged(true)
@@ -507,7 +507,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 		return nil, err
 	}
 	m.updateJobList()
-	mode := m.statusManager.getCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
+	mode := m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
 	if mode == 0 {
 		return nil, errors.New("don't exit can distUpgrade mode")
 	}
@@ -627,7 +627,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 				if err != nil {
 					logger.Warning(err)
 				}
-				m.statusManager.setUpdateStatus(mode, system.Upgrading)
+				m.statusManager.SetUpdateStatus(mode, system.Upgrading)
 				// mask deepin-desktop-base,该包在系统更新完成后最后安装
 				system.HandleDelayPackage(true, []string{
 					"deepin-desktop-base",
@@ -697,7 +697,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 					m.messageManager.postSystemUpgradeMessage(upgradeFailed, job, mode)
 				}()
 				m.messageManager.reportLog(upgradeStatus, false, job.Description)
-				m.statusManager.setUpdateStatus(mode, system.UpgradeErr)
+				m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 				// unmask deepin-desktop-base 无需继续安装
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
@@ -753,7 +753,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 				}()
 				wg.Wait()
 				logger.Info("install deepin-desktop-base done,upgrade succeed.")
-				m.statusManager.setUpdateStatus(mode, system.Upgraded)
+				m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 				// 等待deepin-desktop-base安装完成后,状态后续切换
 				job.setPropProgress(1.00)
 				go func() {
@@ -802,7 +802,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	}
 	m.ensureUpdateSourceOnce()
 	m.updateJobList()
-	mode := m.statusManager.getCanPrepareDistUpgradeMode(origin) // 正在下载的状态会包含其中,会在创建job中找到对应job(由于不追加下载,因此直接返回之前的job) TODO 如果需要追加下载,需要根据前后path的差异,reload该job
+	mode := m.statusManager.GetCanPrepareDistUpgradeMode(origin) // 正在下载的状态会包含其中,会在创建job中找到对应job(由于不追加下载,因此直接返回之前的job) TODO 如果需要追加下载,需要根据前后path的差异,reload该job
 	if mode == 0 {
 		return nil, errors.New("don't exit can prepareDistUpgrade mode")
 	}
@@ -861,7 +861,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		isExist, job, err = m.jobManager.CreateJob(jobName, jobType, nil, environ, nil)
 	} else {
 		option := map[string]interface{}{
-			"UpdateMode": mode,
+			"UpdateMode":   mode,
+			"DownloadSize": m.statusManager.GetAllUpdateModeDownloadSize(),
 		}
 		isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ, option)
 	}
@@ -895,7 +896,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				m.PropsMu.Lock()
 				m.isDownloading = true
 				m.PropsMu.Unlock()
-				m.statusManager.setUpdateStatus(mode, system.IsDownloading)
+				m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
 				sendDownloadingOnce.Do(func() {
 					msg := gettext.Tr("New version available! Downloading...")
 					action := []string{
@@ -907,7 +908,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				})
 			},
 			string(system.PausedStatus): func() {
-				m.statusManager.setUpdateStatus(mode, system.DownloadPause)
+				m.statusManager.SetUpdateStatus(mode, system.DownloadPause)
 			},
 			string(system.FailedStatus): func() {
 				m.PropsMu.Lock()
@@ -915,7 +916,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
 				m.messageManager.reportLog(downloadStatus, false, j.Description)
-				m.statusManager.setUpdateStatus(mode, system.DownloadErr)
+				m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
@@ -949,8 +950,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			},
 			string(system.EndStatus): func() {
 				// pause->end  status更新为未下载.用于适配取消下载的状态
-				if j.Status == system.PausedStatus || m.statusManager.getUpdateStatus(mode) == system.DownloadPause {
-					m.statusManager.setUpdateStatus(mode, system.NotDownload)
+				if j.Status == system.PausedStatus || m.statusManager.GetUpdateStatus(mode) == system.DownloadPause {
+					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
+					m.statusManager.UpdateModeAllStatusBySize()
 				}
 			},
 			// 在reload状态时,修改job的配置
@@ -973,11 +975,11 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			j.wrapHooks(map[string]func(){
 				string(system.SucceedStatus): func() {
 					// 有可能一个模块下载完后，其他模块由于有相同的包，状态同样变化
-					m.statusManager.updateModeStatusBySize(system.AllUpdate)
+					m.statusManager.UpdateModeAllStatusBySize()
 					// 按每个仓库下载，就不会存在该场景：
 					// 两个仓库存在相同包但是版本不同，可能存在一个仓库下载好一个仓库未下载的场景，因此
 					// m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
-					m.statusManager.updateCheckCanUpgradeByEachStatus()
+					m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 					msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
 					action := []string{
 						"updateNow",
@@ -1138,14 +1140,14 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	writeMode := system.UpdateType(pw.Value.(uint64))
-	newMode := m.statusManager.setUpdateMode(writeMode)
+	newMode := m.statusManager.SetUpdateMode(writeMode)
 	pw.Value = newMode
 	return nil
 }
 
 func (m *Manager) checkUpdateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	writeType := system.UpdateType(pw.Value.(uint64))
-	newMode := m.statusManager.setCheckMode(writeType)
+	newMode := m.statusManager.SetCheckMode(writeType)
 	pw.Value = newMode
 	return nil
 }
@@ -1564,23 +1566,23 @@ func (m *Manager) initDSettingsChangedHandle() {
 func (m *Manager) initStatusManager() {
 	logger.Info("start initStatusManager:", time.Now())
 	startTime := time.Now()
-	m.statusManager = newStatusManager(m.config, func(newStatus string) {
+	m.statusManager = NewStatusManager(m.config, func(newStatus string) {
 		m.PropsMu.Lock()
 		m.setPropUpdateStatus(newStatus)
 		m.PropsMu.Unlock()
 	})
-	m.statusManager.registerChangedHandler(handlerKeyUpdateMode, func(value interface{}) {
+	m.statusManager.RegisterChangedHandler(handlerKeyUpdateMode, func(value interface{}) {
 		v := value.(system.UpdateType)
 		m.PropsMu.Lock()
 		m.setPropUpdateMode(v)
 		m.PropsMu.Unlock()
 	})
-	m.statusManager.registerChangedHandler(handlerKeyCheckMode, func(value interface{}) {
+	m.statusManager.RegisterChangedHandler(handlerKeyCheckMode, func(value interface{}) {
 		v := value.(system.UpdateType)
 		m.PropsMu.Lock()
 		m.setPropCheckUpdateMode(v)
 		m.PropsMu.Unlock()
 	})
-	m.statusManager.initModifyData()
+	m.statusManager.InitModifyData()
 	logger.Info("end initStatusManager duration:", time.Now().Sub(startTime))
 }
