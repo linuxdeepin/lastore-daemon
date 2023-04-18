@@ -229,8 +229,9 @@ func (m *updateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) 
 		return newWriteMode
 	}
 	oldMode := m.updateMode
+	var checkMode system.UpdateType
 	// 1.过滤新的UpdateMode数据
-	newWriteMode, m.checkMode = filterMode(newWriteMode, m.checkMode)
+	newWriteMode, checkMode = filterMode(newWriteMode, m.checkMode)
 	m.updateMode = newWriteMode
 	err := m.lsConfig.SetUpdateMode(m.updateMode)
 	if err != nil {
@@ -241,7 +242,6 @@ func (m *updateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) 
 	}
 
 	// 2.updateMode修改后，checkMode要随之修改
-	checkMode := m.checkMode
 	for _, typ := range system.AllUpdateType() {
 		oldBit := oldMode & typ
 		newBit := newWriteMode & typ
