@@ -230,11 +230,12 @@ func (j *Job) wrapHooks(appendHooks map[string]func()) {
 		return
 	}
 	for key, fn := range appendHooks {
+		appendFn := fn
 		f, ok := j.hooks[key]
 		if ok {
 			j.hooks[key] = func() {
 				f()
-				fn()
+				appendFn()
 			}
 		} else {
 			j.hooks[key] = fn

@@ -738,7 +738,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 						}
 						if installJob != nil {
 							installJob.option = job.option
-							installJob.wrapHooks(map[string]func(){
+							installJob.setHooks(map[string]func(){
 								string(system.FailedStatus): func() {
 									wg.Done()
 								},
