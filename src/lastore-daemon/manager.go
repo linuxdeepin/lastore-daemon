@@ -78,7 +78,7 @@ type Manager struct {
 
 	grub           *grubManager
 	userAgents     *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
-	statusManager  *updateModeStatusManager
+	statusManager  *UpdateModeStatusManager
 	messageManager *messageReportManager
 	isDownloading  bool
 }

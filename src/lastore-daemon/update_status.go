@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-type updateModeStatusManager struct {
+type UpdateModeStatusManager struct {
 	checkMode                           system.UpdateType
 	updateMode                          system.UpdateType
 	lsConfig                            *Config
@@ -36,8 +36,8 @@ type allStatus struct {
 	UpdateStatus map[string]system.UpdateModeStatus
 }
 
-func NewStatusManager(config *Config, callback func(newStatus string)) *updateModeStatusManager {
-	m := &updateModeStatusManager{
+func NewStatusManager(config *Config, callback func(newStatus string)) *UpdateModeStatusManager {
+	m := &UpdateModeStatusManager{
 		lsConfig:                    config,
 		checkMode:                   config.CheckUpdateMode,
 		updateMode:                  config.UpdateMode,
@@ -46,7 +46,7 @@ func NewStatusManager(config *Config, callback func(newStatus string)) *updateMo
 	return m
 }
 
-func (m *updateModeStatusManager) InitModifyData() {
+func (m *UpdateModeStatusManager) InitModifyData() {
 	m.updateMode, m.checkMode = filterMode(m.updateMode, m.checkMode)
 	err := m.lsConfig.SetUpdateMode(m.updateMode)
 	if err != nil {
@@ -84,10 +84,12 @@ func (m *updateModeStatusManager) InitModifyData() {
 		if isFirstBoot() {
 			for key, value := range m.updateModeStatusObj {
 				switch value {
-				case system.Upgraded, system.IsDownloading, system.DownloadPause, system.DownloadErr:
+				case system.IsDownloading, system.DownloadPause, system.DownloadErr:
 					m.updateModeStatusObj[key] = system.NotDownload
 				case system.UpgradeErr, system.Upgrading:
 					m.updateModeStatusObj[key] = system.CanUpgrade
+				case system.Upgraded:
+					m.updateModeStatusObj[key] = system.NoUpdate
 				}
 			}
 			m.abStatus = system.NotBackup
@@ -136,7 +138,7 @@ const (
 	handlerKeyUnKnownStatus  = "UnKnownStatus"
 )
 
-func (m *updateModeStatusManager) RegisterChangedHandler(key string, handler func(value interface{})) {
+func (m *UpdateModeStatusManager) RegisterChangedHandler(key string, handler func(value interface{})) {
 	switch key {
 	case handlerKeyCheckMode:
 		m.checkModeChangedCallback = handler
@@ -154,7 +156,7 @@ func (m *updateModeStatusManager) RegisterChangedHandler(key string, handler fun
 }
 
 // TODO delete
-func (m *updateModeStatusManager) getUpdateStatusString() string {
+func (m *UpdateModeStatusManager) getUpdateStatusString() string {
 	m.statusMapMu.RLock()
 	defer m.statusMapMu.RUnlock()
 	content, err := json.Marshal(m.updateModeStatusObj)
@@ -165,13 +167,13 @@ func (m *updateModeStatusManager) getUpdateStatusString() string {
 	return string(content)
 }
 
-func (m *updateModeStatusManager) GetUpdateStatus(typ system.UpdateType) system.UpdateModeStatus {
+func (m *UpdateModeStatusManager) GetUpdateStatus(typ system.UpdateType) system.UpdateModeStatus {
 	m.statusMapMu.RLock()
 	defer m.statusMapMu.RUnlock()
 	return m.updateModeStatusObj[typ.JobType()]
 }
 
-func (m *updateModeStatusManager) SetUpdateStatus(mode system.UpdateType, status system.UpdateModeStatus) {
+func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, status system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllUpdateType() {
 		if mode&typ != 0 {
@@ -183,7 +185,7 @@ func (m *updateModeStatusManager) SetUpdateStatus(mode system.UpdateType, status
 	m.UpdateCheckCanUpgradeByEachStatus()
 }
 
-func (m *updateModeStatusManager) SetABStatus(status system.ABStatus, error system.ABErrorType) {
+func (m *UpdateModeStatusManager) SetABStatus(status system.ABStatus, error system.ABErrorType) {
 	if m.abStatus == status && m.abError == error {
 		return
 	}
@@ -192,14 +194,14 @@ func (m *updateModeStatusManager) SetABStatus(status system.ABStatus, error syst
 	m.syncUpdateStatusNoLock()
 }
 
-func (m *updateModeStatusManager) SetRunningUpgradeStatus(running bool) {
+func (m *UpdateModeStatusManager) SetRunningUpgradeStatus(running bool) {
 	err := m.lsConfig.UpdateLastoreDaemonStatus(runningUpgradeBackend, running)
 	if err != nil {
 		logger.Warning(err)
 	}
 }
 
-func (m *updateModeStatusManager) syncUpdateStatusNoLock() {
+func (m *UpdateModeStatusManager) syncUpdateStatusNoLock() {
 	obj := &allStatus{
 		ABStatus:     m.abStatus,
 		ABError:      m.abError,
@@ -216,15 +218,15 @@ func (m *updateModeStatusManager) syncUpdateStatusNoLock() {
 	_ = m.lsConfig.SetUpdateStatus(string(content))
 }
 
-func (m *updateModeStatusManager) getUpdateMode() system.UpdateType {
+func (m *UpdateModeStatusManager) getUpdateMode() system.UpdateType {
 	return m.updateMode
 }
 
-func (m *updateModeStatusManager) getCheckMode() system.UpdateType {
+func (m *UpdateModeStatusManager) getCheckMode() system.UpdateType {
 	return m.checkMode
 }
 
-func (m *updateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) system.UpdateType {
+func (m *UpdateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) system.UpdateType {
 	if newWriteMode == m.updateMode {
 		return newWriteMode
 	}
@@ -260,7 +262,7 @@ func (m *updateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) 
 	return m.updateMode
 }
 
-func (m *updateModeStatusManager) SetCheckMode(mode system.UpdateType) system.UpdateType {
+func (m *UpdateModeStatusManager) SetCheckMode(mode system.UpdateType) system.UpdateType {
 	if mode == m.checkMode {
 		return mode
 	}
@@ -277,12 +279,12 @@ func (m *updateModeStatusManager) SetCheckMode(mode system.UpdateType) system.Up
 	return m.checkMode
 }
 
-func (m *updateModeStatusManager) UpdateModeAllStatusBySize() {
+func (m *UpdateModeStatusManager) UpdateModeAllStatusBySize() {
 	m.updateModeStatusBySize(system.AllUpdate)
 }
 
 // 单项计算
-func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType) {
+func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType) {
 	// 该处的处理,不会将更新项的状态修改为Upgraded.该状态只有可能在DistUpgrade中处理
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
@@ -343,14 +345,14 @@ func (m *updateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 	logger.Infof("status:%+v", m.updateModeStatusObj)
 }
 
-func (m *updateModeStatusManager) updateCanUpgradeStatus(can bool) {
+func (m *UpdateModeStatusManager) updateCanUpgradeStatus(can bool) {
 	err := m.lsConfig.UpdateLastoreDaemonStatus(canUpgrade, can)
 	if err != nil {
 		logger.Warning(err)
 	}
 }
 
-func (m *updateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
+func (m *UpdateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
 	checkCanUpgrade := false
@@ -382,7 +384,7 @@ func (m *updateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
 }
 
 // GetCanPrepareDistUpgradeMode 根据check和status判断,排除不能下载的类型
-func (m *updateModeStatusManager) GetCanPrepareDistUpgradeMode(origin system.UpdateType) system.UpdateType {
+func (m *UpdateModeStatusManager) GetCanPrepareDistUpgradeMode(origin system.UpdateType) system.UpdateType {
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
 	var canPrepareUpgradeMode system.UpdateType
@@ -410,7 +412,7 @@ func (m *updateModeStatusManager) GetCanPrepareDistUpgradeMode(origin system.Upd
 }
 
 // GetCanDistUpgradeMode 根据check和status判断,排除不能更新的类型
-func (m *updateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType) system.UpdateType {
+func (m *UpdateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType) system.UpdateType {
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
 	var canUpgradeMode system.UpdateType
@@ -451,6 +453,6 @@ func (m *updateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType
 	}
 }
 
-func (m *updateModeStatusManager) GetAllUpdateModeDownloadSize() map[string]float64 {
+func (m *UpdateModeStatusManager) GetAllUpdateModeDownloadSize() map[string]float64 {
 	return m.updateModeDownloadSizeMap
 }
