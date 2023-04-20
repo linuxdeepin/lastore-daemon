@@ -102,7 +102,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		SystemArchitectures: archs,
 		inhibitFd:           -1,
 		AutoClean:           c.AutoClean,
-		userAgents:          newUserAgentMap(service),
 		loginManager:        login1.NewManager(service.Conn()),
 		sysDBusDaemon:       ofdbus.NewDBus(service.Conn()),
 		signalLoop:          dbusutil.NewSignalLoop(service.Conn(), 10),
@@ -113,7 +112,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	}
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)
-	m.messageManager = newMessageReportManager(c, m.userAgents)
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
 	go m.handleOSSignal()
 	m.updateJobList()
@@ -154,6 +152,46 @@ func (m *Manager) initDbusSignalListen() {
 		logger.Warning(err)
 	}
 	m.sysPower.InitSignalExt(m.signalLoop, true)
+}
+
+func (m *Manager) initDSettingsChangedHandle() {
+	m.config.connectConfigChanged(dSettingsKeyLastoreDaemonStatus, func(bit lastoreDaemonStatus, value interface{}) {
+		if bit == disableUpdate {
+			_ = m.updateTimerUnit(lastoreOnline)
+			_ = m.updateTimerUnit(lastoreAutoCheck)
+			_ = m.updateTimerUnit(watchUpdateInfo)
+		}
+	})
+}
+
+func (m *Manager) initStatusManager() {
+	logger.Info("start initStatusManager:", time.Now())
+	startTime := time.Now()
+	m.statusManager = NewStatusManager(m.config, func(newStatus string) {
+		m.PropsMu.Lock()
+		m.setPropUpdateStatus(newStatus)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.RegisterChangedHandler(handlerKeyUpdateMode, func(value interface{}) {
+		v := value.(system.UpdateType)
+		m.PropsMu.Lock()
+		m.setPropUpdateMode(v)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.RegisterChangedHandler(handlerKeyCheckMode, func(value interface{}) {
+		v := value.(system.UpdateType)
+		m.PropsMu.Lock()
+		m.setPropCheckUpdateMode(v)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.InitModifyData()
+	logger.Info("end initStatusManager duration:", time.Now().Sub(startTime))
+}
+
+func (m *Manager) initAgent() {
+	m.userAgents = newUserAgentMap()
+	m.userAgents.recoverLastoreAgents(m.service, m.handleSessionNew)
+	m.messageManager = newMessageReportManager(m.config, m.userAgents)
 }
 
 func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -1495,6 +1533,7 @@ func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.Object
 }
 
 func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
+	logger.Info("user removed", uid, userPath)
 	uidStr := strconv.Itoa(int(uid))
 	m.userAgents.removeUser(uidStr)
 }
@@ -1559,38 +1598,4 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 		m.updater.setUpdatablePackages(updatableApps)
 		m.updater.updateUpdatableApps()
 	}()
-}
-
-func (m *Manager) initDSettingsChangedHandle() {
-	m.config.connectConfigChanged(dSettingsKeyLastoreDaemonStatus, func(bit lastoreDaemonStatus, value interface{}) {
-		if bit == disableUpdate {
-			_ = m.updateTimerUnit(lastoreOnline)
-			_ = m.updateTimerUnit(lastoreAutoCheck)
-			_ = m.updateTimerUnit(watchUpdateInfo)
-		}
-	})
-}
-
-func (m *Manager) initStatusManager() {
-	logger.Info("start initStatusManager:", time.Now())
-	startTime := time.Now()
-	m.statusManager = NewStatusManager(m.config, func(newStatus string) {
-		m.PropsMu.Lock()
-		m.setPropUpdateStatus(newStatus)
-		m.PropsMu.Unlock()
-	})
-	m.statusManager.RegisterChangedHandler(handlerKeyUpdateMode, func(value interface{}) {
-		v := value.(system.UpdateType)
-		m.PropsMu.Lock()
-		m.setPropUpdateMode(v)
-		m.PropsMu.Unlock()
-	})
-	m.statusManager.RegisterChangedHandler(handlerKeyCheckMode, func(value interface{}) {
-		v := value.(system.UpdateType)
-		m.PropsMu.Lock()
-		m.setPropCheckUpdateMode(v)
-		m.PropsMu.Unlock()
-	})
-	m.statusManager.InitModifyData()
-	logger.Info("end initStatusManager duration:", time.Now().Sub(startTime))
 }

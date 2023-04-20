@@ -35,15 +35,66 @@ type sessionAgentMapItem struct {
 	lang     string
 }
 
-func newUserAgentMap(service *dbusutil.Service) *userAgentMap {
-	u := recoverLastoreAgents(userAgentRecordPath, service)
-	if u != nil {
-		logger.Info("recover agent from", userAgentRecordPath)
-		return u
-	}
+func newUserAgentMap() *userAgentMap {
 	return &userAgentMap{
 		uidItemMap: make(map[string]*sessionAgentMapItem, 1),
 	}
+}
+
+// 根据配置文件，恢复之前注册的Agents数据
+func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNew func(sessionId string, sessionPath dbus.ObjectPath)) {
+	var infoMap userAgentInfoMap
+	err := decodeJson(userAgentRecordPath, &infoMap)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	logger.Info("record agent info:", infoMap)
+	login1Obj := login1.NewManager(service.Conn())
+	sessionInfos, err := login1Obj.ListSessions(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	sessionList := strv.Strv{}
+	for _, session := range sessionInfos {
+		if fmt.Sprintf("%v", session.UID) == infoMap.ActiveUid {
+			sessionList = append(sessionList, string(session.Path))
+		}
+	}
+	dbusObj := dbus2.NewDBus(service.Conn())
+	m.activeUid = infoMap.ActiveUid
+	m.uidItemMap = make(map[string]*sessionAgentMapItem, 1)
+	for uid, uidInfo := range infoMap.UidInfoMap {
+		var item sessionAgentMapItem
+		item.sessions = make(map[dbus.ObjectPath]login1.Session)
+		item.agents = make(map[dbus.ObjectPath]lastoreAgent.Agent)
+		for _, sessionPath := range uidInfo.Sessions {
+			// 校验sessionPath是否还有效
+			if !sessionList.Contains(string(sessionPath)) {
+				logger.Warningf("record session path:%s is invalid", sessionPath)
+				continue
+			}
+			sessionNew("", sessionPath)
+		}
+		for agentPath, agentSender := range uidInfo.Agents {
+			// 校验agentSender是否还有效
+			hasOwner, err := dbusObj.NameHasOwner(0, agentSender)
+			if err != nil || !hasOwner {
+				logger.Warningf("record agent name:%s is invalid", agentSender)
+				continue
+			}
+			agent, err := lastoreAgent.NewAgent(service.Conn(), agentSender, agentPath)
+			if err != nil {
+				logger.Warning(err)
+				continue
+			}
+			item.agents[agentPath] = agent
+		}
+		item.lang = uidInfo.Lang
+		m.uidItemMap[uid] = &item
+	}
+	gettext.SetLocale(gettext.LcAll, m.getActiveLastoreAgentLang())
 }
 
 func (m *userAgentMap) addAgent(uid string, agent lastoreAgent.Agent) {
@@ -122,16 +173,15 @@ func (m *userAgentMap) addUser(uid string) {
 func (m *userAgentMap) removeUser(uid string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	// session的handlers移除由session信号处理，此处不再处理。重复remove会导致go-lib的崩溃
-	_, ok := m.uidItemMap[uid]
+	item, ok := m.uidItemMap[uid]
 	if !ok {
 		return
 	}
 
-	// for sessionPath, session := range item.sessions {
-	// 	session.RemoveAllHandlers()
-	// 	delete(item.sessions, sessionPath)
-	// }
+	for sessionPath, session := range item.sessions {
+		session.RemoveAllHandlers()
+		delete(item.sessions, sessionPath)
+	}
 	delete(m.uidItemMap, uid)
 }
 
@@ -266,69 +316,6 @@ func (m *userAgentMap) saveRecordContent(recordFilePath string) {
 	if err != nil {
 		logger.Warning(err)
 	}
-}
-
-// 根据配置文件，恢复之前注册的Agents数据
-func recoverLastoreAgents(recordFilePath string, service *dbusutil.Service) *userAgentMap {
-	var infoMap userAgentInfoMap
-	var agentMap userAgentMap
-	err := decodeJson(recordFilePath, &infoMap)
-	if err != nil {
-		logger.Warning(err)
-		return nil
-	}
-	logger.Info("record agent info:", infoMap)
-	login1Obj := login1.NewManager(service.Conn())
-	sessionInfos, err := login1Obj.ListSessions(0)
-	if err != nil {
-		logger.Warning(err)
-		return nil
-	}
-	sessionList := strv.Strv{}
-	for _, session := range sessionInfos {
-		if fmt.Sprintf("%v", session.UID) == infoMap.ActiveUid {
-			sessionList = append(sessionList, string(session.Path))
-		}
-	}
-	dbusObj := dbus2.NewDBus(service.Conn())
-	agentMap.activeUid = infoMap.ActiveUid
-	agentMap.uidItemMap = make(map[string]*sessionAgentMapItem, 1)
-	for uid, uidInfo := range infoMap.UidInfoMap {
-		var item sessionAgentMapItem
-		item.sessions = make(map[dbus.ObjectPath]login1.Session)
-		item.agents = make(map[dbus.ObjectPath]lastoreAgent.Agent)
-		for _, sessionPath := range uidInfo.Sessions {
-			// 校验sessionPath是否还有效
-			if !sessionList.Contains(string(sessionPath)) {
-				logger.Warningf("record session path:%s is invalid", sessionPath)
-				continue
-			}
-			session, err := login1.NewSession(service.Conn(), sessionPath)
-			if err != nil {
-				logger.Warning(err)
-				continue
-			}
-			item.sessions[sessionPath] = session
-		}
-		for agentPath, agentSender := range uidInfo.Agents {
-			// 校验agentSender是否还有效
-			hasOwner, err := dbusObj.NameHasOwner(0, agentSender)
-			if err != nil || !hasOwner {
-				logger.Warningf("record agent name:%s is invalid", agentSender)
-				continue
-			}
-			agent, err := lastoreAgent.NewAgent(service.Conn(), agentSender, agentPath)
-			if err != nil {
-				logger.Warning(err)
-				continue
-			}
-			item.agents[agentPath] = agent
-		}
-		item.lang = uidInfo.Lang
-		agentMap.uidItemMap[uid] = &item
-	}
-	gettext.SetLocale(gettext.LcAll, agentMap.getActiveLastoreAgentLang())
-	return &agentMap
 }
 
 func decodeJson(fpath string, d interface{}) error {

@@ -85,7 +85,7 @@ func main() {
 		logger.Error("failed to new server manager and updater object:", err)
 		return
 	}
-
+	manager.initAgent()
 	err = serverObject.SetWriteCallback(updater, "AutoInstallUpdates", updater.autoInstallUpdatesWriteCallback)
 	if err != nil {
 		logger.Error("failed to set write cb for property AutoInstallUpdates:", err)
