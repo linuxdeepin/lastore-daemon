@@ -407,8 +407,8 @@ func (m *UpdateModeStatusManager) GetCanPrepareDistUpgradeMode(origin system.Upd
 		if !ok {
 			continue
 		} else {
-			// 可下载类型判断条件：该类型为未下载(如果不存在可下载的会在size或package查询中判断),或正在下载
-			if status == system.NotDownload || status == system.IsDownloading || status == system.DownloadPause {
+			// 可下载类型判断条件：该类型为未下载(如果不存在可下载的会在size或package查询中判断),或正在下载,下载失败
+			if status == system.NotDownload || status == system.IsDownloading || status == system.DownloadPause || status == system.DownloadErr {
 				canPrepareUpgradeMode |= typ
 			}
 		}

@@ -547,7 +547,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 	m.updateJobList()
 	mode := m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
 	if mode == 0 {
-		return nil, errors.New("don't exit can distUpgrade mode")
+		return nil, errors.New("don't exist can distUpgrade mode")
 	}
 	if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
 		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
@@ -845,7 +845,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	m.updateJobList()
 	mode := m.statusManager.GetCanPrepareDistUpgradeMode(origin) // 正在下载的状态会包含其中,会在创建job中找到对应job(由于不追加下载,因此直接返回之前的job) TODO 如果需要追加下载,需要根据前后path的差异,reload该job
 	if mode == 0 {
-		return nil, errors.New("don't exit can prepareDistUpgrade mode")
+		return nil, errors.New("don't exist can prepareDistUpgrade mode")
 	}
 	if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
