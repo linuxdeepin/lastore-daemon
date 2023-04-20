@@ -177,6 +177,10 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, status
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllUpdateType() {
 		if mode&typ != 0 {
+			// TODO 后续用一个valid方法判断
+			if status == system.DownloadPause && m.updateModeStatusObj[typ.JobType()] != system.IsDownloading {
+				continue
+			}
 			m.updateModeStatusObj[typ.JobType()] = status
 		}
 	}
@@ -212,6 +216,7 @@ func (m *UpdateModeStatusManager) syncUpdateStatusNoLock() {
 		logger.Warning(err)
 		return
 	}
+	logger.Info("sync new status :", string(content))
 	if m.handleStatusChangedCallback != nil {
 		m.handleStatusChangedCallback(string(content))
 	}
