@@ -917,13 +917,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	currentJob := job
 	var sendDownloadingOnce sync.Once
 	// 遍历job和所有next
-	var downloadJobList []*Job
 	for currentJob != nil {
-		downloadJobList = append(downloadJobList, currentJob)
+		j := currentJob
 		currentJob = currentJob.next
-	}
-	for i, downloadJob := range downloadJobList {
-		j := downloadJob
 		if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
 			j.option[aptLimitKey] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
 		}
@@ -957,7 +953,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
 				m.messageManager.reportLog(downloadStatus, false, j.Description)
-				m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
+				// 更新一遍状态,再单独设置失败类型的状态
+				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
+				m.statusManager.UpdateModeAllStatusBySize()
+				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
@@ -989,18 +988,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}
 				}
 			},
-			string(system.EndStatus): func() {
-				// pause->end  status更新为未下载.用于适配取消下载的状态
-				// if j.Status == system.PausedStatus || m.statusManager.GetUpdateStatus(mode) == system.DownloadPause {
-				// 	m.statusManager.SetUpdateStatus(mode, system.NotDownload)
-				// 	m.statusManager.UpdateModeAllStatusBySize()
-				// }
-				// 除了下载完成和下载失败之外,其他的情况都要先把状态设置成未下载.然后通过size进行状态修正
-				if m.statusManager.GetUpdateStatus(mode) != system.CanUpgrade && m.statusManager.GetUpdateStatus(mode) != system.DownloadErr {
-					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
-					m.statusManager.UpdateModeAllStatusBySize()
-				}
-			},
 			// 在reload状态时,修改job的配置
 			string(system.ReloadStatus): func() {
 				logger.Infof("job reload option:%+v", j.option)
@@ -1015,17 +1002,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}
 				}
 			},
-		})
-		// 应该只有最后一个处理
-		if i == len(downloadJobList)-1 {
-			j.wrapHooks(map[string]func(){
-				string(system.SucceedStatus): func() {
-					// 有可能一个模块下载完后，其他模块由于有相同的包，状态同样变化
-					m.statusManager.UpdateModeAllStatusBySize()
-					// 按每个仓库下载，就不会存在该场景：
-					// 两个仓库存在相同包但是版本不同，可能存在一个仓库下载好一个仓库未下载的场景，因此
-					// m.statusManager.setUpdateStatus(mode, system.CanUpgrade)
-					m.statusManager.UpdateCheckCanUpgradeByEachStatus()
+			string(system.SucceedStatus): func() {
+				m.statusManager.SetUpdateStatus(j.updateTyp, system.CanUpgrade)
+				if j.next == nil {
 					msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
 					action := []string{
 						"updateNow",
@@ -1036,14 +1015,23 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.UpdateAndShutdown")}
 					m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					m.messageManager.reportLog(downloadStatus, true, "")
-				},
-				string(system.EndStatus): func() {
+				}
+			},
+			string(system.EndStatus): func() {
+				if j.next == nil {
+					logger.Info("running in last end hook")
 					m.PropsMu.Lock()
 					m.isDownloading = false
 					m.PropsMu.Unlock()
-				},
-			})
-		}
+					// 除了下载失败之外,之前的状态为IsDownloading DownloadPause CanUpgrade的都先修改为NotDownload.然后通过size进行状态修正
+					if j.Status != system.FailedStatus {
+						m.statusManager.SetUpdateStatus(mode, system.NotDownload)
+						m.statusManager.UpdateModeAllStatusBySize()
+						m.statusManager.UpdateCheckCanUpgradeByEachStatus()
+					}
+				}
+			},
+		})
 	}
 
 	if err := m.jobManager.addJob(job); err != nil {

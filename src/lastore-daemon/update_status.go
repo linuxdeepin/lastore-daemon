@@ -173,15 +173,19 @@ func (m *UpdateModeStatusManager) GetUpdateStatus(typ system.UpdateType) system.
 	return m.updateModeStatusObj[typ.JobType()]
 }
 
-func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, status system.UpdateModeStatus) {
+func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllUpdateType() {
 		if mode&typ != 0 {
+			oldStatus := m.updateModeStatusObj[typ.JobType()]
 			// TODO 后续用一个valid方法判断
-			if status == system.DownloadPause && m.updateModeStatusObj[typ.JobType()] != system.IsDownloading {
+			if newStatus == system.DownloadPause && oldStatus != system.IsDownloading {
 				continue
 			}
-			m.updateModeStatusObj[typ.JobType()] = status
+			if newStatus == system.IsDownloading && oldStatus == system.CanUpgrade {
+				continue
+			}
+			m.updateModeStatusObj[typ.JobType()] = newStatus
 		}
 	}
 	m.syncUpdateStatusNoLock()
@@ -294,6 +298,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
 	var wg sync.WaitGroup
+	changed := false
 	for _, typ := range system.AllUpdateType() {
 		if mode&typ == 0 {
 			continue
@@ -317,24 +322,70 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 					}
 				} else {
 					// allPackageSize > 0 需要更新
-					// needDownloadSize == 0 可能有3种状态: 可更新,更新中,更新失败;
-					if needDownloadSize == 0 {
-						if oldStatus == system.NotDownload ||
-							oldStatus == system.IsDownloading ||
-							oldStatus == system.Upgraded ||
-							oldStatus == system.NoUpdate {
-							// 如果为未下载、下载中、更新完成、无更新内容状态,需要迁移到可更新状态
+					// needDownloadSize == 0 可能有3种状态: 下载完成可更新,更新中,更新失败;
+					// needDownloadSize > 0 可能有4种状态: 没下载,下载中,下载暂停,下载失败或者是安装更新完成后仓库又有推送
+					switch oldStatus {
+					case system.NoUpdate:
+						if needDownloadSize == 0 {
 							newStatus = system.CanUpgrade
+						} else {
+							newStatus = system.NotDownload
 						}
-					}
-					// needDownloadSize > 0 可能有3种状态: 没下载,下载中;或者是安装更新完成后仓库又有推送
-					if needDownloadSize > 0 {
-						if oldStatus == system.CanUpgrade ||
-							oldStatus == system.UpgradeErr ||
-							oldStatus == system.Upgraded ||
-							oldStatus == system.DownloadErr ||
-							oldStatus == system.NoUpdate {
-							// 如果状态为可更新、更新失败、更新完成、下载失败、无更新内容,需要迁移到未下载;更新中、下载中状态不变
+					case system.NotDownload:
+						if needDownloadSize == 0 {
+							newStatus = system.CanUpgrade
+						} else {
+							newStatus = system.NotDownload
+							// 无需处理
+						}
+					case system.IsDownloading:
+						if needDownloadSize == 0 {
+							newStatus = system.CanUpgrade
+						} else {
+							// 无需处理
+							newStatus = system.IsDownloading
+						}
+					case system.DownloadPause:
+						if needDownloadSize == 0 {
+							newStatus = system.CanUpgrade
+						} else {
+							// 无需处理
+							newStatus = system.DownloadPause
+						}
+					case system.DownloadErr:
+						if needDownloadSize == 0 {
+							newStatus = system.CanUpgrade
+						} else {
+							// 当成未下载处理
+							newStatus = system.NotDownload
+						}
+					case system.CanUpgrade:
+						if needDownloadSize == 0 {
+							// 无需处理
+							newStatus = system.CanUpgrade
+						} else {
+							newStatus = system.NotDownload
+						}
+					case system.Upgrading:
+						if needDownloadSize == 0 {
+							// 无需处理
+							newStatus = system.Upgrading
+						} else {
+							// 无需处理
+							newStatus = system.Upgrading
+						}
+					case system.UpgradeErr:
+						if needDownloadSize == 0 {
+							// 无需处理
+							newStatus = system.UpgradeErr
+						} else {
+							newStatus = system.NotDownload
+						}
+					case system.Upgraded:
+						if needDownloadSize == 0 {
+							// 无需处理
+							newStatus = system.Upgraded
+						} else {
 							newStatus = system.NotDownload
 						}
 					}
@@ -342,11 +393,14 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 			}
 			if newStatus != oldStatus {
 				m.updateModeStatusObj[currentMode.JobType()] = newStatus
+				changed = true
 			}
 		}()
 	}
 	wg.Wait()
-	m.syncUpdateStatusNoLock()
+	if changed {
+		m.syncUpdateStatusNoLock()
+	}
 	logger.Infof("status:%+v", m.updateModeStatusObj)
 }
 

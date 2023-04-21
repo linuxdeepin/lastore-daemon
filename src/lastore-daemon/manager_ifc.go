@@ -46,7 +46,6 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	m.do.Lock()
 	err := m.jobManager.CleanJob(jobId)
 	m.do.Unlock()
-
 	if err != nil {
 		logger.Warningf("CleanJob %q error: %v\n", jobId, err)
 	}

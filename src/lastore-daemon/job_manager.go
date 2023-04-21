@@ -122,6 +122,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 								"Dir::Etc::SourceParts": "/dev/null",
 							}
 						}
+						partJob.updateTyp = typ
 						if len(jobList) >= 1 {
 							jobList[len(jobList)-1].next = partJob
 						}

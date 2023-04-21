@@ -54,6 +54,8 @@ type Job struct {
 
 	hooks   map[string]func()
 	hooksMu sync.Mutex
+
+	updateTyp system.UpdateType
 }
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
