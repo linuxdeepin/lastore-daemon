@@ -21,6 +21,7 @@ type UpdateModeStatusManager struct {
 	updateModeDownloadSizeMap           map[string]float64
 	abStatus                            system.ABStatus
 	abError                             system.ABErrorType
+	currentTriggerBackingUpType         system.UpdateType
 	statusMapMu                         sync.RWMutex
 	handleStatusChangedCallback         func(string)
 	handleSystemStatusChangedCallback   func(interface{})
@@ -30,10 +31,11 @@ type UpdateModeStatusManager struct {
 	updateModeChangedCallback           func(interface{})
 }
 
-type allStatus struct {
-	ABStatus     system.ABStatus
-	ABError      system.ABErrorType
-	UpdateStatus map[string]system.UpdateModeStatus
+type daemonStatus struct {
+	ABStatus             system.ABStatus
+	ABError              system.ABErrorType
+	TriggerBackingUpType system.UpdateType
+	UpdateStatus         map[string]system.UpdateModeStatus
 }
 
 func NewStatusManager(config *Config, callback func(newStatus string)) *UpdateModeStatusManager {
@@ -62,10 +64,11 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 	if m.checkModeChangedCallback != nil {
 		m.checkModeChangedCallback(m.checkMode)
 	}
-	obj := &allStatus{
-		ABStatus:     system.NotBackup,
-		ABError:      system.NoABError,
-		UpdateStatus: make(map[string]system.UpdateModeStatus),
+	obj := &daemonStatus{
+		TriggerBackingUpType: system.AllUpdate,
+		ABStatus:             system.NotBackup,
+		ABError:              system.NoABError,
+		UpdateStatus:         make(map[string]system.UpdateModeStatus),
 	}
 	m.statusMapMu.Lock()
 	err = json.Unmarshal([]byte(m.lsConfig.updateStatus), &obj)
@@ -75,29 +78,32 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 		for _, typ := range system.AllUpdateType() {
 			m.updateModeStatusObj[typ.JobType()] = system.NotDownload
 		}
+		m.currentTriggerBackingUpType = system.AllUpdate
 		m.abStatus = system.NotBackup
 		m.abError = system.NoABError
 		m.syncUpdateStatusNoLock()
 	} else {
 		m.updateModeStatusObj = obj.UpdateStatus
+		m.currentTriggerBackingUpType = obj.TriggerBackingUpType
 		m.abStatus = obj.ABStatus
+		m.abError = obj.ABError
 		if isFirstBoot() {
 			for key, value := range m.updateModeStatusObj {
 				switch value {
 				case system.IsDownloading, system.DownloadPause, system.DownloadErr:
 					m.updateModeStatusObj[key] = system.NotDownload
-				case system.UpgradeErr, system.Upgrading:
+				case system.UpgradeErr, system.Upgrading, system.WaitRunUpgrade:
 					m.updateModeStatusObj[key] = system.CanUpgrade
 				case system.Upgraded:
 					m.updateModeStatusObj[key] = system.NoUpdate
 				}
 			}
+			m.currentTriggerBackingUpType = system.AllUpdate
 			m.abStatus = system.NotBackup
 			m.abError = system.NoABError
 		}
 		m.syncUpdateStatusNoLock()
 	}
-	m.SetRunningUpgradeStatus(false)
 	m.statusMapMu.Unlock()
 	m.updateModeDownloadSizeMap = make(map[string]float64)
 }
@@ -193,27 +199,52 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 	m.UpdateCheckCanUpgradeByEachStatus()
 }
 
-func (m *UpdateModeStatusManager) SetABStatus(status system.ABStatus, error system.ABErrorType) {
-	if m.abStatus == status && m.abError == error {
+// TransitionUpdateStatusValid 用于判断前后类型是否可以迁移
+// 非下载中不能迁移到下载暂停(updateInfo重复触发暂停);
+// 下载完成不能迁移到下载中(串联下载时用于规避);
+// TODO
+func TransitionUpdateStatusValid(oldStatus, newStatus system.UpdateModeStatus) bool {
+	// map的key为旧状态,value为不能迁移的新状态合集
+	invalidationMap := map[system.UpdateModeStatus][]system.UpdateModeStatus{
+		system.NoUpdate:       {system.DownloadPause},
+		system.NotDownload:    {system.DownloadPause},
+		system.IsDownloading:  {},
+		system.DownloadPause:  {system.DownloadPause},
+		system.DownloadErr:    {system.DownloadPause},
+		system.CanUpgrade:     {system.IsDownloading},
+		system.WaitRunUpgrade: {system.DownloadPause},
+		system.Upgrading:      {system.DownloadPause},
+		system.UpgradeErr:     {system.DownloadPause},
+		system.Upgraded:       {system.DownloadPause},
+	}
+	tos, ok := invalidationMap[oldStatus]
+	if !ok {
+		return true
+	}
+	for _, v := range tos {
+		if v == newStatus {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *UpdateModeStatusManager) SetABStatus(typ system.UpdateType, status system.ABStatus, error system.ABErrorType) {
+	if m.currentTriggerBackingUpType == typ && m.abStatus == status && m.abError == error {
 		return
 	}
+	m.currentTriggerBackingUpType = typ
 	m.abStatus = status
 	m.abError = error
 	m.syncUpdateStatusNoLock()
 }
 
-func (m *UpdateModeStatusManager) SetRunningUpgradeStatus(running bool) {
-	err := m.lsConfig.UpdateLastoreDaemonStatus(runningUpgradeBackend, running)
-	if err != nil {
-		logger.Warning(err)
-	}
-}
-
 func (m *UpdateModeStatusManager) syncUpdateStatusNoLock() {
-	obj := &allStatus{
-		ABStatus:     m.abStatus,
-		ABError:      m.abError,
-		UpdateStatus: m.updateModeStatusObj,
+	obj := &daemonStatus{
+		TriggerBackingUpType: m.currentTriggerBackingUpType,
+		ABStatus:             m.abStatus,
+		ABError:              m.abError,
+		UpdateStatus:         m.updateModeStatusObj,
 	}
 	content, err := json.Marshal(obj)
 	if err != nil {
@@ -366,6 +397,9 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 						} else {
 							newStatus = system.NotDownload
 						}
+					case system.WaitRunUpgrade:
+						// 无法根据size判断该状态是否需要修改,不处理
+						newStatus = system.WaitRunUpgrade
 					case system.Upgrading:
 						if needDownloadSize == 0 {
 							// 无需处理
@@ -495,7 +529,7 @@ func (m *UpdateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType
 			// 可安装类型判断条件：该类型为可安装、正在安装或安装失败
 			// 如果全都为更新失败,那么属于重试更新->可以更新
 			// 如果可更新和更新失败都有,那么只能可更新项去更新
-			if status == system.CanUpgrade || status == system.Upgrading {
+			if status == system.CanUpgrade || status == system.Upgrading || status == system.WaitRunUpgrade {
 				canUpgradeCount++
 				canUpgradeMode |= typ
 			}

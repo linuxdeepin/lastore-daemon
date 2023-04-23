@@ -411,15 +411,16 @@ func HandleDelayPackage(hold bool, packages []string) {
 type UpdateModeStatus string
 
 const (
-	NoUpdate      UpdateModeStatus = "noUpdate"    // 无更新
-	NotDownload   UpdateModeStatus = "notDownload" // 包含了有更新没下载
-	IsDownloading UpdateModeStatus = "isDownloading"
-	DownloadPause UpdateModeStatus = "downloadPause"
-	DownloadErr   UpdateModeStatus = "downloadFailed"
-	CanUpgrade    UpdateModeStatus = "downloaded" // Downloaded
-	Upgrading     UpdateModeStatus = "upgrading"
-	UpgradeErr    UpdateModeStatus = "upgradeFailed"
-	Upgraded      UpdateModeStatus = "needReboot" // need reboot
+	NoUpdate       UpdateModeStatus = "noUpdate"    // 无更新
+	NotDownload    UpdateModeStatus = "notDownload" // 包含了有更新没下载
+	IsDownloading  UpdateModeStatus = "isDownloading"
+	DownloadPause  UpdateModeStatus = "downloadPause"
+	DownloadErr    UpdateModeStatus = "downloadFailed"
+	CanUpgrade     UpdateModeStatus = "downloaded"   // Downloaded
+	WaitRunUpgrade UpdateModeStatus = "upgradeReady" // 进行备份+更新时,当处于更新未开始状态
+	Upgrading      UpdateModeStatus = "upgrading"
+	UpgradeErr     UpdateModeStatus = "upgradeFailed"
+	Upgraded       UpdateModeStatus = "needReboot" // need reboot
 )
 
 type ABStatus string

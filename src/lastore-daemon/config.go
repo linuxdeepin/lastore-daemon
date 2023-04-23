@@ -24,9 +24,8 @@ const ConfigVersion = "0.1"
 type lastoreDaemonStatus uint32
 
 const (
-	canUpgrade            lastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
-	disableUpdate         lastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
-	runningUpgradeBackend lastoreDaemonStatus = 1 << 2 // 是否处于后台更新状态
+	canUpgrade    lastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
+	disableUpdate lastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
 )
 
 type Config struct {

@@ -463,7 +463,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				// 检查更新需要重置备份状态,主要是处理备份失败后再检查更新,会直接显示失败的场景
-				m.statusManager.SetABStatus(system.NotBackup, system.NoABError)
+				m.statusManager.SetABStatus(system.AllUpdate, system.NotBackup, system.NoABError)
 			},
 			string(system.SucceedStatus): func() {
 				m.handleUpdateInfosChanged(true)
@@ -532,7 +532,7 @@ func (m *Manager) cancelAllUpdateJob() error {
 
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
 // needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
-func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
+func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
 	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
@@ -545,10 +545,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 		return nil, err
 	}
 	m.updateJobList()
-	mode := m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
-	if mode == 0 {
-		return nil, errors.New("don't exist can distUpgrade mode")
-	}
 	if len(m.updater.getUpdatablePackagesByType(mode)) == 0 {
 		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
 	}
@@ -1027,12 +1023,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					m.PropsMu.Lock()
 					m.isDownloading = false
 					m.PropsMu.Unlock()
-					// 除了下载失败之外,之前的状态为IsDownloading DownloadPause CanUpgrade的都先修改为NotDownload.然后通过size进行状态修正
-					if j.Status != system.FailedStatus {
+					// 除了下载失败和下载成功之外,之前的状态为IsDownloading DownloadPause的都先修改为NotDownload.然后通过size进行状态修正
+					if j.Status != system.FailedStatus && j.Status != system.SucceedStatus {
 						m.statusManager.SetUpdateStatus(mode, system.NotDownload)
 						m.statusManager.UpdateModeAllStatusBySize()
-						m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 					}
+					m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 				}
 			},
 		})
