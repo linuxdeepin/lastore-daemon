@@ -1,3 +1,9 @@
+lastore-daemon (6.2.0) stable; urgency=medium
+
+  * 添加go mod支持
+
+ -- myml <wurongjie@deepin.com>  Sun, 23 Apr 2023 14:08:00 +0800
+
 lastore-daemon (6.1.0.0) stable; urgency=medium
 
   * 集成到obs构建
