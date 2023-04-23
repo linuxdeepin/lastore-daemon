@@ -76,12 +76,12 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	var args = []string{"-y"}
 
 	options := map[string]string{
-		"APT::Status-Fd": "3",
+		"APT::Status-Fd":   "3",
+		"Acquire::Retries": "3",
 	}
 
 	if cmdType == system.DownloadJobType || cmdType == system.PrepareDistUpgradeJobType {
 		options["Debug::NoLocking"] = "1"
-		options["Acquire::Retries"] = "1"
 		args = append(args, "-m")
 	}
 
