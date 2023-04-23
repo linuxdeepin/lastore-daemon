@@ -57,7 +57,7 @@ func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *
 	m.PropsMu.RLock()
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
-	jobObj, err := m.distUpgrade(sender, mode, false, true)
+	jobObj, err := m.distUpgrade(sender, mode, false, true, false)
 	if err != nil && err != JobExistError {
 		return "/", dbusutil.ToError(err)
 	}
@@ -373,7 +373,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	var upgradeJob *Job
 	var createJobErr error
 	var startJobErr error
-	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false)
+	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, needBackup)
 	if createJobErr != nil {
 		logger.Warning(createJobErr)
 		return "", dbusutil.ToError(createJobErr)
@@ -511,6 +511,12 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 					} else {
 						m.statusManager.SetABStatus(system.BackupFailed, system.OtherError)
 						logger.Warning("ab backup failed:", errMsg)
+						// 备份失败后,需要清理原来的job,因为是监听信号,所以不能通过上面的defer处理.
+						inhibit(false)
+						err = m.CleanJob(upgradeJob.Id)
+						if err != nil {
+							logger.Warning(err)
+						}
 
 						msg := gettext.Tr("Backup failed!")
 						action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}

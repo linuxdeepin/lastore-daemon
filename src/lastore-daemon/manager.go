@@ -532,7 +532,7 @@ func (m *Manager) cancelAllUpdateJob() error {
 
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
 // needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
-func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool, needAdd bool) (*Job, error) {
+func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
 	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
@@ -655,10 +655,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 		// 设置hook
 		job.setHooks(map[string]func(){
 			string(system.RunningStatus): func() {
-				// 开始更新时修改grub默认入口为rollback
-				err := m.grub.changeGrubDefaultEntry(rollbackBootEntry)
-				if err != nil {
-					logger.Warning(err)
+				if needChangeGrub {
+					// 开始更新时修改grub默认入口为rollback
+					err := m.grub.changeGrubDefaultEntry(rollbackBootEntry)
+					if err != nil {
+						logger.Warning(err)
+					}
 				}
 				// 状态更新为running
 				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeRunning, ReasonCode: system.NoError})
@@ -742,10 +744,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, origin system.UpdateType, isCl
 				})
 			},
 			string(system.SucceedStatus): func() {
-				// 更新成功后修改grub默认入口为当前系统入口
-				err := m.grub.changeGrubDefaultEntry(normalBootEntry)
-				if err != nil {
-					logger.Warning(err)
+				if needChangeGrub {
+					// 更新成功后修改grub默认入口为当前系统入口
+					err := m.grub.changeGrubDefaultEntry(normalBootEntry)
+					if err != nil {
+						logger.Warning(err)
+					}
 				}
 				// 状态更新为ready
 				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
@@ -1062,7 +1066,7 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						// 可能无需下载,因此继续后面安装job的创建
 					}
 				}
-				upgradeJob, err = m.distUpgrade(sender, category, true, false)
+				upgradeJob, err = m.distUpgrade(sender, category, true, false, false)
 				if err != nil && err != JobExistError {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
