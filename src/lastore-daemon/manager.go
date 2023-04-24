@@ -12,8 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -29,12 +27,15 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
+
 	"github.com/godbus/dbus/v5"
-	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.apps1"
 	atomic1 "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.atomicupgrade1"
 	power "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.power1"
+	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
@@ -60,7 +61,7 @@ const (
 	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
 	controlCenterPath     = "/usr/bin/dde-control-center"
 	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
-	amDaemonPath          = "/usr/bin/deepin-application-manager"
+	amDaemonPath          = "/usr/bin/dde-application-manager"
 )
 
 var (
@@ -1327,7 +1328,7 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 	}
 }
 
-//SystemUpgradeInfo 将update_infos.json数据解析成map
+// SystemUpgradeInfo 将update_infos.json数据解析成map
 func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 	r := make(system.SourceUpgradeInfoMap)
 
