@@ -160,7 +160,7 @@ func QueryPackageDownloadSize(updateType UpdateType, packages ...string) (float6
 					"--print-uris", "--assume-no", "install", "--"}, packages...)...)
 		}
 
-		lines, err := utils.FilterExecOutput(cmd, time.Second*10, func(line string) bool {
+		lines, err := utils.FilterExecOutput(cmd, time.Second*30, func(line string) bool {
 			_, _, _err := parsePackageSize(line)
 			return _err == nil
 		})
