@@ -45,6 +45,8 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 	m.service.DelayAutoQuit()
 	m.do.Lock()
 	err := m.jobManager.CleanJob(jobId)
+	// 在clean后需要执行一次dispatch,将end状态的job清除,防止重新创建时出现异常
+	m.jobManager.dispatch()
 	m.do.Unlock()
 	if err != nil {
 		logger.Warningf("CleanJob %q error: %v\n", jobId, err)
@@ -574,6 +576,7 @@ func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.Updat
 	m.service.DelayAutoQuit()
 	jobObj, err := m.prepareDistUpgrade(sender, mode, false)
 	if err != nil {
+		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
 	}
 	return jobObj.getPath(), nil
