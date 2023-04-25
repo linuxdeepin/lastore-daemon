@@ -953,10 +953,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
 				m.messageManager.reportLog(downloadStatus, false, j.Description)
-				// 更新一遍状态,再单独设置失败类型的状态
-				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
-				m.statusManager.UpdateModeAllStatusBySize()
+				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
+				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
 				var errorContent = struct {
 					ErrType   string
 					ErrDetail string
@@ -1023,9 +1022,11 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					m.PropsMu.Lock()
 					m.isDownloading = false
 					m.PropsMu.Unlock()
-					// 除了下载失败和下载成功之外,之前的状态为IsDownloading DownloadPause的都先修改为NotDownload.然后通过size进行状态修正
+					// 如果出现单项失败,其他的状态需要修改,IsDownloading->notDownload
+					// 如果已经有单项下载完成,然后取消下载,DownloadPause->notDownload
+					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
+					// 除了下载失败和下载成功之外,之前的状态为IsDownloading DownloadPause的都通过size进行状态修正
 					if j.Status != system.FailedStatus && j.Status != system.SucceedStatus {
-						m.statusManager.SetUpdateStatus(mode, system.NotDownload)
 						m.statusManager.UpdateModeAllStatusBySize()
 					}
 					m.statusManager.UpdateCheckCanUpgradeByEachStatus()

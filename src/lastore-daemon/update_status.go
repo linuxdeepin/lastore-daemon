@@ -179,6 +179,7 @@ func (m *UpdateModeStatusManager) GetUpdateStatus(typ system.UpdateType) system.
 	return m.updateModeStatusObj[typ.JobType()]
 }
 
+// SetUpdateStatus 外部调用,会对设置的状态进行过滤
 func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllUpdateType() {
@@ -189,6 +190,12 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 				continue
 			}
 			if newStatus == system.IsDownloading && oldStatus == system.CanUpgrade {
+				continue
+			}
+			if newStatus == system.NotDownload && oldStatus == system.CanUpgrade {
+				continue
+			}
+			if newStatus == system.NotDownload && oldStatus == system.DownloadErr {
 				continue
 			}
 			m.updateModeStatusObj[typ.JobType()] = newStatus
@@ -319,6 +326,7 @@ func (m *UpdateModeStatusManager) SetCheckMode(mode system.UpdateType) system.Up
 	return m.checkMode
 }
 
+// UpdateModeAllStatusBySize 根据size计算更新所有状态,会把除了安装失败之外的所有错误去除
 func (m *UpdateModeStatusManager) UpdateModeAllStatusBySize() {
 	m.updateModeStatusBySize(system.AllUpdate)
 }
