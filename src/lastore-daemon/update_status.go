@@ -183,7 +183,7 @@ func (m *UpdateModeStatusManager) GetUpdateStatus(typ system.UpdateType) system.
 func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllUpdateType() {
-		if mode&typ != 0 {
+		if mode&typ != 0 && m.checkMode&typ != 0 {
 			oldStatus := m.updateModeStatusObj[typ.JobType()]
 			// TODO 后续用一个valid方法判断
 			if newStatus == system.DownloadPause && oldStatus != system.IsDownloading {

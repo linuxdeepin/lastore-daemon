@@ -1027,7 +1027,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
 					// 除了下载失败和下载成功之外,之前的状态为IsDownloading DownloadPause的都通过size进行状态修正
 					if j.Status != system.FailedStatus && j.Status != system.SucceedStatus {
-						m.statusManager.UpdateModeAllStatusBySize()
+						m.statusManager.updateModeStatusBySize(j.updateTyp)
 					}
 					m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 				}
