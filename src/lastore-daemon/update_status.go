@@ -201,6 +201,9 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 			if newStatus == system.NotDownload && oldStatus == system.Upgraded {
 				continue
 			}
+			if newStatus == system.NotDownload && oldStatus == system.WaitRunUpgrade {
+				continue
+			}
 			m.updateModeStatusObj[typ.JobType()] = newStatus
 		}
 	}
