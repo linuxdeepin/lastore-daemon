@@ -225,6 +225,23 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 		return dbusutil.ToError(err)
 	}
 	sysBus := m.service.Conn()
+	// 更新LANG
+	pid, err := m.service.GetConnPID(string(sender))
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	proc := procfs.Process(pid)
+	envVars, err := proc.Environ()
+	logger.Infof(" agent envVars: %+v", getLang(envVars))
+	if err != nil {
+		logger.Warningf("failed to get process %d environ: %v", proc, err)
+	} else {
+		m.userAgents.addLang(uidStr, getLang(envVars))
+		gettext.SetLocale(gettext.LcAll, m.userAgents.getActiveLastoreAgentLang())
+	}
+
 	for _, detail := range sessionDetails {
 		if detail.UID == uid {
 			session, err := login1.NewSession(sysBus, detail.Path)
@@ -245,20 +262,6 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 		return dbusutil.ToError(err)
 	}
 	m.userAgents.addAgent(uidStr, a)
-	// 更新LANG
-	pid, err := m.service.GetConnPID(string(sender))
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-
-	proc := procfs.Process(pid)
-	envVars, err := proc.Environ()
-	if err != nil {
-		logger.Warningf("failed to get process %d environ: %v", proc, err)
-	} else {
-		m.userAgents.addLang(uidStr, getLang(envVars))
-	}
 	return nil
 }
 
@@ -468,7 +471,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 			action := []string{"continue", gettext.Tr("Proceed to Update")}
 			hints := map[string]dbus.Variant{"x-deepin-action-continue": dbus.MakeVariant(
 				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-			m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 			m.inhibitAutoQuitCountSub()
 			m.statusManager.SetABStatus(mode, system.BackupFailed, system.CanNotBackup)
@@ -494,7 +497,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
 					"x-deepin-action-continue": dbus.MakeVariant(
 						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-				m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 				m.inhibitAutoQuitCountSub()
 				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
@@ -530,7 +533,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 							"x-deepin-action-continue": dbus.MakeVariant(
 								fmt.Sprintf("dbus-send,--system,--print-reply,"+
 									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 					}
 				}

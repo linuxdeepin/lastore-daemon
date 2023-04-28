@@ -234,7 +234,7 @@ func QuerySourceDownloadSize(updateType UpdateType) (float64, float64, error) {
 	})
 	if err != nil {
 		logger.Warning(err)
-		return SizeDownloaded, SizeDownloaded, nil
+		return SizeDownloaded, SizeDownloaded, err
 	}
 	logger.Debug("end QuerySourceDownloadSize duration:", time.Now().Sub(startTime))
 	return *downloadSize, *allPackageSize, nil
