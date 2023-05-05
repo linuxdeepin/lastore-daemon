@@ -199,9 +199,9 @@ func (m *Manager) updateAutoDownloadTimer() error {
 		return err
 	}
 	// 如果关闭闲时更新，需要终止下载job
-	if !m.updater.getIdleDownloadEnabled() {
-		m.handleAbortAutoDownload()
-	}
+	// if !m.updater.getIdleDownloadEnabled() {
+	// 	m.handleAbortAutoDownload()
+	// }
 	return nil
 }
 

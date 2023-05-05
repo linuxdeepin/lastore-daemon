@@ -319,17 +319,18 @@ func (m *UpdateModeStatusManager) SetCheckMode(mode system.UpdateType) system.Up
 	if mode == m.checkMode {
 		return mode
 	}
-	_, m.checkMode = filterMode(m.updateMode, mode)
-	err := m.lsConfig.SetCheckUpdateMode(m.checkMode)
+	_, checkMode := filterMode(m.updateMode, mode)
+	err := m.lsConfig.SetCheckUpdateMode(checkMode)
 	if err != nil {
 		logger.Warning(err)
 	}
 	if m.checkModeChangedCallback != nil {
-		m.checkModeChangedCallback(m.checkMode)
+		m.checkModeChangedCallback(checkMode)
 	}
+	m.checkMode = checkMode
 	// check的内容修改后,canUpgrade的状态要随之修改
 	m.UpdateCheckCanUpgradeByEachStatus()
-	return m.checkMode
+	return checkMode
 }
 
 // UpdateModeAllStatusBySize 根据size计算更新所有状态,会把除了安装失败之外的所有错误去除
