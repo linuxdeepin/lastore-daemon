@@ -475,15 +475,10 @@ func (m *UpdateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
 		if !ok {
 			// 默认当成未下载处理处理
 			m.updateModeStatusObj[typ.JobType()] = system.NotDownload
-			checkCanUpgrade = false
-			break
 		} else {
-			// 可更新条件:至少存在一项为可更新,且其他项为更新完成或更新失败或无更新内容
-			// 包含更新失败的情况下,如果进行模态更新,只更新可更新部分,不更新已经更新失败的部分
-			if status == system.CanUpgrade {
+			// 可更新条件:至少存在一项为可更新或更新失败
+			if status == system.CanUpgrade || status == system.UpgradeErr {
 				checkCanUpgrade = true
-			} else if status != system.Upgraded && status != system.UpgradeErr && status != system.NoUpdate {
-				checkCanUpgrade = false
 				break
 			}
 		}
@@ -527,7 +522,6 @@ func (m *UpdateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType
 	var upgradeFailedMode system.UpdateType
 	checkMode := m.checkMode
 	canUpgradeCount := 0
-	upgradeFailedCount := 0
 	for _, typ := range system.AllUpdateType() {
 		if origin&typ == 0 {
 			continue
@@ -542,19 +536,19 @@ func (m *UpdateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType
 			continue
 		} else {
 			// 可安装类型判断条件：该类型为可安装、正在安装或安装失败
-			// 如果全都为更新失败,那么属于重试更新->可以更新
-			// 如果可更新和更新失败都有,那么只能可更新项去更新
+			// 可更新+更新失败的情况下,如果进行更新,只更新可更新部分,不更新已经更新失败的部分
+			// 可更新+未下载的情况下,如果进行更新,只更新可更新部分,不更新未下载部分、
+			// 只有更新失败,属于重试更新,对更新失败的进行更新
 			if status == system.CanUpgrade || status == system.Upgrading || status == system.WaitRunUpgrade {
 				canUpgradeCount++
 				canUpgradeMode |= typ
 			}
 			if status == system.UpgradeErr {
-				upgradeFailedCount++
 				upgradeFailedMode |= typ
 			}
 		}
 	}
-	if upgradeFailedCount > 0 {
+	if canUpgradeCount == 0 {
 		return upgradeFailedMode
 	} else {
 		return canUpgradeMode
