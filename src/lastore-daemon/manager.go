@@ -887,6 +887,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		logger.Warning(dbusError.Detail)
 		errStr, _ := json.Marshal(dbusError)
+		m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
+		m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
 		return nil, dbusutil.ToError(errors.New(string(errStr)))
 	}
 	var job *Job
