@@ -426,6 +426,9 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	defer m.do.Unlock()
 	var err error
 	var environ map[string]string
+	if !system.IsAuthorized() {
+		return nil, errors.New("not authorized, don't allow to exec update")
+	}
 	defer func() {
 		if err == nil {
 			err1 := m.config.UpdateLastCheckTime()
@@ -533,6 +536,9 @@ func (m *Manager) cancelAllUpdateJob() error {
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
 // needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
 func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
+	if !system.IsAuthorized() {
+		return nil, errors.New("not authorized, don't allow to exec upgrade")
+	}
 	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
@@ -839,6 +845,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 // prepareDistUpgrade isClassify true: mode只能是单类型,创建一个单类型的下载job; false: mode类型不限,创建一个全mode类型的下载job
 func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool) (*Job, error) {
+	if !system.IsAuthorized() {
+		return nil, errors.New("not authorized, don't allow to exec download")
+	}
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err

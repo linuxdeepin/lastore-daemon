@@ -17,6 +17,8 @@ import (
 	"strings"
 	"unicode"
 
+	license "github.com/linuxdeepin/go-dbus-factory/com.deepin.license"
+	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
 )
@@ -440,3 +442,32 @@ const (
 	CanNotBackup ABErrorType = "canNotBackup"
 	OtherError   ABErrorType = "otherError"
 )
+
+type UiActiveState int32
+
+const (
+	Unknown         UiActiveState = -1 // 未知
+	Unauthorized    UiActiveState = 0  // 未授权
+	Authorized      UiActiveState = 1  // 已授权
+	AuthorizedLapse UiActiveState = 2  // 授权失效
+	TrialAuthorized UiActiveState = 3  // 试用期已授权
+	TrialExpired    UiActiveState = 4  // 试用期已过期
+)
+
+func IsAuthorized() bool {
+	sysBus, err := dbusutil.NewSystemService()
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	licenseObj := license.NewLicense(sysBus.Conn())
+	state, err := licenseObj.AuthorizationState().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	if UiActiveState(state) == Authorized || UiActiveState(state) == TrialAuthorized {
+		return true
+	}
+	return false
+}
