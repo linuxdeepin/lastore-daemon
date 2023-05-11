@@ -1,3 +1,13 @@
+lastore-daemon (5.4.4.1) stable; urgency=medium
+
+  [ Deepin Packages Builder ]
+  * feat: 优化可更新条件判断(Influence: 可更新条件判断)
+  * fix: 优化空间不足下载逻辑(Bug: 199289)(Influence: 空间不足下载)
+  * feat: 增加备份失败的记录(Bug: 199317)(Influence: 备份失败)
+  * feat: 增加对未激活限制(Bug: 199527)(Influence: 激活限制)
+
+ -- Deepin Packages Builder <packages@deepin.org>  Thu, 11 May 2023 14:44:36 +0800
+
 lastore-daemon (5.4.4) stable; urgency=medium
 
   [ Deepin Packages Builder ]
