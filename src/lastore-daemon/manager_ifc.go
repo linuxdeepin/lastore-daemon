@@ -462,7 +462,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
 	if needBackup {
-		m.statusManager.SetABStatus(mode, system.NotBackup, system.NoABError)
+		// m.statusManager.SetABStatus(mode, system.NotBackup, system.NoABError)
 		canBackup, abErr = m.abObj.CanBackup(0)
 		if abErr != nil || !canBackup {
 			logger.Info("can not backup,", abErr)
@@ -481,7 +481,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 		hasBackedUp, err = m.abObj.HasBackedUp().Get(0)
 		if err != nil {
 			logger.Warning(err)
-		} else {
+		} else if hasBackedUp {
 			m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
 		}
 		if !hasBackedUp {

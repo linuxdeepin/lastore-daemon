@@ -22,6 +22,7 @@ type UpdateModeStatusManager struct {
 	abStatus                            system.ABStatus
 	abError                             system.ABErrorType
 	currentTriggerBackingUpType         system.UpdateType
+	backupFailedType                    system.UpdateType
 	statusMapMu                         sync.RWMutex
 	handleStatusChangedCallback         func(string)
 	handleSystemStatusChangedCallback   func(interface{})
@@ -35,6 +36,7 @@ type daemonStatus struct {
 	ABStatus             system.ABStatus
 	ABError              system.ABErrorType
 	TriggerBackingUpType system.UpdateType
+	BackupFailedType     system.UpdateType
 	UpdateStatus         map[string]system.UpdateModeStatus
 }
 
@@ -247,6 +249,14 @@ func (m *UpdateModeStatusManager) SetABStatus(typ system.UpdateType, status syst
 		return
 	}
 	m.currentTriggerBackingUpType = typ
+	switch status {
+	case system.BackingUp:
+		m.backupFailedType &= ^typ
+	case system.BackupFailed:
+		m.backupFailedType |= typ
+	case system.NotBackup, system.HasBackedUp:
+		m.backupFailedType = 0
+	}
 	m.abStatus = status
 	m.abError = error
 	m.syncUpdateStatusNoLock()
@@ -255,6 +265,7 @@ func (m *UpdateModeStatusManager) SetABStatus(typ system.UpdateType, status syst
 func (m *UpdateModeStatusManager) syncUpdateStatusNoLock() {
 	obj := &daemonStatus{
 		TriggerBackingUpType: m.currentTriggerBackingUpType,
+		BackupFailedType:     m.backupFailedType,
 		ABStatus:             m.abStatus,
 		ABError:              m.abError,
 		UpdateStatus:         m.updateModeStatusObj,
