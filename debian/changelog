@@ -1,3 +1,9 @@
+lastore-daemon (6.2.2) stable; urgency=medium
+
+  * 修复控制中心更新系统卡死的问题
+
+ -- myml <wurongjie@deepin.com>  Tue, 16 May 2023 16:56:00 +0800
+
 lastore-daemon (6.2.1) stable; urgency=medium
 
   * 修复启动器无法卸载应用的问题

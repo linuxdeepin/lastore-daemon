@@ -32,4 +32,4 @@ override_dh_gencontrol:
 endif
 
 override_dh_installsystemd:
-	dh_installsystemd --no-restart-after-upgrade --no-start
+	dh_installsystemd -r --no-restart-after-upgrade --no-start
