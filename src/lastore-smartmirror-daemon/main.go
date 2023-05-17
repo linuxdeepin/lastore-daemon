@@ -20,7 +20,6 @@ import (
 var logger = log.NewLogger("lastore/smartmirror")
 
 func main() {
-	logger.RemoveBackendSyslog()
 	runDaemon := flag.Bool("daemon", false, "run as daemon and not exit")
 	flag.Parse()
 

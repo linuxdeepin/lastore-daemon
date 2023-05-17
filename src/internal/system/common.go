@@ -35,7 +35,7 @@ type MirrorSource struct {
 }
 
 var RepoInfos []RepositoryInfo
-var logger = log.NewLogger("lastore")
+var logger = log.NewLogger("lastore/system")
 
 type RepositoryInfo struct {
 	Name   string `json:"name"`

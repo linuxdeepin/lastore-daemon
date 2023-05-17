@@ -42,7 +42,6 @@ var logger = log.NewLogger("lastore/lastore-daemon")
 //go:generate dbusutil-gen em -type Manager,Updater
 
 func main() {
-	logger.RemoveBackendSyslog()
 	flag.Parse()
 	service, err := dbusutil.NewSystemService()
 	if err != nil {

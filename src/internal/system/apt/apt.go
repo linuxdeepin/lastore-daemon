@@ -25,7 +25,7 @@ type CommandSet interface {
 	FindCMD(id string) *aptCommand
 }
 
-var logger = log.NewLogger("lastore")
+var logger = log.NewLogger("lastore/apt")
 
 func (p *APTSystem) AddCMD(cmd *aptCommand) {
 	if _, ok := p.cmdSet[cmd.JobId]; ok {
