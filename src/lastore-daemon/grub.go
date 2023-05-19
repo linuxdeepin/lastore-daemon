@@ -19,7 +19,7 @@ import (
 
 const (
 	grubScriptFile       = "/boot/grub/grub.cfg"
-	normalBootEntryTitle = "UnionTech OS Desktop 20 Pro GNU/Linux"
+	normalBootEntryTitle = "UOS Desktop 20 Pro GNU/Linux"
 )
 
 type bootEntry uint
