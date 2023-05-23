@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,8 +19,7 @@ import (
 )
 
 const (
-	grubScriptFile       = "/boot/grub/grub.cfg"
-	normalBootEntryTitle = "UOS Desktop 20 Pro GNU/Linux"
+	grubScriptFile = "/boot/grub/grub.cfg"
 )
 
 type bootEntry uint
@@ -47,12 +47,12 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	var err error
 	switch to {
 	case rollbackBootEntry:
-		title, err = system.GetGrubRollbackTitle(grubScriptFile)
-		if err != nil {
-			return err
-		}
+		title = system.GetGrubRollbackTitle(grubScriptFile)
 	case normalBootEntry:
-		title = normalBootEntryTitle
+		title = system.GetGrunNormalTitle(grubScriptFile)
+	}
+	if strings.TrimSpace(title) == "" {
+		return fmt.Errorf("failed to get %v entry form %v", to, grubScriptFile)
 	}
 	logger.Debug("change grub default entry to:", title)
 	defaultEntry, err := m.grub.DefaultEntry().Get(0)

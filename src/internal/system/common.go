@@ -344,12 +344,19 @@ type UpgradeStatusAndReason struct {
 	ReasonCode UpgradeReasonType
 }
 
-func GetGrubRollbackTitle(grubPath string) (string, error) {
-	var rollbackTitle string
+func GetGrubRollbackTitle(grubPath string) string {
+	return getGrubTitleByPrefix(grubPath, "BEGIN /etc/grub.d/11_deepin_ab_recovery")
+}
+
+func GetGrunNormalTitle(grubPath string) string {
+	return getGrubTitleByPrefix(grubPath, "BEGIN /etc/grub.d/10_linux")
+}
+
+func getGrubTitleByPrefix(grubPath string, start string) (entryTitle string) {
 	fileContent, err := ioutil.ReadFile(grubPath)
 	if err != nil {
 		logger.Warning(err)
-		return "", err
+		return ""
 	}
 	sl := bufio.NewScanner(strings.NewReader(string(fileContent)))
 	sl.Split(bufio.ScanLines)
@@ -358,25 +365,25 @@ func GetGrubRollbackTitle(grubPath string) (string, error) {
 		line := sl.Text()
 		line = strings.TrimSpace(line)
 		if !needNext {
-			needNext = strings.Contains(line, "BEGIN /etc/grub.d/11_deepin_ab_recovery")
+			needNext = strings.Contains(line, start)
 		} else {
 			if strings.HasPrefix(line, "menuentry ") {
 				title, ok := parseTitle(line)
 				if ok {
-					rollbackTitle = title
+					entryTitle = title
+					break
 				} else {
-					err := fmt.Errorf("parse entry title failed from: %q", line)
-					return "", err
+					logger.Warningf("parse entry title failed from: %q", line)
+					return ""
 				}
 			}
-			break
 		}
 	}
 	err = sl.Err()
 	if err != nil {
-		return "", err
+		return ""
 	}
-	return rollbackTitle, nil
+	return entryTitle
 }
 
 var (
