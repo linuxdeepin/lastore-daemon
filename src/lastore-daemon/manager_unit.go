@@ -209,7 +209,7 @@ func (m *Manager) updateAutoDownloadTimer() error {
 func (m *Manager) updateAutoCheckSystemUnit() error {
 	err := m.stopTimerUnit(lastoreOnline)
 	if err != nil {
-		logger.Warning(err)
+		logger.Info(err)
 	}
 	return m.updateTimerUnit(lastoreAutoCheck)
 }

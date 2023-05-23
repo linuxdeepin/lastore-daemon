@@ -165,7 +165,6 @@ func (m *Manager) initDSettingsChangedHandle() {
 }
 
 func (m *Manager) initStatusManager() {
-	logger.Info("start initStatusManager:", time.Now())
 	startTime := time.Now()
 	m.statusManager = NewStatusManager(m.config, func(newStatus string) {
 		m.PropsMu.Lock()
@@ -185,7 +184,7 @@ func (m *Manager) initStatusManager() {
 		m.PropsMu.Unlock()
 	})
 	m.statusManager.InitModifyData()
-	logger.Info("end initStatusManager duration:", time.Now().Sub(startTime))
+	logger.Info("initStatusManager cost:", time.Since(startTime))
 }
 
 func (m *Manager) initAgent() {

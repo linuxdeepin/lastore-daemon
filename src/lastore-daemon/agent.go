@@ -49,7 +49,7 @@ func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNe
 		logger.Warning(err)
 		return
 	}
-	logger.Info("record agent info:", infoMap)
+	logger.Infof("record agent info: %+v", infoMap)
 	login1Obj := login1.NewManager(service.Conn())
 	sessionInfos, err := login1Obj.ListSessions(0)
 	if err != nil {

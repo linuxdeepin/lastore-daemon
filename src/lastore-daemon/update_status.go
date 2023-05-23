@@ -181,31 +181,39 @@ func (m *UpdateModeStatusManager) GetUpdateStatus(typ system.UpdateType) system.
 	return m.updateModeStatusObj[typ.JobType()]
 }
 
+func canTransition(oldStatus, newStatus system.UpdateModeStatus) bool {
+	if newStatus == system.DownloadPause && oldStatus != system.IsDownloading {
+		return false
+	}
+	if newStatus == system.IsDownloading && oldStatus == system.CanUpgrade {
+		return false
+	}
+	if newStatus == system.NotDownload && oldStatus == system.CanUpgrade {
+		return false
+	}
+	if newStatus == system.NotDownload && oldStatus == system.DownloadErr {
+		return false
+	}
+	if newStatus == system.NotDownload && oldStatus == system.Upgraded {
+		return false
+	}
+	if newStatus == system.NotDownload && oldStatus == system.WaitRunUpgrade {
+		return false
+	}
+	return true
+}
+
 // SetUpdateStatus 外部调用,会对设置的状态进行过滤
 func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllUpdateType() {
 		if mode&typ != 0 && m.checkMode&typ != 0 {
 			oldStatus := m.updateModeStatusObj[typ.JobType()]
-			// TODO 后续用一个valid方法判断
-			if newStatus == system.DownloadPause && oldStatus != system.IsDownloading {
+			if !canTransition(oldStatus, newStatus) {
+				logger.Infof("inhibit %v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
 				continue
 			}
-			if newStatus == system.IsDownloading && oldStatus == system.CanUpgrade {
-				continue
-			}
-			if newStatus == system.NotDownload && oldStatus == system.CanUpgrade {
-				continue
-			}
-			if newStatus == system.NotDownload && oldStatus == system.DownloadErr {
-				continue
-			}
-			if newStatus == system.NotDownload && oldStatus == system.Upgraded {
-				continue
-			}
-			if newStatus == system.NotDownload && oldStatus == system.WaitRunUpgrade {
-				continue
-			}
+			logger.Infof("%v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
 			m.updateModeStatusObj[typ.JobType()] = newStatus
 		}
 	}
@@ -275,7 +283,7 @@ func (m *UpdateModeStatusManager) syncUpdateStatusNoLock() {
 		logger.Warning(err)
 		return
 	}
-	logger.Info("sync new status :", string(content))
+	logger.Infof("sync new status %v to config", string(content))
 	if m.handleStatusChangedCallback != nil {
 		m.handleStatusChangedCallback(string(content))
 	}
@@ -318,7 +326,7 @@ func (m *UpdateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) 
 		}
 
 		if oldBit == 0 && newBit == typ {
-			// 该位置一,选中为也需要置一
+			// 该位置一,选中位也需要置一
 			checkMode |= typ
 		}
 	}
@@ -371,7 +379,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 				logger.Warning(err)
 			} else {
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
-				logger.Infof("currentMode:%v,needDownloadSize:%v,allPackageSize:%v,oldStatus:%v.", currentMode, needDownloadSize, allPackageSize, oldStatus)
+				logger.Infof("currentMode:%v,needDownloadSize:%v,allPackageSize:%v,oldStatus:%v.", currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {
 					if oldStatus != system.Upgraded {
