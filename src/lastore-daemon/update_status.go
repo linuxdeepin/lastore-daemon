@@ -473,6 +473,11 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 }
 
 func (m *UpdateModeStatusManager) updateCanUpgradeStatus(can bool) {
+	oldCanUpgrade := m.lsConfig.getLastoreDaemonStatusByBit(canUpgrade) == canUpgrade
+	if oldCanUpgrade == can {
+		return
+	}
+	logger.Infof("CanUpgradeStatus transition state from %v to %v", oldCanUpgrade, can)
 	err := m.lsConfig.UpdateLastoreDaemonStatus(canUpgrade, can)
 	if err != nil {
 		logger.Warning(err)
