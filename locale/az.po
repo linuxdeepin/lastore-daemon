@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-04-11 17:54+0800\n"
+"POT-Creation-Date: 2023-05-25 16:25+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Xəyyam Qocayev <xxmn77@gmail.com>, 2023\n"
 "Language-Team: Azerbaijani (https://app.transifex.com/linuxdeepin/teams/3617/az/)\n"
@@ -44,122 +44,135 @@ msgstr "İdarə Etmə Mərkəzi"
 msgid "App Store"
 msgstr "Tətbiq Mağazası"
 
-#: ../src/lastore-daemon/manager.go:275
+#: ../src/lastore-daemon/manager.go:312
 msgid "Removed successfully"
 msgstr "Uğurla silindi"
 
-#: ../src/lastore-daemon/manager.go:279
+#: ../src/lastore-daemon/manager.go:316
 msgid "Failed to remove the app"
 msgstr "Tətbiq silinə bilmədi"
 
-#: ../src/lastore-daemon/manager.go:282
+#: ../src/lastore-daemon/manager.go:319
 msgid "Retry"
 msgstr "Bir daha cəhd edin"
 
-#: ../src/lastore-daemon/manager.go:284
+#: ../src/lastore-daemon/manager.go:321
 msgid "Cancel"
 msgstr "İmtina"
 
-#: ../src/lastore-daemon/manager.go:436
+#: ../src/lastore-daemon/manager.go:478
 msgid "New version available!"
-msgstr ""
+msgstr "Yeni versiya əlçatandır!"
 
-#: ../src/lastore-daemon/manager.go:437 ../src/lastore-daemon/manager.go:455
-#: ../src/lastore-daemon/manager.go:910 ../src/lastore-daemon/manager.go:967
+#: ../src/lastore-daemon/manager.go:479 ../src/lastore-daemon/manager.go:497
+#: ../src/lastore-daemon/manager.go:953 ../src/lastore-daemon/manager.go:996
 msgid "View"
 msgstr "Baxış"
 
-#: ../src/lastore-daemon/manager.go:454
+#: ../src/lastore-daemon/manager.go:496
 msgid "Failed to check for updates. Please check your network."
-msgstr ""
+msgstr "Yenilənmələri yoxlamaq mümkün olmadı. İnternet bağlantısını yoxla."
 
-#: ../src/lastore-daemon/manager.go:460
+#: ../src/lastore-daemon/manager.go:502
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr ""
+"Yenilənmələri yoxlamaq mümkün olmadı. Öncə diskinizi təmizləməniz xahiş "
+"olunur."
 
-#: ../src/lastore-daemon/manager.go:583
+#: ../src/lastore-daemon/manager.go:625
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
+"Batareyanın tutumu 60%-dən aşağıdır. Yenilənmələri uğurla tamamlamaq üçün "
+"kompyteri elektrik şəbəkəsinə qoşun."
 
-#: ../src/lastore-daemon/manager.go:659 ../src/lastore-daemon/manager.go:960
+#: ../src/lastore-daemon/manager.go:704 ../src/lastore-daemon/manager.go:989
 msgid "Updates failed: damaged files. Please update again."
-msgstr ""
+msgstr "Yenilənmə baş tutmadı: fayllar korlanıb. Lütfən bir daha yeniləyin."
 
-#: ../src/lastore-daemon/manager.go:660 ../src/lastore-daemon/manager.go:961
+#: ../src/lastore-daemon/manager.go:705 ../src/lastore-daemon/manager.go:990
 msgid "Try Again"
-msgstr ""
+msgstr "Yenidən cəhd et"
 
-#: ../src/lastore-daemon/manager.go:666
+#: ../src/lastore-daemon/manager.go:711
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr ""
+"Yenilənmə baş tutmadı: disk sahəsi kifayət qədər deyil. Kmpyuterinizə olacaq"
+" təsirin qarşsını almaq üçün onu yenidən başladın."
 
-#: ../src/lastore-daemon/manager.go:667 ../src/lastore-daemon/manager.go:680
+#: ../src/lastore-daemon/manager.go:712 ../src/lastore-daemon/manager.go:725
 msgid "Reboot"
-msgstr ""
+msgstr "Yenidən başlat"
 
-#: ../src/lastore-daemon/manager.go:671
+#: ../src/lastore-daemon/manager.go:716
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "Yenilənmə baş tutmadı: diskdə boş sahə azdır."
 
-#: ../src/lastore-daemon/manager.go:679
+#: ../src/lastore-daemon/manager.go:724
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
+"Yenilənmə baş tutmadı: Sisteminizə təsirin qarşısını almaq üçün onu yenidən "
+"başladın."
 
-#: ../src/lastore-daemon/manager.go:684
+#: ../src/lastore-daemon/manager.go:729
 msgid "Updates failed."
-msgstr ""
+msgstr "Yenilənmə baş tutmadı."
 
-#: ../src/lastore-daemon/manager.go:841 ../src/lastore-daemon/manager.go:955
+#: ../src/lastore-daemon/manager.go:894 ../src/lastore-daemon/manager.go:984
 #, c-format
 msgid "Downloading updates failed. Please free up %n GB disk space first."
 msgstr ""
+"Yenilənmələrin endirilməsi mümkün olmadı. Öncə %n QB disk sahəsini "
+"təmizləyin."
 
-#: ../src/lastore-daemon/manager.go:907
+#: ../src/lastore-daemon/manager.go:950
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "Yeni versiya əlçatandır! Endirilir..."
 
-#: ../src/lastore-daemon/manager.go:924
+#: ../src/lastore-daemon/manager.go:995
+msgid "Downloading updates failed. Please check your network."
+msgstr ""
+"Yenilənmələrin endirilməsi baş tutmadı. İnternet bağlantısını yoxlayın."
+
+#: ../src/lastore-daemon/manager.go:1019
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
+"Endirmə başa çatdı. Yenilənmələri söndürmə və ya yenidən başlatma zamanı "
+"quraşdıra bilərsiniz."
 
-#: ../src/lastore-daemon/manager.go:927
+#: ../src/lastore-daemon/manager.go:1022
 msgid "Update Now"
 msgstr "İndi yeniləmək"
 
-#: ../src/lastore-daemon/manager.go:929
+#: ../src/lastore-daemon/manager.go:1024
 msgid "Dismiss"
-msgstr ""
+msgstr "Ləğv et"
 
-#: ../src/lastore-daemon/manager.go:966
-msgid "Downloading updates failed. Please check your network."
-msgstr ""
-
-#: ../src/lastore-daemon/manager.go:1097
+#: ../src/lastore-daemon/manager.go:1139
 msgid "Package cache wiped"
 msgstr "Paket keşi təmizləndi"
 
-#: ../src/lastore-daemon/manager_ifc.go:383
+#: ../src/lastore-daemon/manager_ifc.go:391
 msgid "Backing up and installing updates..."
-msgstr ""
+msgstr "Ehtiyyat nüsxə yaradılır və yenilənmələr quraşdırılır..."
 
-#: ../src/lastore-daemon/manager_ifc.go:458
-#: ../src/lastore-daemon/manager_ifc.go:482
-#: ../src/lastore-daemon/manager_ifc.go:511
+#: ../src/lastore-daemon/manager_ifc.go:470
+#: ../src/lastore-daemon/manager_ifc.go:493
+#: ../src/lastore-daemon/manager_ifc.go:527
 msgid "Backup failed!"
-msgstr ""
+msgstr "Ehtiyyat nüsxə saxlamaq mümkün olmadı!"
 
-#: ../src/lastore-daemon/manager_ifc.go:459
-#: ../src/lastore-daemon/manager_ifc.go:483
-#: ../src/lastore-daemon/manager_ifc.go:512
+#: ../src/lastore-daemon/manager_ifc.go:471
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
 msgid "Proceed to Update"
-msgstr ""
+msgstr "Yenilənməyə davam et"
 
-#: ../src/lastore-daemon/manager_ifc.go:483
-#: ../src/lastore-daemon/manager_ifc.go:512
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
 msgid "Back Up Again"
-msgstr ""
+msgstr "Yenidən ehtiyyat nüsxə yarat"

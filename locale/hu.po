@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-04-11 17:54+0800\n"
+"POT-Creation-Date: 2023-05-25 16:25+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Béla Bajza, 2023\n"
 "Language-Team: Hungarian (https://app.transifex.com/linuxdeepin/teams/3617/hu/)\n"
@@ -43,43 +43,43 @@ msgstr "Vezérlőpult"
 msgid "App Store"
 msgstr "Áruház"
 
-#: ../src/lastore-daemon/manager.go:275
+#: ../src/lastore-daemon/manager.go:312
 msgid "Removed successfully"
 msgstr "Sikeresen eltávolítva"
 
-#: ../src/lastore-daemon/manager.go:279
+#: ../src/lastore-daemon/manager.go:316
 msgid "Failed to remove the app"
 msgstr "Az alkalmazás eltávolítása sikertelen"
 
-#: ../src/lastore-daemon/manager.go:282
+#: ../src/lastore-daemon/manager.go:319
 msgid "Retry"
 msgstr "Újra"
 
-#: ../src/lastore-daemon/manager.go:284
+#: ../src/lastore-daemon/manager.go:321
 msgid "Cancel"
 msgstr "Mégsem"
 
-#: ../src/lastore-daemon/manager.go:436
+#: ../src/lastore-daemon/manager.go:478
 msgid "New version available!"
 msgstr "Új verzió érhető el!"
 
-#: ../src/lastore-daemon/manager.go:437 ../src/lastore-daemon/manager.go:455
-#: ../src/lastore-daemon/manager.go:910 ../src/lastore-daemon/manager.go:967
+#: ../src/lastore-daemon/manager.go:479 ../src/lastore-daemon/manager.go:497
+#: ../src/lastore-daemon/manager.go:953 ../src/lastore-daemon/manager.go:996
 msgid "View"
 msgstr "Megtekintés"
 
-#: ../src/lastore-daemon/manager.go:454
+#: ../src/lastore-daemon/manager.go:496
 msgid "Failed to check for updates. Please check your network."
 msgstr ""
 "Nem sikerült ellenőrizni a frissítéseket. Kérjük ellenőrizze a hálózatát."
 
-#: ../src/lastore-daemon/manager.go:460
+#: ../src/lastore-daemon/manager.go:502
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr ""
 "Nem sikerült ellenőrizni a frissítéseket. Kérjük először tisztítsa meg a "
 "lemezt."
 
-#: ../src/lastore-daemon/manager.go:583
+#: ../src/lastore-daemon/manager.go:625
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
@@ -87,15 +87,15 @@ msgstr ""
 "Az akkumulátor töltöttsége kevesebb, mint 60%. A sikeres frissítések "
 "eléréséhez csatlakoztassa áramforráshoz a számítógépet."
 
-#: ../src/lastore-daemon/manager.go:659 ../src/lastore-daemon/manager.go:960
+#: ../src/lastore-daemon/manager.go:704 ../src/lastore-daemon/manager.go:989
 msgid "Updates failed: damaged files. Please update again."
 msgstr "Sikertelen frissítés: sérült fájlok. Kérjük frissítse újra."
 
-#: ../src/lastore-daemon/manager.go:660 ../src/lastore-daemon/manager.go:961
+#: ../src/lastore-daemon/manager.go:705 ../src/lastore-daemon/manager.go:990
 msgid "Try Again"
 msgstr "Próbálja újra"
 
-#: ../src/lastore-daemon/manager.go:666
+#: ../src/lastore-daemon/manager.go:711
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
@@ -103,75 +103,75 @@ msgstr ""
 "Sikertelen frissítés: nincs elég lemezterület. Kérjük indítsa újra a "
 "számítógépet, hogy elkerülje a rendszerre gyakorolt hatást."
 
-#: ../src/lastore-daemon/manager.go:667 ../src/lastore-daemon/manager.go:680
+#: ../src/lastore-daemon/manager.go:712 ../src/lastore-daemon/manager.go:725
 msgid "Reboot"
 msgstr "Újraindítás"
 
-#: ../src/lastore-daemon/manager.go:671
+#: ../src/lastore-daemon/manager.go:716
 msgid "Updates failed: insufficient disk space."
 msgstr "Sikertelen frissítés: nincs elegendő lemezterület"
 
-#: ../src/lastore-daemon/manager.go:679
+#: ../src/lastore-daemon/manager.go:724
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
 "Sikertelen frissítés. Kérjük indítsa újra a számítógépet, hogy elkerülje a "
 "rendszerre gyakorolt hatást."
 
-#: ../src/lastore-daemon/manager.go:684
+#: ../src/lastore-daemon/manager.go:729
 msgid "Updates failed."
 msgstr "A frissítés sikertelen."
 
-#: ../src/lastore-daemon/manager.go:841 ../src/lastore-daemon/manager.go:955
+#: ../src/lastore-daemon/manager.go:894 ../src/lastore-daemon/manager.go:984
 #, c-format
 msgid "Downloading updates failed. Please free up %n GB disk space first."
 msgstr ""
 "A frissítések letöltése nem sikerült. Kérjük először szabadítson fel %n GB "
 "lemezterületet."
 
-#: ../src/lastore-daemon/manager.go:907
+#: ../src/lastore-daemon/manager.go:950
 msgid "New version available! Downloading..."
 msgstr "Új verzió érhető el! Letöltése folyamatban..."
 
-#: ../src/lastore-daemon/manager.go:924
+#: ../src/lastore-daemon/manager.go:995
+msgid "Downloading updates failed. Please check your network."
+msgstr "A frissítések letöltése nem sikerült. Kérjük ellenőrizze a hálózatát."
+
+#: ../src/lastore-daemon/manager.go:1019
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
 "A letöltés befejeződött. Leállításkor vagy újraindításkor telepítheti a "
 "frissítéseket."
 
-#: ../src/lastore-daemon/manager.go:927
+#: ../src/lastore-daemon/manager.go:1022
 msgid "Update Now"
 msgstr "Frissítés most"
 
-#: ../src/lastore-daemon/manager.go:929
+#: ../src/lastore-daemon/manager.go:1024
 msgid "Dismiss"
 msgstr "Elvetés"
 
-#: ../src/lastore-daemon/manager.go:966
-msgid "Downloading updates failed. Please check your network."
-msgstr "A frissítések letöltése nem sikerült. Kérjük ellenőrizze a hálózatát."
-
-#: ../src/lastore-daemon/manager.go:1097
+#: ../src/lastore-daemon/manager.go:1139
 msgid "Package cache wiped"
 msgstr "A csomag gyorsítótár kiürítve"
 
-#: ../src/lastore-daemon/manager_ifc.go:383
+#: ../src/lastore-daemon/manager_ifc.go:391
 msgid "Backing up and installing updates..."
 msgstr "Biztonsági mentés készítése, és frissítések telepítése..."
 
-#: ../src/lastore-daemon/manager_ifc.go:458
-#: ../src/lastore-daemon/manager_ifc.go:482
-#: ../src/lastore-daemon/manager_ifc.go:511
+#: ../src/lastore-daemon/manager_ifc.go:470
+#: ../src/lastore-daemon/manager_ifc.go:493
+#: ../src/lastore-daemon/manager_ifc.go:527
 msgid "Backup failed!"
 msgstr "A biztonsági mentés készítése sikertelen!"
 
-#: ../src/lastore-daemon/manager_ifc.go:459
-#: ../src/lastore-daemon/manager_ifc.go:483
-#: ../src/lastore-daemon/manager_ifc.go:512
+#: ../src/lastore-daemon/manager_ifc.go:471
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
 msgid "Proceed to Update"
 msgstr "Folytassa a frissítést"
 
-#: ../src/lastore-daemon/manager_ifc.go:483
-#: ../src/lastore-daemon/manager_ifc.go:512
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
 msgid "Back Up Again"
 msgstr "Biztonsági mentés készítése újra"

@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-04-11 17:54+0800\n"
+"POT-Creation-Date: 2023-05-25 16:25+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Heimen Stoffels <vistausss@fastmail.com>, 2023\n"
 "Language-Team: Dutch (https://app.transifex.com/linuxdeepin/teams/3617/nl/)\n"
@@ -44,40 +44,40 @@ msgstr "Instellingencentrum"
 msgid "App Store"
 msgstr "Appwinkel"
 
-#: ../src/lastore-daemon/manager.go:275
+#: ../src/lastore-daemon/manager.go:312
 msgid "Removed successfully"
 msgstr "Verwijderen voltooid"
 
-#: ../src/lastore-daemon/manager.go:279
+#: ../src/lastore-daemon/manager.go:316
 msgid "Failed to remove the app"
 msgstr "Het programma kan niet worden verwijderd"
 
-#: ../src/lastore-daemon/manager.go:282
+#: ../src/lastore-daemon/manager.go:319
 msgid "Retry"
 msgstr "Opnieuw proberen"
 
-#: ../src/lastore-daemon/manager.go:284
+#: ../src/lastore-daemon/manager.go:321
 msgid "Cancel"
 msgstr "Annuleren"
 
-#: ../src/lastore-daemon/manager.go:436
+#: ../src/lastore-daemon/manager.go:478
 msgid "New version available!"
 msgstr "Nieuwe versie beschikbaar!"
 
-#: ../src/lastore-daemon/manager.go:437 ../src/lastore-daemon/manager.go:455
-#: ../src/lastore-daemon/manager.go:910 ../src/lastore-daemon/manager.go:967
+#: ../src/lastore-daemon/manager.go:479 ../src/lastore-daemon/manager.go:497
+#: ../src/lastore-daemon/manager.go:953 ../src/lastore-daemon/manager.go:996
 msgid "View"
 msgstr "Bekijk"
 
-#: ../src/lastore-daemon/manager.go:454
+#: ../src/lastore-daemon/manager.go:496
 msgid "Failed to check for updates. Please check your network."
 msgstr "De updatecontrole is mislukt - controleer je internetverbinding."
 
-#: ../src/lastore-daemon/manager.go:460
+#: ../src/lastore-daemon/manager.go:502
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr "De updatecontrole is mislukt - maak ruimte vrij op je schijf."
 
-#: ../src/lastore-daemon/manager.go:583
+#: ../src/lastore-daemon/manager.go:625
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
@@ -85,15 +85,15 @@ msgstr ""
 "Het accuniveau is lager dan 60%. Sluit de stroomkabel aan om de updates te "
 "installeren."
 
-#: ../src/lastore-daemon/manager.go:659 ../src/lastore-daemon/manager.go:960
+#: ../src/lastore-daemon/manager.go:704 ../src/lastore-daemon/manager.go:989
 msgid "Updates failed: damaged files. Please update again."
 msgstr "Updates mislukt: beschadigde bestanden. Probeer het opnieuw."
 
-#: ../src/lastore-daemon/manager.go:660 ../src/lastore-daemon/manager.go:961
+#: ../src/lastore-daemon/manager.go:705 ../src/lastore-daemon/manager.go:990
 msgid "Try Again"
 msgstr "Opnieuw proberen"
 
-#: ../src/lastore-daemon/manager.go:666
+#: ../src/lastore-daemon/manager.go:711
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
@@ -101,74 +101,74 @@ msgstr ""
 "Updates mislukt: onvoldoende vrije schijfruimte. Herstart je computer en "
 "probeer het opnieuw."
 
-#: ../src/lastore-daemon/manager.go:667 ../src/lastore-daemon/manager.go:680
+#: ../src/lastore-daemon/manager.go:712 ../src/lastore-daemon/manager.go:725
 msgid "Reboot"
 msgstr "Herstarten"
 
-#: ../src/lastore-daemon/manager.go:671
+#: ../src/lastore-daemon/manager.go:716
 msgid "Updates failed: insufficient disk space."
 msgstr "Updates mislukt: onvoldoende vrije schijfruimte"
 
-#: ../src/lastore-daemon/manager.go:679
+#: ../src/lastore-daemon/manager.go:724
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr "Updates mislukt. Herstart je computer en probeer het opnieuw."
 
-#: ../src/lastore-daemon/manager.go:684
+#: ../src/lastore-daemon/manager.go:729
 msgid "Updates failed."
 msgstr "Updates mislukt."
 
-#: ../src/lastore-daemon/manager.go:841 ../src/lastore-daemon/manager.go:955
+#: ../src/lastore-daemon/manager.go:894 ../src/lastore-daemon/manager.go:984
 #, c-format
 msgid "Downloading updates failed. Please free up %n GB disk space first."
 msgstr ""
 "De updates kunnen niet worden gedownload. Maak minimaal %n GB schijfruimte "
 "vrij en probeer het opnieuw."
 
-#: ../src/lastore-daemon/manager.go:907
+#: ../src/lastore-daemon/manager.go:950
 msgid "New version available! Downloading..."
 msgstr "Nieuwe versie beschikbaar! Bezig met downloaden…"
 
-#: ../src/lastore-daemon/manager.go:924
+#: ../src/lastore-daemon/manager.go:995
+msgid "Downloading updates failed. Please check your network."
+msgstr ""
+"De updates kunnen niet worden gedownload - controleer je internetverbinding."
+
+#: ../src/lastore-daemon/manager.go:1019
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
 "Het downloaden is voltooid. De updates worden tijdens het afsluiten of "
 "herstarten geïnstalleerd."
 
-#: ../src/lastore-daemon/manager.go:927
+#: ../src/lastore-daemon/manager.go:1022
 msgid "Update Now"
 msgstr "Nu bijwerken"
 
-#: ../src/lastore-daemon/manager.go:929
+#: ../src/lastore-daemon/manager.go:1024
 msgid "Dismiss"
 msgstr "Negeren"
 
-#: ../src/lastore-daemon/manager.go:966
-msgid "Downloading updates failed. Please check your network."
-msgstr ""
-"De updates kunnen niet worden gedownload - controleer je internetverbinding."
-
-#: ../src/lastore-daemon/manager.go:1097
+#: ../src/lastore-daemon/manager.go:1139
 msgid "Package cache wiped"
 msgstr "Pakketcache opgeschoond"
 
-#: ../src/lastore-daemon/manager_ifc.go:383
+#: ../src/lastore-daemon/manager_ifc.go:391
 msgid "Backing up and installing updates..."
 msgstr "Bezig met maken van reservekopie en installeren van updates…"
 
-#: ../src/lastore-daemon/manager_ifc.go:458
-#: ../src/lastore-daemon/manager_ifc.go:482
-#: ../src/lastore-daemon/manager_ifc.go:511
+#: ../src/lastore-daemon/manager_ifc.go:470
+#: ../src/lastore-daemon/manager_ifc.go:493
+#: ../src/lastore-daemon/manager_ifc.go:527
 msgid "Backup failed!"
 msgstr "Reservekopie mislukt!"
 
-#: ../src/lastore-daemon/manager_ifc.go:459
-#: ../src/lastore-daemon/manager_ifc.go:483
-#: ../src/lastore-daemon/manager_ifc.go:512
+#: ../src/lastore-daemon/manager_ifc.go:471
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
 msgid "Proceed to Update"
 msgstr "Doorgaan met bijwerken"
 
-#: ../src/lastore-daemon/manager_ifc.go:483
-#: ../src/lastore-daemon/manager_ifc.go:512
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
 msgid "Back Up Again"
 msgstr "Reservekopie opnieuw maken"
