@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -38,6 +39,10 @@ const (
 	lscpuCmd          = "lscpu"
 )
 
+const (
+	customInfoPath = "/usr/share/deepin/custom-note/info.json"
+)
+
 type SystemInfo struct {
 	SystemName      string
 	ProductType     string
@@ -50,7 +55,7 @@ type SystemInfo struct {
 	SN              string
 	HardwareVersion string
 	OEMID           string
-	CustomId        string
+	ProjectId       string
 }
 
 const (
@@ -108,12 +113,9 @@ func getSystemInfo() SystemInfo {
 	if err != nil {
 		logger.Warning("failed to get HardwareVersion:", err)
 	}
-	c, err := ioutil.ReadFile("/usr/share/deepin/custom/info.json")
+	systemInfo.ProjectId, err = getProjectID(customInfoPath)
 	if err != nil {
-		logger.Warning("failed to get /usr/share/deepin/custom/info.json")
-	} else {
-		//TODO 具体文件格式未提供,后续修改
-		systemInfo.CustomId = string(c)
+		logger.Warning("failed to get project id:", err)
 	}
 	return systemInfo
 }
@@ -337,20 +339,20 @@ func getCustomInfoAndOemId() (bool, string, error) {
 
 // 定制标识校验
 func verifyOemFile() bool {
-	//pem解码
+	// pem解码
 	block, _ := pem.Decode([]byte(oemPubKey))
 	if block == nil {
 		return false
 	}
-	//解析得到一个公钥interface
+	// 解析得到一个公钥interface
 	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		logger.Warning(err)
 		return false
 	}
-	//转为rsa公钥
+	// 转为rsa公钥
 	publicKey := pubKeyInterface.(*rsa.PublicKey)
-	//sha256计算
+	// sha256计算
 	hash := sha256.New()
 	encContent, err := ioutil.ReadFile(oemInfoFile)
 	if err != nil {
@@ -364,13 +366,13 @@ func verifyOemFile() bool {
 	}
 	hashed := hash.Sum(nil)
 
-	//读取签名文件
+	// 读取签名文件
 	srBuf, err := ioutil.ReadFile(oemSignFile)
 	if err != nil {
 		logger.Warning(err)
 		return false
 	}
-	//签名认证
+	// 签名认证
 	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed, srBuf) == nil
 }
 
@@ -390,4 +392,21 @@ func getOEMID() (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+type ProjectInfo struct {
+	Id string `json:"id"`
+}
+
+func getProjectID(fileName string) (string, error) {
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
+	info := new(ProjectInfo)
+	err = json.Unmarshal(content, info)
+	if err != nil {
+		return "", err
+	}
+	return info.Id, nil
 }

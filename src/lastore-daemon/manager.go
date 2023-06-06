@@ -418,6 +418,7 @@ func prepareUpdateSource() {
 			}
 		}
 	}
+	updateTokenConfigFile()
 }
 
 func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error) {
