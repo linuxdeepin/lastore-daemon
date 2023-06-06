@@ -148,7 +148,7 @@ func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
 	if err != nil {
 		logger.Errorf("LockDo: %v\n", err)
 	}
-	timer := time.AfterFunc(time.Second*10, func() {
+	timer := time.AfterFunc(time.Second*120, func() {
 		_ = cmd.Process.Signal(syscall.SIGINT)
 	})
 
