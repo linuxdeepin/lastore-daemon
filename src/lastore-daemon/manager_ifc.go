@@ -382,7 +382,7 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	if mode == 0 {
 		return "", dbusutil.ToError(errors.New("don't exist can distUpgrade mode"))
 	}
-	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, needBackup)
+	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, true)
 	if createJobErr != nil {
 		logger.Warning(createJobErr)
 		return "", dbusutil.ToError(createJobErr)
