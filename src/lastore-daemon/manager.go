@@ -691,7 +691,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 						logger.Warning(err)
 					}
 				} else {
-					err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.UpgradeReasonType(errorContent.ErrType)})
+					errType := errorContent.ErrType
+					if strings.Contains(errType, "JobError::") {
+						errType = strings.ReplaceAll(errType, "JobError::", "")
+					}
+					err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.UpgradeReasonType(errType)})
 					if err != nil {
 						logger.Warning(err)
 					}

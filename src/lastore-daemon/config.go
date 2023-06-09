@@ -544,6 +544,7 @@ func (c *Config) SetAllowPostSystemUpgradeMessageVersion(version []string) error
 }
 
 func (c *Config) SetUpgradeStatusAndReason(status system.UpgradeStatusAndReason) error {
+	logger.Infof("Update UpgradeStatusAndReason to %+v", status)
 	c.upgradeStatus = status
 	v, err := json.Marshal(status)
 	if err != nil {
