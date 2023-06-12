@@ -1,3 +1,11 @@
+lastore-daemon (5.4.6) stable; urgency=medium
+
+  [ Deepin Packages Builder ]
+  * fix: 修改更新失败错误记录的内容(Bug: 204029)(Influence: 更新失败错误记录)
+  * fix: DistUpgradePartly默认修改grub(Bug: 204189)(Influence: 更新失败重试)
+
+ -- Deepin Packages Builder <packages@deepin.org>  Mon, 12 Jun 2023 14:58:11 +0800
+
 lastore-daemon (5.4.5.3) stable; urgency=medium
 
   [ Deepin Packages Builder ]
