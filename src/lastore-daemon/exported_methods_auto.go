@@ -104,6 +104,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
+			Name:   "PrepareFullScreenUpgrade",
+			Fn:     v.PrepareFullScreenUpgrade,
+			InArgs: []string{"option"},
+		},
+		{
 			Name:    "QueryAllSizeWithSource",
 			Fn:      v.QueryAllSizeWithSource,
 			InArgs:  []string{"mode"},

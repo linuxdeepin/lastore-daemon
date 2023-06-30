@@ -557,6 +557,81 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	return upgradeJob.getPath(), nil
 }
 
+func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
+	checkExecPath := func() error {
+		// 只有dde-lock可以设置
+		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+		if !strings.Contains(execPath, "dde-lock") {
+			err = fmt.Errorf("%v not allow to call this method", execPath)
+			logger.Warning(err)
+			return err
+		}
+		return nil
+	}
+
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil || uid != 0 {
+		err = checkExecPath()
+		if err != nil {
+			return dbusutil.ToError(err)
+		}
+	}
+
+	// 如果没有/usr/bin/dde-update,则需要进入fallback流程
+	const fullScreenUpdatePath = "/usr/bin/dde-update"
+	if !system.NormalFileExists(fullScreenUpdatePath) {
+		err = fmt.Errorf("%v not exist, need run fallback process", fullScreenUpdatePath)
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	for {
+		pid, err := m.service.GetConnPID(string(sender))
+		if err != nil {
+			logger.Warning(err)
+			break
+		}
+		sessionPath, err := m.loginManager.GetSessionByPID(0, pid)
+		if err != nil {
+			logger.Warning(err)
+			break
+		}
+		session, err := login1.NewSession(m.service.Conn(), sessionPath)
+		if err != nil {
+			logger.Warning(err)
+			break
+		}
+		seatPath, err := session.Seat().Get(0)
+		if err != nil {
+			logger.Warning(err)
+			break
+		}
+		seat, err := login1.NewSeat(m.service.Conn(), seatPath.Path)
+		if err != nil {
+			logger.Warning(err)
+			break
+		}
+		err = seat.Terminate(0)
+		if err != nil {
+			logger.Warning(err)
+			break
+		} else {
+			return nil
+		}
+	}
+
+	// 如果上述方法出错，需要采用重启lightdm方案，此时所有图形session也都会退出
+	_, err = m.systemd.RestartUnit(0, "lightdm.service", "replace")
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	return nil
+}
 func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
 	var sourcePathList []string
 	for _, t := range system.AllUpdateType() {
