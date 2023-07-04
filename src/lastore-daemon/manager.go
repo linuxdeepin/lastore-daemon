@@ -1506,7 +1506,7 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 }
 
 func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath) {
-	logger.Info("session added", sessionId, sessionPath)
+	logger.Infof("session added %v %v", sessionId, sessionPath)
 	sysBus := m.service.Conn()
 	session, err := login1.NewSession(sysBus, sessionPath)
 	if err != nil {
@@ -1523,6 +1523,7 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 
 	uidStr := strconv.Itoa(int(userInfo.UID))
 	if !m.userAgents.hasUser(uidStr) {
+		logger.Infof("no this user %v,don't need add session", uidStr)
 		// 不关心这个用户的新 session,因为只有注册了agent的用户的user才需要监听
 		return
 	}

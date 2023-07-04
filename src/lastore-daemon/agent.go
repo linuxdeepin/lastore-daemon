@@ -69,6 +69,7 @@ func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNe
 		var item sessionAgentMapItem
 		item.sessions = make(map[dbus.ObjectPath]login1.Session)
 		item.agents = make(map[dbus.ObjectPath]lastoreAgent.Agent)
+		m.uidItemMap[uid] = &item
 		for _, sessionPath := range uidInfo.Sessions {
 			// 校验sessionPath是否还有效
 			if !sessionList.Contains(string(sessionPath)) {
@@ -92,7 +93,6 @@ func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNe
 			item.agents[agentPath] = agent
 		}
 		item.lang = uidInfo.Lang
-		m.uidItemMap[uid] = &item
 	}
 	gettext.SetLocale(gettext.LcAll, m.getActiveLastoreAgentLang())
 }
@@ -198,14 +198,17 @@ func (m *userAgentMap) addSession(uid string, session login1.Session) bool {
 
 	item, ok := m.uidItemMap[uid]
 	if !ok {
+		logger.Infof("not uid:%v item", uid)
 		return false
 	}
 
 	_, ok = item.sessions[session.Path_()]
 	if ok {
+		logger.Infof("session exit:%v", session.Path_())
 		return false
 	}
 	item.sessions[session.Path_()] = session
+	logger.Infof("add session %v", session.Path_())
 	return true
 }
 
@@ -295,6 +298,7 @@ func (m *userAgentMap) getAgentsInfo() *userAgentInfoMap {
 	for uid, item := range m.uidItemMap {
 		var sessions []dbus.ObjectPath
 		agentsMap := make(map[dbus.ObjectPath]string)
+		logger.Infof("sessions is %+v", item.sessions)
 		for sessionPath := range item.sessions {
 			sessions = append(sessions, sessionPath)
 		}

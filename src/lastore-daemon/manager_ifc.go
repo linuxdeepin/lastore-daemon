@@ -262,6 +262,7 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 		return dbusutil.ToError(err)
 	}
 	m.userAgents.addAgent(uidStr, a)
+	m.saveLastoreCache()
 	return nil
 }
 
