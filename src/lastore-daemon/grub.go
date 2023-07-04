@@ -47,9 +47,9 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	var err error
 	switch to {
 	case rollbackBootEntry:
-		title = system.GetGrubRollbackTitle(grubScriptFile)
+		title = system.GetGrubRollbackTitle(m.grub, grubScriptFile)
 	case normalBootEntry:
-		title = system.GetGrunNormalTitle(grubScriptFile)
+		title = system.GetGrubNormalTitle(m.grub, grubScriptFile)
 	}
 	if strings.TrimSpace(title) == "" {
 		return fmt.Errorf("failed to get %v entry form %v", to, grubScriptFile)

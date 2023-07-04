@@ -17,6 +17,7 @@ import (
 	"strings"
 	"unicode"
 
+	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
 	license "github.com/linuxdeepin/go-dbus-factory/com.deepin.license"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/log"
@@ -344,12 +345,27 @@ type UpgradeStatusAndReason struct {
 	ReasonCode UpgradeReasonType
 }
 
-func GetGrubRollbackTitle(grubPath string) string {
-	return getGrubTitleByPrefix(grubPath, "BEGIN /etc/grub.d/11_deepin_ab_recovery")
+const (
+	GrubTitleRollbackPrefix = "BEGIN /etc/grub.d/11_deepin_ab_recovery"
+	GrubTitleRollbackIndex  = 1
+	GrubTitleNormalPrefix   = "BEGIN /etc/grub.d/10_linux"
+	GrubTitleNormalIndex    = 0
+)
+
+func GetGrubRollbackTitle(grub grub2.Grub2, grubPath string) string {
+	title := getGrubTitleByPrefix(grubPath, GrubTitleRollbackPrefix)
+	if title == "" {
+		return getGrubTitleByIndex(grub, GrubTitleRollbackIndex)
+	}
+	return title
 }
 
-func GetGrunNormalTitle(grubPath string) string {
-	return getGrubTitleByPrefix(grubPath, "BEGIN /etc/grub.d/10_linux")
+func GetGrubNormalTitle(grub grub2.Grub2, grubPath string) string {
+	title := getGrubTitleByPrefix(grubPath, GrubTitleNormalPrefix)
+	if title == "" {
+		return getGrubTitleByIndex(grub, GrubTitleNormalIndex)
+	}
+	return title
 }
 
 func getGrubTitleByPrefix(grubPath string, start string) (entryTitle string) {
@@ -384,6 +400,23 @@ func getGrubTitleByPrefix(grubPath string, start string) (entryTitle string) {
 		return ""
 	}
 	return entryTitle
+}
+
+// getGrubTitleByIndex index 的起始值是0
+func getGrubTitleByIndex(grub grub2.Grub2, index int) (entryTitle string) {
+	if grub == nil {
+		return ""
+	}
+	entryList, err := grub.GetSimpleEntryTitles(0)
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+	if len(entryList) < index+1 {
+		logger.Warningf(" index:%v out of range", index)
+		return ""
+	}
+	return entryList[index]
 }
 
 var (
