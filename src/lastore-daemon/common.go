@@ -382,15 +382,18 @@ func SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 	err := system.DecodeJson(filename, &updateInfosList)
 	if err != nil {
 		if os.IsNotExist(err) {
+			outputErrorPath := fmt.Sprintf("error_%v", "update_infos.json")
+			filename = path.Join(system.VarLibDir, outputErrorPath)
+			if system.NormalFileExists(filename) {
+				var updateInfoErr system.UpdateInfoError
+				err2 := system.DecodeJson(filename, &updateInfoErr)
+				if err2 == nil {
+					return nil, &updateInfoErr
+				}
+				return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
+			}
 			return nil, err
 		}
-
-		var updateInfoErr system.UpdateInfoError
-		err2 := system.DecodeJson(filename, &updateInfoErr)
-		if err2 == nil {
-			return nil, &updateInfoErr
-		}
-		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
 	}
 	for _, info := range updateInfosList {
 		r[info.Category] = append(r[info.Category], info)

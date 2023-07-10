@@ -349,7 +349,6 @@ func (jm *JobManager) dispatch() {
 	jm.startJobsInQueue(jm.queues[DownloadQueue])
 	// wait for LockQueue be idled
 	if len(lockQueue.RunningJobs()) == 0 {
-
 		jm.startJobsInQueue(jm.queues[SystemChangeQueue])
 	}
 
@@ -390,7 +389,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 		job.PropsMu.RUnlock()
 
 		if jobStatus == system.FailedStatus {
-			job.retry--
+			job.subRetryCount(false)
 			_ = jm.markStart(job)
 			logger.Infof("Retry failed Job %v\n", job)
 		}
@@ -467,8 +466,13 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 
 			pkgSysErr, ok := err.(*system.PkgSystemError)
 			if ok {
+				if job.Type == system.UpdateSourceJobType {
+					job.subRetryCount(false)
+					logger.Infof("Retry failed Job %v\n", job)
+					return
+				}
 				// do not retry job
-				job.retry = 0
+				job.subRetryCount(true)
 				hookFn := job.getHook(string(system.FailedStatus))
 				if hookFn != nil {
 					hookFn()

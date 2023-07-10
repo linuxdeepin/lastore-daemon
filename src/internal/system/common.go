@@ -511,3 +511,18 @@ func IsAuthorized() bool {
 	}
 	return false
 }
+
+func IsActiveCodeExist() bool {
+	sysBus, err := dbusutil.NewSystemService()
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	licenseObj := license.NewLicense(sysBus.Conn())
+	code, err := licenseObj.ActiveCode().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	return strings.TrimSpace(code) != ""
+}

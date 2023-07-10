@@ -76,8 +76,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	var args = []string{"-y"}
 
 	options := map[string]string{
-		"APT::Status-Fd":   "3",
-		"Acquire::Retries": "3",
+		"APT::Status-Fd": "3",
 	}
 
 	if cmdType == system.DownloadJobType || cmdType == system.PrepareDistUpgradeJobType {
@@ -111,7 +110,9 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		args = append(args, "install", "-d", "--allow-change-held-packages")
 		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
-		sh := "apt-get -y -o APT::Status-Fd=3 update --fix-missing && /var/lib/lastore/scripts/build_system_info -now"
+		args = append(args, cmdArgs...)
+		argString := strings.Join(args, " ")
+		sh := fmt.Sprintf("apt-get %s -o APT::Status-Fd=3 update --fix-missing && /var/lib/lastore/scripts/build_system_info -now", argString)
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")

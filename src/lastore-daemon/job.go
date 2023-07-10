@@ -43,8 +43,9 @@ type Job struct {
 
 	Cancelable bool
 
-	queueName string
-	retry     int
+	queueName      string
+	retry          int
+	subRetryHookFn func(*Job) // hook执行规则是在retry--之前执行hook
 
 	// adjust the progress range, used by some download job type
 	progressRangeBegin float64
@@ -72,7 +73,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 
 		option:    make(map[string]string),
 		queueName: queueName,
-		retry:     0,
+		retry:     2,
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
@@ -243,4 +244,17 @@ func (j *Job) wrapHooks(appendHooks map[string]func()) {
 			j.hooks[key] = fn
 		}
 	}
+}
+
+func (j *Job) subRetryCount(toZero bool) {
+	j.PropsMu.Lock()
+	defer j.PropsMu.Unlock()
+	if toZero {
+		j.retry = 0
+		return
+	}
+	if j.subRetryHookFn != nil {
+		j.subRetryHookFn(j)
+	}
+	j.retry--
 }

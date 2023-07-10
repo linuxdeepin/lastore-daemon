@@ -23,11 +23,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 	if err != nil {
 		return err
 	}
-	var args []string
-	for key, value := range j.option { // apt 命令执行参数
-		args = append(args, "-o")
-		args = append(args, fmt.Sprintf("%v=%v", key, value))
-	}
+	args := sys.OptionToArgs(j.option)
 	switch j.Type {
 	case system.DownloadJobType:
 		return sys.DownloadPackages(j.Id, j.Packages, j.environ, args)
@@ -45,7 +41,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.Remove(j.Id, j.Packages, j.environ)
 
 	case system.UpdateSourceJobType:
-		return sys.UpdateSource(j.Id, j.environ)
+		return sys.UpdateSource(j.Id, j.environ, args)
 
 	case system.UpdateJobType:
 		return sys.Install(j.Id, j.Packages, j.environ, args)

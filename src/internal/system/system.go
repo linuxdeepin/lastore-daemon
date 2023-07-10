@@ -112,12 +112,13 @@ var ResourceExitError = errors.New("resource exists")
 type Indicator func(JobProgressInfo)
 
 type System interface {
-	DownloadPackages(jobId string, packages []string, environ map[string]string, args []string) error
+	OptionToArgs(options map[string]string) []string
+	DownloadPackages(jobId string, packages []string, environ map[string]string, cmdArgs []string) error
 	DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error
-	Install(jobId string, packages []string, environ map[string]string, args []string) error
+	Install(jobId string, packages []string, environ map[string]string, cmdArgs []string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
 	DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error
-	UpdateSource(jobId string, environ map[string]string) error
+	UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error
 	Clean(jobId string) error
 	Abort(jobId string) error
 	AttachIndicator(Indicator)

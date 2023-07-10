@@ -326,7 +326,7 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	if uid != 0 {
+	if uid != 0 && systemdEventType(eventType) != OsVersionChanged {
 		err = fmt.Errorf("%q is not allowed to trigger system event", uid)
 		logger.Warning(err)
 		return dbusutil.ToError(err)

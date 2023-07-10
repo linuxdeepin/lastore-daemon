@@ -203,6 +203,8 @@ func GenerateUpdateInfos(outputPath string) error {
 			if os.IsNotExist(err) { // 该类型源文件不存在时,无需将错误写入到文件中
 				logger.Info(err)
 			} else {
+				// 错误写到error_update_infos.json文件中
+				outputErrorPath := fmt.Sprintf("error_%v", outputPath)
 				var updateInfoErr system.UpdateInfoError
 				pkgSysErr, ok := err.(*system.PkgSystemError)
 				if ok {
@@ -212,7 +214,7 @@ func GenerateUpdateInfos(outputPath string) error {
 					updateInfoErr.Type = "unknown"
 					updateInfoErr.Detail = err.Error()
 				}
-				return writeData(outputPath, updateInfoErr)
+				_ = writeData(outputErrorPath, updateInfoErr)
 			}
 		} else {
 			upgradeInfo = append(upgradeInfo, mapUpgradeInfo(

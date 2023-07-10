@@ -459,7 +459,16 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	if isExist {
 		return job, nil
 	}
+	isActiveCodeExist := system.IsActiveCodeExist()
+	if !isActiveCodeExist {
+		// 如果激活了，但是激活码还没有生成，此时不能检查系统更新，需要排除系统仓库
+		job.option = map[string]string{
+			"Dir::Etc::SourceList":  "/dev/null",
+			"Dir::Etc::SourceParts": system.OriginSourceDir,
+		}
+	}
 	if job != nil {
+		job.subRetryHookFn = handleUpdateSourceFailed
 		job.setHooks(map[string]func(){
 			string(system.RunningStatus): func() {
 				m.PropsMu.Lock()
@@ -1605,4 +1614,57 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 		m.updater.setUpdatablePackages(updatableApps)
 		m.updater.updateUpdatableApps()
 	}()
+}
+
+func handleUpdateSourceFailed(j *Job) {
+	// retry次数为2
+	// 第一次去掉非系统，非安全，非第三方仓库的源
+	// 第二次去掉第三方仓库的源
+	retry := j.retry
+	if retry > 2 {
+		retry = 2
+		j.retry = retry
+	}
+	retryMap := map[int]system.UpdateType{
+		2: system.AllUpdate,
+		1: system.SystemUpdate | system.SecurityUpdate,
+	}
+	isActiveCodeExist := system.IsActiveCodeExist()
+	updateType := retryMap[retry]
+	if !isActiveCodeExist {
+		updateType &= ^system.SystemUpdate
+	}
+	err := system.CustomSourceWrapper(updateType, func(path string, unref func()) error {
+		// 重新设置apt命令参数
+		info, err := os.Stat(path)
+		if err != nil {
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if info.IsDir() {
+			j.option = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": path,
+			}
+		} else {
+			j.option = map[string]string{
+				"Dir::Etc::SourceList":  path,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
+		j.wrapHooks(map[string]func(){
+			string(system.EndStatus): func() {
+				if unref != nil {
+					unref()
+				}
+			},
+		})
+		return nil
+	})
+	if err != nil {
+		logger.Warning(err)
+	}
+
 }

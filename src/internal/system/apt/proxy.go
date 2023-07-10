@@ -250,6 +250,15 @@ func safeStart(c *aptCommand) error {
 	return nil
 }
 
+func (p *APTSystem) OptionToArgs(options map[string]string) []string {
+	var args []string
+	for key, value := range options { // apt 命令执行参数
+		args = append(args, "-o")
+		args = append(args, fmt.Sprintf("%v=%v", key, value))
+	}
+	return args
+}
+
 func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, args []string) error {
 	err := checkPkgSystemError(false)
 	if err != nil {
@@ -311,8 +320,8 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 	return safeStart(c)
 }
 
-func (p *APTSystem) UpdateSource(jobId string, environ map[string]string) error {
-	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, nil)
+func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error {
+	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, cmdArgs)
 	c.atExitFn = func() bool {
 		// 无网络时检查更新失败,exitCode为0,空间不足(不确定exit code)导致需要特殊处理
 		if c.exitCode == ExitSuccess && bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
