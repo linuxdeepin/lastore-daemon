@@ -31,6 +31,7 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
 	"github.com/linuxdeepin/go-lib/gettext"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 type Manager struct {
@@ -481,8 +482,10 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.handleUpdateInfosChanged(true)
 				if len(m.UpgradableApps) > 0 {
 					m.messageManager.reportLog(updateStatus, true, "")
+					m.installSpecialPackageSync("uos-release-note", job.option, environ)
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
+					logger.Info("install uos-release-note done,update source succeed.")
 					if !m.updater.AutoDownloadUpdates {
 						// msg := gettext.Tr("New system edition available")
 						msg := gettext.Tr("New version available!")
@@ -780,39 +783,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				// 只处理系统更新
 				if mode&system.SystemUpdate != 0 {
 					// 系统更新成功后,最后安装deepin-desktop-base包,安装成功后进度更新为100%并变成succeed状态
-					var wg sync.WaitGroup
-					wg.Add(1)
-					go func() {
-						m.do.Lock()
-						defer m.do.Unlock()
-						isExist, installJob, err := m.jobManager.CreateJob("install base", system.OnlyInstallJobType, []string{"deepin-desktop-base"}, environ, nil)
-						if err != nil {
-							wg.Done()
-							logger.Warning(err)
-							return
-						}
-						if isExist {
-							wg.Done()
-							return
-						}
-						if installJob != nil {
-							installJob.option = job.option
-							installJob.setHooks(map[string]func(){
-								string(system.FailedStatus): func() {
-									wg.Done()
-								},
-								string(system.SucceedStatus): func() {
-									wg.Done()
-								},
-							})
-							if err := m.jobManager.addJob(installJob); err != nil {
-								logger.Warning(err)
-								wg.Done()
-								return
-							}
-						}
-					}()
-					wg.Wait()
+					m.installSpecialPackageSync("deepin-desktop-base", job.option, environ)
 					logger.Info("install deepin-desktop-base done,upgrade succeed.")
 				}
 				m.statusManager.SetUpdateStatus(mode, system.Upgraded)
@@ -1666,5 +1637,42 @@ func handleUpdateSourceFailed(j *Job) {
 	if err != nil {
 		logger.Warning(err)
 	}
+}
 
+func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]string, environ map[string]string) {
+	if strv.Strv(m.updater.UpdatablePackages).Contains(pkgName) || system.QueryPackageInstallable(pkgName) {
+		// 该包可更新或者该包未安装可以安装
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		m.do.Lock()
+		defer m.do.Unlock()
+		isExist, installJob, err := m.jobManager.CreateJob(fmt.Sprintf("install %v", pkgName), system.OnlyInstallJobType, []string{pkgName}, environ, nil)
+		if err != nil {
+			wg.Done()
+			logger.Warning(err)
+			return
+		}
+		if isExist {
+			wg.Done()
+			return
+		}
+		if installJob != nil {
+			installJob.option = option
+			installJob.setHooks(map[string]func(){
+				string(system.FailedStatus): func() {
+					wg.Done()
+				},
+				string(system.SucceedStatus): func() {
+					wg.Done()
+				},
+			})
+			if err := m.jobManager.addJob(installJob); err != nil {
+				logger.Warning(err)
+				wg.Done()
+				return
+			}
+		}
+		wg.Wait()
+	}
 }
