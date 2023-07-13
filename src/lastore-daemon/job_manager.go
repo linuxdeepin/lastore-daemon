@@ -187,7 +187,7 @@ func (jm *JobManager) markStart(job *Job) error {
 
 	job.PropsMu.Lock()
 	if job.Status != system.ReadyStatus {
-		err := TransitionJobState(job, system.ReadyStatus, false)
+		err := TransitionJobState(job, system.ReadyStatus)
 		if err != nil {
 			job.PropsMu.Unlock()
 			return err
@@ -208,7 +208,7 @@ func (jm *JobManager) markReady(job *Job) error {
 
 	job.PropsMu.Lock()
 	if job.Status != system.ReadyStatus {
-		err := TransitionJobState(job, system.ReadyStatus, false)
+		err := TransitionJobState(job, system.ReadyStatus)
 		if err != nil {
 			job.PropsMu.Unlock()
 			return err
@@ -216,25 +216,6 @@ func (jm *JobManager) markReady(job *Job) error {
 	}
 	job.PropsMu.Unlock()
 	return nil
-}
-
-// markReload 当job的参数需要变化时,标记为reload,重新执行reload的hook完成修改
-func (jm *JobManager) markReload(job *Job) error {
-	jm.markDirty()
-	job.PropsMu.Lock()
-	if job.Status != system.ReloadStatus {
-		err := TransitionJobState(job, system.ReloadStatus, true)
-		if err != nil {
-			job.PropsMu.Unlock()
-			return err
-		}
-	}
-	job.PropsMu.Unlock()
-	queue, ok := jm.queues[job.queueName]
-	if !ok {
-		return system.NotFoundError("MarkStart in queues" + job.queueName)
-	}
-	return queue.Raise(job.Id)
 }
 
 // MarkStart transition the Job status to ReadyStatus
@@ -269,7 +250,7 @@ func (jm *JobManager) CleanJob(jobId string) error {
 	if ValidTransitionJobState(job.Status, system.EndStatus) {
 		job.next = nil
 	}
-	return TransitionJobState(job, system.EndStatus, false)
+	return TransitionJobState(job, system.EndStatus)
 }
 
 func (jm *JobManager) pauseJob(job *Job) error {
@@ -284,7 +265,7 @@ func (jm *JobManager) pauseJob(job *Job) error {
 		}
 	}
 
-	return TransitionJobState(job, system.PausedStatus, job.needReload)
+	return TransitionJobState(job, system.PausedStatus)
 }
 
 // PauseJob try aborting the job and transition the status to PauseStatus
@@ -297,6 +278,26 @@ func (jm *JobManager) PauseJob(jobId string) error {
 	err := jm.pauseJob(job)
 	job.PropsMu.Unlock()
 	return err
+}
+
+// ForceAbortAndRetry 终止该job，并将退出状态设置为failed
+func (jm *JobManager) ForceAbortAndRetry(job *Job) error {
+	job.PropsMu.Lock()
+	defer job.PropsMu.Unlock()
+	if job.Status == system.RunningStatus {
+		if job.retry < 1 {
+			job.retry = 1
+		}
+		err := jm.system.AbortWithFailed(job.Id)
+		if err != nil {
+			return err
+		}
+	}
+	if job.Status == system.FailedStatus && job.retry < 1 {
+		job.retry = 1
+	}
+
+	return nil
 }
 
 // Dispatch transition Job status in Job Queues
@@ -385,7 +386,6 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 	for _, job := range jobs {
 		job.PropsMu.RLock()
 		jobStatus := job.Status
-		jobLastStatus := job.lastStatus
 		job.PropsMu.RUnlock()
 
 		if jobStatus == system.FailedStatus {
@@ -394,73 +394,10 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			logger.Infof("Retry failed Job %v\n", job)
 		}
 
-		if job.needReload {
-			logger.Infof("need reload  %v job status:%v", job.Id, jobStatus)
-			switch jobStatus {
-			case system.RunningStatus:
-				job.PropsMu.Lock()
-				err := jm.pauseJob(job)
-				if err != nil {
-					logger.Warning(err)
-					job.PropsMu.Unlock()
-					continue
-				}
-				job.lastStatus = system.RunningStatus
-				job.PropsMu.Unlock()
-				continue
-			case system.FailedStatus, system.PausedStatus, system.ReadyStatus:
-				job.PropsMu.Lock()
-				job.lastStatus = jobStatus
-				job.PropsMu.Unlock()
-				err := jm.markReload(job)
-				if err != nil {
-					logger.Warning(err)
-					continue
-				}
-				job.needReload = false
-				continue
-			}
-		}
-		if jobStatus == system.ReloadStatus { // 对reload状态的job进行处理，还原至reload前的状态
-			switch jobLastStatus {
-			case system.FailedStatus:
-				logger.Info("recover failed")
-				job.PropsMu.Lock()
-				err := TransitionJobState(job, system.FailedStatus, true)
-				if err != nil {
-					logger.Warning(err)
-				}
-				job.PropsMu.Unlock()
-				continue
-			case system.ReadyStatus:
-				logger.Info("recover ready")
-				err := jm.markReady(job)
-				if err != nil {
-					logger.Warning(err)
-					continue
-				}
-			case system.RunningStatus:
-				logger.Info("recover running(ready)")
-				err := jm.markStart(job)
-				if err != nil {
-					logger.Warning(err)
-					continue
-				}
-			case system.PausedStatus:
-				logger.Info("recover paused")
-				job.PropsMu.Lock()
-				err := jm.pauseJob(job)
-				if err != nil {
-					logger.Warning(err)
-				}
-				job.PropsMu.Unlock()
-				continue
-			}
-		}
 		err := StartSystemJob(jm.system, job)
 		if err != nil {
 			job.PropsMu.Lock()
-			_ = TransitionJobState(job, system.FailedStatus, false)
+			_ = TransitionJobState(job, system.FailedStatus)
 			job.PropsMu.Unlock()
 			logger.Errorf("StartSystemJob failed %v :%v\n", job, err)
 

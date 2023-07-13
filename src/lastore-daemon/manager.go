@@ -469,7 +469,9 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		}
 	}
 	if job != nil {
-		job.subRetryHookFn = handleUpdateSourceFailed
+		job.subRetryHookFn = func(job *Job) {
+			handleUpdateSourceFailed(job)
+		}
 		job.setHooks(map[string]func(){
 			string(system.RunningStatus): func() {
 				m.PropsMu.Lock()
@@ -917,8 +919,13 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	for currentJob != nil {
 		j := currentJob
 		currentJob = currentJob.next
-		if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
-			j.option[aptLimitKey] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
+		limitEnable, limitConfig := m.updater.GetLimitConfig()
+		if limitEnable {
+			j.option[aptLimitKey] = limitConfig
+		}
+		j.subRetryHookFn = func(job *Job) {
+			// 下载限速的配置修改需要在job失败重试的时候修改配置(此处失败为手动终止设置的失败状态)
+			m.handleDownloadLimitChanged(job)
 		}
 		j.setHooks(map[string]func(){
 			string(system.ReadyStatus): func() {
@@ -981,20 +988,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						action := []string{"view", gettext.Tr("View")}
 						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,network")}
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-					}
-				}
-			},
-			// 在reload状态时,修改job的配置
-			string(system.ReloadStatus): func() {
-				logger.Infof("job reload option:%+v", j.option)
-				if m.updater.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled {
-					if j.option == nil {
-						j.option = make(map[string]string)
-					}
-					j.option[aptLimitKey] = m.updater.downloadSpeedLimitConfigObj.LimitSpeed
-				} else {
-					if j.option != nil {
-						delete(j.option, aptLimitKey)
 					}
 				}
 			},
@@ -1557,9 +1550,9 @@ func (m *Manager) closeNotify(id uint32) error {
 	return nil
 }
 
-// reloadPrepareDistUpgradeJob 标记下载job状态为reload
-func (m *Manager) reloadPrepareDistUpgradeJob() {
-	// 标记job状态为reload
+// ChangePrepareDistUpgradeJobOption 当下载job的配置需要修改,通过该接口触发
+func (m *Manager) ChangePrepareDistUpgradeJobOption() {
+	logger.Info("start changed download job option by ForceAbortAndRetry")
 	prepareUpgradeTypeList := []string{
 		system.PrepareDistUpgradeJobType,
 		system.PrepareSystemUpgradeJobType,
@@ -1569,7 +1562,10 @@ func (m *Manager) reloadPrepareDistUpgradeJob() {
 	for _, jobType := range prepareUpgradeTypeList {
 		job := m.jobManager.findJobById(genJobId(jobType))
 		if job != nil {
-			job.needReload = true
+			err := m.jobManager.ForceAbortAndRetry(job)
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 	}
 }
@@ -1585,6 +1581,20 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 		m.updater.setUpdatablePackages(updatableApps)
 		m.updater.updateUpdatableApps()
 	}()
+}
+
+func (m *Manager) handleDownloadLimitChanged(job *Job) {
+	limitEnable, limitConfig := m.updater.GetLimitConfig()
+	if limitEnable {
+		if job.option == nil {
+			job.option = make(map[string]string)
+		}
+		job.option[aptLimitKey] = limitConfig
+	} else {
+		if job.option != nil {
+			delete(job.option, aptLimitKey)
+		}
+	}
 }
 
 func handleUpdateSourceFailed(j *Job) {

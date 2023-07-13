@@ -220,8 +220,7 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 					logger.Warning(err)
 					return
 				}
-				// 当限速配置修改,需要reload所有running paused ready failed的job
-				u.manager.reloadPrepareDistUpgradeJob()
+				u.manager.ChangePrepareDistUpgradeJobOption()
 			}
 			logger.Info("update limit config")
 			return

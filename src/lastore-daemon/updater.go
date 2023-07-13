@@ -272,3 +272,7 @@ func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []str
 	}
 	return updatableApps
 }
+
+func (u *Updater) GetLimitConfig() (bool, string) {
+	return u.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled, u.downloadSpeedLimitConfigObj.LimitSpeed
+}

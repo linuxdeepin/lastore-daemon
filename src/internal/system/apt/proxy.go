@@ -350,6 +350,13 @@ func (p *APTSystem) Abort(jobId string) error {
 	return system.NotFoundError("abort " + jobId)
 }
 
+func (p *APTSystem) AbortWithFailed(jobId string) error {
+	if c := p.FindCMD(jobId); c != nil {
+		return c.AbortWithFailed()
+	}
+	return system.NotFoundError("abort " + jobId)
+}
+
 func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error {
 	WaitDpkgLockRelease()
 	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, append([]string{errType}, cmdArgs...))

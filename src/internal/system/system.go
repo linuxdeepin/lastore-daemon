@@ -22,7 +22,6 @@ const (
 	SucceedStatus Status = "succeed"
 	PausedStatus  Status = "paused"
 	EndStatus     Status = "end"
-	ReloadStatus  Status = "reload"
 )
 
 const (
@@ -121,6 +120,7 @@ type System interface {
 	UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error
 	Clean(jobId string) error
 	Abort(jobId string) error
+	AbortWithFailed(jobId string) error
 	AttachIndicator(Indicator)
 	FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error
 }

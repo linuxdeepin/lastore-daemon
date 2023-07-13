@@ -18,7 +18,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 	}
 	j.PropsMu.Lock()
 	j.setPropDescription("")
-	err := TransitionJobState(j, system.RunningStatus, false)
+	err := TransitionJobState(j, system.RunningStatus)
 	j.PropsMu.Unlock()
 	if err != nil {
 		return err
@@ -63,7 +63,6 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 			system.RunningStatus,
 			system.PausedStatus,
 			system.EndStatus,
-			system.ReloadStatus,
 		},
 		system.RunningStatus: {
 			system.FailedStatus,
@@ -73,7 +72,6 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		system.FailedStatus: {
 			system.ReadyStatus,
 			system.EndStatus,
-			system.ReloadStatus,
 		},
 		system.SucceedStatus: {
 			system.EndStatus,
@@ -81,12 +79,6 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 		system.PausedStatus: {
 			system.ReadyStatus,
 			system.EndStatus,
-			system.ReloadStatus,
-		},
-		system.ReloadStatus: {
-			system.ReadyStatus,
-			system.PausedStatus,
-			system.FailedStatus,
 		},
 	}
 
@@ -103,7 +95,8 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 }
 
 // TransitionJobState 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
-func TransitionJobState(j *Job, to system.Status, inhibitSignalEmit bool) error {
+func TransitionJobState(j *Job, to system.Status) error {
+	var inhibitSignalEmit = false
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
 	}
@@ -116,15 +109,11 @@ func TransitionJobState(j *Job, to system.Status, inhibitSignalEmit bool) error 
 		j.Status = to
 		return nil
 	}
-	if to == system.PausedStatus && inhibitSignalEmit {
-		logger.Info("reload job,don't need handle pause hook")
-	} else {
-		hookFn := j.getHook(string(to))
-		if hookFn != nil {
-			j.PropsMu.Unlock()
-			hookFn()
-			j.PropsMu.Lock()
-		}
+	hookFn := j.getHook(string(to))
+	if hookFn != nil {
+		j.PropsMu.Unlock()
+		hookFn()
+		j.PropsMu.Lock()
 	}
 	j.Status = to
 	if NotUseDBus {
@@ -138,7 +127,7 @@ func TransitionJobState(j *Job, to system.Status, inhibitSignalEmit bool) error 
 	}
 
 	if j.Status == system.SucceedStatus {
-		return TransitionJobState(j, system.EndStatus, false)
+		return TransitionJobState(j, system.EndStatus)
 	}
 	return nil
 }

@@ -425,6 +425,26 @@ func (c *aptCommand) Abort() error {
 	return system.NotSupportError
 }
 
+func (c *aptCommand) AbortWithFailed() error {
+	if c.Cancelable {
+		c.aptMu.Lock()
+		defer c.aptMu.Unlock()
+		if c.apt.Process == nil {
+			return errors.New("the process has not yet started")
+		}
+
+		logger.Debugf("Abort Command: %v\n", c)
+		c.exitCode = ExitFailure
+		var err error
+		pgid, err := syscall.Getpgid(c.apt.Process.Pid)
+		if err != nil {
+			return err
+		}
+		return syscall.Kill(-pgid, 2)
+	}
+	return system.NotSupportError
+}
+
 func (c *aptCommand) updateProgress() {
 	b := bufio.NewReader(c.aptPipe)
 	for {
