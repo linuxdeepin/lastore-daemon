@@ -848,9 +848,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 	var needDownloadSize float64
-	if needDownloadSize, _, err = system.QuerySourceDownloadSize(mode); err == nil && needDownloadSize == 0 {
-		return nil, system.NotFoundError("no need download")
-	}
+	needDownloadSize, _, _ = system.QuerySourceDownloadSize(mode)
+	// 不再处理needDownloadSize == 0的情况,因为有可能是其他仓库包含了该仓库的包,导致该仓库无需下载,可以直接继续后续流程,用来切换该仓库的状态
 	// 下载前检查/var分区的磁盘空间是否足够下载,
 	isInsufficientSpace := false
 	content, err := exec.Command("/bin/sh", []string{
