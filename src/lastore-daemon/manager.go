@@ -308,12 +308,13 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	if isExist {
 		return job, nil
 	}
-	job.setHooks(map[string]func(){
-		string(system.SucceedStatus): func() {
+	job.setHooks(map[string]func() error{
+		string(system.SucceedStatus): func() error {
 			msg := gettext.Tr("Removed successfully")
 			go m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			return nil
 		},
-		string(system.FailedStatus): func() {
+		string(system.FailedStatus): func() error {
 			msg := gettext.Tr("Failed to remove the app")
 			action := []string{
 				"retry",
@@ -325,6 +326,7 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 				"x-deepin-action-retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.StartJob,string:%s", job.Id)),
 				"x-deepin-action-cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.CleanJob,string:%s", job.Id))}
 			go m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			return nil
 		},
 	})
 	if err := m.jobManager.addJob(job); err != nil {
@@ -472,18 +474,25 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		job.subRetryHookFn = func(job *Job) {
 			handleUpdateSourceFailed(job)
 		}
-		job.setHooks(map[string]func(){
-			string(system.RunningStatus): func() {
+		job.setHooks(map[string]func() error{
+			string(system.RunningStatus): func() error {
+				// 离线升级应该不考虑该情况
+				if !m.messageManager.genUpdatePolicyByToken() {
+					job.retry = 0
+					return errors.New("failed to get update policy by token")
+				}
+				m.updater.setPropUpdateTarget(m.messageManager.getUpdateTarget())
 				m.PropsMu.Lock()
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				// 检查更新需要重置备份状态,主要是处理备份失败后再检查更新,会直接显示失败的场景
 				m.statusManager.SetABStatus(system.AllUpdate, system.NotBackup, system.NoABError)
+				return nil
 			},
-			string(system.SucceedStatus): func() {
+			string(system.SucceedStatus): func() error {
 				m.handleUpdateInfosChanged(true)
 				if len(m.UpgradableApps) > 0 {
-					m.messageManager.reportLog(updateStatus, true, "")
+					m.messageManager.reportLog(updateStatusReport, true, "")
 					m.installSpecialPackageSync("uos-release-note", job.option, environ)
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
@@ -496,10 +505,11 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
-					m.messageManager.reportLog(updateStatus, false, "")
+					m.messageManager.reportLog(updateStatusReport, false, "")
 				}
+				return nil
 			},
-			string(system.FailedStatus): func() {
+			string(system.FailedStatus): func() error {
 				// 网络问题检查更新失败和空间不足下载索引失败,需要发通知
 				var errorContent = struct {
 					ErrType   string
@@ -518,7 +528,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
 				}
-				m.messageManager.reportLog(updateStatus, false, job.Description)
+				m.messageManager.reportLog(updateStatusReport, false, job.Description)
+				return nil
 			},
 		})
 	}
@@ -671,8 +682,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			})
 		}
 		// 设置hook
-		job.setHooks(map[string]func(){
-			string(system.RunningStatus): func() {
+		job.setHooks(map[string]func() error{
+			string(system.RunningStatus): func() error {
 				if needChangeGrub {
 					// 开始更新时修改grub默认入口为rollback
 					err := m.grub.changeGrubDefaultEntry(rollbackBootEntry)
@@ -690,8 +701,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				system.HandleDelayPackage(true, []string{
 					"deepin-desktop-base",
 				})
+				return nil
 			},
-			string(system.FailedStatus): func() {
+			string(system.FailedStatus): func() error {
 				// 状态更新为failed
 				var errorContent = struct {
 					ErrType   string
@@ -758,14 +770,15 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 					defer m.inhibitAutoQuitCountSub()
 					m.messageManager.postSystemUpgradeMessage(upgradeFailed, job, mode)
 				}()
-				m.messageManager.reportLog(upgradeStatus, false, job.Description)
+				m.messageManager.reportLog(upgradeStatusReport, false, job.Description)
 				m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 				// unmask deepin-desktop-base 无需继续安装
 				system.HandleDelayPackage(false, []string{
 					"deepin-desktop-base",
 				})
+				return nil
 			},
-			string(system.SucceedStatus): func() {
+			string(system.SucceedStatus): func() error {
 				if needChangeGrub {
 					// 更新成功后修改grub默认入口为当前系统入口
 					err := m.grub.changeGrubDefaultEntry(normalBootEntry)
@@ -795,16 +808,19 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					m.messageManager.postSystemUpgradeMessage(upgradeSucceed, job, mode)
+					m.messageManager.UpdateBaselineFile()
 				}()
 
-				m.messageManager.reportLog(upgradeStatus, true, "")
+				m.messageManager.reportLog(upgradeStatusReport, true, "")
+				return nil
 			},
-			string(system.EndStatus): func() {
+			string(system.EndStatus): func() error {
 				// wrapper的资源释放
 				if unref != nil {
 					unref()
 				}
 				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
+				return nil
 			},
 		})
 		if needAdd { // 分类下载的job需要外部判断是否add
@@ -817,7 +833,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		}
 		return nil
 	})
-	if err != nil && err != JobExistError { // exist的err通过最后的return返回即可
+	if err != nil && !errors.Is(err, JobExistError) { // exist的err通过最后的return返回即可
 		logger.Warning(err)
 		return nil, err
 	}
@@ -926,13 +942,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			// 下载限速的配置修改需要在job失败重试的时候修改配置(此处失败为手动终止设置的失败状态)
 			m.handleDownloadLimitChanged(job)
 		}
-		j.setHooks(map[string]func(){
-			string(system.ReadyStatus): func() {
+		j.setHooks(map[string]func() error{
+			string(system.ReadyStatus): func() error {
 				m.PropsMu.Lock()
 				m.isDownloading = true
 				m.PropsMu.Unlock()
+				return nil
 			},
-			string(system.RunningStatus): func() {
+			string(system.RunningStatus): func() error {
 				m.PropsMu.Lock()
 				m.isDownloading = true
 				m.PropsMu.Unlock()
@@ -946,16 +963,18 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
 					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				})
+				return nil
 			},
-			string(system.PausedStatus): func() {
+			string(system.PausedStatus): func() error {
 				m.statusManager.SetUpdateStatus(mode, system.DownloadPause)
+				return nil
 			},
-			string(system.FailedStatus): func() {
+			string(system.FailedStatus): func() error {
 				m.PropsMu.Lock()
 				m.isDownloading = false
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
-				m.messageManager.reportLog(downloadStatus, false, j.Description)
+				m.messageManager.reportLog(downloadStatusReport, false, j.Description)
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
 				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
@@ -989,8 +1008,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
+				return nil
 			},
-			string(system.SucceedStatus): func() {
+			string(system.SucceedStatus): func() error {
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.CanUpgrade)
 				if j.next == nil {
 					msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
@@ -1002,10 +1022,11 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Show")}
 					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-					m.messageManager.reportLog(downloadStatus, true, "")
+					m.messageManager.reportLog(downloadStatusReport, true, "")
 				}
+				return nil
 			},
-			string(system.EndStatus): func() {
+			string(system.EndStatus): func() error {
 				if j.next == nil {
 					logger.Info("running in last end hook")
 					m.PropsMu.Lock()
@@ -1020,6 +1041,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}
 					m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 				}
+				return nil
 			},
 		})
 	}
@@ -1053,7 +1075,7 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 					}
 				}
 				upgradeJob, err = m.distUpgrade(sender, category, true, false, false)
-				if err != nil && err != JobExistError {
+				if err != nil && !errors.Is(err, JobExistError) {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
 						logger.Warning(err)
@@ -1110,11 +1132,12 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	if isExist {
 		return job, nil
 	}
-	job.setHooks(map[string]func(){
-		string(system.EndStatus): func() {
+	job.setHooks(map[string]func() error{
+		string(system.EndStatus): func() error {
 			// 清理完成的通知
 			msg := gettext.Tr("Package cache wiped")
 			go m.sendNotify(updateNotifyShow, 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			return nil
 		},
 	})
 	if err := m.jobManager.addJob(job); err != nil {
@@ -1634,11 +1657,12 @@ func handleUpdateSourceFailed(j *Job) {
 				"Dir::Etc::SourceParts": "/dev/null",
 			}
 		}
-		j.wrapHooks(map[string]func(){
-			string(system.EndStatus): func() {
+		j.wrapHooks(map[string]func() error{
+			string(system.EndStatus): func() error {
 				if unref != nil {
 					unref()
 				}
+				return nil
 			},
 		})
 		return nil
@@ -1668,12 +1692,14 @@ func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]st
 		}
 		if installJob != nil {
 			installJob.option = option
-			installJob.setHooks(map[string]func(){
-				string(system.FailedStatus): func() {
+			installJob.setHooks(map[string]func() error{
+				string(system.FailedStatus): func() error {
 					wg.Done()
+					return nil
 				},
-				string(system.SucceedStatus): func() {
+				string(system.SucceedStatus): func() error {
 					wg.Done()
+					return nil
 				},
 			})
 			if err := m.jobManager.addJob(installJob); err != nil {

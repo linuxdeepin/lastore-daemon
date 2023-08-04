@@ -34,9 +34,10 @@ func TestJob(t *testing.T) {
 				t.Error("TestJob changed,type=", jobType)
 			}
 			// 测钩子，保证能设置成功就行
-			hooks := make(map[string]func())
-			hooks["test"] = func() {
+			hooks := make(map[string]func() error)
+			hooks["test"] = func() error {
 				job.Description = "testhook"
+				return nil
 			}
 			job.setHooks(hooks)
 			job.getHook("test")()

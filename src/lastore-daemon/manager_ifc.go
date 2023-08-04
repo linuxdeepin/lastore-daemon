@@ -423,17 +423,20 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	}
 
 	// 对hook进行包装:增加配置状态更新的操作
-	upgradeJob.wrapHooks(map[string]func(){
-		string(system.EndStatus): func() {
+	upgradeJob.wrapHooks(map[string]func() error{
+		string(system.EndStatus): func() error {
 			logger.Info("DistUpgradePartly:run wrap end hook")
+			return nil
 		},
-		string(system.SucceedStatus): func() {
+		string(system.SucceedStatus): func() error {
 			logger.Info("DistUpgradePartly:run wrap success hook")
 			inhibit(false)
+			return nil
 		},
-		string(system.FailedStatus): func() {
+		string(system.FailedStatus): func() error {
 			logger.Info("DistUpgradePartly:run wrap failed hook")
 			inhibit(false)
+			return nil
 		},
 	})
 	m.updateJobList()

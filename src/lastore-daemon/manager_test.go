@@ -65,6 +65,7 @@ func Test_saveUpdateSourceOnce(t *testing.T) {
 	err := kf.SaveToFile(lastoreUnitCache)
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
 	defer func() {
 		_ = os.RemoveAll(lastoreUnitCache) // lastore有生成时，有对应文件（0644），无权限删除；无生成时，单元测试生成，需要移除

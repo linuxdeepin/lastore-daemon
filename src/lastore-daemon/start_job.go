@@ -60,6 +60,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 func ValidTransitionJobState(from system.Status, to system.Status) bool {
 	validation := map[system.Status][]system.Status{
 		system.ReadyStatus: {
+			system.FailedStatus,
 			system.RunningStatus,
 			system.PausedStatus,
 			system.EndStatus,
@@ -112,8 +113,11 @@ func TransitionJobState(j *Job, to system.Status) error {
 	hookFn := j.getHook(string(to))
 	if hookFn != nil {
 		j.PropsMu.Unlock()
-		hookFn()
+		err := hookFn()
 		j.PropsMu.Lock()
+		if to == system.RunningStatus && err != nil {
+			return err
+		}
 	}
 	j.Status = to
 	if NotUseDBus {

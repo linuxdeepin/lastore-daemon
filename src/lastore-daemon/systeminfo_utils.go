@@ -56,6 +56,8 @@ type SystemInfo struct {
 	HardwareVersion string
 	OEMID           string
 	ProjectId       string
+	Baseline        string
+	SystemType      string
 }
 
 const (
@@ -117,6 +119,8 @@ func getSystemInfo() SystemInfo {
 	if err != nil {
 		logger.Warning("failed to get project id:", err)
 	}
+	systemInfo.Baseline = getBaseline()
+	systemInfo.SystemName = getSystemType()
 	return systemInfo
 }
 
@@ -391,6 +395,7 @@ func getOEMID() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(content), nil
 }
 

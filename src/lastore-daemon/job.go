@@ -51,7 +51,7 @@ type Job struct {
 
 	environ map[string]string
 
-	hooks   map[string]func()
+	hooks   map[string]func() error
 	hooksMu sync.Mutex
 
 	updateTyp system.UpdateType
@@ -200,20 +200,20 @@ func (j *Job) setError(e Error) {
 	j.setPropDescription(string(jsonBytes))
 }
 
-func (j *Job) getHook(name string) func() {
+func (j *Job) getHook(name string) func() error {
 	j.hooksMu.Lock()
 	fn := j.hooks[name]
 	j.hooksMu.Unlock()
 	return fn
 }
 
-func (j *Job) setHooks(hooks map[string]func()) {
+func (j *Job) setHooks(hooks map[string]func() error) {
 	j.hooksMu.Lock()
 	j.hooks = hooks
 	j.hooksMu.Unlock()
 }
 
-func (j *Job) wrapHooks(appendHooks map[string]func()) {
+func (j *Job) wrapHooks(appendHooks map[string]func() error) {
 	j.hooksMu.Lock()
 	defer j.hooksMu.Unlock()
 	if j.hooks == nil {
@@ -224,9 +224,12 @@ func (j *Job) wrapHooks(appendHooks map[string]func()) {
 		appendFn := fn
 		f, ok := j.hooks[key]
 		if ok {
-			j.hooks[key] = func() {
-				f()
-				appendFn()
+			j.hooks[key] = func() error {
+				err := f()
+				if err != nil {
+					return err
+				}
+				return appendFn()
 			}
 		} else {
 			j.hooks[key] = fn

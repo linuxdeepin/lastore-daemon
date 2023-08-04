@@ -21,7 +21,7 @@ func init() {
 	NotUseDBus = true
 }
 
-func (*testWrap) TestTranisition(c *C.C) {
+func (*testWrap) TestTransition(c *C.C) {
 	var data = []struct {
 		from  system.Status
 		to    system.Status
@@ -29,7 +29,7 @@ func (*testWrap) TestTranisition(c *C.C) {
 	}{
 		{system.ReadyStatus, system.ReadyStatus, false},
 		{system.ReadyStatus, system.RunningStatus, true},
-		{system.ReadyStatus, system.FailedStatus, false},
+		{system.ReadyStatus, system.FailedStatus, true},
 		{system.ReadyStatus, system.SucceedStatus, false},
 		{system.ReadyStatus, system.PausedStatus, true},
 		{system.ReadyStatus, system.EndStatus, true},

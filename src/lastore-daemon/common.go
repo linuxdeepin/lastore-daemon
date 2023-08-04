@@ -32,7 +32,7 @@ import (
 var _tokenUpdateMu sync.Mutex
 
 // 更新 99lastore-token.conf 文件的内容
-func updateTokenConfigFile() {
+func updateTokenConfigFile() string {
 	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
@@ -50,7 +50,9 @@ func updateTokenConfigFile() {
 	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
 	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
 	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
-	tokenSlice = append(tokenSlice, "id="+systemInfo.ProjectId)
+	tokenSlice = append(tokenSlice, "pid="+systemInfo.ProjectId)
+	tokenSlice = append(tokenSlice, "baseline="+systemInfo.Baseline)
+	tokenSlice = append(tokenSlice, "st="+systemInfo.SystemType)
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
@@ -58,6 +60,7 @@ func updateTokenConfigFile() {
 	if err != nil {
 		logger.Warning(err)
 	}
+	return token
 }
 
 var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file)://[^ ]+)`)
