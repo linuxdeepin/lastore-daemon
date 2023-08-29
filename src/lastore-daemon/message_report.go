@@ -86,36 +86,19 @@ func (m *messageReportManager) postSystemUpgradeMessage(upgradeStatus int, j *Jo
 	}
 	// updateType &= m.allowPostSystemUpgradeMessageType
 	var upgradeErrorMsg string
-	var version string
 	if upgradeStatus == upgradeFailed && j != nil {
 		upgradeErrorMsg = j.Description
 	}
-	infoMap, err := getOSVersionInfo()
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		version = strings.Join(
-			[]string{infoMap["MajorVersion"], infoMap["MinorVersion"], infoMap["OsBuild"]}, ".")
-	}
-
-	// sn, err := getSN()
-	// if err != nil {
-	// 	logger.Warning(err)
-	// }
 	hardwareId, err := getHardwareId()
 	if err != nil {
 		logger.Warning(err)
 	}
 
-	// sourceFilePath := system.GetCategorySourceMap()[updateType]
 	postContent := &upgradePostContent{
-		// SerialNumber:    sn,
 		MachineID:       hardwareId,
 		UpgradeStatus:   upgradeStatus,
 		UpgradeErrorMsg: upgradeErrorMsg,
 		TimeStamp:       time.Now().Unix(),
-		// SourceUrl:       getUpgradeUrls(sourceFilePath),
-		Version:         version,
 		PreBuild:        m.preBuild,
 		NextShowVersion: m.targetVersion,
 		PreBaseline:     m.preBaseline,
@@ -177,6 +160,11 @@ type tokenMessage struct {
 	Code   int           `json:"code"`
 	Data   updateMessage `json:"data"`
 }
+type tokenErrorMessage struct {
+	Result bool   `json:"result"`
+	Code   int    `json:"code"`
+	Msg    string `json:"msg"`
+}
 
 // 检查更新时将token数据发送给更新平台，获取本次更新信息
 func (m *messageReportManager) genUpdatePolicyByToken() bool {
@@ -215,6 +203,16 @@ func (m *messageReportManager) genUpdatePolicyByToken() bool {
 			err = json.Unmarshal(body, msg)
 			if err != nil {
 				logger.Warning(err)
+				return false
+			}
+			if !msg.Result {
+				errorMsg := &tokenErrorMessage{}
+				err = json.Unmarshal(body, errorMsg)
+				if err != nil {
+					logger.Warning(err)
+					return false
+				}
+				logger.Warning(errorMsg.Msg)
 				return false
 			}
 			m.targetBaseline = msg.Data.Version.Baseline
