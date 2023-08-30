@@ -138,9 +138,8 @@ func (m *messageReportManager) postSystemUpgradeMessage(upgradeStatus int, j *Jo
 }
 
 type version struct {
-	SystemType string `json:"systemtype"`
-	Version    string `json:"version"`
-	Baseline   string `json:"baseline"`
+	Version  string `json:"version"`
+	Baseline string `json:"baseline"`
 }
 
 type policy struct {
@@ -151,8 +150,9 @@ type policy struct {
 }
 
 type updateMessage struct {
-	Version version `json:"version"`
-	Policy  policy  `json:"policy"`
+	SystemType string  `json:"systemType"`
+	Version    version `json:"version"`
+	Policy     policy  `json:"policy"`
 }
 
 type tokenMessage struct {
@@ -217,7 +217,7 @@ func (m *messageReportManager) genUpdatePolicyByToken() bool {
 			}
 			m.targetBaseline = msg.Data.Version.Baseline
 			m.targetVersion = msg.Data.Version.Version
-			m.systemTypeFromPlatform = msg.Data.Version.SystemType
+			m.systemTypeFromPlatform = msg.Data.SystemType
 			m.checkTime = time.Now().String()
 			return true
 		}
