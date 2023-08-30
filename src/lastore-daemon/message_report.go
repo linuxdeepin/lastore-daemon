@@ -289,7 +289,7 @@ func (m *messageReportManager) reportLog(category reportCategory, status bool, d
 	}()
 }
 
-const baselinePath = "/etc/baseline"
+const baselinePath = "/etc/os-baseline"
 
 /*
 [General]
