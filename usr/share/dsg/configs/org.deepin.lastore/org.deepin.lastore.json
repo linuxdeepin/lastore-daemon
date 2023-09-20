@@ -246,7 +246,7 @@
     },
     "allow-post-system-upgrade-message-version": {
       "value": [
-        "Professional"
+        "Professional","E"
       ],
       "serial": 0,
       "flags": [
