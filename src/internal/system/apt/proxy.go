@@ -5,10 +5,12 @@
 package apt
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"internal/system"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -22,13 +24,13 @@ type APTSystem struct {
 	indicator system.Indicator
 }
 
-func New(systemSourceList []string, nonUnknownList []string) system.System {
+func New(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
 	p := &APTSystem{
 		cmdSet: make(map[string]*aptCommand),
 	}
 	WaitDpkgLockRelease()
-	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run()
-	p.initSource(systemSourceList, nonUnknownList)
+	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run() // TODO
+	p.initSource(systemSourceList, nonUnknownList, otherList)
 	return p
 }
 
@@ -367,7 +369,11 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	return c.Start()
 }
 
-func (p *APTSystem) initSource(systemSourceList []string, nonUnknownList []string) {
+func (p *APTSystem) CheckSystem(jobId string, checkType string) error {
+	return nil
+}
+
+func (p *APTSystem) initSource(systemSourceList []string, nonUnknownList []string, otherList []string) {
 	// apt初始化时执行一次，避免其他apt操作过程中删改软链接导致数据异常
 	err := system.UpdateUnknownSourceDir(nonUnknownList)
 	if err != nil {
@@ -378,4 +384,111 @@ func (p *APTSystem) initSource(systemSourceList []string, nonUnknownList []strin
 	if err != nil {
 		logger.Warning(err)
 	}
+	err = system.UpdateOtherSystemSourceDir(otherList)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = ioutil.WriteFile(system.PlatFormSourceFile, []byte{}, 0644)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+func ListInstallPackages(packages []string) ([]string, error) {
+	args := []string{
+		"-c", system.LastoreAptV2CommonConfPath,
+		"install", "-s",
+		"-o", "Debug::NoLocking=1",
+	}
+	args = append(args, packages...)
+	cmd := exec.Command("apt-get", args...) // #nosec G204
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	// NOTE: 这里不能使用命令的退出码来判断，因为 --assume-no 会让命令的退出码为 1
+	_ = cmd.Run()
+
+	const newInstalled = "The following additional packages will be installed:"
+	if bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) {
+		p := parseAptShowList(bytes.NewReader(outBuf.Bytes()), newInstalled)
+		return p, nil
+	}
+
+	err := ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+	return nil, err
+}
+
+// ListDistUpgradePackages return the pkgs from apt dist-upgrade
+// NOTE: the result strim the arch suffix
+func ListDistUpgradePackages(sourcePath string) ([]string, error) {
+	args := []string{
+		"-c", system.LastoreAptV2CommonConfPath,
+		"dist-upgrade", "--assume-no",
+		"-o", "Debug::NoLocking=1",
+	}
+	if info, err := os.Stat(sourcePath); err == nil {
+		if info.IsDir() {
+			args = append(args, "-o", "Dir::Etc::SourceList=/dev/null")
+			args = append(args, "-o", "Dir::Etc::SourceParts="+sourcePath)
+		} else {
+			args = append(args, "-o", "Dir::Etc::SourceList="+sourcePath)
+			args = append(args, "-o", "Dir::Etc::SourceParts=/dev/null")
+		}
+	} else {
+		return nil, err
+	}
+
+	cmd := exec.Command("apt-get", args...) // #nosec G204
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	// NOTE: 这里不能使用命令的退出码来判断，因为 --assume-no 会让命令的退出码为 1
+	_ = cmd.Run()
+
+	const upgraded = "The following packages will be upgraded:"
+	const newInstalled = "The following NEW packages will be installed:"
+	if bytes.Contains(outBuf.Bytes(), []byte(upgraded)) ||
+		bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) {
+
+		p := parseAptShowList(bytes.NewReader(outBuf.Bytes()), upgraded)
+		p = append(p, parseAptShowList(bytes.NewReader(outBuf.Bytes()), newInstalled)...)
+		return p, nil
+	}
+
+	err := ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+	return nil, err
+}
+
+func parseAptShowList(r io.Reader, title string) []string {
+	buf := bufio.NewReader(r)
+
+	var p []string
+
+	var line string
+	in := false
+
+	var err error
+	for err == nil {
+		line, err = buf.ReadString('\n')
+		if strings.TrimSpace(title) == strings.TrimSpace(line) {
+			in = true
+			continue
+		}
+
+		if !in {
+			continue
+		}
+
+		if !strings.HasPrefix(line, " ") {
+			break
+		}
+
+		for _, f := range strings.Fields(line) {
+			p = append(p, strings.Split(f, ":")[0])
+		}
+	}
+
+	return p
 }

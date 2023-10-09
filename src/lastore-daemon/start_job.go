@@ -52,6 +52,10 @@ func StartSystemJob(sys system.System, j *Job) error {
 	case system.FixErrorJobType:
 		errType := j.Packages[0]
 		return sys.FixError(j.Id, errType, j.environ, args)
+
+	case system.CheckSystemJobType:
+		return sys.CheckSystem(j.Id, j.Packages[0])
+
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)
 	}
@@ -110,11 +114,12 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.Status = to
 		return nil
 	}
-	hookFn := j.getHook(string(to))
+	hookFn := j.getPreHook(string(to))
 	if hookFn != nil {
 		j.PropsMu.Unlock()
 		err := hookFn()
 		j.PropsMu.Lock()
+		// 在切换状态时触发从更新平台获取数据，如果出错，需要终止并返回error
 		if to == system.RunningStatus && err != nil {
 			return err
 		}
@@ -129,7 +134,15 @@ func TransitionJobState(j *Job, to system.Status) error {
 			logger.Warning(err)
 		}
 	}
-
+	hookFn = j.getAfterHook(string(to))
+	if hookFn != nil {
+		j.PropsMu.Unlock()
+		err := hookFn()
+		j.PropsMu.Lock()
+		if err != nil {
+			return err
+		}
+	}
 	if j.Status == system.SucceedStatus {
 		return TransitionJobState(j, system.EndStatus)
 	}

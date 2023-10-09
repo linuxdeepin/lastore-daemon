@@ -51,8 +51,11 @@ type Job struct {
 
 	environ map[string]string
 
-	hooks   map[string]func() error
-	hooksMu sync.Mutex
+	preChangeStatusHooks   map[string]func() error
+	preChangeStatusHooksMu sync.Mutex
+
+	afterChangedHooks   map[string]func() error
+	afterChangedHooksMu sync.Mutex
 
 	updateTyp system.UpdateType
 }
@@ -71,7 +74,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 
 		option:    make(map[string]string),
 		queueName: queueName,
-		retry:     2,
+		retry:     1,
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
@@ -84,7 +87,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 }
 
 func (j *Job) initDownloadSize() {
-	s, _, err := system.QueryPackageDownloadSize(system.AllUpdate, j.Packages...)
+	s, _, err := system.QueryPackageDownloadSize(system.AllCheckUpdate, j.Packages...)
 	if err != nil {
 		logger.Warningf("initDownloadSize failed: %v", err)
 		return
@@ -200,31 +203,31 @@ func (j *Job) setError(e Error) {
 	j.setPropDescription(string(jsonBytes))
 }
 
-func (j *Job) getHook(name string) func() error {
-	j.hooksMu.Lock()
-	fn := j.hooks[name]
-	j.hooksMu.Unlock()
+func (j *Job) getPreHook(name string) func() error {
+	j.preChangeStatusHooksMu.Lock()
+	fn := j.preChangeStatusHooks[name]
+	j.preChangeStatusHooksMu.Unlock()
 	return fn
 }
 
-func (j *Job) setHooks(hooks map[string]func() error) {
-	j.hooksMu.Lock()
-	j.hooks = hooks
-	j.hooksMu.Unlock()
+func (j *Job) setPreHooks(hooks map[string]func() error) {
+	j.preChangeStatusHooksMu.Lock()
+	j.preChangeStatusHooks = hooks
+	j.preChangeStatusHooksMu.Unlock()
 }
 
-func (j *Job) wrapHooks(appendHooks map[string]func() error) {
-	j.hooksMu.Lock()
-	defer j.hooksMu.Unlock()
-	if j.hooks == nil {
-		j.hooks = appendHooks
+func (j *Job) wrapPreHooks(appendHooks map[string]func() error) {
+	j.preChangeStatusHooksMu.Lock()
+	defer j.preChangeStatusHooksMu.Unlock()
+	if j.preChangeStatusHooks == nil {
+		j.preChangeStatusHooks = appendHooks
 		return
 	}
 	for key, fn := range appendHooks {
 		appendFn := fn
-		f, ok := j.hooks[key]
+		f, ok := j.preChangeStatusHooks[key]
 		if ok {
-			j.hooks[key] = func() error {
+			j.preChangeStatusHooks[key] = func() error {
 				err := f()
 				if err != nil {
 					return err
@@ -232,7 +235,44 @@ func (j *Job) wrapHooks(appendHooks map[string]func() error) {
 				return appendFn()
 			}
 		} else {
-			j.hooks[key] = fn
+			j.preChangeStatusHooks[key] = fn
+		}
+	}
+}
+
+func (j *Job) getAfterHook(name string) func() error {
+	j.afterChangedHooksMu.Lock()
+	fn := j.afterChangedHooks[name]
+	j.afterChangedHooksMu.Unlock()
+	return fn
+}
+
+func (j *Job) setAfterHooks(hooks map[string]func() error) {
+	j.afterChangedHooksMu.Lock()
+	j.afterChangedHooks = hooks
+	j.afterChangedHooksMu.Unlock()
+}
+
+func (j *Job) wrapAfterHooks(appendHooks map[string]func() error) {
+	j.afterChangedHooksMu.Lock()
+	defer j.afterChangedHooksMu.Unlock()
+	if j.afterChangedHooks == nil {
+		j.afterChangedHooks = appendHooks
+		return
+	}
+	for key, fn := range appendHooks {
+		appendFn := fn
+		f, ok := j.afterChangedHooks[key]
+		if ok {
+			j.afterChangedHooks[key] = func() error {
+				err := f()
+				if err != nil {
+					return err
+				}
+				return appendFn()
+			}
+		} else {
+			j.afterChangedHooks[key] = fn
 		}
 	}
 }

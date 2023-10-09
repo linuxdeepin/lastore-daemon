@@ -7,12 +7,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
-	"syscall"
-
 	"internal/system"
 	"internal/utils"
+	"strconv"
+	"strings"
 
 	"github.com/godbus/dbus"
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
@@ -60,7 +58,7 @@ func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
 	jobObj, err := m.distUpgrade(sender, mode, false, true, false)
-	if err != nil && err != JobExistError {
+	if err != nil && !errors.Is(err, JobExistError) {
 		return "/", dbusutil.ToError(err)
 	}
 	return jobObj.getPath(), nil
@@ -153,7 +151,7 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 		}
 	} else {
 		// 查询包(可能不止一个)的大小,即使当前开启的仓库没有包含该包,依旧返回该包的大小
-		_, allPackageSize, err = system.QueryPackageDownloadSize(system.AllUpdate, packages...)
+		_, allPackageSize, err = system.QueryPackageDownloadSize(system.AllCheckUpdate, packages...)
 	}
 	if err != nil || allPackageSize == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), allPackageSize, err)
@@ -342,8 +340,7 @@ func (m *Manager) UnRegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbu
 		return dbusutil.ToError(err)
 	}
 
-	uidStr := strconv.Itoa(int(uid))
-	err = m.userAgents.removeAgent(uidStr, path)
+	err = m.userAgents.removeAgent(strconv.Itoa(int(uid)), path)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
@@ -375,189 +372,7 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr 
 
 func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	// 创建job，但是不添加到任务队列中
-	var upgradeJob *Job
-	var createJobErr error
-	var startJobErr error
-	mode = m.statusManager.GetCanDistUpgradeMode(mode) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
-	if mode == 0 {
-		return "", dbusutil.ToError(errors.New("don't exist can distUpgrade mode"))
-	}
-	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, true)
-	if createJobErr != nil {
-		logger.Warning(createJobErr)
-		return "", dbusutil.ToError(createJobErr)
-	}
-	var inhibitFd dbus.UnixFD = -1
-	why := Tr("Backing up and installing updates...")
-	inhibit := func(enable bool) {
-		logger.Infof("handle inhibit:%v fd:%v", enable, inhibitFd)
-		if enable {
-			if inhibitFd == -1 {
-				fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
-				if err != nil {
-					logger.Infof("DistUpgradePartly:prevent shutdown failed: fd:%v, err:%v\n", fd, err)
-				} else {
-					logger.Infof("DistUpgradePartly:prevent shutdown: fd:%v\n", fd)
-					inhibitFd = fd
-				}
-			}
-		} else {
-			if inhibitFd != -1 {
-				err := syscall.Close(int(inhibitFd))
-				if err != nil {
-					logger.Infof("DistUpgradePartly:enable shutdown failed: fd:%d, err:%s\n", inhibitFd, err)
-				} else {
-					logger.Info("DistUpgradePartly:enable shutdown")
-					inhibitFd = -1
-				}
-			}
-		}
-	}
-	// 开始更新job
-	startUpgrade := func() error {
-		m.inhibitAutoQuitCountSub()
-		m.do.Lock()
-		defer m.do.Unlock()
-		return m.jobManager.MarkStart(upgradeJob.Id)
-	}
-
-	// 对hook进行包装:增加配置状态更新的操作
-	upgradeJob.wrapHooks(map[string]func() error{
-		string(system.EndStatus): func() error {
-			logger.Info("DistUpgradePartly:run wrap end hook")
-			return nil
-		},
-		string(system.SucceedStatus): func() error {
-			logger.Info("DistUpgradePartly:run wrap success hook")
-			inhibit(false)
-			return nil
-		},
-		string(system.FailedStatus): func() error {
-			logger.Info("DistUpgradePartly:run wrap failed hook")
-			inhibit(false)
-			return nil
-		},
-	})
-	m.updateJobList()
-	// 将job的状态修改为pause,并添加到队列中,但是不开始
-	upgradeJob.Status = system.PausedStatus
-	err := m.jobManager.addJob(upgradeJob)
-	if err != nil {
-		logger.Warning(err)
-		return "", dbusutil.ToError(err)
-	}
-	m.inhibitAutoQuitCountAdd() // 开始备份前add，结束备份后sub(无论是否成功)
-	var abHandler dbusutil.SignalHandlerId
-	var canBackup bool
-	var hasBackedUp bool
-	var abErr error
-	inhibit(true)
-	defer func() {
-		// 没有开始更新提前结束时，需要处理抑制锁和job
-		if abErr != nil || startJobErr != nil {
-			inhibit(false)
-			err = m.CleanJob(upgradeJob.Id)
-			if err != nil {
-				logger.Warning(err)
-			}
-			m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
-		}
-	}()
-	m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
-	if needBackup {
-		// m.statusManager.SetABStatus(mode, system.NotBackup, system.NoABError)
-		canBackup, abErr = m.abObj.CanBackup(0)
-		if abErr != nil || !canBackup {
-			logger.Info("can not backup,", abErr)
-
-			msg := gettext.Tr("Backup failed!")
-			action := []string{"continue", gettext.Tr("Proceed to Update")}
-			hints := map[string]dbus.Variant{"x-deepin-action-continue": dbus.MakeVariant(
-				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-
-			m.inhibitAutoQuitCountSub()
-			m.statusManager.SetABStatus(mode, system.BackupFailed, system.CanNotBackup)
-			abErr = errors.New("can not backup")
-			return "", dbusutil.ToError(abErr)
-		}
-		hasBackedUp, err = m.abObj.HasBackedUp().Get(0)
-		if err != nil {
-			logger.Warning(err)
-		} else if hasBackedUp {
-			m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
-		}
-		if !hasBackedUp {
-			// 没有备份过，先备份再更新
-			abErr = m.abObj.StartBackup(0)
-			if abErr != nil {
-				logger.Warning(abErr)
-
-				msg := gettext.Tr("Backup failed!")
-				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
-				hints := map[string]dbus.Variant{
-					"x-deepin-action-backup": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
-					"x-deepin-action-continue": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-
-				m.inhibitAutoQuitCountSub()
-				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
-				return "", dbusutil.ToError(abErr)
-			}
-			m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
-			abHandler, err = m.abObj.ConnectJobEnd(func(kind string, success bool, errMsg string) {
-				if kind == "backup" {
-					m.abObj.RemoveHandler(abHandler)
-					if success {
-						m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
-						// 开始更新
-						startJobErr = startUpgrade()
-						if startJobErr != nil {
-							logger.Warning(startJobErr)
-						}
-					} else {
-						m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
-						logger.Warning("ab backup failed:", errMsg)
-						// 备份失败后,需要清理原来的job,因为是监听信号,所以不能通过上面的defer处理.
-						inhibit(false)
-						err = m.CleanJob(upgradeJob.Id)
-						if err != nil {
-							logger.Warning(err)
-						}
-						m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
-						msg := gettext.Tr("Backup failed!")
-						action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
-						hints := map[string]dbus.Variant{
-							"x-deepin-action-backup": dbus.MakeVariant(
-								fmt.Sprintf("dbus-send,--system,--print-reply,"+
-									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
-							"x-deepin-action-continue": dbus.MakeVariant(
-								fmt.Sprintf("dbus-send,--system,--print-reply,"+
-									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-
-					}
-				}
-			})
-			if err != nil {
-				logger.Warning(err)
-			}
-		} else {
-			// 备份过可以直接更新
-			startJobErr = startUpgrade()
-		}
-	} else {
-		// 无需备份,直接更新
-		startJobErr = startUpgrade()
-	}
-	if startJobErr != nil {
-		logger.Warning(startJobErr)
-		return "", dbusutil.ToError(startJobErr)
-	}
-	return upgradeJob.getPath(), nil
+	return m.distUpgradePartly(sender, mode, needBackup)
 }
 
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
@@ -637,14 +452,14 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 }
 func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
 	var sourcePathList []string
-	for _, t := range system.AllUpdateType() {
+	for _, t := range system.AllCheckUpdateType() {
 		category := mode & t
 		if category != 0 {
 			sourcePath := system.GetCategorySourceMap()[category]
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
-	_, allSize, err := system.QuerySourceDownloadSize(mode)
+	_, allSize, err := system.QueryPackageDownloadSize(mode, m.updater.getUpdatablePackagesByType(mode)...)
 	if err != nil || allSize == system.SizeUnknown {
 		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
 	} else {
@@ -662,4 +477,14 @@ func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.Updat
 		return "/", dbusutil.ToError(err)
 	}
 	return jobObj.getPath(), nil
+}
+
+func (m *Manager) CheckUpgrade(sender dbus.Sender, checkOrder uint32) (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
+	return m.checkUpgrade(sender, checkType(checkOrder))
+}
+
+func (m *Manager) UpdateOfflineSource(sender dbus.Sender, option string) (job dbus.ObjectPath, busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
+	return "", nil
 }

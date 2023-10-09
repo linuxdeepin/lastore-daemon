@@ -61,10 +61,13 @@ type Config struct {
 	idleDownloadConfig       string
 	systemSourceList         []string
 	nonUnknownList           []string
+	otherSourceList          []string // TODO
 	needDownloadSize         float64
 	downloadSpeedLimitConfig string
 	lastoreDaemonStatus      lastoreDaemonStatus
 	updateStatus             string
+
+	classifiedUpdatablePackages map[string][]string // TODO
 
 	filePath string
 	statusMu sync.RWMutex
@@ -137,6 +140,7 @@ const (
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
+	dSettingsKeyClassifiedUpdatablePackages          = "classified-updatable-packages"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -632,6 +636,11 @@ func (c *Config) getLastoreDaemonStatusByBit(key lastoreDaemonStatus) lastoreDae
 func (c *Config) SetUpdateStatus(status string) error {
 	c.updateStatus = status
 	return c.save(dSettingsKeyUpdateStatus, status)
+}
+
+func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) error {
+	c.classifiedUpdatablePackages = pkgMap
+	return c.save(dSettingsKeyClassifiedUpdatablePackages, pkgMap)
 }
 
 func (c *Config) save(key string, v interface{}) error {

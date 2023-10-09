@@ -39,8 +39,8 @@ func TestJob(t *testing.T) {
 				job.Description = "testhook"
 				return nil
 			}
-			job.setHooks(hooks)
-			job.getHook("test")()
+			job.setPreHooks(hooks)
+			job.getPreHook("test")()
 			if job.Description != "testhook" {
 				t.Error("TestJob Hook() error,type=", jobType)
 			}

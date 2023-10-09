@@ -25,8 +25,6 @@ const (
 	dbusServiceName = "com.deepin.lastore"
 )
 const (
-	etcDir               = "/etc"
-	osVersionFileName    = "os-version"
 	aptConfDir           = "/etc/apt/apt.conf.d"
 	tokenConfFileName    = "99lastore-token.conf" // #nosec G101
 	securityConfFileName = "99security.conf"
@@ -74,7 +72,7 @@ func main() {
 	}
 
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	aptImpl := apt.New(config.systemSourceList, config.nonUnknownList)
+	aptImpl := apt.New(config.systemSourceList, config.nonUnknownList, config.otherSourceList)
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, aptImpl, config)
@@ -106,7 +104,7 @@ func main() {
 	if err != nil {
 		logger.Error("failed to set write cb for property CheckUpdateMode:", err)
 	}
-	manager.handleUpdateInfosChanged(false)
+	manager.refreshUpdateInfos(false)
 	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况
 	go manager.jobManager.Dispatch() // 导入job缓存之后，再执行job的dispatch，防止暂停任务创建时自动开始
 	err = serverObject.Export()

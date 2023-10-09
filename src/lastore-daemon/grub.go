@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,19 @@ func newGrubManager(sysBus *dbus.Conn, loop *dbusutil.SignalLoop) *grubManager {
 	}
 	m.grub.InitSignalExt(loop, true)
 	return m
+}
+
+// 下次启动默认进入第一个入口启动
+func (m *grubManager) createTempGrubEntry() error {
+	err := exec.Command("grub-reboot", "0").Run()
+	if err != nil {
+		return err
+	}
+	err = exec.Command("update-grub").Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // changeGrubDefaultEntry 设置grub默认入口(社区版可能不需要进行grub设置)

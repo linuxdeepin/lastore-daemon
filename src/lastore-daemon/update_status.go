@@ -67,7 +67,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 		m.checkModeChangedCallback(m.checkMode)
 	}
 	obj := &daemonStatus{
-		TriggerBackingUpType: system.AllUpdate,
+		TriggerBackingUpType: system.AllCheckUpdate,
 		ABStatus:             system.NotBackup,
 		ABError:              system.NoABError,
 		UpdateStatus:         make(map[string]system.UpdateModeStatus),
@@ -77,10 +77,10 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 	if err != nil {
 		logger.Warning(err)
 		m.updateModeStatusObj = make(map[string]system.UpdateModeStatus)
-		for _, typ := range system.AllUpdateType() {
+		for _, typ := range system.AllCheckUpdateType() {
 			m.updateModeStatusObj[typ.JobType()] = system.NotDownload
 		}
-		m.currentTriggerBackingUpType = system.AllUpdate
+		m.currentTriggerBackingUpType = system.AllCheckUpdate
 		m.abStatus = system.NotBackup
 		m.abError = system.NoABError
 		m.syncUpdateStatusNoLock()
@@ -100,7 +100,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 					m.updateModeStatusObj[key] = system.NoUpdate
 				}
 			}
-			m.currentTriggerBackingUpType = system.AllUpdate
+			m.currentTriggerBackingUpType = system.AllCheckUpdate
 			m.abStatus = system.NotBackup
 			m.abError = system.NoABError
 		}
@@ -115,7 +115,7 @@ func filterMode(updateMode, checkMode system.UpdateType) (system.UpdateType, sys
 	var res0 system.UpdateType // updateMode
 	var res1 system.UpdateType // checkMode
 	// 过滤掉不存在的类型，updateMode没有的类型，checkMode的也需要清理
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllCheckUpdateType() {
 		if updateMode&typ != 0 {
 			res0 |= typ
 			if typ&checkMode != 0 {
@@ -206,7 +206,7 @@ func canTransition(oldStatus, newStatus system.UpdateModeStatus) bool {
 // SetUpdateStatus 外部调用,会对设置的状态进行过滤
 func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllCheckUpdateType() {
 		if mode&typ != 0 && m.checkMode&typ != 0 {
 			oldStatus := m.updateModeStatusObj[typ.JobType()]
 			if !canTransition(oldStatus, newStatus) {
@@ -316,7 +316,7 @@ func (m *UpdateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) 
 	}
 
 	// 2.updateMode修改后，checkMode要随之修改
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllCheckUpdateType() {
 		oldBit := oldMode & typ
 		newBit := newWriteMode & typ
 		// updateMode清零的，应该在filter中已经清零了 TODO delete
@@ -354,7 +354,7 @@ func (m *UpdateModeStatusManager) SetCheckMode(mode system.UpdateType) system.Up
 
 // UpdateModeAllStatusBySize 根据size计算更新所有状态,会把除了安装失败之外的所有错误去除
 func (m *UpdateModeStatusManager) UpdateModeAllStatusBySize() {
-	m.updateModeStatusBySize(system.AllUpdate)
+	m.updateModeStatusBySize(system.AllCheckUpdate)
 }
 
 // 单项计算
@@ -364,7 +364,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 	defer m.statusMapMu.Unlock()
 	var wg sync.WaitGroup
 	changed := false
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllCheckUpdateType() {
 		if mode&typ == 0 {
 			continue
 		}
@@ -489,7 +489,7 @@ func (m *UpdateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
 	defer m.statusMapMu.Unlock()
 	checkCanUpgrade := false
 	checkMode := m.checkMode
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllCheckUpdateType() {
 		// 先检查该项是否选中,未选中则无需判断
 		if checkMode&typ == 0 {
 			continue
@@ -516,7 +516,7 @@ func (m *UpdateModeStatusManager) GetCanPrepareDistUpgradeMode(origin system.Upd
 	defer m.statusMapMu.Unlock()
 	var canPrepareUpgradeMode system.UpdateType
 	checkMode := m.checkMode
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllCheckUpdateType() {
 		if origin&typ == 0 {
 			continue
 		}
@@ -546,7 +546,7 @@ func (m *UpdateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType
 	var upgradeFailedMode system.UpdateType
 	checkMode := m.checkMode
 	canUpgradeCount := 0
-	for _, typ := range system.AllUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		if origin&typ == 0 {
 			continue
 		}

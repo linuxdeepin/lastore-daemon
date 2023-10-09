@@ -27,7 +27,7 @@ const (
 const (
 	DownloadJobType           = "download"
 	InstallJobType            = "install"
-	OnlyInstallJobType        = "onlyInstall"
+	OnlyInstallJobType        = "only_install"
 	RemoveJobType             = "remove"
 	UpdateJobType             = "update"
 	DistUpgradeJobType        = "dist_upgrade"
@@ -35,6 +35,7 @@ const (
 	UpdateSourceJobType       = "update_source"
 	CleanJobType              = "clean"
 	FixErrorJobType           = "fix_error"
+	CheckSystemJobType        = "check_system"
 
 	// UpgradeJobType 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
 	PrepareSystemUpgradeJobType   = "prepare_system_upgrade"
@@ -45,6 +46,8 @@ const (
 	AppStoreUpgradeJobType        = "appstore_upgrade"
 	SecurityUpgradeJobType        = "security_upgrade"
 	UnknownUpgradeJobType         = "unknown_upgrade"
+	OfflineUpgradeJobType         = "offline_update"
+	OtherUpgradeJobType           = "other_system_update"
 )
 
 const (
@@ -123,6 +126,7 @@ type System interface {
 	AbortWithFailed(jobId string) error
 	AttachIndicator(Indicator)
 	FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error
+	CheckSystem(jobId string, checkType string) error
 }
 
 type PkgSystemError struct {

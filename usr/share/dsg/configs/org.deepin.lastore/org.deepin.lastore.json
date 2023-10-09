@@ -266,7 +266,7 @@
       "name": "UpgradeStatus",
       "description": "",
       "permissions": "readwrite",
-      "visibility": "private"
+      "visibility": "public"
     },
     "idle-download-config": {
       "value": "{\"IdleDownloadEnabled\":false,\"BeginTime\":\"17:00\",\"EndTime\":\"20:00\"}",

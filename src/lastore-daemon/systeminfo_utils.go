@@ -18,7 +18,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 
 	"github.com/godbus/dbus"
@@ -70,7 +69,7 @@ func getSystemInfo() SystemInfo {
 		Custom: OemNotCustomState,
 	}
 
-	osVersionInfoMap, err := getOSVersionInfo()
+	osVersionInfoMap, err := getOSVersionInfo(cacheVersion)
 	if err != nil {
 		logger.Warning("failed to get os-version:", err)
 	} else {
@@ -119,8 +118,8 @@ func getSystemInfo() SystemInfo {
 	if err != nil {
 		logger.Warning("failed to get project id:", err)
 	}
-	systemInfo.Baseline = getBaseline()
-	systemInfo.SystemName = getSystemType()
+	systemInfo.Baseline = getCurrentBaseline()
+	systemInfo.SystemName = getCurrentSystemType()
 	return systemInfo
 }
 
@@ -146,9 +145,8 @@ func loadFile(filepath string) ([]string, error) {
 	return lines, nil
 }
 
-func getOSVersionInfo() (map[string]string, error) {
-	versionPath := path.Join(etcDir, osVersionFileName)
-	versionLines, err := loadFile(versionPath)
+func getOSVersionInfo(filePath string) (map[string]string, error) {
+	versionLines, err := loadFile(filePath)
 	if err != nil {
 		logger.Warning("failed to load os-version file:", err)
 		return nil, err

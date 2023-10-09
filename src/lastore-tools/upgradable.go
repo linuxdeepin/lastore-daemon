@@ -54,48 +54,6 @@ func mapUpgradeInfo(lines []string, needle *regexp.Regexp, fn func(*regexp.Regex
 	return infos
 }
 
-// return the pkgs from apt dist-upgrade
-// NOTE: the result strim the arch suffix
-func listDistUpgradePackages(sourcePath string) ([]string, error) {
-	args := []string{
-		"-c", system.LastoreAptV2CommonConfPath,
-		"dist-upgrade", "--assume-no",
-		"-o", "Debug::NoLocking=1",
-	}
-	if info, err := os.Stat(sourcePath); err == nil {
-		if info.IsDir() {
-			args = append(args, "-o", "Dir::Etc::SourceList=/dev/null")
-			args = append(args, "-o", "Dir::Etc::SourceParts="+sourcePath)
-		} else {
-			args = append(args, "-o", "Dir::Etc::SourceList="+sourcePath)
-			args = append(args, "-o", "Dir::Etc::SourceParts=/dev/null")
-		}
-	} else {
-		return nil, err
-	}
-
-	cmd := exec.Command("apt-get", args...) // #nosec G204
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	// NOTE: 这里不能使用命令的退出码来判断，因为 --assume-no 会让命令的退出码为 1
-	_ = cmd.Run()
-
-	const upgraded = "The following packages will be upgraded:"
-	const newInstalled = "The following NEW packages will be installed:"
-	if bytes.Contains(outBuf.Bytes(), []byte(upgraded)) ||
-		bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) {
-
-		p := parseAptShowList(bytes.NewReader(outBuf.Bytes()), upgraded)
-		p = append(p, parseAptShowList(bytes.NewReader(outBuf.Bytes()), newInstalled)...)
-		return p, nil
-	}
-
-	err := apt.ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
-	return nil, err
-}
-
 func parseAptShowList(r io.Reader, title string) []string {
 	buf := bufio.NewReader(r)
 
@@ -129,7 +87,7 @@ func parseAptShowList(r io.Reader, title string) []string {
 }
 
 func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
-	ps, err := listDistUpgradePackages(sourcePath)
+	ps, err := apt.ListDistUpgradePackages(sourcePath)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +95,7 @@ func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
 		return nil, nil
 	}
 	cmd := exec.Command("apt", append([]string{"-c", system.LastoreAptV2CommonConfPath,
-		"-o", fmt.Sprintf("Dir::Etc::SourceList=%s", system.SystemSourceFile),
+		"-o", fmt.Sprintf("Dir::Etc::SourceList=%s", system.OriginSourceFile),
 		"-o", fmt.Sprintf("Dir::Etc::SourceParts=%s", system.OriginSourceDir),
 		"list", "--upgradable"}, ps...)...) // #nosec G204
 	r, err := cmd.StdoutPipe()

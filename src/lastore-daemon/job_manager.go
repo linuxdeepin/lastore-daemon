@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"internal/system"
 	"sort"
 	"strconv"
@@ -98,46 +99,49 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.PrepareDistUpgradeJobType:
 		var jobList []*Job
 		mode, ok := jobArgc["UpdateMode"].(system.UpdateType)
-		if ok {
-			var allDownloadSize float64
-			var holderSize float64
-			sizeMap, ok := jobArgc["DownloadSize"].(map[string]float64)
-			if ok {
-				for _, typ := range system.AllUpdateType() {
-					if typ&mode != 0 {
-						allDownloadSize += sizeMap[typ.JobType()]
-					}
-				}
-				for _, typ := range system.AllUpdateType() {
-					if typ&mode != 0 {
-						partJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
-						if utils.IsDir(system.GetCategorySourceMap()[typ]) {
-							partJob.option = map[string]string{
-								"Dir::Etc::SourceList":  "/dev/null",
-								"Dir::Etc::SourceParts": system.GetCategorySourceMap()[typ],
-							}
-						} else {
-							partJob.option = map[string]string{
-								"Dir::Etc::SourceList":  system.GetCategorySourceMap()[typ],
-								"Dir::Etc::SourceParts": "/dev/null",
-							}
-						}
-						partJob.updateTyp = typ
-						if len(jobList) >= 1 {
-							jobList[len(jobList)-1].next = partJob
-						}
-						jobList = append(jobList, partJob)
-						partJob._InitProgressRange(holderSize/allDownloadSize, (holderSize+sizeMap[typ.JobType()])/allDownloadSize)
-						holderSize += sizeMap[typ.JobType()]
-					}
-				}
-				job = jobList[0]
-			} else {
-				job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
-			}
-		} else {
-			job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.PrepareDistUpgradeJobType, DownloadQueue, environ)
+		if !ok {
+			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
 		}
+		sizeMap, ok := jobArgc["DownloadSize"].(map[string]float64)
+		if !ok {
+			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
+		}
+		packageMap, ok := jobArgc["PackageMap"].(map[string][]string)
+		if !ok {
+			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
+		}
+		var allDownloadSize float64
+		var holderSize float64
+		for _, typ := range system.AllInstallUpdateType() {
+			if typ&mode != 0 {
+				allDownloadSize += sizeMap[typ.JobType()]
+			}
+		}
+		for _, typ := range system.AllInstallUpdateType() {
+			if typ&mode != 0 {
+				partJob := NewJob(jm.service, genJobId(jobType), jobName, packageMap[typ.JobType()], system.DownloadJobType, DownloadQueue, environ)
+				if utils.IsDir(system.GetCategorySourceMap()[typ]) {
+					partJob.option = map[string]string{
+						"Dir::Etc::SourceList":  "/dev/null",
+						"Dir::Etc::SourceParts": system.GetCategorySourceMap()[typ],
+					}
+				} else {
+					partJob.option = map[string]string{
+						"Dir::Etc::SourceList":  system.GetCategorySourceMap()[typ],
+						"Dir::Etc::SourceParts": "/dev/null",
+					}
+				}
+				partJob.updateTyp = typ
+				if len(jobList) >= 1 {
+					jobList[len(jobList)-1].next = partJob
+				}
+				jobList = append(jobList, partJob)
+				partJob._InitProgressRange(holderSize/allDownloadSize, (holderSize+sizeMap[typ.JobType()])/allDownloadSize)
+				holderSize += sizeMap[typ.JobType()]
+			}
+		}
+		job = jobList[0]
+
 	case system.InstallJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DownloadJobType,
 			DownloadQueue, environ)
@@ -154,8 +158,9 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
+		job._InitProgressRange(0.11, 0.8)
 	case system.DistUpgradeJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.InstallJobType, LockQueue, environ)
 		job._InitProgressRange(0, 0.99)
 	case system.UpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
@@ -167,14 +172,16 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 			errType = packages[0]
 		}
 		jobId := jobType + "_" + errType
-		job = NewJob(jm.service, jobId, jobName, packages, jobType,
-			LockQueue, environ)
+		job = NewJob(jm.service, jobId, jobName, packages, jobType, LockQueue, environ)
+	// 分类更新接口触发
 	case system.SystemUpgradeJobType,
 		system.SecurityUpgradeJobType,
 		system.UnknownUpgradeJobType,
 		system.AppStoreUpgradeJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.InstallJobType, LockQueue, environ)
 		job._InitProgressRange(0, 0.99)
+	case system.CheckSystemJobType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, nil, system.CheckSystemJobType, LockQueue, environ)
 	default:
 		return false, nil, system.NotSupportError
 	}
@@ -345,6 +352,7 @@ func (jm *JobManager) dispatch() {
 
 	// 2. Try starting jobs with ReadyStatus
 	lockQueue := jm.queues[LockQueue]
+	jm.sendNotify()
 	jm.startJobsInQueue(lockQueue)
 	jm.startJobsInQueue(jm.queues[DelayLockQueue])
 	jm.startJobsInQueue(jm.queues[DownloadQueue])
@@ -410,7 +418,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 				}
 				// do not retry job
 				job.subRetryCount(true)
-				hookFn := job.getHook(string(system.FailedStatus))
+				hookFn := job.getPreHook(string(system.FailedStatus))
 				if hookFn != nil {
 					hookFn()
 				}
@@ -546,7 +554,7 @@ var genJobId = func() func(string) string {
 		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType,
 			system.UpdateSourceJobType, system.CleanJobType, system.PrepareSystemUpgradeJobType,
 			system.PrepareAppStoreUpgradeJobType, system.PrepareSecurityUpgradeJobType, system.PrepareUnknownUpgradeJobType,
-			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType:
+			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType, system.CheckSystemJobType:
 			return jobType
 		default:
 			__count++

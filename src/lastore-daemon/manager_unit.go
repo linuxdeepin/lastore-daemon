@@ -61,14 +61,14 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	if (m.config.getLastoreDaemonStatus() & disableUpdate) == 0 { // 更新禁用未开启时
 		unitMap[lastoreOnline] = []string{
 			// 随机数范围1800-21600，时间为0.5~6小时
-			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(19800) + 1800),
+			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(19800)+1800),
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
 		}
 		unitMap[lastoreAutoCheck] = []string{
 			// 随机数范围1800-21600，时间为0.5~6小时
-			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(19800) + 1800),
+			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(19800)+1800),
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
@@ -348,9 +348,9 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 				logger.Warning(err)
 			}
 		}()
-	case UpdateInfosChanged:
-		logger.Info("UpdateInfos Changed")
-		// m.handleUpdateInfosChanged()
+	// case UpdateInfosChanged:
+	// 	logger.Info("UpdateInfos Changed")
+	// 	m.handleUpdateInfosChanged()
 	case OsVersionChanged:
 		go updateTokenConfigFile()
 	case AutoDownload:

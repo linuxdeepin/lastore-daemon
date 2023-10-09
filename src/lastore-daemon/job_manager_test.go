@@ -13,7 +13,7 @@ import (
 )
 
 func TestJobManager(t *testing.T) {
-	jm := NewJobManager(nil, apt.New(nil, nil), nil)
+	jm := NewJobManager(nil, apt.New(nil, nil, nil), nil)
 
 	// 空包只走流程
 	_, _, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, nil)

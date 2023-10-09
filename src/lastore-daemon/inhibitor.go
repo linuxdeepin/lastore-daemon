@@ -17,6 +17,7 @@ const (
 	methodCallerOtherCaller methodCaller = iota
 	methodCallerControlCenter
 	methodCallerAppStore
+	methodCallerOfflineTool
 )
 
 func mapMethodCaller(execPath string, cmdLine string) methodCaller {

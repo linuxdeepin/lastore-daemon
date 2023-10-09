@@ -17,7 +17,6 @@ import (
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"
-	"github.com/linuxdeepin/go-lib/strv"
 )
 
 type ApplicationUpdateInfo struct {
@@ -71,19 +70,19 @@ type Updater struct {
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
 	u := &Updater{
-		manager:                  m,
-		service:                  service,
-		config:                   config,
-		AutoCheckUpdates:         config.AutoCheckUpdates,
-		AutoDownloadUpdates:      config.AutoDownloadUpdates,
-		MirrorSource:             config.MirrorSource,
-		UpdateNotify:             config.UpdateNotify,
-		AutoInstallUpdates:       config.AutoInstallUpdates,
-		AutoInstallUpdateType:    config.AutoInstallUpdateType,
-		IdleDownloadConfig:       config.idleDownloadConfig,
-		DownloadSpeedLimitConfig: config.downloadSpeedLimitConfig,
+		manager:                     m,
+		service:                     service,
+		config:                      config,
+		AutoCheckUpdates:            config.AutoCheckUpdates,
+		AutoDownloadUpdates:         config.AutoDownloadUpdates,
+		MirrorSource:                config.MirrorSource,
+		UpdateNotify:                config.UpdateNotify,
+		AutoInstallUpdates:          config.AutoInstallUpdates,
+		AutoInstallUpdateType:       config.AutoInstallUpdateType,
+		IdleDownloadConfig:          config.idleDownloadConfig,
+		DownloadSpeedLimitConfig:    config.downloadSpeedLimitConfig,
+		ClassifiedUpdatablePackages: config.classifiedUpdatablePackages,
 	}
-	u.ClassifiedUpdatablePackages = make(map[string][]string)
 	err := json.Unmarshal([]byte(u.IdleDownloadConfig), &u.idleDownloadConfigObj)
 	if err != nil {
 		logger.Warning(err)
@@ -214,36 +213,11 @@ func (u *Updater) restoreSystemSource() error {
 	return err
 }
 
-func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeInfoMap) {
-	changed := false
-	newUpdatablePackages := make(map[string][]string)
-
-	u.PropsMu.RLock()
-	oldUpdatablePackages := u.ClassifiedUpdatablePackages
-	u.PropsMu.RUnlock()
-
-	for updateType, infos := range infosMap {
-		var packages []string
-		for _, info := range infos {
-			packages = append(packages, info.Package)
-		}
-		newUpdatablePackages[updateType] = packages
-	}
-	for _, updateType := range system.AllUpdateType() {
-		if !changed {
-			newData := strv.Strv(newUpdatablePackages[updateType.JobType()])
-			oldData := strv.Strv(oldUpdatablePackages[updateType.JobType()])
-			changed = !newData.Equal(oldData)
-			if changed {
-				break
-			}
-		}
-	}
-	if changed {
-		u.PropsMu.Lock()
-		defer u.PropsMu.Unlock()
-		u.setPropClassifiedUpdatablePackages(newUpdatablePackages)
-	}
+func (u *Updater) setClassifiedUpdatablePackages(infosMap map[string][]string) {
+	u.PropsMu.Lock()
+	defer u.PropsMu.Unlock()
+	_ = u.config.SetClassifiedUpdatablePackages(infosMap)
+	u.setPropClassifiedUpdatablePackages(infosMap)
 }
 
 func (u *Updater) autoInstallUpdatesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
@@ -264,7 +238,7 @@ func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []str
 	u.PropsMu.RLock()
 	defer u.PropsMu.RUnlock()
 	var updatableApps []string
-	for _, t := range system.AllUpdateType() {
+	for _, t := range system.AllInstallUpdateType() {
 		if updateType&t != 0 {
 			packages := u.ClassifiedUpdatablePackages[t.JobType()]
 			if len(packages) > 0 {

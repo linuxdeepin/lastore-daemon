@@ -24,7 +24,6 @@ import (
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"
-	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/procfs"
 	"github.com/linuxdeepin/go-lib/strv"
 )
@@ -167,20 +166,6 @@ func getLang(envVars procfs.EnvVars) string {
 		}
 	}
 	return ""
-}
-
-func getEditionName() string {
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile("/etc/os-version")
-	// 为避免收集数据的风险，读不到此文件，或者Edition文件不存在也不收集数据
-	if err != nil {
-		return ""
-	}
-	edition, err := kf.GetString("Version", "EditionName")
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(edition)
 }
 
 func listPackageDesktopFiles(pkg string) []string {
@@ -362,14 +347,13 @@ func getExecutablePathAndCmdline(service *dbusutil.Service, sender dbus.Sender) 
 }
 
 // 根据类型过滤数据
-func getFilterInfosMap(infosMap system.SourceUpgradeInfoMap, updateType system.UpdateType) system.SourceUpgradeInfoMap {
-	r := make(system.SourceUpgradeInfoMap)
-	for _, t := range system.AllUpdateType() {
-		category := updateType & t
-		if category != 0 {
+func getFilterPackages(infosMap map[string][]string, updateType system.UpdateType) []string {
+	var r []string
+	for _, t := range system.AllInstallUpdateType() {
+		if updateType&t != 0 {
 			info, ok := infosMap[t.JobType()]
 			if ok {
-				r[t.JobType()] = info
+				r = append(r, info...)
 			}
 		}
 	}
