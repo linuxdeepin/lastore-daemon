@@ -80,7 +80,7 @@ const (
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList
 
 	SoftLinkSystemSourceDir = "/var/lib/lastore/SystemSource.d"      // 系统更新仓库
-	PlatFormSourceFile      = "/var/lib/lastore/platform.list"       // 从更新平台获取的仓库,为系统更新仓库,在message_report.go 中的 UpdatePlatFormSourceListFile 更新
+	PlatFormSourceFile      = "/var/lib/lastore/platform.list"       // 从更新平台获取的仓库,为系统更新仓库,在message_report.go 中的 获取升级版本信息genUpdatePolicyByToken后即可 更新
 	UnknownSourceDir        = "/var/lib/lastore/unknownSource.d"     // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 	OtherSystemSourceDir    = "/var/lib/lastore/otherSystemSource.d" // 其他需要检查的系统仓库
 	OfflineSourceFile       = "/var/lib/lastore/offline.list"        // 在offline_repo.go 中的 UpdateOfflineSourceFile 更新

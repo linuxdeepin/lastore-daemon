@@ -125,7 +125,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
 					m.updatePlatform.reportLog(updateStatusReport, true, "")
-					m.updatePlatform.PostStatusMessage()
+					m.updatePlatform.PostStatusMessage("")
 					// m.installSpecialPackageSync("uos-release-note", job.option, environ)
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
@@ -139,7 +139,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					}
 				} else {
 					m.updatePlatform.reportLog(updateStatusReport, false, "")
-					m.updatePlatform.PostStatusMessage()
+					m.updatePlatform.PostStatusMessage("")
 				}
 				job.setPropProgress(0.99)
 				return nil
@@ -164,7 +164,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					}
 				}
 				m.updatePlatform.reportLog(updateStatusReport, false, job.Description)
-				m.updatePlatform.PostStatusMessage()
+				m.updatePlatform.PostStatusMessage("")
 				return nil
 			},
 			string(system.EndStatus): func() error {
@@ -182,25 +182,19 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
 				if !m.updatePlatform.genUpdatePolicyByToken() {
 					job.retry = 0
-					m.updatePlatform.PostStatusMessage()
+					m.updatePlatform.PostStatusMessage("")
 					return errors.New("failed to get update policy by token")
 				}
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
 				if err != nil {
 					logger.Warning(err)
 					job.retry = 0
-					m.updatePlatform.PostStatusMessage()
+					m.updatePlatform.PostStatusMessage("")
 					return fmt.Errorf("failed to get update info by update platform: %v", err)
 				}
 				m.updater.setPropUpdateTarget(m.updatePlatform.getUpdateTarget())
-				err = m.updatePlatform.UpdatePlatFormSourceListFile()
-				if err != nil {
-					logger.Warning(err)
-					job.retry = 0
-					m.updatePlatform.PostStatusMessage()
-					return fmt.Errorf("failed to update temp source list dir: %v", err)
-				}
-				// 从更新平台获取数据并处理完成后,进度更新到5%
+
+				// 从更新平台获取数据并处理完成后,进度更新到6%
 				job.setPropProgress(0.06)
 
 				// 系统工具检查依赖关系
@@ -422,11 +416,11 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 	if sync {
 		systemErr, securityErr := m.generateUpdateInfo(m.updatePlatform.GetSystemMeta())
 		if systemErr != nil {
-			m.updatePlatform.PostStatusMessage()
+			m.updatePlatform.PostStatusMessage("")
 			logger.Warning(systemErr)
 		}
 		if securityErr != nil {
-			m.updatePlatform.PostStatusMessage()
+			m.updatePlatform.PostStatusMessage("")
 			logger.Warning(securityErr)
 		}
 		m.statusManager.UpdateModeAllStatusBySize()

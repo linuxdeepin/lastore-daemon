@@ -75,7 +75,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkOrder checkType) (dbus.O
 			return nil
 		},
 		string(system.FailedStatus): func() error {
-			m.updatePlatform.PostStatusMessage() // TODO 上报检查失败，上报本次更新失败
+			m.updatePlatform.PostStatusMessage("") // TODO 上报检查失败，上报本次更新失败
 			inhibit(false)
 			err = delRebootCheckOption(all)
 			if err != nil {

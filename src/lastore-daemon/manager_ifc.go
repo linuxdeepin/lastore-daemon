@@ -136,6 +136,28 @@ func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *db
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
+func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *dbus.Error) {
+	switch updateType {
+	case system.SystemUpdate.JobType():
+		return m.updater.ClassifiedUpdatablePackages[updateType], nil
+	case system.SecurityUpdate.JobType():
+		return m.updater.ClassifiedUpdatablePackages[updateType], nil
+	default:
+		return nil, dbusutil.ToError(fmt.Errorf("%s", "Unknown update type"))
+	}
+}
+
+func (m *Manager) UpdateLogs(updateType string) (changeLogs []string, busErr *dbus.Error) {
+	switch updateType {
+	case system.SystemUpdate.JobType():
+		return m.updatePlatform.GetSystemUpdataLogs(), nil
+	case system.SecurityUpdate.JobType():
+		return m.updatePlatform.GetCVEUpdataLogs(m.updater.ClassifiedUpdatablePackages[updateType]), nil
+	default:
+		return nil, dbusutil.ToError(fmt.Errorf("%s", "Unknown update type"))
+	}
+}
+
 func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()

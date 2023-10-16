@@ -432,7 +432,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		m.updatePlatform.postSystemUpgradeMessage(upgradeFailed, job, mode)
 	}()
 	m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
-	m.updatePlatform.PostStatusMessage()
+	m.updatePlatform.PostStatusMessage("")
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	m.updatePlatform.recoverVersionLink()
 	return nil
@@ -470,7 +470,7 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	}()
 
 	m.updatePlatform.reportLog(upgradeStatusReport, true, "")
-	m.updatePlatform.PostStatusMessage()
+	m.updatePlatform.PostStatusMessage("")
 	return nil
 }
 

@@ -183,7 +183,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
-				m.updatePlatform.PostStatusMessage() // 上报失败状态
+				m.updatePlatform.PostStatusMessage("") // 上报失败状态
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
@@ -200,7 +200,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					m.updatePlatform.reportLog(downloadStatusReport, true, "")
 				}
-				m.updatePlatform.PostStatusMessage() // 上报成功状态
+				m.updatePlatform.PostStatusMessage("") // 上报成功状态
 				return nil
 			},
 			string(system.EndStatus): func() error {

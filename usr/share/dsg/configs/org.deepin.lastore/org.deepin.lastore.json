@@ -167,6 +167,17 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "last-cve-sync-time": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "LastCVESyncTime",
+      "description": "",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "last-clean-time": {
       "value": "",
       "serial": 0,

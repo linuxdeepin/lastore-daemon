@@ -5,18 +5,25 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"internal/system"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/godbus/dbus"
+	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
+	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/keyfile"
-	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -32,7 +39,20 @@ type UpdatePlatformManager struct {
 	targetBaseline         string // 更新到的目标基线号,本地os-baseline.b获取
 	checkTime              string // 基线检查时间
 	systemTypeFromPlatform string // 从更新平台获取的系统类型,本地os-baseline.b获取
-	requestUrl             string
+	requestUrl             string // 更新平台请求地址
+
+	preCheck   string                        // 更新前检查脚本
+	midCheck   string                        // 更新中检查脚本
+	postCheck  string                        // 更新后检查脚本
+	corePkgs   map[string]system.UpgradeInfo // 必须安装软件包信息清单
+	selectPkgs map[string]system.UpgradeInfo // 可选软件包清单
+	freezePkgs map[string]packageInfo        // 禁止升级包清单
+	purgePkgs  map[string]packageInfo        // 删除软件包清单
+
+	repoInfos        []repoInfo      // 从更新平台获取的仓库信息
+	systemUpdataLogs []UpdatelogMeta // 更新注记
+	cveDataTime      string
+	cvePkgs          map[string][]string // cve信息 pkgname:[cveid...]
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -43,10 +63,56 @@ const (
 	realVersion   = "/etc/os-version"
 )
 
+func isZH() bool {
+	lang := gettext.QueryLang()
+	return strings.HasPrefix(lang, "zh")
+}
+
+func (m *UpdatePlatformManager) GetSystemUpdataLogs() []string {
+	var updataLogs []string
+	zh := isZH()
+
+	var logStr string
+	for _, updateLog := range m.systemUpdataLogs {
+		if zh {
+			logStr = updateLog.CnLog
+		} else {
+			logStr = updateLog.EnLog
+		}
+		updataLogs = append(updataLogs, logStr)
+	}
+
+	sort.Strings(updataLogs)
+	return updataLogs
+}
+
+func (m *UpdatePlatformManager) GetCVEUpdataLogs(pkgs []string) []string {
+	var cves map[string]string = make(map[string]string)
+	var updataLogs []string
+	zh := isZH()
+
+	for _, pkg := range pkgs {
+		for _, id := range m.cvePkgs[pkg] {
+			if _, ok := cves[id]; ok {
+				continue
+			}
+			if zh {
+				cves[id] = CVEs[id].Description
+			} else {
+				cves[id] = CVEs[id].CveDescription
+			}
+			updataLogs = append(updataLogs, cves[id])
+		}
+	}
+
+	sort.Strings(updataLogs)
+	return updataLogs
+}
+
 func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformManager {
 	url := os.Getenv("UPDATE_PLATFORM_URL")
 	if len(url) == 0 {
-		url = "https://update-platform.uniontech.com"
+		url = "https://update-platform-pre.uniontech.com"
 	}
 
 	if !utils.IsFileExist(cacheVersion) {
@@ -67,6 +133,7 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 		targetVersion:                     getTargetVersion(),
 		targetBaseline:                    getTargetBaseline(),
 		requestUrl:                        url,
+		cvePkgs:                           make(map[string][]string),
 	}
 }
 
@@ -215,28 +282,70 @@ func updateKeyFile(path, key, content string) bool {
 	return true
 }
 
-type version struct {
+const (
+	RELEASE_VERSION  = 1
+	UNSTABLE_VERSION = 2
+)
+
+func isUnstable() int {
+	sysBus, err := dbus.SystemBus()
+	if err != nil {
+		return RELEASE_VERSION
+	}
+	ds := ConfigManager.NewConfigManager(sysBus)
+	dsPath, err := ds.AcquireManager(0, "org.deepin.unstable", "org.deepin.unstable", "")
+	if err != nil {
+		logger.Warning(err)
+		return RELEASE_VERSION
+	}
+	unstableManager, err := ConfigManager.NewManager(sysBus, dsPath)
+	if err != nil {
+		logger.Warning(err)
+		return RELEASE_VERSION
+	}
+	v, err := unstableManager.Value(0, "updateUnstable")
+	if err != nil {
+		return RELEASE_VERSION
+	} else {
+		value := v.Value().(string)
+		if value == "Enable" {
+			return UNSTABLE_VERSION
+		} else {
+			return RELEASE_VERSION
+		}
+	}
+}
+
+type Version struct {
 	Version  string `json:"version"`
 	Baseline string `json:"baseline"`
 }
 
-type policy struct {
+type Policy struct {
 	Tp int `json:"tp"`
 
-	Data struct {
+	Data interface {
 	} `json:"data"`
 }
 
+type repoInfo struct {
+	Uri      string `json:"uri"`
+	Cdn      string `json:"cdn"`
+	CodeName string `json:"codename"`
+	Version  string `json:"version"`
+}
+
 type updateMessage struct {
-	SystemType string  `json:"systemType"`
-	Version    version `json:"version"`
-	Policy     policy  `json:"policy"`
+	SystemType string     `json:"systemType"`
+	Version    Version    `json:"version"`
+	Policy     Policy     `json:"policy"`
+	RepoInfos  []repoInfo `json:"repoInfos"`
 }
 
 type tokenMessage struct {
-	Result bool          `json:"result"`
-	Code   int           `json:"code"`
-	Data   updateMessage `json:"data"`
+	Result bool            `json:"result"`
+	Code   int             `json:"code"`
+	Data   json.RawMessage `json:"data"`
 }
 type tokenErrorMessage struct {
 	Result bool   `json:"result"`
@@ -244,137 +353,494 @@ type tokenErrorMessage struct {
 	Msg    string `json:"msg"`
 }
 
+const (
+	GetVersion = iota
+	GetUpdataLog
+	GetPkgLists // 系统软件包清单
+	GetPkgCVEs  // CVE 信息
+	PostProcess
+)
+
+type requestType struct {
+	path   string
+	method string
+}
+
+var Urls = map[uint32]requestType{
+	GetVersion: {
+		"/api/v1/version",
+		"GET",
+	},
+	GetPkgLists: {
+		"/api/v1/package",
+		"GET",
+	},
+	GetUpdataLog: {
+		"/api/v1/systemupdatelogs",
+		"GET",
+	},
+	GetPkgCVEs: {
+		"/api/v1/cve/sync",
+		"GET",
+	},
+	PostProcess: {
+		"/api/v1/process",
+		"POST",
+	},
+}
+
 // 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) genUpdatePolicyByToken() bool {
-	policyUrl := m.requestUrl + "/api/v1/version"
+func (m *UpdatePlatformManager) Report(reqType uint32, body string) (data interface{}, err error) {
+	// 设置请求url
+	policyUrl := m.requestUrl + Urls[reqType].path
 	client := &http.Client{
 		Timeout: 4 * time.Second,
 	}
-	if logger.GetLogLevel() == log.LevelDebug {
-		logger.Info("debug mode,default target is 1062")
-		time.Sleep(4 * time.Second)
-		m.targetBaseline = "106x_debug"
-		m.targetVersion = "1062"
-		m.systemTypeFromPlatform = "professional"
-		m.checkTime = time.Now().String()
-		return true
+	// 设置请求参数
+	switch reqType {
+	case GetPkgLists:
+		values := url.Values{}
+		values.Add("baseline", m.targetBaseline)
+		policyUrl = policyUrl + "?" + values.Encode()
+	case GetPkgCVEs:
+		values := url.Values{}
+		values.Add("synctime", m.config.LastCVESyncTime)
+		policyUrl = policyUrl + "?" + values.Encode()
+	case GetUpdataLog:
+		values := url.Values{}
+		values.Add("baseline", m.targetBaseline)
+		values.Add("isUnstable", fmt.Sprintf("%d", isUnstable()))
+		policyUrl = policyUrl + "?" + values.Encode()
 	}
-	request, err := http.NewRequest("GET", policyUrl, nil)
+
+	request, err := http.NewRequest(Urls[reqType].method, policyUrl, bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		logger.Warning(err)
+		return nil, err
+	}
+
+	// 设置header
+	if reqType == PostProcess {
+		// 如果是更新过程日志上报，设置header
+		hardwareId, err := getHardwareId()
+		if err != nil {
+			return nil, err
+		}
+
+		request.Header.Set("X-MachineID", hardwareId)
+		request.Header.Set("X-CurrentBaseline", m.preBaseline)
+		request.Header.Set("X-Baseline", m.targetBaseline)
+		request.Header.Set("X-Time", fmt.Sprintf("%d", time.Now().Unix()))
+		request.Header.Set("X-Sign", "TODO")
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateTokenConfigFile())))
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = response.Body.Close()
+	}()
+	var respData []byte
+
+	switch response.StatusCode {
+	case http.StatusOK:
+		respData, err = ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		// logger.Infof("request for %s,body:%s respData:%s", policyUrl, string(body), string(respData))
+		msg := &tokenMessage{}
+		err = json.Unmarshal(respData, msg)
+		if err != nil {
+			return nil, err
+		}
+		if !msg.Result {
+			errorMsg := &tokenErrorMessage{}
+			err = json.Unmarshal(respData, errorMsg)
+			if err != nil {
+				return nil, err
+			}
+			err = fmt.Errorf("request for %s err:%s", policyUrl, errorMsg.Msg)
+			return nil, err
+		}
+		switch reqType {
+		case GetVersion:
+			tmp := updateMessage{}
+			err = json.Unmarshal(msg.Data, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			data = tmp
+		case GetPkgLists:
+			tmp := PreInstalledPkgMeta{}
+			err = json.Unmarshal(msg.Data, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			data = tmp
+		case GetPkgCVEs:
+			tmp := CEVMeta{}
+			err = json.Unmarshal(msg.Data, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			data = tmp
+		case GetUpdataLog:
+			var tmp []UpdatelogMeta
+			err = json.Unmarshal(msg.Data, &tmp)
+			if err != nil {
+				return nil, err
+			}
+			data = tmp
+		case PostProcess:
+			return
+		default:
+			err = fmt.Errorf("unknown report type:%d", reqType)
+			return
+		}
+	default:
+		err = fmt.Errorf("request for %s failed, response code=%d", policyUrl, response.StatusCode)
+	}
+	return
+}
+
+// 检查更新时将token数据发送给更新平台，获取本次更新信息
+func (m *UpdatePlatformManager) genUpdatePolicyByToken() bool {
+	data, err := m.Report(GetVersion, "")
 	if err != nil {
 		logger.Warning(err)
 		return false
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateTokenConfigFile())))
-	response, err := client.Do(request)
-	if err == nil {
-		defer func() {
-			_ = response.Body.Close()
-		}()
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			logger.Warning(err)
-			return false
-		}
-		if response.StatusCode == 200 {
-			logger.Debug(string(body))
-			msg := &tokenMessage{}
-			err = json.Unmarshal(body, msg)
-			if err != nil {
-				logger.Warning(err)
-				return false
-			}
-			if !msg.Result {
-				errorMsg := &tokenErrorMessage{}
-				err = json.Unmarshal(body, errorMsg)
-				if err != nil {
-					logger.Warning(err)
-					return false
-				}
-				logger.Warning(errorMsg.Msg)
-				return false
-			}
-			m.targetBaseline = msg.Data.Version.Baseline
-			m.targetVersion = msg.Data.Version.Version
-			m.systemTypeFromPlatform = msg.Data.SystemType
-			m.checkTime = time.Now().String()
-			m.UpdateBaselineCache()
-			return true
-		}
-		logger.Warning(string(body))
-		return false
-	} else {
-		logger.Warning(err)
+	msg, ok := data.(updateMessage)
+	if !ok {
+		logger.Warning("bad format")
 		return false
 	}
+	m.targetBaseline = msg.Version.Baseline
+	m.targetVersion = msg.Version.Version
+	m.systemTypeFromPlatform = msg.SystemType
+	m.repoInfos = msg.RepoInfos
+	m.checkTime = time.Now().String()
+	m.UpdateBaselineCache()
+
+	// 生成仓库和InRelease
+	m.genDepositoryFromPlatform()
+	m.checkInReleaseFromPlatform()
+
+	return true
+
 }
 
 // TODO 更新平台数据处理
 
+type packageInfo struct {
+	Name    string `json:"name"`    // "软件包名"
+	Version string `json:"version"` // "软件包版本"
+}
+
+type packageLists struct {
+	Core   []packageInfo `json:"core"`   // "必须安装软件包清单"
+	Select []packageInfo `json:"select"` // "可选软件包清单"
+	Freeze []packageInfo `json:"freeze"` // "禁止升级包清单"
+	Purge  []packageInfo `json:"purge"`  // "删除软件包清单"
+}
+
 type PreInstalledPkgMeta struct {
+	PreCheck  string       `json:"preCheck"`  // "更新前检查脚本"
+	MidCheck  string       `json:"midCheck"`  // "更新中检查"
+	PostCheck string       `json:"postCheck"` // "更新后检查"
+	Packages  packageLists `json:"packages"`  // "基线软件包清单"
 }
 
 // 从更新平台获取当前基线版本预装列表,暂不缓存至本地;
 func (m *UpdatePlatformManager) updateCurrentPreInstalledPkgMetaSync() error {
+	data, err := m.Report(GetPkgLists, "")
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	pkgs, ok := data.(PreInstalledPkgMeta)
+	if !ok {
+		logger.Warning("bad format")
+		return err
+	}
+	m.preCheck = pkgs.PreCheck
+	m.midCheck = pkgs.MidCheck
+	m.postCheck = pkgs.PostCheck
+
+	if pkgs.Packages.Core != nil {
+		for _, pkg := range pkgs.Packages.Core {
+			m.corePkgs[pkg.Name] = system.UpgradeInfo{
+				Package:        pkg.Name,
+				CurrentVersion: "TODO",
+				LastVersion:    pkg.Version,
+				ChangeLog:      "TODO",
+				Category:       "core",
+			}
+		}
+		for _, pkg := range pkgs.Packages.Select {
+			m.selectPkgs[pkg.Name] = system.UpgradeInfo{
+				Package:        pkg.Name,
+				CurrentVersion: "TODO",
+				LastVersion:    pkg.Version,
+				ChangeLog:      "TODO",
+				Category:       "select",
+			}
+		}
+		for _, pkg := range pkgs.Packages.Freeze {
+			m.freezePkgs[pkg.Name] = packageInfo{
+				Name:    pkg.Name,
+				Version: pkg.Version,
+			}
+		}
+		for _, pkg := range pkgs.Packages.Purge {
+			m.purgePkgs[pkg.Name] = packageInfo{
+				Name:    pkg.Name,
+				Version: pkg.Version,
+			}
+		}
+	}
+
 	return nil
+}
+
+type CEVInfo struct {
+	SyncTime       string `json:"synctime"`        // "CVE类型"
+	CveId          string `json:"cveid"`           // "CVE编号"
+	Source         string `json:"source"`          // "包名"
+	FixedVersion   string `json:"fixed_version"`   // "修复版本"
+	Archs          string `json:"archs"`           // "架构信息"
+	Score          string `json:"score"`           // "评分"
+	Status         string `json:"status"`          // "修复状态"
+	VulCategory    string `json:"vul_category"`    // "漏洞类型"
+	VulName        string `json:"vul_name"`        // "漏洞名称"
+	VulLevel       string `json:"vul_level"`       // "⻛险等级"
+	PubTime        string `json:"pub_time"`        // "CVE公开时间"
+	Binary         string `json:"binary"`          // "二进制包"
+	Description    string `json:"description"`     // "漏洞描述"
+	CveDescription string `json:"cve_description"` // "漏洞描述(英文)"
 }
 
 type CEVMeta struct {
+	DateTime string    `json:"dateTime"`
+	Cves     []CEVInfo `json:"cves"`
 }
+
+var CVEs map[string]CEVInfo // 保存全局cves信息，方便查询
 
 // 从更新平台获取CVE元数据
 func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
-	return nil
-}
+	data, err := m.Report(GetPkgCVEs, "")
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	cves, ok := data.(CEVMeta)
+	if !ok {
+		logger.Warning("bad format")
+		return err
+	}
+	// 重置CVEs
+	CVEs = make(map[string]CEVInfo)
+	m.cveDataTime = cves.DateTime
+	for _, cve := range cves.Cves {
+		CVEs[cve.CveId] = cve
+		str := cve.Binary
+		str = strings.ReplaceAll(str, "[", "")
+		str = strings.ReplaceAll(str, "]", "")
+		str = strings.ReplaceAll(str, " ", "")
+		str = strings.ReplaceAll(str, "'", "")
+		if str == "None" || len(str) == 0 {
+			continue
+		}
 
-type SystemMeta struct {
-}
+		binarys := strings.Split(str, ",")
+		if len(binarys) > 0 {
+			for _, binary := range binarys {
+				m.cvePkgs[binary] = append(m.cvePkgs[binary], cve.CveId)
+			}
+		}
 
-func (m *UpdatePlatformManager) updateSystemMetaSync() error {
+	}
+
+	m.config.UpdateLastCVESyncTime(m.cveDataTime)
 	return nil
 }
 
 func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.UpgradeInfo {
-	if logger.GetLogLevel() == log.LevelDebug {
-		r := make(map[string]system.UpgradeInfo)
-		r["deepin-camera"] = system.UpgradeInfo{
-			Package:        "deepin-camera",
-			CurrentVersion: "",
-			LastVersion:    "1.4.16-1",
-			ChangeLog:      "",
-			Category:       "",
-		}
-		r["dde-launcher"] = system.UpgradeInfo{
-			Package:        "dde-launcher",
-			CurrentVersion: "",
-			LastVersion:    "5.6.10-1",
-			ChangeLog:      "",
-			Category:       "",
-		}
-		return r
+	infos := make(map[string]system.UpgradeInfo)
+	for name, info := range m.corePkgs {
+		infos[name] = info
 	}
-	return nil
+
+	for name, info := range m.selectPkgs {
+		infos[name] = info
+	}
+	return infos
 }
 
-type ChangelogMeta struct {
+type UpdatelogMeta struct {
+	Baseline      string    `json:"baseline"`
+	ShowVersion   string    `json:"showVersion"`
+	CnLog         string    `json:"cnLog"`
+	EnLog         string    `json:"enLog"`
+	LogType       int       `json:"logType"`
+	IsUnstable    int       `json:"isUnstable"`
+	SystemVersion string    `json:"systemVersion"`
+	PublishTime   time.Time `json:"publishTime"`
 }
 
 // 如果更新日志无法获取到,不会返回错误,而是设置默认日志文案
-func (m *UpdatePlatformManager) updateChangelogMetaSync() error {
-	return nil
-}
-
-func (m *UpdatePlatformManager) getDepositoryFromPlatform() []string {
-	if logger.GetLogLevel() == log.LevelDebug {
-		return []string{
-			"deb http://pools.uniontech.com/ppa/dde-eagle eagle/1061 main contrib non-free",
-		}
+func (m *UpdatePlatformManager) updateLogMetaSync() error {
+	data, err := m.Report(GetUpdataLog, "")
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	var ok bool
+	m.systemUpdataLogs, ok = data.([]UpdatelogMeta)
+	if !ok {
+		return err
 	}
 	return nil
 }
 
-// UpdatePlatFormSourceListFile 更新从平台获取的仓库
-func (m *UpdatePlatformManager) UpdatePlatFormSourceListFile() error {
-	return ioutil.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(m.getDepositoryFromPlatform(), "\n")), 0644)
+func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
+	prefix := "deb"
+	suffix := "main contrib non-free"
+	var repos []string
+	for _, repo := range m.repoInfos {
+		codeName := repo.CodeName
+		if repo.Version != "" {
+			codeName = fmt.Sprintf("%s/%s", codeName, repo.Version)
+		}
+		// 如果有cdn，则使用cdn，效率更高
+		var uri = repo.Uri
+		if repo.Cdn != "" {
+			uri = repo.Cdn
+		}
+		repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, suffix))
+	}
+
+	err := ioutil.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
+	if err != nil {
+		logger.Warning("update sourcefile err")
+	}
+
+}
+
+func getAptAuthConf(domain string) string {
+	AuthFile := "/etc/apt/auth.conf.d/uos.conf"
+	file, err := os.Open(AuthFile)
+	if err != nil {
+		logger.Warning("无法打开文件:", err)
+		return ""
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	// 逐行读取文件内容
+	for scanner.Scan() {
+		line := strings.Split(scanner.Text(), " ")
+		if len(line) < 6 {
+			continue
+		}
+		if line[1] == domain {
+			auth := line[3] + ":" + line[5]
+			auth = "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+			return auth
+		}
+	}
+	return ""
+}
+
+// 校验InRelease文件，如果平台和本地不同，则删除
+func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
+	// 更新获取InRelease文件
+	client := &http.Client{
+		Timeout: 4 * time.Second,
+	}
+	for _, repo := range m.repoInfos {
+		// 如果有cdn，则使用cdn，效率更高
+		var uri = repo.Uri
+		if repo.Cdn != "" {
+			uri = repo.Cdn
+		}
+
+		uri = fmt.Sprintf("%s/dists/%s/InRelease", uri, repo.CodeName)
+		request, err := http.NewRequest("GET", uri, nil)
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
+
+		// 获取仓库文件路径
+		file := utils.URIToPath(uri)
+		if len(file) == 0 {
+			logger.Warning("unillegal uri:", repo.Uri)
+		}
+		// 获取域名
+		domain := strings.Split(file, "/")[0]
+
+		request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateTokenConfigFile())))
+		request.Header.Set("Authorization", getAptAuthConf(domain))
+		resp, err := client.Do(request)
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		switch resp.StatusCode {
+		case http.StatusOK:
+		default:
+			logger.Warningf("failed download InRelease:%s,respCode:%d", uri, resp.StatusCode)
+			continue
+		}
+
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+
+		file = strings.ReplaceAll(file, "/", "_")
+		lastoreFile := "/tmp/" + file
+		aptFile := "/var/lib/apt/lists/" + file
+
+		err = ioutil.WriteFile(lastoreFile, data, 0644)
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+
+		_, err = os.Stat(aptFile)
+		// 文件存在，则校验MD5值
+		if err == nil {
+			aptSum, ok := utils.SumFileMd5(aptFile)
+			if !ok {
+				logger.Warningf("check %s md5sum failed", aptFile)
+				continue
+			}
+			lastoreSum, ok := utils.SumFileMd5(lastoreFile)
+			if !ok {
+				logger.Warningf("check %s md5sum failed", lastoreFile)
+				continue
+			}
+			if aptSum != lastoreSum {
+				logger.Warning("InRelease changed:", aptFile)
+				os.Remove(aptFile)
+			} else {
+				logger.Warningf("InRelease unchanged: %s", aptFile)
+				continue
+			}
+		}
+		// 文件不存在直接拷贝过去
+		if os.IsNotExist(err) {
+			logger.Warningf("failed check InRelease: %s ", aptFile)
+			continue
+		}
+	}
 }
 
 // UpdateAllPlatformDataSync 同步获取所有需要从更新平台获取的数据
@@ -382,22 +848,20 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	var wg sync.WaitGroup
 	var errGlobal error
 	syncFuncList := []func() error{
+		m.updateLogMetaSync,
 		m.updateCurrentPreInstalledPkgMetaSync,
 		m.updateCVEMetaDataSync,
-		m.updateSystemMetaSync,
-		m.updateChangelogMetaSync,
 	}
 	for _, syncFunc := range syncFuncList {
-		f := syncFunc
-		go func() {
-			wg.Add(1)
+		wg.Add(1)
+		go func(f func() error) {
 			err := f()
 			if err != nil {
 				logger.Warning(err)
 				errGlobal = err
 			}
 			wg.Done()
-		}()
+		}(syncFunc)
 
 	}
 	wg.Wait()
@@ -405,8 +869,12 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 }
 
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
-func (m *UpdatePlatformManager) PostStatusMessage() {
-
+func (m *UpdatePlatformManager) PostStatusMessage(body string) {
+	_, err := m.Report(PostProcess, body)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
 }
 
 // 更新平台上报
@@ -472,9 +940,6 @@ func (m *UpdatePlatformManager) postSystemUpgradeMessage(upgradeStatus int, j *J
 		logger.Warning(err)
 		return
 	}
-	client := &http.Client{
-		Timeout: 4 * time.Second,
-	}
 	logger.Debug(postContent)
 	encryptMsg, err := EncryptMsg(content)
 	if err != nil {
@@ -482,21 +947,10 @@ func (m *UpdatePlatformManager) postSystemUpgradeMessage(upgradeStatus int, j *J
 		return
 	}
 	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
-	url := m.requestUrl + "/api/v1/update/status"
-	request, err := http.NewRequest("POST", url, strings.NewReader(base64EncodeString))
+	_, err = m.Report(PostProcess, base64EncodeString)
 	if err != nil {
 		logger.Warning(err)
 		return
-	}
-	response, err := client.Do(request)
-	if err == nil {
-		defer func() {
-			_ = response.Body.Close()
-		}()
-		body, _ := ioutil.ReadAll(response.Body)
-		logger.Info(string(body))
-	} else {
-		logger.Warning(err)
 	}
 }
 

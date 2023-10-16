@@ -82,6 +82,18 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"installable"},
 		},
 		{
+			Name:    "UpdateLogs",
+			Fn:      v.UpdateLogs,
+			InArgs:  []string{"type"},
+			OutArgs: []string{"updatelogs"},
+		},
+		{
+			Name:    "UpdatablePackages",
+			Fn:      v.UpdatablePackages,
+			InArgs:  []string{"type"},
+			OutArgs: []string{"pkgs"},
+		},
+		{
 			Name:    "PackagesDownloadSize",
 			Fn:      v.PackagesDownloadSize,
 			InArgs:  []string{"packages"},
