@@ -157,8 +157,11 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.RemoveJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
-		job._InitProgressRange(0.11, 0.8)
+		job = NewJob(jm.service, genJobId(system.CheckSystemJobType), jobName, packages, system.CheckSystemJobType, LockQueue, environ)
+		job._InitProgressRange(0.06, 0.1)
+		next := NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
+		job.Id = next.Id
+		next._InitProgressRange(0.11, 0.8)
 	case system.DistUpgradeJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.InstallJobType, LockQueue, environ)
 		job._InitProgressRange(0, 0.99)

@@ -1,68 +1,72 @@
 package dut
 
 import (
-	"bytes"
-	"fmt"
 	"internal/system"
-	"os"
 	"os/exec"
-	"strings"
-	"sync"
+	"syscall"
 
 	"github.com/linuxdeepin/go-lib/log"
 )
 
-type CommandSet interface {
-	AddCMD(cmd *dutCommand)
-	RemoveCMD(id string)
-	FindCMD(id string) *dutCommand
-}
-
 var logger = log.NewLogger("lastore/dut")
 
-func (p *DutSystem) AddCMD(cmd *dutCommand) {
-	if _, ok := p.cmdSet[cmd.JobId]; ok {
-		logger.Warningf("DutSystem AddCMD: exist cmd %q\n", cmd.JobId)
-		return
+func newDUTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn system.Indicator, cmdArgs []string) *system.Command {
+	cmd := createCommandLine(cmdType, cmdArgs)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	r := &system.Command{
+		JobId:             jobId,
+		CmdSet:            cmdSet,
+		Indicator:         fn,
+		ParseJobError:     parseJobError,
+		ParseProgressInfo: parseProgressInfo,
+		Cmd:               cmd,
+		Cancelable:        true,
 	}
-	logger.Infof("DutSystem AddCMD: %v\n", cmd)
-	p.cmdSet[cmd.JobId] = cmd
+	cmd.Stdout = &r.Stdout
+	cmd.Stderr = &r.Stderr
+	cmdSet.AddCMD(r)
+	return r
 }
 
-func (p *DutSystem) RemoveCMD(id string) {
-	c, ok := p.cmdSet[id]
-	if !ok {
-		logger.Warningf("DutSystem RemoveCMD with invalid Id=%q\n", id)
-		return
+func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
+	bin := "deepin-system-update"
+	var args []string
+	logger.Info("cmdArgs is:", cmdArgs)
+	switch cmdType {
+	case system.CheckDependsJobType:
+		bin = "deepin-system-fixpkg"
+		args = append(args, "check")
+
+	case system.CheckSystemJobType:
+		args = append(args, "check")
+		// precheck --before-download ;precheck --after-download; midcheck ;postcheck --check-succeed;postcheck --check-failed
+		args = append(args, cmdArgs...)
+		args = append(args, "--ignore-warning")
+		args = append(args, []string{
+			"--meta-cfg",
+			system.DutMetaConfPath,
+		}...)
+	case system.DistUpgradeJobType:
+		args = append(args, "update")
+		args = append(args, []string{
+			"--meta-cfg",
+			system.DutMetaConfPath,
+		}...)
+	case system.FixErrorJobType:
+		bin = "deepin-system-fixpkg"
+		args = append(args, "fix")
+	default:
+		panic("invalid cmd type " + cmdType)
 	}
-	logger.Infof("DutSystem RemoveCMD: %v (exitCode:%d)\n", c, c.exitCode)
-	delete(p.cmdSet, id)
+	logger.Info("cmd final args is:", bin, args)
+	return exec.Command(bin, args...)
 }
 
-func (p *DutSystem) FindCMD(id string) *dutCommand {
-	return p.cmdSet[id]
+func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
+	// TODO
+	return nil
 }
-
-type dutCommand struct {
-	JobId      string
-	Cancelable bool
-
-	cmdSet CommandSet
-
-	apt      *exec.Cmd
-	aptMu    sync.Mutex
-	exitCode int
-
-	aptPipe *os.File
-
-	indicator system.Indicator
-
-	stdout   bytes.Buffer
-	stderr   bytes.Buffer
-	atExitFn func() bool
-}
-
-func (c *dutCommand) String() string {
-	return fmt.Sprintf("DutCommand{id:%q, Cancelable:%v, CMD:%q}",
-		c.JobId, c.Cancelable, strings.Join(c.apt.Args, " "))
+func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
+	// TODO
+	return system.JobProgressInfo{}, nil
 }

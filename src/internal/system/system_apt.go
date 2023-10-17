@@ -33,6 +33,10 @@ const (
 	LastoreAptV2CommonConfPath = "/var/lib/lastore/apt_v2_common.conf" // 该配置指定了通过lastore更新的deb包缓存路径
 )
 
+const (
+	DutMetaConfPath = "/var/lib/lastore/meta.json"
+)
+
 // ListPackageFile list files path contained in the packages
 func ListPackageFile(packages ...string) []string {
 	desktopFiles, err := utils.FilterExecOutput(

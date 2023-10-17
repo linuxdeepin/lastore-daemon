@@ -7,12 +7,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"internal/system/dut"
 	"os"
 	"path"
 	"time"
 
 	"internal/system"
-	"internal/system/apt"
 	"internal/utils"
 
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	aptImpl := apt.New(config.systemSourceList, config.nonUnknownList, config.otherSourceList)
+	aptImpl := dut.NewSystem(config.systemSourceList, config.nonUnknownList, config.otherSourceList)
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, aptImpl, config)

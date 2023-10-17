@@ -6,67 +6,36 @@ import (
 )
 
 type DutSystem struct {
-	system.System
-	cmdSet    map[string]*dutCommand
-	indicator system.Indicator
+	apt.APTSystem
 }
 
-func New() system.System {
-	aptImpl := apt.New(nil, nil, nil)
+func NewSystem(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
+	aptImpl := apt.New(systemSourceList, nonUnknownList, otherList)
 	return &DutSystem{
-		System: aptImpl,
+		APTSystem: aptImpl,
 	}
 }
 
-func (p *DutSystem) OptionToArgs(options map[string]string) []string {
-	return p.System.OptionToArgs(options)
-}
-
-func (p *DutSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, cmdArgs []string) error {
-	return p.System.DownloadPackages(jobId, packages, environ, cmdArgs)
-}
-
-func (p *DutSystem) DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error {
-	return p.System.DownloadSource(jobId, environ, cmdArgs)
-}
-
-func (p *DutSystem) Install(jobId string, packages []string, environ map[string]string, cmdArgs []string) error {
-	return p.System.Install(jobId, packages, environ, cmdArgs)
-}
-
-func (p *DutSystem) Remove(jobId string, packages []string, environ map[string]string) error {
-	return p.System.Remove(jobId, packages, environ)
-}
-
 func (p *DutSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error {
-	return p.System.DistUpgrade(jobId, environ, cmdArgs)
-}
-
-func (p *DutSystem) UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error {
-	return p.System.UpdateSource(jobId, environ, cmdArgs)
-}
-
-func (p *DutSystem) Clean(jobId string) error {
-	return p.System.Clean(jobId)
-}
-
-func (p *DutSystem) Abort(jobId string) error {
-	return p.System.Abort(jobId)
-}
-
-func (p *DutSystem) AbortWithFailed(jobId string) error {
-	return p.System.AbortWithFailed(jobId)
-}
-
-func (p *DutSystem) AttachIndicator(indicator system.Indicator) {
-	p.System.AttachIndicator(indicator)
-	p.indicator = indicator
+	c := newDUTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, cmdArgs)
+	c.SetEnv(environ)
+	return c.Start()
 }
 
 func (p *DutSystem) FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error {
-	return p.System.FixError(jobId, errType, environ, cmdArgs)
+	c := newDUTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, cmdArgs...))
+	c.SetEnv(environ)
+	return c.Start()
 }
 
-func (p *DutSystem) CheckSystem(jobId string, checkType string) error {
-	return nil
+func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs []string) error {
+	c := newDUTCommand(p, jobId, system.CheckSystemJobType, p.Indicator, cmdArgs)
+	c.SetEnv(environ)
+	return c.Start()
+}
+
+func (p *DutSystem) CheckDepends(jobId string, checkType string, environ map[string]string, cmdArgs []string) error {
+	c := newDUTCommand(p, jobId, system.CheckDependsJobType, p.Indicator, nil)
+	c.SetEnv(environ)
+	return c.Start()
 }

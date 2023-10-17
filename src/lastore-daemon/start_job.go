@@ -54,7 +54,10 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.FixError(j.Id, errType, j.environ, args)
 
 	case system.CheckSystemJobType:
-		return sys.CheckSystem(j.Id, j.Packages[0])
+		return sys.CheckSystem(j.Id, j.Packages[0], j.environ, args)
+
+	case system.CheckDependsJobType:
+		return sys.CheckDepends(j.Id, j.Packages[0], j.environ, args)
 
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)

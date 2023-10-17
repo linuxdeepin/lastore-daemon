@@ -36,6 +36,7 @@ const (
 	CleanJobType              = "clean"
 	FixErrorJobType           = "fix_error"
 	CheckSystemJobType        = "check_system"
+	CheckDependsJobType       = "check_depends"
 
 	// UpgradeJobType 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
 	PrepareSystemUpgradeJobType   = "prepare_system_upgrade"
@@ -112,6 +113,8 @@ var NotSupportError = errors.New("not support operation")
 var ResourceExitError = errors.New("resource exists")
 
 type Indicator func(JobProgressInfo)
+type ParseProgressInfo func(id, line string) (JobProgressInfo, error)
+type ParseJobError func(stdErrStr string, stdOutStr string) *JobError
 
 type System interface {
 	OptionToArgs(options map[string]string) []string
@@ -126,7 +129,8 @@ type System interface {
 	AbortWithFailed(jobId string) error
 	AttachIndicator(Indicator)
 	FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error
-	CheckSystem(jobId string, checkType string) error
+	CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs []string) error
+	CheckDepends(jobId string, checkType string, environ map[string]string, cmdArgs []string) error
 }
 
 type PkgSystemError struct {

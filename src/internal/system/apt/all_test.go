@@ -20,7 +20,7 @@ func init() {
 
 func (*testWrap) TestParseInfo(c *C.C) {
 	line := "dummy:" + system.RunningStatus + ":1:" + "running"
-	info, err := ParseProgressInfo("jobid", string(line))
+	info, err := parseProgressInfo("jobid", string(line))
 	c.Check(err, C.Equals, nil)
 	c.Check(info.Status, C.Equals, system.RunningStatus)
 	c.Check(info.JobId, C.Equals, "jobid")

@@ -5,71 +5,36 @@
 package apt
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
 	"internal/system"
-	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"syscall"
 
 	"github.com/linuxdeepin/go-lib/log"
 )
 
-type CommandSet interface {
-	AddCMD(cmd *aptCommand)
-	RemoveCMD(id string)
-	FindCMD(id string) *aptCommand
-}
-
 var logger = log.NewLogger("lastore/apt")
 
-func (p *APTSystem) AddCMD(cmd *aptCommand) {
-	if _, ok := p.cmdSet[cmd.JobId]; ok {
+func (p *APTSystem) AddCMD(cmd *system.Command) {
+	if _, ok := p.CmdSet[cmd.JobId]; ok {
 		logger.Warningf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
 		return
 	}
 	logger.Infof("APTSystem AddCMD: %v\n", cmd)
-	p.cmdSet[cmd.JobId] = cmd
+	p.CmdSet[cmd.JobId] = cmd
 }
 func (p *APTSystem) RemoveCMD(id string) {
-	c, ok := p.cmdSet[id]
+	c, ok := p.CmdSet[id]
 	if !ok {
 		logger.Warningf("APTSystem RemoveCMD with invalid Id=%q\n", id)
 		return
 	}
-	logger.Infof("APTSystem RemoveCMD: %v (exitCode:%d)\n", c, c.exitCode)
-	delete(p.cmdSet, id)
+	logger.Infof("APTSystem RemoveCMD: %v (exitCode:%d)\n", c, c.ExitCode)
+	delete(p.CmdSet, id)
 }
-func (p *APTSystem) FindCMD(id string) *aptCommand {
-	return p.cmdSet[id]
-}
-
-type aptCommand struct {
-	JobId      string
-	Cancelable bool
-
-	cmdSet CommandSet
-
-	apt      *exec.Cmd
-	aptMu    sync.Mutex
-	exitCode int
-
-	aptPipe *os.File
-
-	indicator system.Indicator
-
-	stdout   bytes.Buffer
-	stderr   bytes.Buffer
-	atExitFn func() bool
-}
-
-func (c *aptCommand) String() string {
-	return fmt.Sprintf("AptCommand{id:%q, Cancelable:%v, CMD:%q}",
-		c.JobId, c.Cancelable, strings.Join(c.apt.Args, " "))
+func (p *APTSystem) FindCMD(id string) *system.Command {
+	return p.CmdSet[id]
 }
 
 func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
@@ -146,132 +111,25 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	return exec.Command("apt-get", args...)
 }
 
-func newAPTCommand(cmdSet CommandSet, jobId string, cmdType string, fn system.Indicator, cmdArgs []string) *aptCommand {
+func newAPTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn system.Indicator, cmdArgs []string) *system.Command {
 	cmd := createCommandLine(cmdType, cmdArgs)
 
 	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	r := &aptCommand{
-		JobId:      jobId,
-		cmdSet:     cmdSet,
-		indicator:  fn,
-		apt:        cmd,
-		Cancelable: true,
+	r := &system.Command{
+		JobId:             jobId,
+		CmdSet:            cmdSet,
+		Indicator:         fn,
+		ParseJobError:     parseJobError,
+		ParseProgressInfo: parseProgressInfo,
+		Cmd:               cmd,
+		Cancelable:        true,
 	}
-	cmd.Stdout = &r.stdout
-	cmd.Stderr = &r.stderr
+	cmd.Stdout = &r.Stdout
+	cmd.Stderr = &r.Stderr
 
 	cmdSet.AddCMD(r)
 	return r
-}
-
-func (c *aptCommand) setEnv(envVarMap map[string]string) {
-	if envVarMap == nil {
-		return
-	}
-
-	envVarSlice := os.Environ()
-	for key, value := range envVarMap {
-		envVarSlice = append(envVarSlice, key+"="+value)
-	}
-	c.apt.Env = envVarSlice
-}
-
-func (c *aptCommand) Start() error {
-	rr, ww, err := os.Pipe()
-	if err != nil {
-		return fmt.Errorf("aptCommand.Start pipe : %v", err)
-	}
-
-	// It must be closed after c.osCMD.Start
-	defer func() {
-		_ = ww.Close()
-	}()
-
-	c.apt.ExtraFiles = append(c.apt.ExtraFiles, ww)
-
-	c.aptMu.Lock()
-	err = c.apt.Start()
-	c.aptMu.Unlock()
-	if err != nil {
-		_ = rr.Close()
-		return err
-	}
-
-	c.aptPipe = rr
-
-	go c.updateProgress()
-
-	go func() {
-		_ = c.Wait()
-	}()
-
-	return nil
-}
-
-func (c *aptCommand) Wait() (err error) {
-	err = c.apt.Wait()
-	if c.exitCode != ExitPause {
-		if err != nil {
-			c.exitCode = ExitFailure
-			logger.Infof("aptCommand.Wait: %v\n", err)
-		} else {
-			c.exitCode = ExitSuccess
-		}
-	}
-	c.atExit()
-	return err
-}
-
-const (
-	ExitSuccess = 0
-	ExitFailure = 1
-	ExitPause   = 2
-)
-
-func (c *aptCommand) atExit() {
-	err := c.aptPipe.Close()
-	if err != nil {
-		logger.Warning("failed to close pipe:", err)
-	}
-
-	logger.Infof("job %s stdout: %s", c.JobId, c.stdout.Bytes())
-	logger.Infof("job %s stderr: %s", c.JobId, c.stderr.Bytes())
-
-	c.cmdSet.RemoveCMD(c.JobId)
-
-	if c.atExitFn != nil {
-		shouldReturn := c.atExitFn()
-		if shouldReturn {
-			return
-		}
-	}
-
-	switch c.exitCode {
-	case ExitSuccess:
-		c.indicator(system.JobProgressInfo{
-			JobId:      c.JobId,
-			Status:     system.SucceedStatus,
-			Progress:   1.0,
-			Cancelable: false,
-		})
-	case ExitFailure:
-		err := parseJobError(c.stderr.String(), c.stdout.String())
-		c.indicator(system.JobProgressInfo{
-			JobId:      c.JobId,
-			Status:     system.FailedStatus,
-			Progress:   -1.0,
-			Cancelable: true,
-			Error:      err,
-		})
-	case ExitPause:
-		c.indicator(system.JobProgressInfo{
-			JobId:      c.JobId,
-			Status:     system.PausedStatus,
-			Progress:   -1.0,
-			Cancelable: true,
-		})
-	}
 }
 
 func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
@@ -385,81 +243,5 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Type:   string(system.ErrorUnknown),
 			Detail: stdErrStr,
 		}
-	}
-}
-
-func (c *aptCommand) indicateFailed(errType, errDetail string, isFatalErr bool) {
-	logger.Warningf("indicateFailed: type: %s, detail: %s", errType, errDetail)
-	progressInfo := system.JobProgressInfo{
-		JobId:      c.JobId,
-		Progress:   -1.0,
-		Status:     system.FailedStatus,
-		Cancelable: true,
-		Error: &system.JobError{
-			Type:   errType,
-			Detail: errDetail,
-		},
-		FatalError: isFatalErr,
-	}
-	c.cmdSet.RemoveCMD(c.JobId)
-	c.indicator(progressInfo)
-}
-
-func (c *aptCommand) Abort() error {
-	if c.Cancelable {
-		c.aptMu.Lock()
-		defer c.aptMu.Unlock()
-		if c.apt.Process == nil {
-			return errors.New("the process has not yet started")
-		}
-
-		logger.Debugf("Abort Command: %v\n", c)
-		c.exitCode = ExitPause
-		var err error
-		pgid, err := syscall.Getpgid(c.apt.Process.Pid)
-		if err != nil {
-			return err
-		}
-		return syscall.Kill(-pgid, 2)
-	}
-	return system.NotSupportError
-}
-
-func (c *aptCommand) AbortWithFailed() error {
-	if c.Cancelable {
-		c.aptMu.Lock()
-		defer c.aptMu.Unlock()
-		if c.apt.Process == nil {
-			return errors.New("the process has not yet started")
-		}
-
-		logger.Debugf("Abort Command: %v\n", c)
-		c.exitCode = ExitFailure
-		var err error
-		pgid, err := syscall.Getpgid(c.apt.Process.Pid)
-		if err != nil {
-			return err
-		}
-		return syscall.Kill(-pgid, 2)
-	}
-	return system.NotSupportError
-}
-
-func (c *aptCommand) updateProgress() {
-	b := bufio.NewReader(c.aptPipe)
-	for {
-		line, err := b.ReadString('\n')
-		if err != nil {
-			return
-		}
-
-		info, err := ParseProgressInfo(c.JobId, line)
-		if err != nil {
-			logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
-			continue
-		}
-
-		c.Cancelable = info.Cancelable
-		c.indicator(info)
 	}
 }

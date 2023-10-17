@@ -7,6 +7,7 @@ package apt
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"internal/system"
 	"io"
@@ -20,13 +21,18 @@ import (
 )
 
 type APTSystem struct {
-	cmdSet    map[string]*aptCommand
-	indicator system.Indicator
+	CmdSet    map[string]*system.Command
+	Indicator system.Indicator
 }
 
-func New(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
-	p := &APTSystem{
-		cmdSet: make(map[string]*aptCommand),
+func NewSystem(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
+	apt := New(systemSourceList, nonUnknownList, otherList)
+	return &apt
+}
+
+func New(systemSourceList []string, nonUnknownList []string, otherList []string) APTSystem {
+	p := APTSystem{
+		CmdSet: make(map[string]*system.Command),
 	}
 	WaitDpkgLockRelease()
 	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run() // TODO
@@ -42,7 +48,7 @@ func parseProgressField(v string) (float64, error) {
 	return progress, nil
 }
 
-func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
+func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	fs := strings.SplitN(line, ":", 4)
 	if len(fs) != 4 {
 		return system.JobProgressInfo{JobId: id}, fmt.Errorf("Invlaid Progress line:%q", line)
@@ -90,7 +96,7 @@ func ParseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 }
 
 func (p *APTSystem) AttachIndicator(f system.Indicator) {
-	p.indicator = f
+	p.Indicator = f
 }
 
 func WaitDpkgLockRelease() {
@@ -211,8 +217,8 @@ func checkPkgSystemError(lock bool) error {
 	return parsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
 }
 
-func safeStart(c *aptCommand) error {
-	args := c.apt.Args
+func safeStart(c *system.Command) error {
+	args := c.Cmd.Args
 	// add -s option
 	args = append([]string{"-s"}, args[1:]...)
 	cmd := exec.Command("apt-get", args...) // #nosec G204
@@ -231,21 +237,21 @@ func safeStart(c *aptCommand) error {
 		err := cmd.Wait()
 		if err != nil {
 			jobErr := parseJobError(stderr.String(), stdout.String())
-			c.indicateFailed(jobErr.Type, jobErr.Detail, false)
+			c.IndicateFailed(jobErr.Type, jobErr.Detail, false)
 			return
 		}
 
 		// cmd run ok
 		// check rm dde?
 		if bytes.Contains(stdout.Bytes(), []byte("Remv dde ")) {
-			c.indicateFailed("removeDDE", "", true)
+			c.IndicateFailed("removeDDE", "", true)
 			return
 		}
 
 		// really perform apt-get action
 		err = c.Start()
 		if err != nil {
-			c.indicateFailed("unknown",
+			c.IndicateFailed("unknown",
 				"apt-get start failed: "+err.Error(), false)
 		}
 	}()
@@ -266,8 +272,8 @@ func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ ma
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.DownloadJobType, p.indicator, append(packages, args...))
-	c.setEnv(environ)
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.Indicator, append(packages, args...))
+	c.SetEnv(environ)
 	return c.Start()
 }
 
@@ -279,8 +285,8 @@ func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, cmdA
 			return err
 		}
 	*/
-	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.indicator, cmdArgs)
-	c.setEnv(environ)
+	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, cmdArgs)
+	c.SetEnv(environ)
 	return c.Start()
 }
 
@@ -291,8 +297,8 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 		return err
 	}
 
-	c := newAPTCommand(p, jobId, system.RemoveJobType, p.indicator, packages)
-	c.setEnv(environ)
+	c := newAPTCommand(p, jobId, system.RemoveJobType, p.Indicator, packages)
+	c.SetEnv(environ)
 	return safeStart(c)
 }
 
@@ -302,8 +308,8 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.InstallJobType, p.indicator, append(packages, args...))
-	c.setEnv(environ)
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(packages, args...))
+	c.SetEnv(environ)
 	return safeStart(c)
 }
 
@@ -312,36 +318,37 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 	err := checkPkgSystemError(true)
 	if err != nil {
 		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
-		e, ok := err.(*system.PkgSystemError)
+		var e *system.PkgSystemError
+		ok := errors.As(err, &e)
 		if !ok || (ok && e.Type != system.ErrTypeDependenciesBroken) {
 			return err
 		}
 	}
-	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.indicator, cmdArgs)
-	c.setEnv(environ)
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, cmdArgs)
+	c.SetEnv(environ)
 	return safeStart(c)
 }
 
 func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error {
-	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.indicator, cmdArgs)
-	c.atExitFn = func() bool {
+	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, cmdArgs)
+	c.AtExitFn = func() bool {
 		// 无网络时检查更新失败,exitCode为0,空间不足(不确定exit code)导致需要特殊处理
-		if c.exitCode == ExitSuccess && bytes.Contains(c.stderr.Bytes(), []byte("Some index files failed to download")) {
-			if bytes.Contains(c.stderr.Bytes(), []byte("No space left on device")) {
-				c.indicateFailed(string(system.ErrorInsufficientSpace), c.stderr.String(), false)
+		if c.ExitCode == system.ExitSuccess && bytes.Contains(c.Stderr.Bytes(), []byte("Some index files failed to download")) {
+			if bytes.Contains(c.Stderr.Bytes(), []byte("No space left on device")) {
+				c.IndicateFailed(string(system.ErrorInsufficientSpace), c.Stderr.String(), false)
 			} else {
-				c.indicateFailed(string(system.ErrorIndexDownloadFailed), c.stderr.String(), false)
+				c.IndicateFailed(string(system.ErrorIndexDownloadFailed), c.Stderr.String(), false)
 			}
 			return true
 		}
 		return false
 	}
-	c.setEnv(environ)
+	c.SetEnv(environ)
 	return c.Start()
 }
 
 func (p *APTSystem) Clean(jobId string) error {
-	c := newAPTCommand(p, jobId, system.CleanJobType, p.indicator, nil)
+	c := newAPTCommand(p, jobId, system.CleanJobType, p.Indicator, nil)
 	return c.Start()
 }
 
@@ -361,15 +368,19 @@ func (p *APTSystem) AbortWithFailed(jobId string) error {
 
 func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error {
 	WaitDpkgLockRelease()
-	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.indicator, append([]string{errType}, cmdArgs...))
-	c.setEnv(environ)
+	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, cmdArgs...))
+	c.SetEnv(environ)
 	if errType == system.ErrTypeDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
 	}
 	return c.Start()
 }
 
-func (p *APTSystem) CheckSystem(jobId string, checkType string) error {
+func (p *APTSystem) CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs []string) error {
+	return nil
+}
+
+func (p *APTSystem) CheckDepends(jobId string, checkType string, environ map[string]string, cmdArgs []string) error {
 	return nil
 }
 

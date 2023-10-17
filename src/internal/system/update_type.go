@@ -204,7 +204,7 @@ func UpdateOtherSystemSourceDir(otherSourceList []string) error {
 	}
 	// 创建对应的软链接
 	for _, filePath := range otherSourceList {
-		linkPath := filepath.Join(SoftLinkSystemSourceDir, filepath.Base(filePath))
+		linkPath := filepath.Join(OtherSystemSourceDir, filepath.Base(filePath))
 		err = os.Symlink(filePath, linkPath)
 		if err != nil {
 			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)

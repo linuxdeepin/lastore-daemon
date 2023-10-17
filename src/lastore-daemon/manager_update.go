@@ -201,16 +201,16 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					return fmt.Errorf("failed to update temp source list dir: %v", err)
 				}
 				// 从更新平台获取数据并处理完成后,进度更新到5%
-				job.setPropProgress(0.6)
+				job.setPropProgress(0.06)
 
 				// 系统工具检查依赖关系
-				err = m.updateApi.CheckSystem("", "")
-				if err != nil {
-					logger.Warning(err)
-					return err
-				}
-				// 检查完成后进度更新到10%
-				job.setPropProgress(0.10)
+				// err = m.updateApi.CheckSystem("", "")
+				// if err != nil {
+				// 	logger.Warning(err)
+				// 	return err
+				// }
+				// // 检查完成后进度更新到10%
+				// job.setPropProgress(0.10)
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
