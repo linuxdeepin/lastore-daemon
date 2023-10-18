@@ -16,6 +16,15 @@ func NewSystem(systemSourceList []string, nonUnknownList []string, otherList []s
 	}
 }
 
+func (p *DutSystem) OptionToArgs(options map[string]string) []string {
+	var args []string
+	for key, value := range options { // dut 命令执行参数
+		args = append(args, key)
+		args = append(args, value)
+	}
+	return args
+}
+
 func (p *DutSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error {
 	c := newDUTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, cmdArgs)
 	c.SetEnv(environ)

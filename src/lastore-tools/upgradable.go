@@ -87,7 +87,7 @@ func parseAptShowList(r io.Reader, title string) []string {
 }
 
 func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
-	ps, err := apt.ListDistUpgradePackages(sourcePath)
+	ps, err := apt.ListDistUpgradePackages(sourcePath, nil)
 	if err != nil {
 		return nil, err
 	}

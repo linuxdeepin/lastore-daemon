@@ -34,7 +34,8 @@ const (
 )
 
 const (
-	DutMetaConfPath = "/var/lib/lastore/meta.json"
+	DutOnlineMetaConfPath  = "/var/lib/lastore/online_meta.json"  // 在线更新元数据
+	DutOfflineMetaConfPath = "/var/lib/lastore/offline_meta.json" // 离线更新元数据
 )
 
 // ListPackageFile list files path contained in the packages

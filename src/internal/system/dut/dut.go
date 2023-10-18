@@ -42,16 +42,16 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		// precheck --before-download ;precheck --after-download; midcheck ;postcheck --check-succeed;postcheck --check-failed
 		args = append(args, cmdArgs...)
 		args = append(args, "--ignore-warning")
-		args = append(args, []string{
-			"--meta-cfg",
-			system.DutMetaConfPath,
-		}...)
+		// args = append(args, []string{
+		// 	"--meta-cfg",
+		// 	system.DutOnlineMetaConfPath,
+		// }...)
 	case system.DistUpgradeJobType:
 		args = append(args, "update")
-		args = append(args, []string{
-			"--meta-cfg",
-			system.DutMetaConfPath,
-		}...)
+		// args = append(args, []string{
+		// 	"--meta-cfg",
+		// 	system.DutOnlineMetaConfPath,
+		// }...)
 	case system.FixErrorJobType:
 		bin = "deepin-system-fixpkg"
 		args = append(args, "fix")

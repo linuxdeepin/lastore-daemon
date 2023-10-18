@@ -174,6 +174,12 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:      v.UpdateSource,
 			OutArgs: []string{"job"},
 		},
+		{
+			Name:    "UpdateOfflineSource",
+			Fn:      v.UpdateOfflineSource,
+			InArgs:  []string{"paths", "option"},
+			OutArgs: []string{"job"},
+		},
 	}
 }
 func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {

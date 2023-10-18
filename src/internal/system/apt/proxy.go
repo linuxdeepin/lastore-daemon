@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -430,14 +431,56 @@ func ListInstallPackages(packages []string) ([]string, error) {
 	return nil, err
 }
 
+var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
+
+// GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
+func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.UpgradeInfo, error) {
+	allPackages := make(map[string]system.UpgradeInfo)
+	args := []string{
+		"install", "-s",
+		"-c", system.LastoreAptV2CommonConfPath,
+		"-o", "Debug::NoLocking=1",
+	}
+	args = append(args, option...)
+	args = append(args, packages...)
+	cmd := exec.Command("apt-get", args...) // #nosec G204
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	if err != nil {
+		logger.Warning(errBuf.String())
+		return nil, err
+	}
+	const upgraded = "The following packages will be upgraded:"
+	const newInstalled = "The following NEW packages will be installed:"
+	if bytes.Contains(outBuf.Bytes(), []byte(upgraded)) ||
+		bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) {
+		// 证明平台要求包可以安装
+		allLine := strings.Split(outBuf.String(), "\n")
+		for _, line := range allLine {
+			matches := _installRegex.FindStringSubmatch(line)
+			if len(matches) > 2 {
+				allPackages[matches[1]] = system.UpgradeInfo{
+					Package:     matches[1],
+					LastVersion: matches[2],
+				}
+			}
+		}
+	}
+	return allPackages, nil
+}
+
 // ListDistUpgradePackages return the pkgs from apt dist-upgrade
 // NOTE: the result strim the arch suffix
-func ListDistUpgradePackages(sourcePath string) ([]string, error) {
+func ListDistUpgradePackages(sourcePath string, option []string) ([]string, error) {
 	args := []string{
 		"-c", system.LastoreAptV2CommonConfPath,
 		"dist-upgrade", "--assume-no",
 		"-o", "Debug::NoLocking=1",
 	}
+	args = append(args, option...)
 	if info, err := os.Stat(sourcePath); err == nil {
 		if info.IsDir() {
 			args = append(args, "-o", "Dir::Etc::SourceList=/dev/null")

@@ -75,7 +75,7 @@ type Manager struct {
 	updatePlatform *UpdatePlatformManager
 	isDownloading  bool
 
-	offline            *offlineManager
+	offline            *OfflineManager
 	rebootTimeoutTimer *time.Timer
 }
 
@@ -109,6 +109,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
+	m.offline = NewOfflineManager()
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.initStatusManager()

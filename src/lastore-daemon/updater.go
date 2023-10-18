@@ -66,6 +66,8 @@ type Updater struct {
 	setIdleDownloadConfigTimer *time.Timer
 
 	UpdateTarget string
+
+	OfflineInfo string
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
@@ -251,4 +253,15 @@ func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []str
 
 func (u *Updater) GetLimitConfig() (bool, string) {
 	return u.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled, u.downloadSpeedLimitConfigObj.LimitSpeed
+}
+
+func (u *Updater) SetOfflineInfo(res OfflineCheckResult) error {
+	content, err := json.Marshal(res)
+	if err != nil {
+		u.setPropOfflineInfo("")
+		logger.Warning(err)
+		return err
+	}
+	u.setPropOfflineInfo(string(content))
+	return nil
 }

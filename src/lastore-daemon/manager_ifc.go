@@ -506,7 +506,14 @@ func (m *Manager) CheckUpgrade(sender dbus.Sender, checkOrder uint32) (job dbus.
 	return m.checkUpgrade(sender, checkType(checkOrder))
 }
 
-func (m *Manager) UpdateOfflineSource(sender dbus.Sender, option string) (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option string) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	return "", nil
+
+	jobObj, err := m.updateOfflineSource(sender, paths, option)
+	if err != nil {
+		logger.Warning(err)
+		return "/", dbusutil.ToError(err)
+	}
+
+	return jobObj.getPath(), nil
 }

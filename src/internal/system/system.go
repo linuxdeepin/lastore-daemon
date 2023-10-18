@@ -37,6 +37,7 @@ const (
 	FixErrorJobType           = "fix_error"
 	CheckSystemJobType        = "check_system"
 	CheckDependsJobType       = "check_depends"
+	OfflineUpdateJobType      = "offline_update"
 
 	// UpgradeJobType 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
 	PrepareSystemUpgradeJobType   = "prepare_system_upgrade"

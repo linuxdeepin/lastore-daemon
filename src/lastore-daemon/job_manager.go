@@ -162,8 +162,11 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		next := NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 		job.Id = next.Id
 		next._InitProgressRange(0.11, 0.8)
+	case system.OfflineUpdateJobType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.OfflineUpdateJobType, LockQueue, environ)
+		job._InitProgressRange(0.11, 0.9)
 	case system.DistUpgradeJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.InstallJobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
 		job._InitProgressRange(0, 0.99)
 	case system.UpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
@@ -412,7 +415,8 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			job.PropsMu.Unlock()
 			logger.Errorf("StartSystemJob failed %v :%v\n", job, err)
 
-			pkgSysErr, ok := err.(*system.PkgSystemError)
+			var pkgSysErr *system.PkgSystemError
+			ok := errors.As(err, &pkgSysErr)
 			if ok {
 				if job.Type == system.UpdateSourceJobType {
 					job.subRetryCount(false)
@@ -423,7 +427,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 				job.subRetryCount(true)
 				hookFn := job.getPreHook(string(system.FailedStatus))
 				if hookFn != nil {
-					hookFn()
+					_ = hookFn()
 				}
 				job.PropsMu.Lock()
 				job.setError(pkgSysErr)
@@ -557,7 +561,8 @@ var genJobId = func() func(string) string {
 		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType,
 			system.UpdateSourceJobType, system.CleanJobType, system.PrepareSystemUpgradeJobType,
 			system.PrepareAppStoreUpgradeJobType, system.PrepareSecurityUpgradeJobType, system.PrepareUnknownUpgradeJobType,
-			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType, system.CheckSystemJobType:
+			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType, system.CheckSystemJobType,
+			system.OfflineUpdateJobType:
 			return jobType
 		default:
 			__count++

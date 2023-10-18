@@ -21,10 +21,10 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	var createJobErr error
 	var startJobErr error
 	if mode&system.OfflineUpdate != 0 {
-		info := m.offline.GetOfflineUpdateInfo()
-		if len(info) == 0 {
-			return "", dbusutil.ToError(errors.New("don't exist offline upgrade info"))
-		}
+		// info := m.offline.GetOfflineUpdateInfo()
+		// if len(info) == 0 {
+		// 	return "", dbusutil.ToError(errors.New("don't exist offline upgrade info"))
+		// }
 	} else {
 		mode = m.statusManager.GetCanDistUpgradeMode(mode) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
 		if mode == 0 {
@@ -226,10 +226,17 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		return nil, err
 	}
 	m.updateJobList()
-	packages := m.updater.getUpdatablePackagesByType(mode)
-	if len(packages) == 0 {
-		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
+	var packages []string
+
+	if mode == system.OfflineUpdate {
+		// TODO 判断是否有可离线更新内容
+	} else {
+		packages = m.updater.getUpdatablePackagesByType(mode)
+		if len(packages) == 0 {
+			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
+		}
 	}
+
 	// TODO 检查系统环境是否满足安装条件
 
 	var isExist bool
@@ -253,6 +260,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	}
 	// 笔记本电池电量监听
 	m.handleSysPowerChanged(job)
+	if mode == system.OfflineUpdate {
+		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
+	} else {
+		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
+	}
+
 	// 设置hook
 	job.setPreHooks(map[string]func() error{
 		string(system.RunningStatus): func() error {

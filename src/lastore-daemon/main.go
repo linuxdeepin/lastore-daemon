@@ -15,6 +15,7 @@ import (
 	"internal/system"
 	"internal/utils"
 
+	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
@@ -104,6 +105,9 @@ func main() {
 	if err != nil {
 		logger.Error("failed to set write cb for property CheckUpdateMode:", err)
 	}
+	err = serverObject.SetReadCallback(updater, "OfflineInfo", func(read *dbusutil.PropertyRead) *dbus.Error {
+		return dbusutil.ToError(updater.SetOfflineInfo(manager.offline.GetCheckInfo()))
+	})
 	manager.refreshUpdateInfos(false)
 	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况
 	go manager.jobManager.Dispatch() // 导入job缓存之后，再执行job的dispatch，防止暂停任务创建时自动开始
