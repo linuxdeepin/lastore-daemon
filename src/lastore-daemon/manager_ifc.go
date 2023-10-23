@@ -150,9 +150,9 @@ func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *d
 func (m *Manager) UpdateLogs(updateType string) (changeLogs []string, busErr *dbus.Error) {
 	switch updateType {
 	case system.SystemUpdate.JobType():
-		return m.updatePlatform.GetSystemUpdataLogs(), nil
+		return m.updatePlatform.GetSystemUpdateLogs(), nil
 	case system.SecurityUpdate.JobType():
-		return m.updatePlatform.GetCVEUpdataLogs(m.updater.ClassifiedUpdatablePackages[updateType]), nil
+		return m.updatePlatform.GetCVEUpdateLogs(m.updater.ClassifiedUpdatablePackages[updateType]), nil
 	default:
 		return nil, dbusutil.ToError(fmt.Errorf("%s", "Unknown update type"))
 	}

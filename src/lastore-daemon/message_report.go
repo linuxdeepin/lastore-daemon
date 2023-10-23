@@ -50,7 +50,7 @@ type UpdatePlatformManager struct {
 	purgePkgs  map[string]packageInfo        // 删除软件包清单
 
 	repoInfos        []repoInfo      // 从更新平台获取的仓库信息
-	systemUpdataLogs []UpdatelogMeta // 更新注记
+	systemUpdateLogs []UpdateLogMeta // 更新注记
 	cveDataTime      string
 	cvePkgs          map[string][]string // cve信息 pkgname:[cveid...]
 }
@@ -68,45 +68,45 @@ func isZH() bool {
 	return strings.HasPrefix(lang, "zh")
 }
 
-func (m *UpdatePlatformManager) GetSystemUpdataLogs() []string {
-	var updataLogs []string
+func (m *UpdatePlatformManager) GetSystemUpdateLogs() []string {
+	var updateLogs []string
 	zh := isZH()
 
 	var logStr string
-	for _, updateLog := range m.systemUpdataLogs {
+	for _, updateLog := range m.systemUpdateLogs {
 		if zh {
 			logStr = updateLog.CnLog
 		} else {
 			logStr = updateLog.EnLog
 		}
-		updataLogs = append(updataLogs, logStr)
+		updateLogs = append(updateLogs, logStr)
 	}
 
-	sort.Strings(updataLogs)
-	return updataLogs
+	sort.Strings(updateLogs)
+	return updateLogs
 }
 
-func (m *UpdatePlatformManager) GetCVEUpdataLogs(pkgs []string) []string {
-	var cves map[string]string = make(map[string]string)
-	var updataLogs []string
+func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs []string) []string {
+	var cveInfos = make(map[string]string)
+	var updateLogs []string
 	zh := isZH()
 
 	for _, pkg := range pkgs {
 		for _, id := range m.cvePkgs[pkg] {
-			if _, ok := cves[id]; ok {
+			if _, ok := cveInfos[id]; ok {
 				continue
 			}
 			if zh {
-				cves[id] = CVEs[id].Description
+				cveInfos[id] = CVEs[id].Description
 			} else {
-				cves[id] = CVEs[id].CveDescription
+				cveInfos[id] = CVEs[id].CveDescription
 			}
-			updataLogs = append(updataLogs, cves[id])
+			updateLogs = append(updateLogs, cveInfos[id])
 		}
 	}
 
-	sort.Strings(updataLogs)
-	return updataLogs
+	sort.Strings(updateLogs)
+	return updateLogs
 }
 
 func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformManager {
@@ -487,7 +487,7 @@ func (m *UpdatePlatformManager) Report(reqType uint32, body string) (data interf
 			}
 			data = tmp
 		case GetUpdataLog:
-			var tmp []UpdatelogMeta
+			var tmp []UpdateLogMeta
 			err = json.Unmarshal(msg.Data, &tmp)
 			if err != nil {
 				return nil, err
@@ -680,7 +680,7 @@ func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.UpgradeInfo {
 	return infos
 }
 
-type UpdatelogMeta struct {
+type UpdateLogMeta struct {
 	Baseline      string    `json:"baseline"`
 	ShowVersion   string    `json:"showVersion"`
 	CnLog         string    `json:"cnLog"`
@@ -699,7 +699,7 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 		return err
 	}
 	var ok bool
-	m.systemUpdataLogs, ok = data.([]UpdatelogMeta)
+	m.systemUpdateLogs, ok = data.([]UpdateLogMeta)
 	if !ok {
 		return err
 	}
@@ -725,7 +725,7 @@ func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 
 	err := ioutil.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
 	if err != nil {
-		logger.Warning("update sourcefile err")
+		logger.Warning("update source list file err")
 	}
 
 }
@@ -761,85 +761,88 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 		Timeout: 4 * time.Second,
 	}
 	for _, repo := range m.repoInfos {
-		// 如果有cdn，则使用cdn，效率更高
-		var uri = repo.Uri
-		if repo.Cdn != "" {
-			uri = repo.Cdn
-		}
-
-		uri = fmt.Sprintf("%s/dists/%s/InRelease", uri, repo.CodeName)
-		request, err := http.NewRequest("GET", uri, nil)
-		if err != nil {
-			logger.Warning(err)
-			return
-		}
-
-		// 获取仓库文件路径
-		file := utils.URIToPath(uri)
-		if len(file) == 0 {
-			logger.Warning("unillegal uri:", repo.Uri)
-		}
-		// 获取域名
-		domain := strings.Split(file, "/")[0]
-
-		request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateTokenConfigFile())))
-		request.Header.Set("Authorization", getAptAuthConf(domain))
-		resp, err := client.Do(request)
-		if err != nil {
-			logger.Warning(err)
-			continue
-		}
-		defer resp.Body.Close()
-
-		switch resp.StatusCode {
-		case http.StatusOK:
-		default:
-			logger.Warningf("failed download InRelease:%s,respCode:%d", uri, resp.StatusCode)
-			continue
-		}
-
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			logger.Warning(err)
-			continue
-		}
-
-		file = strings.ReplaceAll(file, "/", "_")
-		lastoreFile := "/tmp/" + file
-		aptFile := "/var/lib/apt/lists/" + file
-
-		err = ioutil.WriteFile(lastoreFile, data, 0644)
-		if err != nil {
-			logger.Warning(err)
-			continue
-		}
-
-		_, err = os.Stat(aptFile)
-		// 文件存在，则校验MD5值
-		if err == nil {
-			aptSum, ok := utils.SumFileMd5(aptFile)
-			if !ok {
-				logger.Warningf("check %s md5sum failed", aptFile)
-				continue
+		func(repo repoInfo) {
+			// 如果有cdn，则使用cdn，效率更高
+			var uri = repo.Uri
+			if repo.Cdn != "" {
+				uri = repo.Cdn
 			}
-			lastoreSum, ok := utils.SumFileMd5(lastoreFile)
-			if !ok {
-				logger.Warningf("check %s md5sum failed", lastoreFile)
-				continue
+
+			uri = fmt.Sprintf("%s/dists/%s/InRelease", uri, repo.CodeName)
+			request, err := http.NewRequest("GET", uri, nil)
+			if err != nil {
+				logger.Warning(err)
+				return
 			}
-			if aptSum != lastoreSum {
-				logger.Warning("InRelease changed:", aptFile)
-				os.Remove(aptFile)
-			} else {
-				logger.Warningf("InRelease unchanged: %s", aptFile)
-				continue
+
+			// 获取仓库文件路径
+			file := utils.URIToPath(uri)
+			if len(file) == 0 {
+				logger.Warning("unillegal uri:", repo.Uri)
 			}
-		}
-		// 文件不存在直接拷贝过去
-		if os.IsNotExist(err) {
-			logger.Warningf("failed check InRelease: %s ", aptFile)
-			continue
-		}
+			// 获取域名
+			domain := strings.Split(file, "/")[0]
+
+			request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateTokenConfigFile())))
+			request.Header.Set("Authorization", getAptAuthConf(domain))
+			resp, err := client.Do(request)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+			defer resp.Body.Close()
+
+			switch resp.StatusCode {
+			case http.StatusOK:
+			default:
+				logger.Warningf("failed download InRelease:%s,respCode:%d", uri, resp.StatusCode)
+				return
+			}
+
+			data, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+
+			file = strings.ReplaceAll(file, "/", "_")
+			lastoreFile := "/tmp/" + file
+			aptFile := "/var/lib/apt/lists/" + file
+
+			err = ioutil.WriteFile(lastoreFile, data, 0644)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+
+			_, err = os.Stat(aptFile)
+			// 文件存在，则校验MD5值
+			if err == nil {
+				aptSum, ok := utils.SumFileMd5(aptFile)
+				if !ok {
+					logger.Warningf("check %s md5sum failed", aptFile)
+					return
+				}
+				lastoreSum, ok := utils.SumFileMd5(lastoreFile)
+				if !ok {
+					logger.Warningf("check %s md5sum failed", lastoreFile)
+					return
+				}
+				if aptSum != lastoreSum {
+					logger.Warning("InRelease changed:", aptFile)
+					os.RemoveAll(aptFile)
+				} else {
+					logger.Warningf("InRelease unchanged: %s", aptFile)
+					return
+				}
+			}
+			// 文件不存在直接拷贝过去
+			if os.IsNotExist(err) {
+				logger.Warningf("failed check InRelease: %s ", aptFile)
+				return
+			}
+		}(repo)
+
 	}
 }
 
