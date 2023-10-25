@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"internal/system"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -390,10 +389,6 @@ func (p *APTSystem) initSource(systemSourceList []string, nonUnknownList []strin
 		logger.Warning(err)
 	}
 	err = system.UpdateOtherSystemSourceDir(otherList)
-	if err != nil {
-		logger.Warning(err)
-	}
-	err = ioutil.WriteFile(system.PlatFormSourceFile, []byte{}, 0644)
 	if err != nil {
 		logger.Warning(err)
 	}

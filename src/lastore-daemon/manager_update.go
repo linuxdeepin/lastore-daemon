@@ -461,10 +461,10 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		m.statusManager.UpdateModeAllStatusBySize(m.updater.ClassifiedUpdatablePackages)
 		m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 	} else {
-		// go func() {
-		// 	m.statusManager.UpdateModeAllStatusBySize(m.allUpgradableInfo)
-		// 	m.statusManager.UpdateCheckCanUpgradeByEachStatus()
-		// }()
+		go func() {
+			m.statusManager.UpdateModeAllStatusBySize(m.updater.ClassifiedUpdatablePackages)
+			m.statusManager.UpdateCheckCanUpgradeByEachStatus()
+		}()
 	}
 	m.updateUpdatableProp(m.updater.ClassifiedUpdatablePackages)
 	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && sync && !m.updater.getIdleDownloadEnabled() {
