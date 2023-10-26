@@ -18,9 +18,11 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/godbus/dbus"
+	"github.com/jouyouyun/hardware/utils"
 
 	hhardware "github.com/jouyouyun/hardware"
 )
@@ -57,6 +59,7 @@ type SystemInfo struct {
 	ProjectId       string
 	Baseline        string
 	SystemType      string
+	MachineType     string
 }
 
 const (
@@ -120,6 +123,7 @@ func getSystemInfo() SystemInfo {
 	}
 	systemInfo.Baseline = getCurrentBaseline()
 	systemInfo.SystemType = getCurrentSystemType()
+	systemInfo.MachineType = getMachineType()
 	return systemInfo
 }
 
@@ -412,4 +416,22 @@ func getProjectID(fileName string) (string, error) {
 		return "", err
 	}
 	return info.Id, nil
+}
+
+func getMachineType() string {
+	const dmiDirPrefix = "/sys/class/dmi/id"
+	var files = []string{
+		"product_family",
+		"product_name",
+		"product_sku",
+	}
+	var content []string
+	for _, key := range files {
+		value, err := utils.ReadFileContent(filepath.Join(dmiDirPrefix, key))
+		if err != nil {
+			continue
+		}
+		content = append(content, value)
+	}
+	return strings.Join(content, " ")
 }
