@@ -74,7 +74,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 
 		option:    make(map[string]string),
 		queueName: queueName,
-		retry:     1,
+		retry:     2,
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,

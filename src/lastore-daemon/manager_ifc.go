@@ -5,10 +5,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"internal/system"
 	"internal/utils"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -147,15 +149,26 @@ func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *d
 	}
 }
 
-func (m *Manager) UpdateLogs(updateType string) (changeLogs []string, busErr *dbus.Error) {
-	switch updateType {
-	case system.SystemUpdate.JobType():
-		return m.updatePlatform.GetSystemUpdateLogs(), nil
-	case system.SecurityUpdate.JobType():
-		return m.updatePlatform.GetCVEUpdateLogs(m.updater.ClassifiedUpdatablePackages[updateType]), nil
-	default:
-		return nil, dbusutil.ToError(fmt.Errorf("%s", "Unknown update type"))
+func (m *Manager) GetUpdateLogs(updateType system.UpdateType, hasHistory bool) (changeLogs string, busErr *dbus.Error) {
+	res := make(map[system.UpdateType][]string)
+	if updateType&system.SystemUpdate != 0 {
+		res[system.SystemUpdate] = m.updatePlatform.GetSystemUpdateLogs()
 	}
+
+	if updateType&system.SecurityUpdate != 0 {
+		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate])
+	}
+
+	if len(res) == 0 {
+		return "", dbusutil.ToError(fmt.Errorf("%s", "Unknown update type"))
+	}
+
+	logs, err := json.Marshal(res)
+	if err != nil {
+		return "", dbusutil.ToError(err)
+	}
+
+	return string(logs), nil
 }
 
 func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
@@ -398,24 +411,29 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 }
 
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
-	checkExecPath := func() error {
+	// TODO 离线更新需要处理
+
+	checkExecPath := func() (bool, error) {
 		// 只有dde-lock可以设置
 		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
 		if err != nil {
 			logger.Warning(err)
-			return err
+			return false, err
 		}
-		if !strings.Contains(execPath, "dde-lock") {
+		if !strings.Contains(execPath, "dde-lock") && !strings.Contains(execPath, "deepin-offline-update-tool") {
 			err = fmt.Errorf("%v not allow to call this method", execPath)
 			logger.Warning(err)
-			return err
+			return false, err
 		}
-		return nil
-	}
 
+		return strings.Contains(execPath, "deepin-offline-update-tool"), nil
+	}
+	var isOffline bool
 	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil || uid != 0 {
-		err = checkExecPath()
+	if err == nil && uid == 0 {
+		logger.Info("auth root caller")
+	} else {
+		isOffline, err = checkExecPath()
 		if err != nil {
 			return dbusutil.ToError(err)
 		}
@@ -427,6 +445,23 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		err = fmt.Errorf("%v not exist, need run fallback process", fullScreenUpdatePath)
 		logger.Warning(err)
 		return dbusutil.ToError(err)
+	}
+
+	if isOffline {
+		content, err := json.Marshal(&fullUpgradeOption{
+			DoUpgrade:         true,
+			DoUpgradeMode:     system.OfflineUpdate,
+			IsPowerOff:        false,
+			PreGreeterCheck:   false,
+			AfterGreeterCheck: false,
+		})
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
+	} else {
+		_ = ioutil.WriteFile(optionFilePathTemp, []byte(option), 0644)
 	}
 
 	for {
@@ -501,9 +536,9 @@ func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.Updat
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) CheckUpgrade(sender dbus.Sender, checkOrder uint32) (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder uint32) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	return m.checkUpgrade(sender, checkType(checkOrder))
+	return m.checkUpgrade(sender, checkMode, checkType(checkOrder))
 }
 
 func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option string) (job dbus.ObjectPath, busErr *dbus.Error) {

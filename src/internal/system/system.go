@@ -36,7 +36,6 @@ const (
 	CleanJobType              = "clean"
 	FixErrorJobType           = "fix_error"
 	CheckSystemJobType        = "check_system"
-	CheckDependsJobType       = "check_depends"
 	OfflineUpdateJobType      = "offline_update"
 
 	// UpgradeJobType 创建任务时会根据四种下载和安装类型,分别创建带有不同参数的下载和更新任务
@@ -82,6 +81,12 @@ type UpgradeInfo struct {
 	Category       string
 }
 
+type PackageInfo struct {
+	Name    string `json:"name"`    // "软件包名"
+	Version string `json:"version"` // "软件包版本"
+	Need    string `json:"need"`    // 严格程度;strict:严格匹配,skipstate:忽略状态,skipversion:忽略版本,exist:存在即可
+}
+
 type UpdateInfoError struct {
 	Type   string
 	Detail string
@@ -118,20 +123,18 @@ type ParseProgressInfo func(id, line string) (JobProgressInfo, error)
 type ParseJobError func(stdErrStr string, stdOutStr string) *JobError
 
 type System interface {
-	OptionToArgs(options map[string]string) []string
-	DownloadPackages(jobId string, packages []string, environ map[string]string, cmdArgs []string) error
-	DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error
-	Install(jobId string, packages []string, environ map[string]string, cmdArgs []string) error
+	DownloadPackages(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
+	DownloadSource(jobId string, environ map[string]string, cmdArgs map[string]string) error
+	Install(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
-	DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error
-	UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error
+	DistUpgrade(jobId string, environ map[string]string, cmdArgs map[string]string) error
+	UpdateSource(jobId string, environ map[string]string, cmdArgs map[string]string) error
 	Clean(jobId string) error
 	Abort(jobId string) error
 	AbortWithFailed(jobId string) error
 	AttachIndicator(Indicator)
-	FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error
-	CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs []string) error
-	CheckDepends(jobId string, checkType string, environ map[string]string, cmdArgs []string) error
+	FixError(jobId string, errType string, environ map[string]string, cmdArgs map[string]string) error
+	CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs map[string]string) error
 }
 
 type PkgSystemError struct {
@@ -152,17 +155,21 @@ func (e *PkgSystemError) Error() string {
 }
 
 type JobError struct {
-	Type   string
+	Type   UpgradeReasonType
 	Detail string
 }
 
 func (e *JobError) GetType() string {
-	return "JobError::" + e.Type
+	return "JobError::" + string(e.Type)
 }
 
 func (e *JobError) GetDetail() string {
 	return e.Detail
 }
+
+// func (e *JobError) Error() string {
+// 	return fmt.Sprintf("JobError Type:%s, Detail: %s", e.Type, e.Detail)
+// }
 
 func GetAppStoreAppName() string {
 	_, err := os.Stat("/usr/share/applications/deepin-app-store.desktop")

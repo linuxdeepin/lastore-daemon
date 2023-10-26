@@ -77,6 +77,8 @@ type Manager struct {
 
 	offline            *OfflineManager
 	rebootTimeoutTimer *time.Timer
+
+	allUpgradableInfo map[system.UpdateType]map[string]system.PackageInfo
 }
 
 /*
@@ -105,6 +107,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		systemd:             systemd1.NewManager(service.Conn()),
 		sysPower:            power.NewPower(service.Conn()),
 		abObj:               abrecovery.NewABRecovery(service.Conn()),
+		allUpgradableInfo:   make(map[system.UpdateType]map[string]system.PackageInfo),
 	}
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)

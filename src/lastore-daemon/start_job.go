@@ -23,28 +23,27 @@ func StartSystemJob(sys system.System, j *Job) error {
 	if err != nil {
 		return err
 	}
-	args := sys.OptionToArgs(j.option)
 	switch j.Type {
 	case system.DownloadJobType:
-		return sys.DownloadPackages(j.Id, j.Packages, j.environ, args)
+		return sys.DownloadPackages(j.Id, j.Packages, j.environ, j.option)
 
 	case system.PrepareDistUpgradeJobType:
-		return sys.DownloadSource(j.Id, j.environ, args)
+		return sys.DownloadSource(j.Id, j.environ, j.option)
 
 	case system.InstallJobType:
-		return sys.Install(j.Id, j.Packages, j.environ, args)
+		return sys.Install(j.Id, j.Packages, j.environ, j.option)
 
 	case system.DistUpgradeJobType:
-		return sys.DistUpgrade(j.Id, j.environ, args)
+		return sys.DistUpgrade(j.Id, j.environ, j.option)
 
 	case system.RemoveJobType:
 		return sys.Remove(j.Id, j.Packages, j.environ)
 
 	case system.UpdateSourceJobType, system.OfflineUpdateJobType:
-		return sys.UpdateSource(j.Id, j.environ, args)
+		return sys.UpdateSource(j.Id, j.environ, j.option)
 
 	case system.UpdateJobType:
-		return sys.Install(j.Id, j.Packages, j.environ, args)
+		return sys.Install(j.Id, j.Packages, j.environ, j.option)
 
 	case system.CleanJobType:
 		return sys.Clean(j.Id)
@@ -54,21 +53,14 @@ func StartSystemJob(sys system.System, j *Job) error {
 		if len(j.Packages) != 0 {
 			errType = j.Packages[0]
 		}
-		return sys.FixError(j.Id, errType, j.environ, args)
+		return sys.FixError(j.Id, errType, j.environ, j.option)
 
 	case system.CheckSystemJobType:
 		var pkg string
 		if len(j.Packages) != 0 {
 			pkg = j.Packages[0]
 		}
-		return sys.CheckSystem(j.Id, pkg, j.environ, args)
-
-	case system.CheckDependsJobType:
-		var pkg string
-		if len(j.Packages) != 0 {
-			pkg = j.Packages[0]
-		}
-		return sys.CheckDepends(j.Id, pkg, j.environ, args)
+		return sys.CheckSystem(j.Id, pkg, j.environ, j.option)
 
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)

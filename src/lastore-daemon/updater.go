@@ -174,21 +174,6 @@ func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	return r
 }
 
-func UpdatableNames(infosMap system.SourceUpgradeInfoMap) []string {
-	// 去重,防止出现下载量出现偏差（同一包，重复出现在系统仓库和商店仓库）
-	var apps []string
-	appsMap := make(map[string]struct{})
-	for _, infos := range infosMap {
-		for _, info := range infos {
-			appsMap[info.Package] = struct{}{}
-		}
-	}
-	for name := range appsMap {
-		apps = append(apps, name)
-	}
-	return apps
-}
-
 const (
 	aptSource       = "/etc/apt/sources.list"
 	aptSourceOrigin = aptSource + ".origin"

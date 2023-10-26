@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"internal/system"
+	"internal/system/dut"
 	"io/ioutil"
 	"os"
 	"syscall"
@@ -31,7 +32,8 @@ func (c checkType) JobType() string {
 	}
 }
 
-func (m *Manager) checkUpgrade(sender dbus.Sender, checkOrder checkType) (dbus.ObjectPath, *dbus.Error) {
+// 更新后重启的检查
+func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder checkType) (dbus.ObjectPath, *dbus.Error) {
 	m.updateJobList()
 	if m.rebootTimeoutTimer != nil {
 		m.rebootTimeoutTimer.Stop()
@@ -65,9 +67,15 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkOrder checkType) (dbus.O
 	var job *Job
 	var isExist bool
 	var err error
-	isExist, job, err = m.jobManager.CreateJob("", system.CheckSystemJobType, []string{checkOrder.JobType()}, nil, nil)
+	isExist, job, err = m.jobManager.CreateJob("", system.CheckSystemJobType, nil, nil, nil)
 	if err != nil {
 		return "", dbusutil.ToError(err)
+	}
+	job.option[dut.PostCheck.String()] = "--check-succeed" // TODO 还有--check-failed 的情况需要处理
+	if checkMode == system.OfflineUpdate {
+		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
+	} else {
+		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
 	}
 	job.setPreHooks(map[string]func() error{
 		string(system.RunningStatus): func() error {
@@ -75,7 +83,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkOrder checkType) (dbus.O
 			return nil
 		},
 		string(system.FailedStatus): func() error {
-			m.updatePlatform.PostStatusMessage("") // TODO 上报检查失败，上报本次更新失败
+			m.updatePlatform.PostStatusMessage("")
 			inhibit(false)
 			err = delRebootCheckOption(all)
 			if err != nil {
@@ -127,14 +135,24 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkOrder checkType) (dbus.O
 	return job.getPath(), nil
 }
 
-type checkOption struct {
+type fullUpgradeOption struct {
+	DoUpgrade         bool
+	DoUpgradeMode     system.UpdateType
+	IsPowerOff        bool
 	PreGreeterCheck   bool
 	AfterGreeterCheck bool
 }
 
-const optionFilePath = "/etc/deepin/deepin_update_option.json" // 和upgrade_check.sh脚本中对应
-func setRebootCheckOption() error {
-	option := &checkOption{
+const (
+	optionFilePath     = "/etc/deepin/deepin_update_option.json" // 和upgrade_check.sh脚本中对应
+	optionFilePathTemp = "/tmp/deepin_update_option.json"
+)
+
+func setRebootCheckOption(mode system.UpdateType) error {
+	option := &fullUpgradeOption{
+		DoUpgrade:         false,
+		DoUpgradeMode:     mode,
+		IsPowerOff:        false,
 		PreGreeterCheck:   true,
 		AfterGreeterCheck: true,
 	}
@@ -148,7 +166,7 @@ func setRebootCheckOption() error {
 func delRebootCheckOption(order checkType) error {
 	switch order {
 	case firstCheck:
-		option := &checkOption{}
+		option := &fullUpgradeOption{}
 		err := decodeJson(optionFilePath, option)
 		if err != nil {
 			return err

@@ -94,10 +94,20 @@ func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
 	if len(ps) == 0 {
 		return nil, nil
 	}
-	cmd := exec.Command("apt", append([]string{"-c", system.LastoreAptV2CommonConfPath,
-		"-o", fmt.Sprintf("Dir::Etc::SourceList=%s", system.OriginSourceFile),
-		"-o", fmt.Sprintf("Dir::Etc::SourceParts=%s", system.OriginSourceDir),
-		"list", "--upgradable"}, ps...)...) // #nosec G204
+	args := []string{
+		"-c", system.LastoreAptV2CommonConfPath,
+	}
+	if info, err := os.Stat(sourcePath); err == nil {
+		if info.IsDir() {
+			args = append(args, "-o", "Dir::Etc::SourceList=/dev/null")
+			args = append(args, "-o", "Dir::Etc::SourceParts="+sourcePath)
+		} else {
+			args = append(args, "-o", "Dir::Etc::SourceList="+sourcePath)
+			args = append(args, "-o", "Dir::Etc::SourceParts=/dev/null")
+		}
+	}
+	args = append(args, []string{"list", "--upgradable"}...)
+	cmd := exec.Command("apt", append(args, ps...)...) // #nosec G204
 	r, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err

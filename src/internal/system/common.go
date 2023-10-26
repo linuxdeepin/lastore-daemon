@@ -100,6 +100,10 @@ const (
 	ErrorIndexDownloadFailed     UpgradeReasonType = "IndexDownloadFailed"
 	ErrorIO                      UpgradeReasonType = "ioError"
 	ErrorDamagePackage           UpgradeReasonType = "damagePackage" // 包损坏,需要删除后重新下载或者安装
+
+	ErrorMissCoreFile  UpgradeReasonType = "missCoreFile"
+	ErrorScript        UpgradeReasonType = "scriptError"
+	ErrorProgressCheck UpgradeReasonType = "progressCheckError"
 )
 
 type UpgradeStatusAndReason struct {

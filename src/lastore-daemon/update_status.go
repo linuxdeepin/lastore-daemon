@@ -19,6 +19,7 @@ type UpdateModeStatusManager struct {
 	unKnownUpdateStatus                 system.UpdateModeStatus
 	updateModeStatusObj                 map[string]system.UpdateModeStatus // 每一个更新项的状态 object,在检查更新、下载更新、安装更新的过程中修改
 	updateModeDownloadSizeMap           map[string]float64
+	updateModeDownloadSizeMapLock       sync.Mutex
 	abStatus                            system.ABStatus
 	abError                             system.ABErrorType
 	currentTriggerBackingUpType         system.UpdateType
@@ -354,7 +355,7 @@ func (m *UpdateModeStatusManager) SetCheckMode(mode system.UpdateType) system.Up
 
 // UpdateModeAllStatusBySize 根据size计算更新所有状态,会把除了安装失败之外的所有错误去除
 func (m *UpdateModeStatusManager) UpdateModeAllStatusBySize() {
-	m.updateModeStatusBySize(system.AllCheckUpdate)
+	m.updateModeStatusBySize(system.AllInstallUpdate)
 }
 
 // 单项计算
@@ -364,7 +365,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 	defer m.statusMapMu.Unlock()
 	var wg sync.WaitGroup
 	changed := false
-	for _, typ := range system.AllCheckUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		if mode&typ == 0 {
 			continue
 		}
@@ -378,7 +379,9 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 			if err != nil {
 				logger.Warning(err)
 			} else {
+				m.updateModeDownloadSizeMapLock.Lock()
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
+				m.updateModeDownloadSizeMapLock.Unlock()
 				logger.Infof("currentMode:%v,needDownloadSize:%v,allPackageSize:%v,oldStatus:%v.", currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {

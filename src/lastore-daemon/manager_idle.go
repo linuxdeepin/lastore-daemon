@@ -188,12 +188,8 @@ func (m *Manager) loadLastoreCache() {
 
 func (m *Manager) saveLastoreCache() {
 	m.saveUpdateSourceOnce()
-	m.saveCacheJob()
+	// m.saveCacheJob()  TODO job缓存需要修改
 	m.userAgents.saveRecordContent(userAgentRecordPath)
-	err := m.offline.CleanCache()
-	if err != nil {
-		logger.Warning(err)
-	}
 }
 
 func (m *Manager) handleOSSignal() {

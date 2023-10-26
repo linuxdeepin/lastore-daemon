@@ -38,6 +38,11 @@ const (
 	DutOfflineMetaConfPath = "/var/lib/lastore/offline_meta.json" // 离线更新元数据
 )
 
+const (
+	OnlineListPath  = "/var/lib/apt/lists"
+	OfflineListPath = "/var/lib/lastore/offline_list"
+)
+
 // ListPackageFile list files path contained in the packages
 func ListPackageFile(packages ...string) []string {
 	desktopFiles, err := utils.FilterExecOutput(

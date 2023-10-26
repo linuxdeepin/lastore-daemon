@@ -153,10 +153,6 @@ func checkLock(p string) (string, bool) {
 	return "", false
 }
 
-func ParsePkgSystemError(out, err []byte) error {
-	return parsePkgSystemError(out, err)
-}
-
 func parsePkgSystemError(out, err []byte) error {
 	if len(err) == 0 {
 		return nil
@@ -199,7 +195,7 @@ func parsePkgSystemError(out, err []byte) error {
 	}
 }
 
-func checkPkgSystemError(lock bool) error {
+func CheckPkgSystemError(lock bool) error {
 	args := []string{"check"}
 	if !lock {
 		// without locking, it can only check for dependencies broken
@@ -252,14 +248,14 @@ func safeStart(c *system.Command) error {
 		// really perform apt-get action
 		err = c.Start()
 		if err != nil {
-			c.IndicateFailed("unknown",
+			c.IndicateFailed(system.ErrorUnknown,
 				"apt-get start failed: "+err.Error(), false)
 		}
 	}()
 	return nil
 }
 
-func (p *APTSystem) OptionToArgs(options map[string]string) []string {
+func OptionToArgs(options map[string]string) []string {
 	var args []string
 	for key, value := range options { // apt 命令执行参数
 		args = append(args, "-o")
@@ -268,32 +264,33 @@ func (p *APTSystem) OptionToArgs(options map[string]string) []string {
 	return args
 }
 
-func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, args []string) error {
-	err := checkPkgSystemError(false)
+func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, args map[string]string) error {
+	err := CheckPkgSystemError(false)
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.DownloadJobType, p.Indicator, append(packages, args...))
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.Indicator, append(packages, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	return c.Start()
 }
 
-func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, cmdArgs []string) error {
+func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, args map[string]string) error {
 	// 无需检查依赖错误
 	/*
-		err := checkPkgSystemError(false)
+		err := CheckPkgSystemError(false)
 		if err != nil {
 			return err
 		}
 	*/
-	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, cmdArgs)
+
+	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, OptionToArgs(args))
 	c.SetEnv(environ)
 	return c.Start()
 }
 
 func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
 	WaitDpkgLockRelease()
-	err := checkPkgSystemError(true)
+	err := CheckPkgSystemError(true)
 	if err != nil {
 		return err
 	}
@@ -303,20 +300,20 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 	return safeStart(c)
 }
 
-func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string, args []string) error {
+func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
-	err := checkPkgSystemError(true)
+	err := CheckPkgSystemError(true)
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(packages, args...))
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(packages, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	return safeStart(c)
 }
 
-func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs []string) error {
+func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
-	err := checkPkgSystemError(true)
+	err := CheckPkgSystemError(true)
 	if err != nil {
 		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
 		var e *system.PkgSystemError
@@ -325,20 +322,20 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, cmdArgs
 			return err
 		}
 	}
-	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, cmdArgs)
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, OptionToArgs(args))
 	c.SetEnv(environ)
 	return safeStart(c)
 }
 
-func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, cmdArgs []string) error {
-	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, cmdArgs)
+func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args map[string]string) error {
+	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, OptionToArgs(args))
 	c.AtExitFn = func() bool {
 		// 无网络时检查更新失败,exitCode为0,空间不足(不确定exit code)导致需要特殊处理
 		if c.ExitCode == system.ExitSuccess && bytes.Contains(c.Stderr.Bytes(), []byte("Some index files failed to download")) {
 			if bytes.Contains(c.Stderr.Bytes(), []byte("No space left on device")) {
-				c.IndicateFailed(string(system.ErrorInsufficientSpace), c.Stderr.String(), false)
+				c.IndicateFailed(system.ErrorInsufficientSpace, c.Stderr.String(), false)
 			} else {
-				c.IndicateFailed(string(system.ErrorIndexDownloadFailed), c.Stderr.String(), false)
+				c.IndicateFailed(system.ErrorIndexDownloadFailed, c.Stderr.String(), false)
 			}
 			return true
 		}
@@ -367,9 +364,9 @@ func (p *APTSystem) AbortWithFailed(jobId string) error {
 	return system.NotFoundError("abort " + jobId)
 }
 
-func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, cmdArgs []string) error {
+func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
-	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, cmdArgs...))
+	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	if errType == system.ErrTypeDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
@@ -377,11 +374,7 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	return c.Start()
 }
 
-func (p *APTSystem) CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs []string) error {
-	return nil
-}
-
-func (p *APTSystem) CheckDepends(jobId string, checkType string, environ map[string]string, cmdArgs []string) error {
+func (p *APTSystem) CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs map[string]string) error {
 	return nil
 }
 
@@ -427,15 +420,15 @@ func ListInstallPackages(packages []string) ([]string, error) {
 		return p, nil
 	}
 
-	err := ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+	err := parsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
 	return nil, err
 }
 
 var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
 
 // GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
-func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.UpgradeInfo, error) {
-	allPackages := make(map[string]system.UpgradeInfo)
+func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, error) {
+	allPackages := make(map[string]system.PackageInfo)
 	args := []string{
 		"install", "-s",
 		"-c", system.LastoreAptV2CommonConfPath,
@@ -462,9 +455,9 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 		for _, line := range allLine {
 			matches := _installRegex.FindStringSubmatch(line)
 			if len(matches) > 2 {
-				allPackages[matches[1]] = system.UpgradeInfo{
-					Package:     matches[1],
-					LastVersion: matches[2],
+				allPackages[matches[1]] = system.PackageInfo{
+					Name:    matches[1],
+					Version: matches[2],
 				}
 			}
 		}
@@ -511,7 +504,7 @@ func ListDistUpgradePackages(sourcePath string, option []string) ([]string, erro
 		return p, nil
 	}
 
-	err := ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+	err := parsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
 	return nil, err
 }
 

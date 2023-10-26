@@ -24,7 +24,6 @@ import (
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"
-	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/procfs"
 	"github.com/linuxdeepin/go-lib/strv"
 )
@@ -61,9 +60,9 @@ func updateTokenConfigFile() string {
 		logger.Warning(err)
 	}
 	// TODO: 使用教育版token，获取仓库
-	if logger.GetLogLevel() == log.LevelDebug {
-		token = "a=edu-20-std;b=Desktop;c=E;v=20.1060.11068.101.100;i=905923cfb835f3649e79fa90b28dad6fa973425a12d1b6a2ebd3dcf4a52eab92;m=Hygon C86 3250 8-core Processor;ac=amd64;cu=0;sn=N9DA5MAAAFPSL66NBNEAAVS5G;vs=Dhyana+;oid=f1800c30-ceb6-58a4-bcb2-0e4a565947a6;pid=;baseline=edu-20-std-0002;st="
-	}
+	// if logger.GetLogLevel() == log.LevelDebug {
+	// token = "a=edu-20-std;b=Desktop;c=E;v=20.1060.11068.101.100;i=905923cfb835f3649e79fa90b28dad6fa973425a12d1b6a2ebd3dcf4a52eab92;m=Hygon C86 3250 8-core Processor;ac=amd64;cu=0;sn=N9DA5MAAAFPSL66NBNEAAVS5G;vs=Dhyana+;oid=f1800c30-ceb6-58a4-bcb2-0e4a565947a6;pid=;baseline=edu-20-std-0002;st="
+	// }
 	return token
 }
 
@@ -101,14 +100,14 @@ func getUpgradeUrls(path string) []string {
 		r := bufio.NewReader(f)
 		for {
 			s, err := r.ReadString('\n')
-			if err != nil {
-				break
-			}
 			allMatchedString := _urlReg.FindAllStringSubmatch(s, -1)
 			for _, MatchedString := range allMatchedString {
 				if len(MatchedString) == 2 {
 					upgradeUrls = append(upgradeUrls, MatchedString[1])
 				}
+			}
+			if err != nil {
+				break
 			}
 		}
 	}
@@ -365,7 +364,7 @@ func getFilterPackages(infosMap map[string][]string, updateType system.UpdateTyp
 	return r
 }
 
-// SystemUpgradeInfo 将update_infos.json数据解析成map
+// SystemUpgradeInfo 将update_infos.json数据解析成map TODO 包相关信息已经不在update_infos.json文件中了
 func SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
 	r := make(system.SourceUpgradeInfoMap)
 

@@ -143,6 +143,10 @@ func main() {
 	service.SetAutoQuitHandler(autoQuitTime, manager.canAutoQuit)
 	service.Wait()
 	manager.saveLastoreCache()
+	err = manager.offline.CleanCache()
+	if err != nil {
+		logger.Warning(err)
+	}
 }
 
 func initLastoreInhibitHint(service *dbusutil.Service) {

@@ -40,11 +40,11 @@ func prepareUpdateSource() {
 			}
 		}
 	}
-	updateTokenConfigFile()
+
 }
 
-// updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.依赖检查;3.apt update;4.最终可更新内容确定(模拟安装的方式);5.数据上报;
-// 任务进度划分: 0-5%-10%-80%-90%-100%
+// updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
+// 任务进度划分: 0-10%-80%-90%-100%
 func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error) {
 	var err error
 	var environ map[string]string
@@ -68,6 +68,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		return nil, err
 	}
 	prepareUpdateSource()
+	m.updatePlatform.token = updateTokenConfigFile()
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job
 	var isExist bool
@@ -126,10 +127,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				if len(m.UpgradableApps) > 0 {
 					m.updatePlatform.reportLog(updateStatusReport, true, "")
 					m.updatePlatform.PostStatusMessage("")
-					// m.installSpecialPackageSync("uos-release-note", job.option, environ)
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
-					logger.Info("install uos-release-note done,update source succeed.")
 					if !m.updater.AutoDownloadUpdates {
 						// msg := gettext.Tr("New system edition available")
 						msg := gettext.Tr("New version available!")
@@ -141,7 +140,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					m.updatePlatform.reportLog(updateStatusReport, false, "")
 					m.updatePlatform.PostStatusMessage("")
 				}
-				job.setPropProgress(0.99)
+				job.setPropProgress(1.0)
 				return nil
 			},
 			string(system.FailedStatus): func() error {
@@ -163,6 +162,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
 				}
+				// 发通知 end
 				m.updatePlatform.reportLog(updateStatusReport, false, job.Description)
 				m.updatePlatform.PostStatusMessage("")
 				return nil
@@ -178,37 +178,25 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		job.setAfterHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				job.setPropProgress(0.01)
-				// 检查任务开始后,从更新平台获取仓库、更新注记等信息 TODO 可能不再需要
+				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
-				if !m.updatePlatform.genUpdatePolicyByToken() {
+				err = m.updatePlatform.genUpdatePolicyByToken()
+				if err != nil {
 					job.retry = 0
-					m.updatePlatform.PostStatusMessage("")
+					m.updatePlatform.PostStatusMessage(err.Error())
 					return errors.New("failed to get update policy by token")
 				}
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
 				if err != nil {
 					logger.Warning(err)
 					job.retry = 0
-					m.updatePlatform.PostStatusMessage("")
+					m.updatePlatform.PostStatusMessage(err.Error())
 					return fmt.Errorf("failed to get update info by update platform: %v", err)
 				}
-				m.updater.setPropUpdateTarget(m.updatePlatform.getUpdateTarget())
+				m.updater.setPropUpdateTarget(m.updatePlatform.getUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
 
-				// 从更新平台获取数据并处理完成后,进度更新到6%
-				job.setPropProgress(0.06)
-
-				// 系统工具检查依赖关系
-				// err = m.updateApi.CheckSystem("", "")
-				// if err != nil {
-				// 	logger.Warning(err)
-				// 	return err
-				// }
-				// // 检查完成后进度更新到10%
-				// job.setPropProgress(0.10)
-				return nil
-			},
-			string(system.SucceedStatus): func() error {
-				job.setPropProgress(1.00)
+				// 从更新平台获取数据并处理完成后,进度更新到10%
+				job.setPropProgress(0.10)
 				return nil
 			},
 		})
@@ -230,12 +218,12 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 }
 
 // 生成系统更新内容和安全更新内容
-func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.UpgradeInfo) (error, error) {
+func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.PackageInfo) (error, error) {
 	propPkgMap := make(map[string][]string) // updater的ClassifiedUpdatablePackages用
 	var systemErr error = nil
 	var securityErr error = nil
-	var systemPackageList map[string]system.UpgradeInfo
-	var securityPackageList map[string]system.UpgradeInfo
+	var systemPackageList map[string]system.PackageInfo
+	var securityPackageList map[string]system.PackageInfo
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -243,7 +231,7 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Upgra
 		if systemErr == nil && systemPackageList != nil {
 			var packageList []string
 			for k, v := range systemPackageList {
-				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.LastVersion))
+				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
 			}
 			propPkgMap[system.SystemUpdate.JobType()] = packageList
 		}
@@ -255,7 +243,7 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Upgra
 		if securityErr == nil && securityPackageList != nil {
 			var packageList []string
 			for k, v := range securityPackageList {
-				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.LastVersion))
+				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
 			}
 			propPkgMap[system.SecurityUpdate.JobType()] = packageList
 		}
@@ -263,100 +251,65 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Upgra
 	}()
 	wg.Wait()
 	m.updater.setClassifiedUpdatablePackages(propPkgMap)
+	if systemErr == nil && systemPackageList != nil {
+		m.allUpgradableInfo[system.SystemUpdate] = systemPackageList
+	}
+	if securityErr == nil && securityPackageList != nil {
+		m.allUpgradableInfo[system.SecurityUpdate] = securityPackageList
+	}
 	return systemErr, securityErr
 }
 
-func getSystemUpdatePackageList(platFormPackageList map[string]system.UpgradeInfo) (map[string]system.UpgradeInfo, error) {
-	// 从平台更新列表获取需要更新或者安装的包
-	cache, err := loadPkgStatusVersion()
+func getSystemUpdatePackageList(platFormPackageMap map[string]system.PackageInfo) (map[string]system.PackageInfo, error) {
+	var err error
+	var localCache map[string]statusVersion
+	var repoUpgradableList []string
+	var emulatePkgList map[string]system.PackageInfo
+	// 获取本地deb信息
+	localCache, err = loadPkgStatusVersion()
 	if err != nil {
 		logger.Warning(err)
 		return nil, err
 	}
-	var needInstallPackage []string
-	for _, pkg := range platFormPackageList {
-		status, ok := cache[pkg.Package]
-		if !ok {
-			// 系统没有该包的情况
-			needInstallPackage = append(needInstallPackage, fmt.Sprintf("%v=%v", pkg.Package, pkg.LastVersion))
-			continue
-		}
-		if compareVersionsGe(status.version, pkg.LastVersion) {
-			// 包已安装版本>=平台下发包的版本 ：可以忽略,无需安装
-			continue
-		} else {
-			// 包已安装版本 < 平台下发包的版本
-			// return nil, fmt.Errorf("package %v_%v obtained from the platform can not install in current OS", pkg.Package, pkg.LastVersion)
-			needInstallPackage = append(needInstallPackage, fmt.Sprintf("%v=%v", pkg.Package, pkg.LastVersion))
-		}
+	for name, _ := range platFormPackageMap {
+		repoUpgradableList = append(repoUpgradableList, name)
 	}
-	return apt.GenOnlineUpdatePackagesByEmulateInstall(needInstallPackage, []string{
+	// 模拟安装更新平台下发所有包(不携带版本号)，获取可升级包的版本
+	emulatePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(repoUpgradableList, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SystemUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
 		"-o", "Dir::Etc::preferences=/dev/null", // 系统更新仓库来自更新平台，为了不收本地优先级配置影响，覆盖本地优先级配置
 		"-o", "Dir::Etc::PreferencesParts=/dev/null",
 	})
+	if err != nil {
+		logger.Warning(err)
+		return nil, err
+	}
+	for _, platformPkgInfo := range platFormPackageMap {
+		repoPkgInfo, ok := emulatePkgList[platformPkgInfo.Name]
+		if ok {
+			// 该包可升级，但是可升级版本小于更新平台下发版本，此时将不允许升级
+			if !compareVersionsGe(platformPkgInfo.Version, repoPkgInfo.Version) {
+				return nil, fmt.Errorf("%v can not install to version %v", platformPkgInfo.Name, platformPkgInfo.Version)
+			}
+		} else {
+			// 该包不能升级，需要判断是否在本地存在高版本包
+			localPkgInfo, ok := localCache[platformPkgInfo.Name]
+			if ok {
+				// 本地有该包，但是版本小于更新平台版本
+				if !compareVersionsGe(localPkgInfo.version, repoPkgInfo.Version) {
+					return nil, fmt.Errorf("local exist low version package and %v can not install to version：%v in repo", repoPkgInfo.Name, repoPkgInfo.Version)
+				}
+			} else {
+				// 本地无该包
+				return nil, fmt.Errorf("local and repo not exist %v", platformPkgInfo.Name)
+			}
+		}
+	}
+	return emulatePkgList, nil
 }
 
-// 通过 sudo apt install -s dde-api=5.5.35-1 startdde=5.10.12.4-1 dde-api-dbgsym=5.5.35-1 获取更新列表
-// func getSystemUpdatePackageList(platFormPackageList map[string]system.UpgradeInfo) ([]string, error) {
-// 	platFormPackageListInner := platFormPackageList
-// 	// 拿到系统仓库的可更新包列表
-// 	var endNameListWithVersion []string
-// 	pkgList, err := listDistUpgradePackages(system.SystemUpdate) // 仓库检查出所有可以升级的包
-// 	if err != nil {
-// 		if os.IsNotExist(err) { // 该类型源文件不存在时
-// 			logger.Info(err)
-// 		} else {
-// 			logger.Warningf("failed to list %v upgradable package %v", system.SystemUpdate.JobType(), err)
-// 		}
-// 		return nil, err
-// 	}
-// 	// 和更新平台的数据比对,找到允许升级的包，此处不会判断版本
-// 	for _, pkg := range pkgList {
-// 		info, ok := platFormPackageListInner[pkg]
-// 		if ok {
-// 			endNameListWithVersion = append(endNameListWithVersion, fmt.Sprintf("%v=%v", info.Package, info.LastVersion))
-// 		}
-// 		delete(platFormPackageListInner, pkg)
-// 	}
-// 	// 证明从平台获取的包还有未匹配上的(可能是已经升级了，或者依赖关系导致，或者仓库问题导致无法升级)
-// 	if len(platFormPackageListInner) > 0 {
-// 		// 获取本地所有包状态
-// 		cache, err := loadPkgStatusVersion()
-// 		if err != nil {
-// 			logger.Warning(err)
-// 			return nil, err
-// 		}
-// 		for _, pkg := range platFormPackageListInner {
-// 			status, ok := cache[pkg.Package]
-// 			if !ok {
-// 				// 系统没有该包的情况
-// 				return nil, fmt.Errorf("package %v obtained from the platform can not install in current OS", pkg.Package)
-// 			}
-// 			if compareVersionsGe(status.version, pkg.LastVersion) {
-// 				// 包已安装版本>=平台下发包的版本 ：可以忽略,无需安装
-// 				continue
-// 			} else {
-// 				// 包已安装版本 < 平台下发包的版本 ：环境存在问题,需要上报
-// 				return nil, fmt.Errorf("package %v_%v obtained from the platform can not install in current OS", pkg.Package, pkg.LastVersion)
-// 			}
-// 		}
-// 	}
-// 	// 判断匹配到的包版本是否存在
-// 	if !checkDebExistWithVersion(endNameListWithVersion) {
-// 		return nil, errors.New("apt show err ,some package can not install")
-// 	}
-// 	// 补充强依赖包，eg：需要安装startdde，但是当前系统 startdde-dbgsym 也安装了，那么需要在下一步进行补充 startdde-dbgsym，这一步补充不需要带版本号
-// 	newInstallList, err := apt.ListInstallPackages(endNameListWithVersion)
-// 	if err != nil {
-// 		logger.Warning(err)
-// 		return nil, err
-// 	}
-// 	return append(endNameListWithVersion, newInstallList...), nil
-// }
-
-func getSecurityUpdatePackageList() (map[string]system.UpgradeInfo, error) {
+func getSecurityUpdatePackageList() (map[string]system.PackageInfo, error) {
 	pkgList, err := listDistUpgradePackages(system.SecurityUpdate) // 仓库检查出所有可以升级的包
 	if err != nil {
 		if os.IsNotExist(err) { // 该类型源文件不存在时
@@ -514,17 +467,17 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
-// retry次数为1
+// retry次数为2,实际重试次数为1次
 // 默认检查为 AllCheckUpdate
 // 重试检查为 AllInstallUpdate
 func handleUpdateSourceFailed(j *Job) {
 	retry := j.retry
-	if retry > 1 {
-		retry = 1
+	if retry > 2 {
+		retry = 2
 		j.retry = retry
 	}
 	retryMap := map[int]system.UpdateType{
-		1: system.AllInstallUpdate,
+		2: system.AllInstallUpdate,
 	}
 	updateType := retryMap[retry]
 	err := system.CustomSourceWrapper(updateType, func(path string, unref func()) error {

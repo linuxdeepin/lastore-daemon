@@ -11,7 +11,7 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 		{
 			Name:    "CheckUpgrade",
 			Fn:      v.CheckUpgrade,
-			InArgs:  []string{"checkOrder"},
+			InArgs:  []string{"checkMode", "checkOrder"},
 			OutArgs: []string{"job"},
 		},
 		{
@@ -53,6 +53,12 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"info"},
 		},
 		{
+			Name:    "GetUpdateLogs",
+			Fn:      v.GetUpdateLogs,
+			InArgs:  []string{"updateType", "hasHistory"},
+			OutArgs: []string{"changeLogs"},
+		},
+		{
 			Name:   "HandleSystemEvent",
 			Fn:     v.HandleSystemEvent,
 			InArgs: []string{"eventType"},
@@ -80,18 +86,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:      v.PackageInstallable,
 			InArgs:  []string{"pkgId"},
 			OutArgs: []string{"installable"},
-		},
-		{
-			Name:    "UpdateLogs",
-			Fn:      v.UpdateLogs,
-			InArgs:  []string{"type"},
-			OutArgs: []string{"updatelogs"},
-		},
-		{
-			Name:    "UpdatablePackages",
-			Fn:      v.UpdatablePackages,
-			InArgs:  []string{"type"},
-			OutArgs: []string{"pkgs"},
 		},
 		{
 			Name:    "PackagesDownloadSize",
@@ -164,6 +158,18 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"path"},
 		},
 		{
+			Name:    "UpdatablePackages",
+			Fn:      v.UpdatablePackages,
+			InArgs:  []string{"updateType"},
+			OutArgs: []string{"pkgs"},
+		},
+		{
+			Name:    "UpdateOfflineSource",
+			Fn:      v.UpdateOfflineSource,
+			InArgs:  []string{"paths", "option"},
+			OutArgs: []string{"job"},
+		},
+		{
 			Name:    "UpdatePackage",
 			Fn:      v.UpdatePackage,
 			InArgs:  []string{"jobName", "packages"},
@@ -172,12 +178,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 		{
 			Name:    "UpdateSource",
 			Fn:      v.UpdateSource,
-			OutArgs: []string{"job"},
-		},
-		{
-			Name:    "UpdateOfflineSource",
-			Fn:      v.UpdateOfflineSource,
-			InArgs:  []string{"paths", "option"},
 			OutArgs: []string{"job"},
 		},
 	}

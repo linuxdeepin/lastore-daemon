@@ -157,11 +157,8 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.RemoveJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
-		job = NewJob(jm.service, genJobId(system.CheckSystemJobType), jobName, packages, system.CheckSystemJobType, LockQueue, environ)
-		job._InitProgressRange(0.06, 0.1)
-		next := NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
-		job.Id = next.Id
-		next._InitProgressRange(0.11, 0.8)
+		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
+		job._InitProgressRange(0.11, 0.8)
 	case system.OfflineUpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.OfflineUpdateJobType, LockQueue, environ)
 		job._InitProgressRange(0.11, 0.9)
@@ -187,7 +184,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.InstallJobType, LockQueue, environ)
 		job._InitProgressRange(0, 0.99)
 	case system.CheckSystemJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, nil, system.CheckSystemJobType, LockQueue, environ)
+		job = NewJob(jm.service, genJobId(jobType), jobName, nil, system.CheckSystemJobType, SystemChangeQueue, environ)
 	default:
 		return false, nil, system.NotSupportError
 	}
@@ -418,7 +415,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			var pkgSysErr *system.PkgSystemError
 			ok := errors.As(err, &pkgSysErr)
 			if ok {
-				if job.Type == system.UpdateSourceJobType {
+				if job.Type == system.UpdateSourceJobType && job.retry > 1 {
 					job.subRetryCount(false)
 					logger.Infof("Retry failed Job %v\n", job)
 					return

@@ -119,7 +119,7 @@ func getSystemInfo() SystemInfo {
 		logger.Warning("failed to get project id:", err)
 	}
 	systemInfo.Baseline = getCurrentBaseline()
-	systemInfo.SystemName = getCurrentSystemType()
+	systemInfo.SystemType = getCurrentSystemType()
 	return systemInfo
 }
 

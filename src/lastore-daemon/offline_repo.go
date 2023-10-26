@@ -37,7 +37,7 @@ type OfflineManager struct {
 	localOupInfoMap   map[string]OfflineRepoInfo
 	// localOupCheckMap  map[string]*OupResultInfo
 	checkResult         OfflineCheckResult
-	upgradeAblePackages map[string]system.UpgradeInfo
+	upgradeAblePackages map[string]system.PackageInfo // 离线更新可更新包
 }
 
 func NewOfflineManager() *OfflineManager {
@@ -80,24 +80,24 @@ type OfflineRepoInfo struct {
 }
 
 type OupResultInfo struct {
-	CveId             string
-	oupType           OfflineUpgradeType
-	CompletenessCheck CheckState
-	SystemTypeCheck   CheckState
-	ArchCheck         CheckState
+	CveId             string             // CVE ID
+	oupType           OfflineUpgradeType // 离线包类型 unit类型 0 未知  1 系统仓库  2 安全补丁
+	CompletenessCheck CheckState         // 完整性检查	unit类型  0 未检查 1 检查通过 2检查不通过
+	SystemTypeCheck   CheckState         // 系统版本检查  unit类型  0 未检查 1 检查通过 2检查不通过
+	ArchCheck         CheckState         // 架构检查		unit类型  0 未检查 1 检查通过 2检查不通过
 }
 
 type OfflineCheckResult struct {
 	// 检查oup包即可完成下面5项数据的补充
-	OfflineUpgradeType OfflineUpgradeType
+	OfflineUpgradeType OfflineUpgradeType // 离线包类型 unit类型 0 未知  1 系统仓库  2 安全补丁
 	OupCount           int
-	OupCheckState      CheckState
+	OupCheckState      CheckState // 整体检查是否通过 unit类型  0 未检查 1 检查通过 2检查不通过
 	CheckResultInfo    map[string]*OupResultInfo
-	DiskCheckState     CheckState // 解压空间是否满足
+	DiskCheckState     CheckState // 解压空间是否满足 unit类型  0 未检查 1 检查通过 2检查不通过
 
 	// 建立离线仓库检查更新后补充下面两项数据
 	DebCount         int        // apt update后,获取可更新包的数量
-	SystemCheckState CheckState // apt update后,通过系统更新工具做环境检查
+	SystemCheckState CheckState // apt update后,通过系统更新工具做环境检查 unit类型  0 未检查 1 检查通过 2检查不通过
 }
 
 // PrepareUpdateOffline  离线检查更新之前触发：需要完成缓存清理、解压、验签、挂载
@@ -315,28 +315,22 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 				logger.Warning(err)
 				return err
 			}
-			err = m.updateApi.CheckDepends("", "", nil, nil)
-			if err != nil {
-				// 依赖检查不通过
-				m.offline.checkResult.SystemCheckState = failed
-				logger.Warning(err)
-				return err
-			}
 			return nil
 		},
 		string(system.SucceedStatus): func() error {
 			err = m.offline.AfterUpdateOffline()
 			if err != nil {
 				logger.Warning(err)
+				return err
 			}
 			logger.Info(m.offline.GetCheckInfo())
 			// 系统环境检查
-			err = m.updateApi.CheckSystem("", "", nil, nil) // TODO
-			if err != nil {
-				m.offline.checkResult.SystemCheckState = failed
-				logger.Warning(err)
-				return err
-			}
+			// err = m.updateApi.CheckSystem("", "", nil, nil) // TODO 系统环境检查改用命令检查
+			// if err != nil {
+			// 	m.offline.checkResult.SystemCheckState = failed
+			// 	logger.Warning(err)
+			// 	return err
+			// }
 			m.offline.checkResult.SystemCheckState = success
 			job.setPropProgress(1)
 			return nil

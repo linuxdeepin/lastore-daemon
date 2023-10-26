@@ -1,10 +1,15 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"internal/system"
+	"internal/system/dut"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -13,6 +18,7 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
 	"github.com/linuxdeepin/go-lib/gettext"
+	"github.com/linuxdeepin/go-lib/utils"
 )
 
 func (m *Manager) distUpgradePartly(sender dbus.Sender, mode system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
@@ -228,8 +234,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	m.updateJobList()
 	var packages []string
 
+	// 判断是否有可离线更新内容
 	if mode == system.OfflineUpdate {
-		// TODO 判断是否有可离线更新内容
+		if len(m.offline.upgradeAblePackages) == 0 {
+			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
+		}
 	} else {
 		packages = m.updater.getUpdatablePackagesByType(mode)
 		if len(packages) == 0 {
@@ -237,10 +246,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		}
 	}
 
-	// TODO 检查系统环境是否满足安装条件
-
 	var isExist bool
 	var job *Job
+	var uuid string
 	m.do.Lock()
 	defer m.do.Unlock()
 	if isClassify {
@@ -260,21 +268,31 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	}
 	// 笔记本电池电量监听
 	m.handleSysPowerChanged(job)
-	if mode == system.OfflineUpdate {
-		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
-	} else {
-		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
+	uuid, err = m.prepareDutUpgrade(job, mode)
+	if err != nil {
+		logger.Warning(err)
+		return nil, err
 	}
-
+	logger.Info(uuid)
 	// 设置hook
 	job.setPreHooks(map[string]func() error{
 		string(system.RunningStatus): func() error {
+			systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil)
+			if systemErr != nil {
+				logger.Info(systemErr)
+				return systemErr
+			}
 			return m.preRunningHook(needChangeGrub, mode)
 		},
 		string(system.FailedStatus): func() error {
 			return m.preFailedHook(job, mode)
 		},
 		string(system.SucceedStatus): func() error {
+			systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
+			if systemErr != nil {
+				logger.Info(systemErr)
+				return systemErr
+			}
 			return m.preSuccessHook(job, needChangeGrub, mode)
 		},
 		string(system.EndStatus): func() error {
@@ -460,10 +478,8 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 			logger.Warning(err)
 		}
 	}
-	// TODO 进行安装后检查
-
 	// TODO 设置重启后的检查项
-	err := setRebootCheckOption()
+	err := setRebootCheckOption(mode)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -503,4 +519,129 @@ func (m *Manager) cancelAllUpdateJob() error {
 		}
 	}
 	return nil
+}
+
+func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
+	// 使用dut更新前的准备
+	var uuid string
+	var err error
+	if mode == system.OfflineUpdate {
+		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
+		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
+			"/var/cache/lastore/archives",
+			m.offline.upgradeAblePackages,
+			nil, nil, nil, nil, m.genRepoInfo(mode, system.OfflineListPath))
+		if err != nil {
+			logger.Warning(err)
+			return "", err
+		}
+	} else {
+		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
+		var pkgMap map[string]system.PackageInfo
+		mode &= system.AllInstallUpdate
+		if mode == 0 {
+			return "", errors.New("invalid mode")
+		}
+		hasSystem := mode&system.SystemUpdate != 0
+		hasSecurity := mode&system.SecurityUpdate != 0
+		if hasSystem && hasSecurity {
+			// 如果是系统+安全更新，需要将两个仓库的数据整合，如果有重复deb包，那么需要只保留高版本包
+			pkgMap = m.mergePackages()
+		} else {
+			pkgMap = m.allUpgradableInfo[mode]
+		}
+		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
+			"/var/cache/lastore/archives",
+			pkgMap,
+			m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, m.updatePlatform.getRules(), m.genRepoInfo(mode, system.OnlineListPath))
+		if err != nil {
+			logger.Warning(err)
+			return "", err
+		}
+	}
+	return uuid, nil
+}
+
+// 融合系统与安全仓库
+func (m *Manager) mergePackages() map[string]system.PackageInfo {
+	var res map[string]system.PackageInfo
+	jsonStr, err := json.Marshal(m.allUpgradableInfo[system.SystemUpdate])
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	err = json.Unmarshal(jsonStr, &res)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	for name, secInfo := range m.allUpgradableInfo[system.SecurityUpdate] {
+		sysInfo, ok := res[name]
+		if ok {
+			// 当两个仓库存在相同包，留版本高的包
+			if compareVersionsGe(secInfo.Version, sysInfo.Name) {
+				res[name] = secInfo
+			}
+		} else {
+			// 不存在时直接添加
+			res[name] = secInfo
+		}
+	}
+	return res
+}
+
+// 生成repo信息
+func (m *Manager) genRepoInfo(typ system.UpdateType, listPath string) []dut.RepoInfo {
+	var repoInfos []dut.RepoInfo
+	for _, file := range getPackagesPathList(typ, listPath) {
+		info := dut.RepoInfo{
+			Name:       file,
+			FilePath:   file,
+			HashSha256: "",
+		}
+		data, err := ioutil.ReadFile(file)
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+		hash := sha256.New()
+		hash.Write(data)
+		info.HashSha256 = hex.EncodeToString(hash.Sum(nil))
+		repoInfos = append(repoInfos, info)
+	}
+	return repoInfos
+}
+
+func getPackagesPathList(typ system.UpdateType, listPath string) []string {
+	var res []string
+	var urls []string
+	prefixMap := make(map[string]struct{})
+	if typ&system.SystemUpdate != 0 {
+		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.SystemUpdate])...)
+	}
+	if typ&system.SecurityUpdate != 0 {
+		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.SecurityUpdate])...)
+	}
+	for _, url := range urls {
+		prefixMap[strings.ReplaceAll(utils.URIToPath(url), "/", "_")] = struct{}{}
+	}
+	var prefixs []string
+	for k, _ := range prefixMap {
+		prefixs = append(prefixs, k)
+	}
+	infos, err := ioutil.ReadDir(listPath)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	for _, info := range infos {
+		if strings.HasSuffix(info.Name(), "Packages") {
+			for _, prefix := range prefixs {
+				if strings.HasPrefix(info.Name(), prefix) {
+					res = append(res, filepath.Join("/var/lib/apt/lists", info.Name()))
+				}
+			}
+		}
+	}
+	return res
 }
