@@ -404,6 +404,12 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 			needDownloadSize, allPackageSize, err := system.QuerySourceDownloadSize(currentMode)
 			if err != nil {
 				logger.Warning(err)
+				// 初始化配置值为noDownload，如果query失败，不会变更，造成前端状态异常
+				// 升级问题处理
+				if oldStatus != system.NoUpdate {
+					m.updateModeStatusObj[currentMode.JobType()] = system.NoUpdate
+					changed = true
+				}
 			} else {
 				m.updateModeDownloadSizeMapLock.Lock()
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
