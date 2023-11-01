@@ -31,6 +31,10 @@ Provides:
 Depends:
  dbus,
  procps,
+ deepin-iso-standard,
+ binutils,
+ deepin-system-fixpkg,
+ deepin-system-update,
  ${dist:Depends},
  ${misc:Depends},
  ${shlibs:Depends},
