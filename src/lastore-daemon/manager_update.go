@@ -178,6 +178,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		job.setAfterHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				job.setPropProgress(0.01)
+				_ = os.Setenv("http_proxy", environ["http_proxy"])
+				_ = os.Setenv("https_proxy", environ["https_proxy"])
 				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
 				err = m.updatePlatform.genUpdatePolicyByToken()
