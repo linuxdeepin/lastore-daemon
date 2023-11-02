@@ -474,7 +474,22 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		}
 		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
 	} else {
-		_ = ioutil.WriteFile(optionFilePathTemp, []byte(option), 0644)
+		opt := fullUpgradeOption{}
+		err = json.Unmarshal([]byte(option), &opt)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		// 在线更新时填充部分属性
+		opt.DoUpgrade = true
+		opt.PreGreeterCheck = false
+		opt.AfterGreeterCheck = false
+		content, err := json.Marshal(opt)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
 	}
 
 	for {

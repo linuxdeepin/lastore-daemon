@@ -314,7 +314,10 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			logger.Info(m.offline.GetCheckInfo())
 			if err != nil {
 				logger.Warning(err)
-				return err
+				return &system.JobError{
+					Type:   system.ErrorOfflineCheck,
+					Detail: "check offline oup file error:" + err.Error(),
+				}
 			}
 			return nil
 		},
@@ -322,7 +325,10 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			err = m.offline.AfterUpdateOffline()
 			if err != nil {
 				logger.Warning(err)
-				return err
+				return &system.JobError{
+					Type:   system.ErrorOfflineCheck,
+					Detail: "check offline oup file error:" + err.Error(),
+				}
 			}
 
 			if checkRootSpace() {

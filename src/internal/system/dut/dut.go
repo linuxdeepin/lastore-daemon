@@ -65,8 +65,8 @@ type DetailErrorMsg struct {
 	Msg  []string
 }
 
-func GetErrorBitMap() map[system.UpgradeReasonType]uint {
-	return map[system.UpgradeReasonType]uint{
+func GetErrorBitMap() map[system.JobErrorType]uint {
+	return map[system.JobErrorType]uint{
 		system.ErrorUnmetDependencies: ErrorUnmetDependenciesBit,
 		system.ErrorInsufficientSpace: ErrorInsufficientSpaceBit,
 		system.ErrorPkgNotFound:       ErrorPkgNotFoundBit,
@@ -93,8 +93,8 @@ const (
 func parsePkgSystemError(stdErrStr string, stdOutStr string) error {
 	err := parseJobError(stdErrStr, stdOutStr)
 	if err != nil {
-		return &system.PkgSystemError{
-			Type:   string(err.Type),
+		return &system.JobError{
+			Type:   err.Type,
 			Detail: err.Detail,
 		}
 	}
@@ -107,7 +107,7 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	err := json.Unmarshal([]byte(stdErrStr), &content)
 	if err != nil {
 		return &system.JobError{
-			Type:   system.ErrTypeUnknown,
+			Type:   system.ErrorUnknown,
 			Detail: err.Error(),
 		}
 	}

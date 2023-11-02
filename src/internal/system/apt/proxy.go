@@ -159,8 +159,8 @@ func parsePkgSystemError(out, err []byte) error {
 	}
 	switch {
 	case bytes.Contains(err, []byte("dpkg was interrupted")):
-		return &system.PkgSystemError{
-			Type: system.ErrTypeDpkgInterrupted,
+		return &system.JobError{
+			Type: system.ErrorDpkgInterrupted,
 		}
 
 	case bytes.Contains(err, []byte("Unmet dependencies")):
@@ -174,22 +174,22 @@ func parsePkgSystemError(out, err []byte) error {
 			detail = string(out[idx:])
 		}
 
-		return &system.PkgSystemError{
-			Type:   system.ErrTypeDependenciesBroken,
+		return &system.JobError{
+			Type:   system.ErrorDependenciesBroken,
 			Detail: detail,
 		}
 
 	case bytes.Contains(err, []byte("The list of sources could not be read")):
 		detail := string(err)
-		return &system.PkgSystemError{
-			Type:   system.ErrTypeInvalidSourcesList,
+		return &system.JobError{
+			Type:   system.ErrorInvalidSourcesList,
 			Detail: detail,
 		}
 
 	default:
 		detail := string(err)
-		return &system.PkgSystemError{
-			Type:   system.ErrTypeUnknown,
+		return &system.JobError{
+			Type:   system.ErrorUnknown,
 			Detail: detail,
 		}
 	}
@@ -316,9 +316,9 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, args ma
 	err := CheckPkgSystemError(true)
 	if err != nil {
 		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
-		var e *system.PkgSystemError
+		var e *system.JobError
 		ok := errors.As(err, &e)
-		if !ok || (ok && e.Type != system.ErrTypeDependenciesBroken) {
+		if !ok || (ok && e.Type != system.ErrorDependenciesBroken) {
 			return err
 		}
 	}
@@ -368,7 +368,7 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	WaitDpkgLockRelease()
 	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, OptionToArgs(args)...))
 	c.SetEnv(environ)
-	if errType == system.ErrTypeDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
+	if system.JobErrorType(errType) == system.ErrorDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
 	}
 	return c.Start()

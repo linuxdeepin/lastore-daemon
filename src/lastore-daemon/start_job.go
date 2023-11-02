@@ -125,8 +125,8 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.PropsMu.Unlock()
 		err := hookFn()
 		j.PropsMu.Lock()
-		// 在切换状态时触发从更新平台获取数据，如果出错，需要终止并返回error
-		if to == system.RunningStatus && err != nil {
+		// 在切换running和success状态时触发一些检查，如果出错，需要终止并返回error
+		if (to == system.RunningStatus || to == system.SucceedStatus) && err != nil {
 			return err
 		}
 	}
@@ -145,7 +145,8 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.PropsMu.Unlock()
 		err := hookFn()
 		j.PropsMu.Lock()
-		if err != nil {
+		// 在切换running和success状态时触发一些检查，如果出错，需要终止并返回error,不过通常不会有success的after hook返回error
+		if (to == system.RunningStatus || to == system.SucceedStatus) && err != nil {
 			return err
 		}
 	}

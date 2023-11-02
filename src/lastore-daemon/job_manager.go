@@ -412,17 +412,13 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			job.PropsMu.Unlock()
 			logger.Errorf("StartSystemJob failed %v :%v\n", job, err)
 
-			var pkgSysErr *system.PkgSystemError
-			ok := errors.As(err, &pkgSysErr)
+			var jobErr *system.JobError
+			ok := errors.As(err, &jobErr)
 			if ok {
 				// do not retry job
 				job.subRetryCount(true) // retry 设置为 0
-				hookFn := job.getPreHook(string(system.FailedStatus))
-				if hookFn != nil {
-					_ = hookFn()
-				}
 				job.PropsMu.Lock()
-				job.setError(pkgSysErr)
+				job.setError(jobErr)
 				_ = job.emitPropChangedStatus(job.Status)
 				job.PropsMu.Unlock()
 			} else if job.retry == 0 {

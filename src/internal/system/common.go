@@ -84,31 +84,36 @@ const (
 	UpgradeFailed  UpgradeStatus = "failed"
 )
 
-type UpgradeReasonType string
+type JobErrorType string
 
 const (
-	NoError                      UpgradeReasonType = "NoError"
-	ErrorUnknown                 UpgradeReasonType = "ErrorUnknown"
-	ErrorFetchFailed             UpgradeReasonType = "fetchFailed"
-	ErrorDpkgError               UpgradeReasonType = "dpkgError"
-	ErrorPkgNotFound             UpgradeReasonType = "pkgNotFound"
-	ErrorUnmetDependencies       UpgradeReasonType = "unmetDependencies"
-	ErrorNoInstallationCandidate UpgradeReasonType = "noInstallationCandidate"
-	ErrorInsufficientSpace       UpgradeReasonType = "insufficientSpace"
-	ErrorUnauthenticatedPackages UpgradeReasonType = "unauthenticatedPackages"
-	ErrorOperationNotPermitted   UpgradeReasonType = "operationNotPermitted"
-	ErrorIndexDownloadFailed     UpgradeReasonType = "IndexDownloadFailed"
-	ErrorIO                      UpgradeReasonType = "ioError"
-	ErrorDamagePackage           UpgradeReasonType = "damagePackage" // 包损坏,需要删除后重新下载或者安装
+	NoError                      JobErrorType = "NoError"
+	ErrorUnknown                 JobErrorType = "ErrorUnknown"
+	ErrorFetchFailed             JobErrorType = "fetchFailed"
+	ErrorDpkgError               JobErrorType = "dpkgError"
+	ErrorPkgNotFound             JobErrorType = "pkgNotFound"
+	ErrorDpkgInterrupted         JobErrorType = "dpkgInterrupted"
+	ErrorDependenciesBroken      JobErrorType = "dependenciesBroken"
+	ErrorUnmetDependencies       JobErrorType = "unmetDependencies"
+	ErrorNoInstallationCandidate JobErrorType = "noInstallationCandidate"
+	ErrorInsufficientSpace       JobErrorType = "insufficientSpace"
+	ErrorUnauthenticatedPackages JobErrorType = "unauthenticatedPackages"
+	ErrorOperationNotPermitted   JobErrorType = "operationNotPermitted"
+	ErrorIndexDownloadFailed     JobErrorType = "IndexDownloadFailed"
+	ErrorIO                      JobErrorType = "ioError"
+	ErrorDamagePackage           JobErrorType = "damagePackage" // 包损坏,需要删除后重新下载或者安装
+	ErrorInvalidSourcesList      JobErrorType = "invalidSourceList"
+	ErrorPlatformUnreachable     JobErrorType = "platformUnreachable"
+	ErrorOfflineCheck            JobErrorType = "offlineCheckError"
 
-	ErrorMissCoreFile  UpgradeReasonType = "missCoreFile"
-	ErrorScript        UpgradeReasonType = "scriptError"
-	ErrorProgressCheck UpgradeReasonType = "progressCheckError"
+	ErrorMissCoreFile  JobErrorType = "missCoreFile"
+	ErrorScript        JobErrorType = "scriptError"
+	ErrorProgressCheck JobErrorType = "progressCheckError"
 )
 
 type UpgradeStatusAndReason struct {
 	Status     UpgradeStatus
-	ReasonCode UpgradeReasonType
+	ReasonCode JobErrorType
 }
 
 const (

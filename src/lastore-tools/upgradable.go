@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"internal/system"
 	"internal/system/apt"
@@ -174,7 +175,8 @@ func GenerateUpdateInfos(outputPath string) error {
 				// 错误写到error_update_infos.json文件中
 				outputErrorPath := fmt.Sprintf("error_%v", outputPath)
 				var updateInfoErr system.UpdateInfoError
-				pkgSysErr, ok := err.(*system.PkgSystemError)
+				var pkgSysErr *system.JobError
+				ok := errors.As(err, &pkgSysErr)
 				if ok {
 					updateInfoErr.Type = pkgSysErr.GetType()
 					updateInfoErr.Detail = pkgSysErr.GetDetail()

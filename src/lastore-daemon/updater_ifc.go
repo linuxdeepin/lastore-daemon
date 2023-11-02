@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"internal/system"
 	"os"
 	"time"
@@ -30,7 +31,8 @@ func (u *Updater) ApplicationUpdateInfos(lang string) (updateInfos []Application
 			time.Sleep(1 * time.Second)
 			repeatCount++
 		} else if err != nil {
-			updateInfoErr, ok := err.(*system.UpdateInfoError)
+			var updateInfoErr *system.UpdateInfoError
+			ok := errors.As(err, &updateInfoErr)
 			if ok {
 				return nil, dbusutil.MakeErrorJSON(u, "UpdateInfoError", updateInfoErr)
 			}

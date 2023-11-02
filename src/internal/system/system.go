@@ -52,13 +52,6 @@ const (
 )
 
 const (
-	ErrTypeDpkgInterrupted    = "dpkgInterrupted"
-	ErrTypeDependenciesBroken = "dependenciesBroken"
-	ErrTypeUnknown            = "unknown"
-	ErrTypeInvalidSourcesList = "invalidSourceList"
-)
-
-const (
 	NotifyExpireTimeoutDefault = -1
 	NotifyExpireTimeoutNoHide  = 0
 )
@@ -137,25 +130,8 @@ type System interface {
 	CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs map[string]string) error
 }
 
-type PkgSystemError struct {
-	Type   string
-	Detail string
-}
-
-func (e *PkgSystemError) GetType() string {
-	return "PkgSystemError::" + e.Type
-}
-
-func (e *PkgSystemError) GetDetail() string {
-	return e.Detail
-}
-
-func (e *PkgSystemError) Error() string {
-	return fmt.Sprintf("PkgSystemError Type:%s, Detail: %s", e.Type, e.Detail)
-}
-
 type JobError struct {
-	Type   UpgradeReasonType
+	Type   JobErrorType
 	Detail string
 }
 
@@ -167,9 +143,9 @@ func (e *JobError) GetDetail() string {
 	return e.Detail
 }
 
-// func (e *JobError) Error() string {
-// 	return fmt.Sprintf("JobError Type:%s, Detail: %s", e.Type, e.Detail)
-// }
+func (e *JobError) Error() string {
+	return fmt.Sprintf("JobError Type:%s, Detail: %s", e.Type, e.Detail)
+}
 
 func GetAppStoreAppName() string {
 	_, err := os.Stat("/usr/share/applications/deepin-app-store.desktop")

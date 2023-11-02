@@ -153,7 +153,7 @@ func (c *Command) atExit() {
 	}
 }
 
-func (c *Command) IndicateFailed(errType UpgradeReasonType, errDetail string, isFatalErr bool) {
+func (c *Command) IndicateFailed(errType JobErrorType, errDetail string, isFatalErr bool) {
 	logger.Warningf("IndicateFailed: type: %s, detail: %s", errType, errDetail)
 	progressInfo := JobProgressInfo{
 		JobId:      c.JobId,

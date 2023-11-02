@@ -221,12 +221,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 		})
-		job.setAfterHooks(map[string]func() error{
-			string(system.RunningStatus): func() error {
-				// TODO 下载之前需要检查系统环境是否满足下载条件
-				return nil
-			},
-		})
 	}
 
 	if err = m.jobManager.addJob(job); err != nil {

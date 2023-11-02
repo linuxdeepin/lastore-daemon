@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"internal/system"
 	"sync"
@@ -160,6 +161,19 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 		err := TransitionJobState(j, info.Status)
 		if err != nil {
 			logger.Warningf("_UpdateInfo: %v\n", err)
+			// 当success的hook报错时，需要将error内容传递给job，running的hook错误在StartSystemJob中处理（其他四类状态应该不会有hook报错的情况）
+			if info.Status == system.SucceedStatus {
+				_ = TransitionJobState(j, system.FailedStatus)
+				var jobErr *system.JobError
+				ok := errors.As(err, &jobErr)
+				if ok {
+					j.setError(jobErr)
+					// 当需要迁移到success时，Cancelable为false，当hook报错时，需要将Cancelable设置为true
+					j.Cancelable = true
+					_ = j.emitPropChangedCancelable(info.Cancelable)
+					return true
+				}
+			}
 			return false
 		}
 		changed = true
@@ -210,6 +224,7 @@ func (j *Job) getPreHook(name string) func() error {
 	return fn
 }
 
+// 当success的hook报错时,需要在updateInfo处理error;running的hook错误在StartSystemJob中处理;其他四类状态应该不会有hook报错的情况.
 func (j *Job) setPreHooks(hooks map[string]func() error) {
 	j.preChangeStatusHooksMu.Lock()
 	j.preChangeStatusHooks = hooks
@@ -247,6 +262,7 @@ func (j *Job) getAfterHook(name string) func() error {
 	return fn
 }
 
+// after hook中 success状态的hook不要返回error
 func (j *Job) setAfterHooks(hooks map[string]func() error) {
 	j.afterChangedHooksMu.Lock()
 	j.afterChangedHooks = hooks

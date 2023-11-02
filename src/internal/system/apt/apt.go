@@ -83,9 +83,9 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		return exec.Command("/usr/bin/lastore-apt-clean")
 
 	case system.FixErrorJobType:
-		var errType string
+		var errType system.JobErrorType
 		if len(cmdArgs) >= 1 {
-			errType = cmdArgs[0]
+			errType = system.JobErrorType(cmdArgs[0])
 		}
 		// FixError 需要加上apt参数项
 		var aptOption []string
@@ -95,11 +95,11 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 			aptOptionString = strings.Join(aptOption, " ")
 		}
 		switch errType {
-		case system.ErrTypeDpkgInterrupted:
+		case system.ErrorDpkgInterrupted:
 			sh := "dpkg --force-confold --configure -a;" +
 				fmt.Sprintf("apt-get -y -c %s -f install %s;", system.LastoreAptV2CommonConfPath, aptOptionString)
 			return exec.Command("/bin/sh", "-c", sh) // #nosec G204
-		case system.ErrTypeDependenciesBroken:
+		case system.ErrorDependenciesBroken:
 			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 			args = append(args, "-f", "install")
 			args = append(args, aptOption...)

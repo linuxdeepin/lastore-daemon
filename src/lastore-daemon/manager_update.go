@@ -186,14 +186,20 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				if err != nil {
 					job.retry = 0
 					m.updatePlatform.PostStatusMessage(err.Error())
-					return errors.New("failed to get update policy by token")
+					return &system.JobError{
+						Type:   system.ErrorPlatformUnreachable,
+						Detail: "failed to get update policy by token" + err.Error(),
+					}
 				}
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
 				if err != nil {
 					logger.Warning(err)
 					job.retry = 0
 					m.updatePlatform.PostStatusMessage(err.Error())
-					return fmt.Errorf("failed to get update info by update platform: %v", err)
+					return &system.JobError{
+						Type:   system.ErrorPlatformUnreachable,
+						Detail: "failed to get update info by update platform" + err.Error(),
+					}
 				}
 				m.updater.setPropUpdateTarget(m.updatePlatform.getUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
 

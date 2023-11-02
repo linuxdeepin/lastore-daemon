@@ -73,8 +73,8 @@ func checkSystemDependsError() error {
 	if err == nil {
 		err = apt.CheckPkgSystemError(false)
 		if err != nil {
-			return &system.PkgSystemError{
-				Type:   system.ErrTypeUnknown,
+			return &system.JobError{
+				Type:   system.ErrorUnknown,
 				Detail: err.Error(),
 			}
 		}

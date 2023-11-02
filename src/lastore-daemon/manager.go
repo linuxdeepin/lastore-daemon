@@ -452,8 +452,8 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 		return nil, err
 	}
 
-	switch errType {
-	case system.ErrTypeDpkgInterrupted, system.ErrTypeDependenciesBroken:
+	switch system.JobErrorType(errType) {
+	case system.ErrorDpkgInterrupted, system.ErrorDependenciesBroken:
 		// good error type
 	default:
 		return nil, errors.New("invalid error type")

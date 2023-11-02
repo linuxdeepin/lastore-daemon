@@ -283,10 +283,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				logger.Info(systemErr)
 				return systemErr
 			}
-			return m.preRunningHook(needChangeGrub, mode)
+			_ = m.preRunningHook(needChangeGrub, mode)
+			return nil
 		},
 		string(system.FailedStatus): func() error {
-			return m.preFailedHook(job, mode)
+			_ = m.preFailedHook(job, mode)
+			return nil
 		},
 		string(system.SucceedStatus): func() error {
 			systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
@@ -302,8 +304,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			if mode&system.SecurityUpdate != 0 {
 				recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate]), upgradeRecordPath)
 			}
-
-			return m.preSuccessHook(job, needChangeGrub, mode)
+			_ = m.preSuccessHook(job, needChangeGrub, mode)
+			return nil
 		},
 		string(system.EndStatus): func() error {
 			m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
@@ -423,7 +425,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		if strings.Contains(errType, "JobError::") {
 			errType = strings.ReplaceAll(errType, "JobError::", "")
 		}
-		err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.UpgradeReasonType(errType)})
+		err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.JobErrorType(errType)})
 		if err != nil {
 			logger.Warning(err)
 		}
