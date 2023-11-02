@@ -53,9 +53,14 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"info"},
 		},
 		{
+			Name:    "GetHistoryLogs",
+			Fn:      v.GetHistoryLogs,
+			OutArgs: []string{"changeLogs"},
+		},
+		{
 			Name:    "GetUpdateLogs",
 			Fn:      v.GetUpdateLogs,
-			InArgs:  []string{"updateType", "hasHistory"},
+			InArgs:  []string{"updateType"},
 			OutArgs: []string{"changeLogs"},
 		},
 		{

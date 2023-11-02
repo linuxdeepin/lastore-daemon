@@ -401,3 +401,70 @@ func cleanAllCache() {
 }
 
 const aptLimitKey = "Acquire::http::Dl-Limit"
+
+const upgradeRecordPath = "/usr/share/lastore/upgrade_record.json"
+
+type recordInfo struct {
+	UUID        string
+	UpgradeTime string
+	UpgradeMode system.UpdateType
+	ChangelogEn []string
+	ChangelogZh []string
+}
+
+// mode 只能为单一类型
+func recordUpgradeLog(uuid string, mode system.UpdateType, changelogEn []string, changelogZh []string, path string) {
+	var allContent []recordInfo
+	content, _ := ioutil.ReadFile(path)
+	if len(content) > 0 {
+		err := json.Unmarshal(content, &allContent)
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
+	}
+
+	if mode&system.SecurityUpdate != 0 {
+		info := recordInfo{
+			UUID:        uuid,
+			UpgradeTime: time.Now().String(),
+			UpgradeMode: system.SecurityUpdate,
+			ChangelogEn: changelogEn,
+			ChangelogZh: changelogZh,
+		}
+		allContent = append([]recordInfo{
+			info,
+		}, allContent...)
+	}
+	if mode&system.SystemUpdate != 0 {
+		info := recordInfo{
+			UUID:        uuid,
+			UpgradeTime: time.Now().String(),
+			UpgradeMode: system.SystemUpdate,
+			ChangelogEn: changelogEn,
+			ChangelogZh: changelogZh,
+		}
+		allContent = append([]recordInfo{
+			info,
+		}, allContent...)
+	}
+	res, err := json.Marshal(allContent)
+	if err != nil {
+		logger.Warning("failed to marshal all upgrade log:", err)
+		return
+	}
+	err = ioutil.WriteFile(path, res, 0644)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+}
+
+func getHistoryChangelog(path string) (changeLogs string) {
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	return string(content)
+}

@@ -149,14 +149,15 @@ func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *d
 	}
 }
 
-func (m *Manager) GetUpdateLogs(updateType system.UpdateType, hasHistory bool) (changeLogs string, busErr *dbus.Error) {
+func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
 	res := make(map[system.UpdateType][]string)
+	isZh := strings.HasPrefix(m.userAgents.getActiveLastoreAgentLang(), "zh")
 	if updateType&system.SystemUpdate != 0 {
-		res[system.SystemUpdate] = m.updatePlatform.GetSystemUpdateLogs()
+		res[system.SystemUpdate] = m.updatePlatform.GetSystemUpdateLogs(isZh)
 	}
 
 	if updateType&system.SecurityUpdate != 0 {
-		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate])
+		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate], isZh)
 	}
 
 	if len(res) == 0 {
@@ -169,6 +170,19 @@ func (m *Manager) GetUpdateLogs(updateType system.UpdateType, hasHistory bool) (
 	}
 
 	return string(logs), nil
+}
+
+// GetHistoryLogs changeLogs json解析后数据结构
+// type recordInfo struct {
+//	UUID        string
+//	UpgradeTime string
+//	UpgradeMode system.UpdateType
+//	ChangelogEn []string
+//	ChangelogZh []string
+// }
+
+func (m *Manager) GetHistoryLogs() (changeLogs string, busErr *dbus.Error) {
+	return getHistoryChangelog(upgradeRecordPath), nil
 }
 
 func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {

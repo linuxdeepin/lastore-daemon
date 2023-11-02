@@ -237,6 +237,9 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 			}
 			propPkgMap[system.SystemUpdate.JobType()] = packageList
 		}
+		if systemErr != nil {
+			logger.Warning(systemErr)
+		}
 		wg.Done()
 	}()
 	wg.Add(1)
@@ -248,6 +251,9 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
 			}
 			propPkgMap[system.SecurityUpdate.JobType()] = packageList
+		}
+		if securityErr != nil {
+			logger.Warning(securityErr)
 		}
 		wg.Done()
 	}()

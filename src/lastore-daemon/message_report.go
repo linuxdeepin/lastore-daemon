@@ -111,9 +111,8 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 	}
 }
 
-func (m *UpdatePlatformManager) GetSystemUpdateLogs() []string {
+func (m *UpdatePlatformManager) GetSystemUpdateLogs(isZh bool) []string {
 	var updateLogs []string
-	isZh := strings.HasPrefix(m.userAgents.getActiveLastoreAgentLang(), "zh")
 
 	var logStr string
 	for _, updateLog := range m.systemUpdateLogs {
@@ -129,10 +128,9 @@ func (m *UpdatePlatformManager) GetSystemUpdateLogs() []string {
 	return updateLogs
 }
 
-func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo) []string {
+func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo, isZh bool) []string {
 	var cveInfos = make(map[string]string)
 	var updateLogs []string
-	isZh := strings.HasPrefix(m.userAgents.getActiveLastoreAgentLang(), "zh")
 	for name, _ := range pkgs {
 		for _, id := range m.cvePkgs[name] {
 			if _, ok := cveInfos[id]; ok {
