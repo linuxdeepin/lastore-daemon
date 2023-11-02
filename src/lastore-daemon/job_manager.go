@@ -399,7 +399,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 		jobStatus := job.Status
 		job.PropsMu.RUnlock()
 
-		if jobStatus == system.FailedStatus {
+		if jobStatus == system.FailedStatus { // 将失败的job标记为ready
 			job.subRetryCount(false)
 			_ = jm.markStart(job)
 			logger.Infof("Retry failed Job %v\n", job)
@@ -415,13 +415,8 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			var pkgSysErr *system.PkgSystemError
 			ok := errors.As(err, &pkgSysErr)
 			if ok {
-				if job.Type == system.UpdateSourceJobType && job.retry > 1 {
-					job.subRetryCount(false)
-					logger.Infof("Retry failed Job %v\n", job)
-					return
-				}
 				// do not retry job
-				job.subRetryCount(true)
+				job.subRetryCount(true) // retry 设置为 0
 				hookFn := job.getPreHook(string(system.FailedStatus))
 				if hookFn != nil {
 					_ = hookFn()

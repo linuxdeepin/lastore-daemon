@@ -469,17 +469,17 @@ func (m *Manager) ensureUpdateSourceOnce() {
 	}
 }
 
-// retry次数为2,实际重试次数为1次
+// retry次数为1
 // 默认检查为 AllCheckUpdate
 // 重试检查为 AllInstallUpdate
 func handleUpdateSourceFailed(j *Job) {
 	retry := j.retry
-	if retry > 2 {
-		retry = 2
+	if retry > 1 {
+		retry = 1
 		j.retry = retry
 	}
 	retryMap := map[int]system.UpdateType{
-		2: system.AllInstallUpdate,
+		1: system.AllInstallUpdate,
 	}
 	updateType := retryMap[retry]
 	err := system.CustomSourceWrapper(updateType, func(path string, unref func()) error {
