@@ -425,6 +425,7 @@ func ListInstallPackages(packages []string) ([]string, error) {
 }
 
 var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
+var _installRegex2 = regexp.MustCompile(`Inst (.*) \(([^ ]+) .*\)`)
 
 // GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
 func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, error) {
@@ -454,11 +455,15 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 		allLine := strings.Split(outBuf.String(), "\n")
 		for _, line := range allLine {
 			matches := _installRegex.FindStringSubmatch(line)
+			if len(matches) < 2 {
+				matches = _installRegex2.FindStringSubmatch(line)
+			}
 			if len(matches) > 2 {
 				allPackages[matches[1]] = system.PackageInfo{
 					Name:    matches[1],
 					Version: matches[2],
 				}
+				continue
 			}
 		}
 	}
