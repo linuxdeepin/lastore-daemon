@@ -17,20 +17,20 @@ func (m *Manager) canAutoQuit() bool {
 	m.PropsMu.RLock()
 	jobList := m.jobList
 	m.PropsMu.RUnlock()
-	haveActiveJob := false
-	for _, job := range jobList {
-		if (job.Status != system.FailedStatus || job.retry > 0) && job.Status != system.PausedStatus {
-			logger.Info(job.Id)
-			haveActiveJob = true
-		}
-	}
+	haveActiveJob := len(jobList) > 0
+	// for _, job := range jobList {
+	// 	if (job.Status != system.FailedStatus || job.retry > 0) && job.Status != system.PausedStatus {
+	// 		logger.Info(job.Id)
+	// 		haveActiveJob = true
+	// 	}
+	// }
 	m.autoQuitCountMu.Lock()
 	inhibitAutoQuitCount := m.inhibitAutoQuitCount
 	m.autoQuitCountMu.Unlock()
 	logger.Info("haveActiveJob", haveActiveJob)
 	logger.Info("inhibitAutoQuitCount", inhibitAutoQuitCount)
 	logger.Info("upgrade status:", m.config.upgradeStatus.Status)
-	return !haveActiveJob && inhibitAutoQuitCount == 0 && (m.config.upgradeStatus.Status == system.UpgradeReady)
+	return !haveActiveJob && inhibitAutoQuitCount == 0 && (m.config.upgradeStatus.Status == system.UpgradeReady || m.config.upgradeStatus.Status == system.UpgradeFailed)
 }
 
 type JobContent struct {
@@ -74,6 +74,7 @@ func (m *Manager) loadCacheJob() {
 			failedJob.CreateTime = j.CreateTime
 			failedJob.DownloadSize = j.DownloadSize
 			failedJob.Status = j.Status
+			failedJob.retry = 0
 			err = m.jobManager.addJob(failedJob)
 			if err != nil {
 				logger.Warning(err)
@@ -183,12 +184,12 @@ func (m *Manager) inhibitAutoQuitCountAdd() {
 
 func (m *Manager) loadLastoreCache() {
 	m.loadUpdateSourceOnce()
-	m.loadCacheJob()
+	// m.loadCacheJob()
 }
 
 func (m *Manager) saveLastoreCache() {
 	m.saveUpdateSourceOnce()
-	// m.saveCacheJob()  TODO job缓存需要修改
+	// m.saveCacheJob() // TODO job缓存需要修改  目前来看failed和paused状态可以
 	m.userAgents.saveRecordContent(userAgentRecordPath)
 }
 
