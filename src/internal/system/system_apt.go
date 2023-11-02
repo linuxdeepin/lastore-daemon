@@ -279,6 +279,56 @@ func QueryPackageInstallable(pkgId string) bool {
 	return true
 }
 
+func QuerySourceAddSize(updateType UpdateType) (float64, error) {
+	startTime := time.Now()
+	addSize := new(float64)
+	err := CustomSourceWrapper(updateType, func(path string, unref func()) error {
+		defer func() {
+			if unref != nil {
+				unref()
+			}
+		}()
+		var cmd *exec.Cmd
+		if utils2.IsDir(path) {
+			// #nosec G204
+			cmd = exec.Command("/usr/bin/apt-get",
+				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
+		} else {
+			// #nosec G204
+			cmd = exec.Command("/usr/bin/apt-get",
+				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}...)
+		}
+
+		lines, err := utils.FilterExecOutput(cmd, time.Second*120, func(line string) bool {
+			_, _err := parseInstallAddSize(line)
+			return _err == nil
+		})
+		if err != nil && len(lines) == 0 {
+			return fmt.Errorf("run:%v failed-->%v", cmd.Args, err)
+		}
+
+		if len(lines) != 0 {
+			allSize, err := parseInstallAddSize(lines[0])
+			if err != nil {
+				logger.Warning(err)
+				return err
+			}
+			*addSize = allSize
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Warning(err)
+		return SizeUnknown, err
+	}
+	logger.Debug("end QuerySourceDownloadSize duration:", time.Now().Sub(startTime))
+	return *addSize, nil
+}
+
 // SystemArchitectures return the system package manager supported architectures
 func SystemArchitectures() ([]Architecture, error) {
 	foreignArchs, err := exec.Command("dpkg", "--print-foreign-architectures").Output()
@@ -416,4 +466,29 @@ func parsePackageSize(line string) (float64, float64, error) {
 		return needDownloadSize, allDownloadSize, nil
 	}
 	return SizeUnknown, SizeUnknown, fmt.Errorf("%q invalid", line)
+}
+
+var __InstallAddSize__ = regexp.MustCompile("After this operation, ([0-9,.]+) ([kMGTPEZY]?)B")
+
+func parseInstallAddSize(line string) (float64, error) {
+	ms := __InstallAddSize__.FindSubmatch(([]byte)(line))
+	switch len(ms) {
+	case 3:
+		// ms[0] 匹配的字符串
+		// ms[1] 增加大小数字
+		// ms[2] 增加大小单位(可以为空,为空时单位为B)
+		var unit byte
+		addStr := strings.Replace(string(ms[1]), ",", "", -1)
+		addSize, err := strconv.ParseFloat(addStr, 64)
+		if err != nil {
+			return SizeUnknown, fmt.Errorf("%q invalid : %v err", addStr, err)
+		}
+		if len(ms[2]) != 0 {
+			unit = ms[2][0]
+		}
+
+		addSize = addSize * __unitTable__[unit]
+		return addSize, nil
+	}
+	return SizeUnknown, fmt.Errorf("%q invalid", line)
 }

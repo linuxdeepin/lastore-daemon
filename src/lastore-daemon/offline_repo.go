@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/godbus/dbus"
@@ -324,14 +325,12 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 				return err
 			}
 			logger.Info(m.offline.GetCheckInfo())
-			// 系统环境检查
-			// err = m.updateApi.CheckSystem("", "", nil, nil) // TODO 系统环境检查改用命令检查
-			// if err != nil {
-			// 	m.offline.checkResult.SystemCheckState = failed
-			// 	logger.Warning(err)
-			// 	return err
-			// }
-			m.offline.checkResult.SystemCheckState = success
+			if checkRootSpace() {
+				m.offline.checkResult.SystemCheckState = success
+			} else {
+				m.offline.checkResult.SystemCheckState = failed
+			}
+
 			job.setPropProgress(1)
 			return nil
 		},
@@ -345,4 +344,31 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 		return nil, err
 	}
 	return job, nil
+}
+
+func checkRootSpace() bool {
+	// TODO 检查安装空间是否满足
+	isSatisfied := false
+	addSize, err := system.QuerySourceAddSize(system.OfflineUpdate)
+	if err != nil {
+		logger.Warning(err)
+	}
+	content, err := exec.Command("/bin/sh", []string{
+		"-c",
+		"df -BK --output='avail' /var|awk 'NR==2'",
+	}...).CombinedOutput()
+	if err != nil {
+		logger.Warning(string(content))
+	} else {
+		spaceStr := strings.Replace(string(content), "K", "", -1)
+		spaceStr = strings.TrimSpace(spaceStr)
+		spaceNum, err := strconv.Atoi(spaceStr)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			spaceNum = spaceNum * 1000
+			isSatisfied = spaceNum > int(addSize)
+		}
+	}
+	return isSatisfied
 }
