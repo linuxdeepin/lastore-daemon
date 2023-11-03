@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -111,45 +110,31 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 	}
 }
 
-func (m *UpdatePlatformManager) GetSystemUpdateLogs(isZh bool) []string {
-	var updateLogs []string
-
-	var logStr string
-	for _, updateLog := range m.systemUpdateLogs {
-		if isZh {
-			logStr = updateLog.CnLog
-		} else {
-			logStr = updateLog.EnLog
-		}
-		updateLogs = append(updateLogs, logStr)
+func (m *UpdatePlatformManager) GetSystemUpdateLogs() string {
+	logStr, err := json.Marshal(m.systemUpdateLogs)
+	if err != nil {
+		logger.Warning(err)
+		return ""
 	}
-
-	sort.Strings(updateLogs)
-	return updateLogs
+	return string(logStr)
 }
 
-func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo, isZh bool) []string {
-	var cveInfos = make(map[string]string)
-	var updateLogs []string
+func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo) string {
+	var cveInfos = make(map[string]CEVInfo)
 	for name, _ := range pkgs {
 		for _, id := range m.cvePkgs[name] {
 			if _, ok := cveInfos[id]; ok {
 				continue
 			}
-			if isZh {
-				if len(strings.TrimSpace(CVEs[id].Description)) == 0 {
-					cveInfos[id] = id + ":" + CVEs[id].CveDescription
-				} else {
-					cveInfos[id] = id + ":" + CVEs[id].Description
-				}
-			} else {
-				cveInfos[id] = id + ":" + CVEs[id].CveDescription
-			}
-			updateLogs = append(updateLogs, cveInfos[id])
+			cveInfos[id] = CVEs[id]
 		}
 	}
-	sort.Strings(updateLogs)
-	return updateLogs
+	logStr, err := json.Marshal(cveInfos)
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+	return string(logStr)
 }
 
 func genPreBuild() string {

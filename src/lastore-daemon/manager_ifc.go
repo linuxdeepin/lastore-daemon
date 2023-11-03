@@ -150,14 +150,13 @@ func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *d
 }
 
 func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
-	res := make(map[system.UpdateType][]string)
-	isZh := strings.HasPrefix(m.userAgents.getActiveLastoreAgentLang(), "zh")
+	res := make(map[system.UpdateType]string)
 	if updateType&system.SystemUpdate != 0 {
-		res[system.SystemUpdate] = m.updatePlatform.GetSystemUpdateLogs(isZh)
+		res[system.SystemUpdate] = m.updatePlatform.GetSystemUpdateLogs()
 	}
 
 	if updateType&system.SecurityUpdate != 0 {
-		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate], isZh)
+		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate])
 	}
 
 	if len(res) == 0 {

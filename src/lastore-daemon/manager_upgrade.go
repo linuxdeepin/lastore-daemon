@@ -296,15 +296,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			}
 
 			if mode&system.SystemUpdate != 0 {
-				upgradeLogEn := m.updatePlatform.GetSystemUpdateLogs(false)
-				upgradeLogZh := m.updatePlatform.GetSystemUpdateLogs(true)
-				recordUpgradeLog(uuid, system.SystemUpdate, upgradeLogEn, upgradeLogZh, upgradeRecordPath)
+				recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.GetSystemUpdateLogs(), upgradeRecordPath)
 			}
 
 			if mode&system.SecurityUpdate != 0 {
-				upgradeLogEn := m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate], false)
-				upgradeLogZh := m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate], true)
-				recordUpgradeLog(uuid, system.SecurityUpdate, upgradeLogEn, upgradeLogZh, upgradeRecordPath)
+				recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate]), upgradeRecordPath)
 			}
 
 			return m.preSuccessHook(job, needChangeGrub, mode)
