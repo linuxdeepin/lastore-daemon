@@ -324,13 +324,13 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 				logger.Warning(err)
 				return err
 			}
-			logger.Info(m.offline.GetCheckInfo())
+
 			if checkRootSpace() {
 				m.offline.checkResult.SystemCheckState = success
 			} else {
 				m.offline.checkResult.SystemCheckState = failed
 			}
-
+			logger.Info(m.offline.GetCheckInfo())
 			job.setPropProgress(1)
 			return nil
 		},

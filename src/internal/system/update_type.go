@@ -54,6 +54,7 @@ func AllCheckUpdateType() []UpdateType {
 		AppStoreUpdate,
 		SecurityUpdate,
 		OtherSystemUpdate,
+		OfflineUpdate,
 	}
 }
 

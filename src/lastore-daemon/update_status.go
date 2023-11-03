@@ -78,7 +78,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 	if err != nil {
 		logger.Warning(err)
 		m.updateModeStatusObj = make(map[string]system.UpdateModeStatus)
-		for _, typ := range system.AllCheckUpdateType() {
+		for _, typ := range system.AllInstallUpdateType() {
 			m.updateModeStatusObj[typ.JobType()] = system.NotDownload
 		}
 		m.currentTriggerBackingUpType = system.AllCheckUpdate
@@ -207,7 +207,7 @@ func canTransition(oldStatus, newStatus system.UpdateModeStatus) bool {
 // SetUpdateStatus 外部调用,会对设置的状态进行过滤
 func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
 	m.statusMapMu.Lock()
-	for _, typ := range system.AllCheckUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		if mode&typ != 0 && m.checkMode&typ != 0 {
 			oldStatus := m.updateModeStatusObj[typ.JobType()]
 			if !canTransition(oldStatus, newStatus) {
@@ -317,7 +317,7 @@ func (m *UpdateModeStatusManager) SetUpdateMode(newWriteMode system.UpdateType) 
 	}
 
 	// 2.updateMode修改后，checkMode要随之修改
-	for _, typ := range system.AllCheckUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		oldBit := oldMode & typ
 		newBit := newWriteMode & typ
 		// updateMode清零的，应该在filter中已经清零了 TODO delete
@@ -492,7 +492,7 @@ func (m *UpdateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
 	defer m.statusMapMu.Unlock()
 	checkCanUpgrade := false
 	checkMode := m.checkMode
-	for _, typ := range system.AllCheckUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		// 先检查该项是否选中,未选中则无需判断
 		if checkMode&typ == 0 {
 			continue

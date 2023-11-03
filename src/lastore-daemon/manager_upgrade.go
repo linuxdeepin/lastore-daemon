@@ -9,6 +9,7 @@ import (
 	"internal/system"
 	"internal/system/dut"
 	"io/ioutil"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -534,11 +535,32 @@ func (m *Manager) cancelAllUpdateJob() error {
 	return nil
 }
 
+func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
+	var packages []string
+	for name, _ := range pkgsMap {
+		packages = append(packages, name)
+	}
+	cmdStr := fmt.Sprintf("apt-get download %v -c /var/lib/lastore/apt_v2_common.conf --allow-change-held-packages -o Dir::Etc::SourceParts=/dev/null -o Dir::Etc::SourceList=/var/lib/lastore/offline.list", strings.Join(packages, " "))
+	cmd := exec.Command("/bin/sh", "-c", cmdStr)
+	cmd.Dir = "/var/cache/lastore/archives" // 该路径和/var/lib/lastore/apt_v2_common.conf保持一致
+	err := cmd.Run()
+	if err != nil {
+		logger.Info(err)
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
 	// 使用dut更新前的准备
 	var uuid string
 	var err error
 	if mode == system.OfflineUpdate {
+		// 转移包路径
+		err = onlyDownloadOfflinePackage(m.offline.upgradeAblePackages)
+		if err != nil {
+			return "", err
+		}
 		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
 		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
 			"/var/cache/lastore/archives",
