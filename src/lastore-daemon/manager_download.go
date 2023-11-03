@@ -149,7 +149,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				m.isDownloading = false
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
-				m.updatePlatform.reportLog(downloadStatusReport, false, j.Description)
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
 				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
@@ -183,7 +182,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
-				m.updatePlatform.PostStatusMessage("") // 上报失败状态
+				go func() {
+					m.inhibitAutoQuitCountAdd()
+					defer m.inhibitAutoQuitCountSub()
+					m.updatePlatform.reportLog(downloadStatusReport, false, j.Description)
+					m.updatePlatform.postStatusMessage(fmt.Sprintf("download %v package failed, detail is %v", mode, job.Description)) // 上报下载失败状态
+				}()
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
@@ -197,10 +201,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						gettext.Tr("Dismiss"),
 					}
 					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Show")}
-					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-					m.updatePlatform.reportLog(downloadStatusReport, true, "")
+					go func() {
+						m.inhibitAutoQuitCountAdd()
+						defer m.inhibitAutoQuitCountSub()
+						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						m.updatePlatform.reportLog(downloadStatusReport, true, "")
+					}()
 				}
-				m.updatePlatform.PostStatusMessage("") // 上报成功状态
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("download %v package success", mode)) // 上报下载成功状态
 				return nil
 			},
 			string(system.EndStatus): func() error {

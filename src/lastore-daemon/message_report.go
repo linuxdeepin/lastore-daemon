@@ -7,7 +7,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -26,7 +29,6 @@ import (
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/keyfile"
-	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -362,6 +364,7 @@ const (
 	GetCurrentPkgLists
 	GetPkgCVEs // CVE 信息
 	PostProcess
+	PostResult
 )
 
 type requestContent struct {
@@ -398,15 +401,27 @@ var Urls = map[requestType]requestContent{
 		"/api/v1/process",
 		"POST",
 	},
+	PostResult: {
+		"/api/v1/update/status",
+		"POST",
+	},
 }
 
+const secret = "DflXyFwTmaoGmbDkVj8uD62XGb01pkJn"
+
 // Report 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) Report(reqType requestType, body string, token string) (data interface{}, err error) {
+func (m *UpdatePlatformManager) Report(reqType requestType, msg string, token string) (data interface{}, err error) {
 	// 设置请求url
 	policyUrl := m.requestUrl + Urls[reqType].path
 	client := &http.Client{
 		Timeout: 40 * time.Second,
 	}
+	var sign string
+	var xTime string
+	var tarFilePath string
+	var request *http.Request
+	var body *bytes.Buffer
+	body = bytes.NewBuffer([]byte{})
 	// 设置请求参数
 	switch reqType {
 	case GetTargetPkgLists:
@@ -426,9 +441,38 @@ func (m *UpdatePlatformManager) Report(reqType requestType, body string, token s
 		values.Add("baseline", m.targetBaseline)
 		values.Add("isUnstable", fmt.Sprintf("%d", isUnstable()))
 		policyUrl = policyUrl + "?" + values.Encode()
-	}
+	case PostProcess:
+		buf := bytes.NewBufferString(msg)
+		tarFilePath = fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
+		xzFile, err := os.Create(tarFilePath)
+		if err != nil {
+			logger.Warning("create file failed:", err)
+			return nil, err
+		}
+		xzCmd := exec.Command("xz", "-z", "-c")
+		xzCmd.Stdin = buf
+		xzCmd.Stdout = xzFile
+		if err := xzCmd.Run(); err != nil {
+			_ = xzFile.Close()
+			logger.Warning("exec xz command err:", err)
+			return nil, err
+		}
+		_ = xzFile.Close()
 
-	request, err := http.NewRequest(Urls[reqType].method, policyUrl, bytes.NewBuffer([]byte(body)))
+		hash := sha256.New()
+		xTime = fmt.Sprintf("%d", time.Now().Unix())
+
+		byt, err := ioutil.ReadFile(tarFilePath)
+		if err != nil {
+			logger.Warning("open xz file failed:", err)
+			return nil, err
+		}
+		body = bytes.NewBuffer(byt)
+
+		hash.Write([]byte(fmt.Sprintf("%s%s%s", secret, xTime, byt)))
+		sign = base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(hash.Sum(nil))))
+	}
+	request, err = http.NewRequest(Urls[reqType].method, policyUrl, body)
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", reqType.string(), err.Error())
 	}
@@ -444,8 +488,8 @@ func (m *UpdatePlatformManager) Report(reqType requestType, body string, token s
 		request.Header.Set("X-MachineID", hardwareId)
 		request.Header.Set("X-CurrentBaseline", m.preBaseline)
 		request.Header.Set("X-Baseline", m.targetBaseline)
-		request.Header.Set("X-Time", fmt.Sprintf("%d", time.Now().Unix()))
-		request.Header.Set("X-Sign", "TODO")
+		request.Header.Set("X-Time", xTime)
+		request.Header.Set("X-Sign", sign)
 	}
 	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(token)))
 	response, err := client.Do(request)
@@ -464,7 +508,7 @@ func (m *UpdatePlatformManager) Report(reqType requestType, body string, token s
 			return nil, fmt.Errorf("%v failed to read response body: %v ", reqType.string(), err.Error())
 		}
 		if reqType == GetVersion {
-			logger.Infof("%v request for %s ,body:%s respData:%s ", reqType.string(), policyUrl, body, string(respData))
+			logger.Infof("%v request for %s ,body:%s respData:%s ", reqType.string(), policyUrl, msg, string(respData))
 		}
 		msg := &tokenMessage{}
 		err = json.Unmarshal(respData, msg)
@@ -697,27 +741,13 @@ func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
 
 func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.PackageInfo {
 	infos := make(map[string]system.PackageInfo)
-
-	var temp []system.UpgradeInfo
-	if logger.GetLogLevel() == log.LevelDebug {
-		content, _ := ioutil.ReadFile("/home/lee/Desktop/1.json")
-		json.Unmarshal(content, &temp)
-		for _, info := range temp {
-			infos[info.Package] = system.PackageInfo{
-				Name:    info.Package,
-				Version: info.LastVersion,
-				Need:    "",
-			}
-		}
-	} else {
-		for name, info := range m.targetCorePkgs {
-			infos[name] = info
-		}
-		// 暂时应该只有core中的包是需要装的,可选包需要由前端选择
-		// for name, info := range m.selectPkgs {
-		// 	infos[name] = info
-		// }
+	for name, info := range m.targetCorePkgs {
+		infos[name] = info
 	}
+	// 暂时应该只有core中的包是需要装的,可选包需要由前端选择
+	// for name, info := range m.selectPkgs {
+	// 	infos[name] = info
+	// }
 	return infos
 }
 
@@ -923,11 +953,12 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	return nil
 }
 
-// PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
-func (m *UpdatePlatformManager) PostStatusMessage(body string) {
+// postStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
+func (m *UpdatePlatformManager) postStatusMessage(body string) {
+	logger.Debug("post msg:", body)
 	_, err := m.Report(PostProcess, body, m.token)
 	if err != nil {
-		// logger.Warning(err)
+		logger.Warning(err)
 		return
 	}
 }
@@ -995,6 +1026,9 @@ func (m *UpdatePlatformManager) postSystemUpgradeMessage(upgradeStatus int, j *J
 		logger.Warning(err)
 		return
 	}
+	client := &http.Client{
+		Timeout: 4 * time.Second,
+	}
 	logger.Debug(postContent)
 	encryptMsg, err := EncryptMsg(content)
 	if err != nil {
@@ -1002,10 +1036,21 @@ func (m *UpdatePlatformManager) postSystemUpgradeMessage(upgradeStatus int, j *J
 		return
 	}
 	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
-	_, err = m.Report(PostProcess, base64EncodeString, m.token)
+	requestUrl := m.requestUrl + "/api/v1/update/status"
+	request, err := http.NewRequest("POST", requestUrl, strings.NewReader(base64EncodeString))
 	if err != nil {
 		logger.Warning(err)
 		return
+	}
+	response, err := client.Do(request)
+	if err == nil {
+		defer func() {
+			_ = response.Body.Close()
+		}()
+		body, _ := ioutil.ReadAll(response.Body)
+		logger.Info(string(body))
+	} else {
+		logger.Warning(err)
 	}
 }
 
@@ -1048,30 +1093,29 @@ type reportLogInfo struct {
 	Reason string
 }
 
+// 数据埋点接口
 func (m *UpdatePlatformManager) reportLog(category reportCategory, status bool, description string) {
-	go func() {
-		agent := m.userAgents.getActiveLastoreAgent()
-		if agent != nil {
-			logInfo := reportLogInfo{
-				Result: status,
-				Reason: description,
-			}
-			switch category {
-			case updateStatusReport:
-				logInfo.Tid = 1000600002
-			case downloadStatusReport:
-				logInfo.Tid = 1000600003
-			case upgradeStatusReport:
-				logInfo.Tid = 1000600004
-			}
-			infoContent, err := json.Marshal(logInfo)
-			if err != nil {
-				logger.Warning(err)
-			}
-			err = agent.ReportLog(0, string(infoContent))
-			if err != nil {
-				logger.Warning(err)
-			}
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		logInfo := reportLogInfo{
+			Result: status,
+			Reason: description,
 		}
-	}()
+		switch category {
+		case updateStatusReport:
+			logInfo.Tid = 1000600002
+		case downloadStatusReport:
+			logInfo.Tid = 1000600003
+		case upgradeStatusReport:
+			logInfo.Tid = 1000600004
+		}
+		infoContent, err := json.Marshal(logInfo)
+		if err != nil {
+			logger.Warning(err)
+		}
+		err = agent.ReportLog(0, string(infoContent))
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
 }

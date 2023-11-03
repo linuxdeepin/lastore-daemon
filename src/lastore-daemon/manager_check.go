@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"internal/system"
 	"internal/system/dut"
 	"io/ioutil"
@@ -83,7 +84,13 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			return nil
 		},
 		string(system.FailedStatus): func() error {
-			m.updatePlatform.PostStatusMessage("")
+			go func() {
+				m.inhibitAutoQuitCountAdd()
+				defer m.inhibitAutoQuitCountSub()
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
+				m.updatePlatform.postSystemUpgradeMessage(upgradeFailed, job, checkMode)
+				m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
+			}()
 			inhibit(false)
 			err = delRebootCheckOption(all)
 			if err != nil {
@@ -118,7 +125,13 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				if err != nil {
 					logger.Warning(err)
 				}
-				// m.updatePlatform.postSystemUpgradeMessage(upgradeSucceed, job, mode)
+				go func() {
+					m.inhibitAutoQuitCountAdd()
+					defer m.inhibitAutoQuitCountSub()
+					// m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
+					m.updatePlatform.postSystemUpgradeMessage(upgradeSucceed, job, checkMode)
+					m.updatePlatform.reportLog(upgradeStatusReport, true, "")
+				}()
 				m.updatePlatform.UpdateBaseline()
 				m.updatePlatform.recoverVersionLink()
 			}

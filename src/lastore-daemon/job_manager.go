@@ -407,11 +407,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 
 		err := StartSystemJob(jm.system, job)
 		if err != nil {
-			job.PropsMu.Lock()
-			_ = TransitionJobState(job, system.FailedStatus)
-			job.PropsMu.Unlock()
 			logger.Errorf("StartSystemJob failed %v :%v\n", job, err)
-
 			var jobErr *system.JobError
 			ok := errors.As(err, &jobErr)
 			if ok {
@@ -419,14 +415,19 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 				job.subRetryCount(true) // retry 设置为 0
 				job.PropsMu.Lock()
 				job.setError(jobErr)
-				_ = job.emitPropChangedStatus(job.Status)
 				job.PropsMu.Unlock()
 			} else if job.retry == 0 {
+				job.PropsMu.Lock()
 				job.setError(&system.JobError{
 					Type:   "unknown",
 					Detail: "failed to start system job: " + err.Error(),
 				})
+				job.PropsMu.Unlock()
 			}
+			// failed状态迁移放到 setError 后面,需要failed hook 上报错误信息
+			job.PropsMu.Lock()
+			_ = TransitionJobState(job, system.FailedStatus)
+			job.PropsMu.Unlock()
 		}
 	}
 }

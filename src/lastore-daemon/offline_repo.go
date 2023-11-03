@@ -338,9 +338,20 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			}
 			logger.Info(m.offline.GetCheckInfo())
 			job.setPropProgress(1)
+			go func() {
+				m.inhibitAutoQuitCountAdd()
+				defer m.inhibitAutoQuitCountSub()
+				m.updatePlatform.postStatusMessage("offline update check success")
+			}()
+
 			return nil
 		},
 		string(system.FailedStatus): func() error {
+			go func() {
+				m.inhibitAutoQuitCountAdd()
+				defer m.inhibitAutoQuitCountSub()
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("offline update check failed detail is:%v", job.Description))
+			}()
 			m.offline.checkResult.SystemCheckState = failed
 			return nil
 		},

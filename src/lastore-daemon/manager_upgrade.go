@@ -272,6 +272,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	uuid, err = m.prepareDutUpgrade(job, mode)
 	if err != nil {
 		logger.Warning(err)
+		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
 		return nil, err
 	}
 	logger.Info(uuid)
@@ -280,10 +281,10 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		string(system.RunningStatus): func() error {
 			systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil)
 			if systemErr != nil {
-				logger.Info(systemErr)
+				logger.Warning(systemErr)
 				return systemErr
 			}
-			_ = m.preRunningHook(needChangeGrub, mode)
+			m.preRunningHook(needChangeGrub, mode)
 			return nil
 		},
 		string(system.FailedStatus): func() error {
@@ -294,6 +295,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
 			if systemErr != nil {
 				logger.Info(systemErr)
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
 				return systemErr
 			}
 
@@ -388,7 +390,7 @@ func (m *Manager) handleSysPowerChanged(job *Job) {
 	}
 }
 
-func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) error {
+func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
 	if needChangeGrub {
 		// 开始更新时修改grub默认入口为rollback
 		err := m.grub.changeGrubDefaultEntry(rollbackBootEntry)
@@ -404,7 +406,6 @@ func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) er
 	m.statusManager.SetUpdateStatus(mode, system.Upgrading)
 	// 替换cache文件,防止更新失败后os-version是错误的
 	m.updatePlatform.replaceVersionCache()
-	return nil
 }
 
 func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
@@ -473,9 +474,9 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		m.inhibitAutoQuitCountAdd()
 		defer m.inhibitAutoQuitCountSub()
 		m.updatePlatform.postSystemUpgradeMessage(upgradeFailed, job, mode)
+		m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
+		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v%v", mode, job.Description, dut.GetDutErrorMessage()))
 	}()
-	m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
-	m.updatePlatform.PostStatusMessage("")
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	m.updatePlatform.recoverVersionLink()
 	return nil
@@ -502,16 +503,6 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	// }
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
-	go func() {
-		// 更新成功的上报需要在重启检查完成后上报
-		// m.inhibitAutoQuitCountAdd()
-		// defer m.inhibitAutoQuitCountSub()
-		// m.updatePlatform.postSystemUpgradeMessage(upgradeSucceed, job, mode)
-		// m.updatePlatform.UpdateBaseline()
-	}()
-
-	m.updatePlatform.reportLog(upgradeStatusReport, true, "")
-	m.updatePlatform.PostStatusMessage("")
 	return nil
 }
 

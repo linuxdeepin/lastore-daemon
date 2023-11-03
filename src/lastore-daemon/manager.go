@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"internal/system/dut"
 	"strconv"
 	"strings"
 	"sync"
@@ -126,7 +127,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	m.initDSettingsChangedHandle()
 	m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
 		// 启动后600s如果没有触发检查，那么上报更新失败
-		m.updatePlatform.PostStatusMessage("")
+		m.updatePlatform.postStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds,detail is :%v", dut.GetDutErrorMessage()))
 		err = delRebootCheckOption(all)
 		if err != nil {
 			logger.Warning(err)

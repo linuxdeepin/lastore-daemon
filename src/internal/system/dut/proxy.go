@@ -233,3 +233,7 @@ func genBaseList(pkgMap map[string]system.PackageInfo) []system.PackageInfo {
 	}
 	return list
 }
+
+func GetDutErrorMessage() string {
+	return "TODO dut error message"
+}

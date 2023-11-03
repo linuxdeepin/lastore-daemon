@@ -125,8 +125,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					m.updatePlatform.reportLog(updateStatusReport, true, "")
-					m.updatePlatform.PostStatusMessage("")
+					go m.updatePlatform.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
 					if !m.updater.AutoDownloadUpdates {
@@ -137,9 +136,13 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
-					m.updatePlatform.reportLog(updateStatusReport, false, "")
-					m.updatePlatform.PostStatusMessage("")
+					go m.updatePlatform.reportLog(updateStatusReport, false, "")
 				}
+				go func() {
+					m.inhibitAutoQuitCountAdd()
+					defer m.inhibitAutoQuitCountSub()
+					m.updatePlatform.postStatusMessage("check update success")
+				}()
 				job.setPropProgress(1.0)
 				return nil
 			},
@@ -163,8 +166,12 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					}
 				}
 				// 发通知 end
-				m.updatePlatform.reportLog(updateStatusReport, false, job.Description)
-				m.updatePlatform.PostStatusMessage("")
+				go func() {
+					m.inhibitAutoQuitCountAdd()
+					defer m.inhibitAutoQuitCountSub()
+					m.updatePlatform.reportLog(updateStatusReport, false, job.Description)
+					m.updatePlatform.postStatusMessage(fmt.Sprintf("check update failed, detail is %v ", job.Description))
+				}()
 				return nil
 			},
 			string(system.EndStatus): func() error {
@@ -185,7 +192,6 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				err = m.updatePlatform.genUpdatePolicyByToken()
 				if err != nil {
 					job.retry = 0
-					m.updatePlatform.PostStatusMessage(err.Error())
 					return &system.JobError{
 						Type:   system.ErrorPlatformUnreachable,
 						Detail: "failed to get update policy by token" + err.Error(),
@@ -195,7 +201,6 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				if err != nil {
 					logger.Warning(err)
 					job.retry = 0
-					m.updatePlatform.PostStatusMessage(err.Error())
 					return &system.JobError{
 						Type:   system.ErrorPlatformUnreachable,
 						Detail: "failed to get update info by update platform" + err.Error(),
@@ -426,11 +431,20 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 	if sync {
 		systemErr, securityErr := m.generateUpdateInfo(m.updatePlatform.GetSystemMeta())
 		if systemErr != nil {
-			m.updatePlatform.PostStatusMessage("")
+			go func() {
+				m.inhibitAutoQuitCountAdd()
+				defer m.inhibitAutoQuitCountSub()
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate system package list error, detail is %v:", systemErr))
+
+			}()
 			logger.Warning(systemErr)
 		}
 		if securityErr != nil {
-			m.updatePlatform.PostStatusMessage("")
+			go func() {
+				m.inhibitAutoQuitCountAdd()
+				defer m.inhibitAutoQuitCountSub()
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate security package list error, detail is %v:", securityErr))
+			}()
 			logger.Warning(securityErr)
 		}
 		m.statusManager.UpdateModeAllStatusBySize()
