@@ -29,6 +29,7 @@ import (
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/keyfile"
+	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -748,6 +749,14 @@ func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.PackageInfo {
 	// for name, info := range m.selectPkgs {
 	// 	infos[name] = info
 	// }
+
+	if logger.GetLogLevel() == log.LevelDebug {
+		infos["deepin-camera"] = system.PackageInfo{
+			Name:    "deepin-camera",
+			Version: "1.4.13-1",
+			Need:    "strict",
+		}
+	}
 	return infos
 }
 
@@ -879,7 +888,7 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 			// 获取域名
 			domain := strings.Split(file, "/")[0]
 
-			request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+			request.Header.Set("X-Repo-Token", m.token)
 			request.SetBasicAuth(getAptAuthConf(domain))
 			resp, err := client.Do(request)
 			if err != nil {

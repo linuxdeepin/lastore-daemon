@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/utils"
 )
 
@@ -191,7 +192,7 @@ func genPkgList(pkgMap map[string]system.PackageInfo) []system.PackageInfo {
 		info := system.PackageInfo{
 			Name:    v.Name,
 			Version: v.Version,
-			Need:    v.Need,
+			Need:    "strict",
 		}
 		list = append(list, info)
 	}
@@ -206,6 +207,13 @@ func genCoreList(pkgMap map[string]system.PackageInfo) []system.PackageInfo {
 			Need:    skipVersion,
 		}
 		list = append(list, info)
+	}
+	if logger.GetLogLevel() == log.LevelDebug {
+		list = append(list, system.PackageInfo{
+			Name:    "deepin-camera",
+			Version: "1.4.13-1",
+			Need:    "strict",
+		})
 	}
 	return list
 }

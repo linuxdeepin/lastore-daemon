@@ -462,6 +462,7 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 				allPackages[matches[1]] = system.PackageInfo{
 					Name:    matches[1],
 					Version: matches[2],
+					Need:    "strict",
 				}
 				continue
 			}
