@@ -1,3 +1,9 @@
+lastore-daemon (6.2.4) stable; urgency=medium
+
+  * chore: add legacy AM daemon compat service to allowlist
+
+ -- ComixHe <heyuming@deepin.org> Mon, 06 Nov 2023 10:37:55 +0800
+
 lastore-daemon (6.2.3) stable; urgency=medium
 
   * chore: Sync by https://github.com/linuxdeepin/.github/commit/559e91167d4919644f37bbcf123eb0651c1528ea(Influence: none)
