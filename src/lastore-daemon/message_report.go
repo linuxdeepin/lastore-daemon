@@ -827,6 +827,15 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 	client := &http.Client{
 		Timeout: 4 * time.Second,
 	}
+	// 用于Debug时查看重定向地址
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		logger.Info("CheckRedirect  :", req.Response.Header)
+		if len(via) >= 10 {
+			return errors.New("stopped after 10 redirects")
+		}
+		return http.ErrUseLastResponse
+	}
+
 	for _, repo := range m.repoInfos {
 		func(repo repoInfo) {
 			needRemoveCache := new(bool)

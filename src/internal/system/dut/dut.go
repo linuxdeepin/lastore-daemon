@@ -121,6 +121,11 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 				}
 			}
 		}
+		// 错误未匹配上，应该是调用者程序错误
+		return &system.JobError{
+			Type:   system.ErrorProgram,
+			Detail: strings.Join(content.Ext.Msg, ";"),
+		}
 	}
 	return nil
 }

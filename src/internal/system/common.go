@@ -89,6 +89,7 @@ type JobErrorType string
 const (
 	NoError                      JobErrorType = "NoError"
 	ErrorUnknown                 JobErrorType = "ErrorUnknown"
+	ErrorProgram                 JobErrorType = "ErrorProgram"
 	ErrorFetchFailed             JobErrorType = "fetchFailed"
 	ErrorDpkgError               JobErrorType = "dpkgError"
 	ErrorPkgNotFound             JobErrorType = "pkgNotFound"
