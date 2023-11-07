@@ -64,6 +64,7 @@ type UpdatePlatformManager struct {
 	packagesPrefixList []string // 根据仓库
 
 	token string
+	arch  string
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -94,6 +95,10 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 	if !utils.IsFileExist(cacheBaseline) {
 		copyFile(realBaseline, cacheBaseline)
 	}
+	arch, err := getArchInfo()
+	if err != nil {
+		logger.Warning(err)
+	}
 	return &UpdatePlatformManager{
 		config:                            c,
 		userAgents:                        agents,
@@ -110,6 +115,7 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 		selectPkgs:                        make(map[string]system.PackageInfo),
 		freezePkgs:                        make(map[string]system.PackageInfo),
 		purgePkgs:                         make(map[string]system.PackageInfo),
+		arch:                              arch,
 	}
 }
 
@@ -597,10 +603,10 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
 }
 
 type packageLists struct {
-	Core   []system.PackageInfo `json:"core"`   // "必须安装软件包清单"
-	Select []system.PackageInfo `json:"select"` // "可选软件包清单"
-	Freeze []system.PackageInfo `json:"freeze"` // "禁止升级包清单"
-	Purge  []system.PackageInfo `json:"purge"`  // "删除软件包清单"
+	Core   []system.PlatformPackageInfo `json:"core"`   // "必须安装软件包清单"
+	Select []system.PlatformPackageInfo `json:"select"` // "可选软件包清单"
+	Freeze []system.PlatformPackageInfo `json:"freeze"` // "禁止升级包清单"
+	Purge  []system.PlatformPackageInfo `json:"purge"`  // "删除软件包清单"
 }
 
 type PreInstalledPkgMeta struct {
@@ -625,30 +631,58 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	m.postCheck = pkgs.PostCheck
 
 	for _, pkg := range pkgs.Packages.Core {
+		version := ""
+		for _, v := range pkg.AllArchVersion {
+			if v.Arch == m.arch {
+				version = v.Version
+				break
+			}
+		}
 		m.targetCorePkgs[pkg.Name] = system.PackageInfo{
 			Name:    pkg.Name,
-			Version: pkg.Version,
 			Need:    pkg.Need,
+			Version: version,
 		}
 	}
 	for _, pkg := range pkgs.Packages.Select {
+		version := ""
+		for _, v := range pkg.AllArchVersion {
+			if v.Arch == m.arch {
+				version = v.Version
+				break
+			}
+		}
 		m.selectPkgs[pkg.Name] = system.PackageInfo{
 			Name:    pkg.Name,
-			Version: pkg.Version,
+			Version: version,
 			Need:    pkg.Need,
 		}
 	}
 	for _, pkg := range pkgs.Packages.Freeze {
+		version := ""
+		for _, v := range pkg.AllArchVersion {
+			if v.Arch == m.arch {
+				version = v.Version
+				break
+			}
+		}
 		m.freezePkgs[pkg.Name] = system.PackageInfo{
 			Name:    pkg.Name,
-			Version: pkg.Version,
+			Version: version,
 			Need:    pkg.Need,
 		}
 	}
 	for _, pkg := range pkgs.Packages.Purge {
+		version := ""
+		for _, v := range pkg.AllArchVersion {
+			if v.Arch == m.arch {
+				version = v.Version
+				break
+			}
+		}
 		m.purgePkgs[pkg.Name] = system.PackageInfo{
 			Name:    pkg.Name,
-			Version: pkg.Version,
+			Version: version,
 			Need:    pkg.Need,
 		}
 	}
@@ -669,9 +703,16 @@ func (m *UpdatePlatformManager) updateCurrentPreInstalledPkgMetaSync() error {
 	}
 
 	for _, pkg := range pkgs.Packages.Core {
+		version := ""
+		for _, v := range pkg.AllArchVersion {
+			if v.Arch == m.arch {
+				version = v.Version
+				break
+			}
+		}
 		m.baselinePkgs[pkg.Name] = system.PackageInfo{
 			Name:    pkg.Name,
-			Version: pkg.Version,
+			Version: version,
 			Need:    pkg.Need,
 		}
 	}

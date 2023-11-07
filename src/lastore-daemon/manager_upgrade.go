@@ -483,7 +483,6 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 }
 
 func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType) error {
-	// TODO 创建临时grub启动,在检查全部完成后，再修改为normal
 	if needChangeGrub {
 		// 更新成功后修改grub默认入口为当前系统入口
 		err := m.grub.createTempGrubEntry()
@@ -491,12 +490,12 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 			logger.Warning(err)
 		}
 	}
-	// TODO 设置重启后的检查项
+	// 设置重启后的检查项
 	err := setRebootCheckOption(mode)
 	if err != nil {
 		logger.Warning(err)
 	}
-	// 状态更新为ready TODO 需要改成在重启后检查完成时修改为ready，此处应该保持为running状态
+	// 需要改成在重启后检查完成时修改为ready，此处应该保持为running状态
 	// err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
 	// if err != nil {
 	// 	logger.Warning(err)

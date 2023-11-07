@@ -424,8 +424,6 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 }
 
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
-	// TODO 离线更新需要处理
-
 	checkExecPath := func() (bool, error) {
 		// 只有dde-lock可以设置
 		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)

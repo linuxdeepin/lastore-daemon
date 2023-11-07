@@ -80,6 +80,17 @@ type PackageInfo struct {
 	Need    string `json:"need"`    // 严格程度;strict:严格匹配,skipstate:忽略状态,skipversion:忽略版本,exist:存在即可
 }
 
+type Version struct {
+	Version string `json:"version"`
+	Arch    string `json:"arch"`
+}
+
+type PlatformPackageInfo struct {
+	Name           string    `json:"name"`    // "软件包名"
+	AllArchVersion []Version `json:"version"` // "软件包版本"
+	Need           string    `json:"need"`    // 严格程度;strict:严格匹配,skipstate:忽略状态,skipversion:忽略版本,exist:存在即可
+}
+
 type UpdateInfoError struct {
 	Type   string
 	Detail string

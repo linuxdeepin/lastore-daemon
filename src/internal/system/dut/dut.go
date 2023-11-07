@@ -50,6 +50,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	default:
 		panic("invalid cmd type " + cmdType)
 	}
+	args = append(args, "-d")
 	logger.Info("cmd final args is:", bin, args)
 	return exec.Command(bin, args...)
 }
