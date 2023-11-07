@@ -842,7 +842,7 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 		if len(via) >= 10 {
 			return errors.New("stopped after 10 redirects")
 		}
-		return http.ErrUseLastResponse
+		return nil
 	}
 
 	for _, repo := range m.repoInfos {
@@ -1073,26 +1073,57 @@ func (m *UpdatePlatformManager) postSystemUpgradeMessage(upgradeStatus int, j *J
 }
 
 func (m *UpdatePlatformManager) getRules() []dut.RuleInfo {
-	return []dut.RuleInfo{
-		{
+	defaultCmd := "echo default rules"
+	var rules []dut.RuleInfo
+
+	if len(strings.TrimSpace(m.preCheck)) == 0 {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "00_precheck",
+			Type:    dut.PreCheck,
+			Command: defaultCmd,
+			Argv:    "",
+		})
+	} else {
+		rules = append(rules, dut.RuleInfo{
 			Name:    "00_precheck",
 			Type:    dut.PreCheck,
 			Command: m.preCheck,
 			Argv:    "",
-		},
-		{
+		})
+	}
+
+	if len(strings.TrimSpace(m.midCheck)) == 0 {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "10_midcheck",
+			Type:    dut.MidCheck,
+			Command: defaultCmd,
+			Argv:    "",
+		})
+	} else {
+		rules = append(rules, dut.RuleInfo{
 			Name:    "10_midcheck",
 			Type:    dut.MidCheck,
 			Command: m.midCheck,
 			Argv:    "",
-		},
-		{
+		})
+	}
+
+	if len(strings.TrimSpace(m.postCheck)) == 0 {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "20_postcheck",
+			Type:    dut.PostCheck,
+			Command: defaultCmd,
+			Argv:    "",
+		})
+	} else {
+		rules = append(rules, dut.RuleInfo{
 			Name:    "20_postcheck",
 			Type:    dut.PostCheck,
 			Command: m.postCheck,
 			Argv:    "",
-		},
+		})
 	}
+	return rules
 }
 
 // 埋点数据上报
