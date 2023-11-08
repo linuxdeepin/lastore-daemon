@@ -409,11 +409,11 @@ type recordInfo struct {
 	UUID            string
 	UpgradeTime     string
 	UpgradeMode     system.UpdateType
-	OriginChangelog string
+	OriginChangelog interface{}
 }
 
 // mode 只能为单一类型
-func recordUpgradeLog(uuid string, mode system.UpdateType, originChangelog string, path string) {
+func recordUpgradeLog(uuid string, mode system.UpdateType, originChangelog interface{}, path string) {
 	var allContent []recordInfo
 	content, _ := ioutil.ReadFile(path)
 	if len(content) > 0 {

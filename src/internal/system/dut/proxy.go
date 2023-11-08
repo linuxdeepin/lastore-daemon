@@ -81,7 +81,7 @@ func checkSystemDependsError() error {
 		}
 		return nil
 	}
-	return parsePkgSystemError(outBuf.String(), errBuf.String())
+	return parsePkgSystemError(errBuf.String(), outBuf.String())
 }
 
 type checkType uint
@@ -123,6 +123,7 @@ type metaInfo struct {
 	CoreList   []system.PackageInfo
 	OptionList []system.PackageInfo
 	BaseLine   []system.PackageInfo
+	PurgeList  []system.PackageInfo
 	Rules      []RuleInfo
 	ReposInfo  []RepoInfo `json:"RepoInfo"`
 	UUID       string
@@ -137,7 +138,7 @@ const (
 )
 
 // GenDutMetaFile metaPath为DutOnlineMetaConfPath或DutOfflineMetaConfPath
-func GenDutMetaFile(metaPath, debPath string, pkgMap, coreMap, optionMap, baseMap map[string]system.PackageInfo, rules []RuleInfo, repoInfo []RepoInfo) (string, error) {
+func GenDutMetaFile(metaPath, debPath string, pkgMap, coreMap, optionMap, baseMap, removeMap map[string]system.PackageInfo, rules []RuleInfo, repoInfo []RepoInfo) (string, error) {
 	meta := metaInfo{
 		PkgDebPath: debPath,
 		UUID:       utils.GenUuid(),
@@ -149,6 +150,7 @@ func GenDutMetaFile(metaPath, debPath string, pkgMap, coreMap, optionMap, baseMa
 	var coreList []system.PackageInfo
 	var optionList []system.PackageInfo
 	var baseList []system.PackageInfo
+	var removeList []system.PackageInfo
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -170,11 +172,17 @@ func GenDutMetaFile(metaPath, debPath string, pkgMap, coreMap, optionMap, baseMa
 		baseList = genBaseList(baseMap)
 		wg.Done()
 	}()
+	wg.Add(1)
+	go func() {
+		removeList = genRemoveList(removeMap)
+		wg.Done()
+	}()
 	wg.Wait()
 	meta.PkgList = pkgList
 	meta.CoreList = coreList
 	meta.OptionList = optionList
 	meta.BaseLine = baseList
+	meta.PurgeList = removeList
 	content, err := json.Marshal(meta)
 	if err != nil {
 		return "", err
@@ -236,6 +244,19 @@ func genBaseList(pkgMap map[string]system.PackageInfo) []system.PackageInfo {
 			Name:    v.Name,
 			Version: v.Version,
 			Need:    skipVersion,
+		}
+		list = append(list, info)
+	}
+	return list
+}
+
+func genRemoveList(removeMap map[string]system.PackageInfo) []system.PackageInfo {
+	var list []system.PackageInfo
+	for _, v := range removeMap {
+		info := system.PackageInfo{
+			Name:    v.Name,
+			Version: v.Version,
+			Need:    exist,
 		}
 		list = append(list, info)
 	}

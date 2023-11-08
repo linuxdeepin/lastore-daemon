@@ -39,6 +39,7 @@ type OfflineManager struct {
 	// localOupCheckMap  map[string]*OupResultInfo
 	checkResult         OfflineCheckResult
 	upgradeAblePackages map[string]system.PackageInfo // 离线更新可更新包
+	removePackages      map[string]system.PackageInfo
 }
 
 func NewOfflineManager() *OfflineManager {
@@ -222,7 +223,7 @@ func (m *OfflineManager) AfterUpdateOffline() error {
 		return err
 	}
 	m.checkResult.DebCount = len(packages)
-	pkgs, err := apt.GenOnlineUpdatePackagesByEmulateInstall(packages, []string{
+	installPkgs, removePkgs, err := apt.GenOnlineUpdatePackagesByEmulateInstall(packages, []string{
 		"-o", "Dir::State::lists=/var/lib/lastore/offline_list",
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.OfflineUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
@@ -230,12 +231,8 @@ func (m *OfflineManager) AfterUpdateOffline() error {
 	if err != nil {
 		return err
 	}
-	m.upgradeAblePackages = pkgs
-	return nil
-}
-
-func (m *OfflineManager) PrepareDistUpgrade() error {
-	// TODO 需要生成DutOfflineMetaConfPath数据
+	m.upgradeAblePackages = installPkgs
+	m.removePackages = removePkgs
 	return nil
 }
 

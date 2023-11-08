@@ -300,7 +300,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			}
 
 			if mode&system.SystemUpdate != 0 {
-				recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.GetSystemUpdateLogs(), upgradeRecordPath)
+				recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.systemUpdateLogs, upgradeRecordPath)
 			}
 
 			if mode&system.SecurityUpdate != 0 {
@@ -550,10 +550,11 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			return "", err
 		}
 		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
+		job.option["--ignore-check"] = ""
 		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
 			"/var/cache/lastore/archives",
 			m.offline.upgradeAblePackages,
-			nil, nil, nil, nil, m.genRepoInfo(mode, system.OfflineListPath))
+			m.offline.upgradeAblePackages, nil, m.offline.upgradeAblePackages, m.offline.removePackages, nil, m.genRepoInfo(mode, system.OfflineListPath))
 		if err != nil {
 			logger.Warning(err)
 			return "", err
@@ -561,6 +562,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 	} else {
 		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
 		var pkgMap map[string]system.PackageInfo
+		var removeMap map[string]system.PackageInfo
 		mode &= system.AllInstallUpdate
 		if mode == 0 {
 			return "", errors.New("invalid mode")
@@ -569,14 +571,16 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		hasSecurity := mode&system.SecurityUpdate != 0
 		if hasSystem && hasSecurity {
 			// 如果是系统+安全更新，需要将两个仓库的数据整合，如果有重复deb包，那么需要只保留高版本包
-			pkgMap = m.mergePackages()
+			pkgMap = m.mergePackages(m.allUpgradableInfo[system.SystemUpdate], m.allUpgradableInfo[system.SecurityUpdate])
+			removeMap = m.mergePackages(m.allRemovePkgInfo[system.SystemUpdate], m.allRemovePkgInfo[system.SecurityUpdate])
 		} else {
 			pkgMap = m.allUpgradableInfo[mode]
+			removeMap = m.allRemovePkgInfo[mode]
 		}
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
 			"/var/cache/lastore/archives",
 			pkgMap,
-			m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, m.updatePlatform.getRules(), m.genRepoInfo(mode, system.OnlineListPath))
+			m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), m.genRepoInfo(mode, system.OnlineListPath))
 		if err != nil {
 			logger.Warning(err)
 			return "", err
@@ -586,9 +590,9 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 }
 
 // 融合系统与安全仓库
-func (m *Manager) mergePackages() map[string]system.PackageInfo {
+func (m *Manager) mergePackages(repo1PkgMap, repo2PkgMap map[string]system.PackageInfo) map[string]system.PackageInfo {
 	var res map[string]system.PackageInfo
-	jsonStr, err := json.Marshal(m.allUpgradableInfo[system.SystemUpdate])
+	jsonStr, err := json.Marshal(repo1PkgMap)
 	if err != nil {
 		logger.Warning(err)
 		return nil
@@ -598,7 +602,7 @@ func (m *Manager) mergePackages() map[string]system.PackageInfo {
 		logger.Warning(err)
 		return nil
 	}
-	for name, secInfo := range m.allUpgradableInfo[system.SecurityUpdate] {
+	for name, secInfo := range repo2PkgMap {
 		sysInfo, ok := res[name]
 		if ok {
 			// 当两个仓库存在相同包，留版本高的包

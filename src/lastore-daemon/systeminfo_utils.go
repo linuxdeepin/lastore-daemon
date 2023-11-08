@@ -295,7 +295,7 @@ func getArchInfo() (string, error) {
 		logger.Warningf("GetSystemArchitecture failed:%v\n", arch)
 		return "", err
 	}
-	return string(arch), nil
+	return strings.TrimSpace(string(arch)), nil
 }
 
 // 获取激活码

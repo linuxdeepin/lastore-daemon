@@ -426,10 +426,12 @@ func ListInstallPackages(packages []string) ([]string, error) {
 
 var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
 var _installRegex2 = regexp.MustCompile(`Inst (.*) \(([^ ]+) .*\)`)
+var _removeRegex = regexp.MustCompile(`Remv (.*) `)
 
 // GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
-func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, error) {
-	allPackages := make(map[string]system.PackageInfo)
+func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+	allInstallPackages := make(map[string]system.PackageInfo)
+	removePackages := make(map[string]system.PackageInfo)
 	args := []string{
 		"install", "-s",
 		"-c", system.LastoreAptV2CommonConfPath,
@@ -445,12 +447,14 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 	err := cmd.Run()
 	if err != nil {
 		logger.Warning(errBuf.String())
-		return nil, err
+		return nil, nil, errors.New(errBuf.String())
 	}
 	const upgraded = "The following packages will be upgraded:"
 	const newInstalled = "The following NEW packages will be installed:"
+	const removed = "The following packages will be REMOVED:"
 	if bytes.Contains(outBuf.Bytes(), []byte(upgraded)) ||
-		bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) {
+		bytes.Contains(outBuf.Bytes(), []byte(newInstalled)) ||
+		bytes.Contains(outBuf.Bytes(), []byte(removed)) {
 		// 证明平台要求包可以安装
 		allLine := strings.Split(outBuf.String(), "\n")
 		for _, line := range allLine {
@@ -459,16 +463,24 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 				matches = _installRegex2.FindStringSubmatch(line)
 			}
 			if len(matches) > 2 {
-				allPackages[matches[1]] = system.PackageInfo{
+				allInstallPackages[matches[1]] = system.PackageInfo{
 					Name:    matches[1],
 					Version: matches[2],
 					Need:    "strict",
 				}
-				continue
+			} else {
+				removeMatches := _removeRegex.FindStringSubmatch(line)
+				if len(removeMatches) > 1 {
+					removePackages[removeMatches[1]] = system.PackageInfo{
+						Name:    removeMatches[1],
+						Version: "1.0",
+						Need:    "exist",
+					}
+				}
 			}
 		}
 	}
-	return allPackages, nil
+	return allInstallPackages, removePackages, nil
 }
 
 // ListDistUpgradePackages return the pkgs from apt dist-upgrade

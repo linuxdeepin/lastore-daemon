@@ -235,81 +235,85 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	propPkgMap := make(map[string][]string) // updater的ClassifiedUpdatablePackages用
 	var systemErr error = nil
 	var securityErr error = nil
-	var systemPackageList map[string]system.PackageInfo
-	var securityPackageList map[string]system.PackageInfo
+	var systemInstallPkgList map[string]system.PackageInfo
+	var systemRemovePkgList map[string]system.PackageInfo
+	var securityInstallPkgList map[string]system.PackageInfo
+	var securityRemovePkgList map[string]system.PackageInfo
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		systemPackageList, systemErr = getSystemUpdatePackageList(platFormPackageList)
-		if systemErr == nil && systemPackageList != nil {
+		systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(platFormPackageList)
+		if systemErr == nil && systemInstallPkgList != nil {
 			var packageList []string
-			for k, v := range systemPackageList {
+			for k, v := range systemInstallPkgList {
 				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
 			}
 			propPkgMap[system.SystemUpdate.JobType()] = packageList
-		}
-		if systemErr != nil {
-			logger.Warning(systemErr)
 		}
 		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {
-		securityPackageList, securityErr = getSecurityUpdatePackageList()
-		if securityErr == nil && securityPackageList != nil {
+		securityInstallPkgList, securityRemovePkgList, securityErr = getSecurityUpdatePackageList()
+		if securityErr == nil && securityInstallPkgList != nil {
 			var packageList []string
-			for k, v := range securityPackageList {
+			for k, v := range securityInstallPkgList {
 				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
 			}
 			propPkgMap[system.SecurityUpdate.JobType()] = packageList
-		}
-		if securityErr != nil {
-			logger.Warning(securityErr)
 		}
 		wg.Done()
 	}()
 	wg.Wait()
 	m.updater.setClassifiedUpdatablePackages(propPkgMap)
-	if systemErr == nil && systemPackageList != nil {
-		m.allUpgradableInfo[system.SystemUpdate] = systemPackageList
+	if systemErr == nil && systemInstallPkgList != nil {
+		m.allUpgradableInfo[system.SystemUpdate] = systemInstallPkgList
 	}
-	if securityErr == nil && securityPackageList != nil {
-		m.allUpgradableInfo[system.SecurityUpdate] = securityPackageList
+	if securityErr == nil && securityInstallPkgList != nil {
+		m.allUpgradableInfo[system.SecurityUpdate] = securityInstallPkgList
+	}
+
+	if systemErr == nil && systemRemovePkgList != nil {
+		m.allRemovePkgInfo[system.SystemUpdate] = systemRemovePkgList
+	}
+	if securityErr == nil && securityRemovePkgList != nil {
+		m.allRemovePkgInfo[system.SecurityUpdate] = securityRemovePkgList
 	}
 	return systemErr, securityErr
 }
 
-func getSystemUpdatePackageList(platFormPackageMap map[string]system.PackageInfo) (map[string]system.PackageInfo, error) {
+func getSystemUpdatePackageList(platFormPackageMap map[string]system.PackageInfo) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	var err error
 	var localCache map[string]statusVersion
 	var repoUpgradableList []string
-	var emulatePkgList map[string]system.PackageInfo
+	var emulateInstallPkgList map[string]system.PackageInfo
+	var emulateRemovePkgList map[string]system.PackageInfo
 	// 获取本地deb信息
 	localCache, err = loadPkgStatusVersion()
 	if err != nil {
 		logger.Warning(err)
-		return nil, err
+		return nil, nil, err
 	}
 	for name, _ := range platFormPackageMap {
 		repoUpgradableList = append(repoUpgradableList, name)
 	}
+	logger.Info("repoUpgradableList:", repoUpgradableList)
 	// 模拟安装更新平台下发所有包(不携带版本号)，获取可升级包的版本
-	emulatePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(repoUpgradableList, []string{
+	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(repoUpgradableList, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SystemUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
 		"-o", "Dir::Etc::preferences=/dev/null", // 系统更新仓库来自更新平台，为了不收本地优先级配置影响，覆盖本地优先级配置
 		"-o", "Dir::Etc::PreferencesParts=/dev/null",
 	})
 	if err != nil {
-		logger.Warning(err)
-		return nil, err
+		return nil, nil, err
 	}
 	for _, platformPkgInfo := range platFormPackageMap {
-		repoPkgInfo, ok := emulatePkgList[platformPkgInfo.Name]
+		repoPkgInfo, ok := emulateInstallPkgList[platformPkgInfo.Name]
 		if ok {
 			// 该包可升级，但是可升级版本小于更新平台下发版本，此时将不允许升级
-			if !compareVersionsGe(platformPkgInfo.Version, repoPkgInfo.Version) {
-				return nil, fmt.Errorf("%v can not install to version %v", platformPkgInfo.Name, platformPkgInfo.Version)
+			if !compareVersionsGe(repoPkgInfo.Version, platformPkgInfo.Version) {
+				return nil, nil, fmt.Errorf("%v can not install to version %v", platformPkgInfo.Name, platformPkgInfo.Version)
 			}
 		} else {
 			// 该包不能升级，需要判断是否在本地存在高版本包
@@ -317,26 +321,26 @@ func getSystemUpdatePackageList(platFormPackageMap map[string]system.PackageInfo
 			if ok {
 				// 本地有该包，但是版本小于更新平台版本
 				if !compareVersionsGe(localPkgInfo.version, repoPkgInfo.Version) {
-					return nil, fmt.Errorf("local exist low version package and %v can not install to version：%v in repo", repoPkgInfo.Name, repoPkgInfo.Version)
+					return nil, nil, fmt.Errorf("local exist low version package and %v can not install to version：%v in repo", repoPkgInfo.Name, repoPkgInfo.Version)
 				}
 			} else {
 				// 本地无该包
-				return nil, fmt.Errorf("local and repo not exist %v", platformPkgInfo.Name)
+				return nil, nil, fmt.Errorf("local and repo not exist %v", platformPkgInfo.Name)
 			}
 		}
 	}
-	return emulatePkgList, nil
+	return emulateInstallPkgList, emulateRemovePkgList, nil
 }
 
-func getSecurityUpdatePackageList() (map[string]system.PackageInfo, error) {
+func getSecurityUpdatePackageList() (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	pkgList, err := listDistUpgradePackages(system.SecurityUpdate) // 仓库检查出所有可以升级的包
 	if err != nil {
 		if os.IsNotExist(err) { // 该类型源文件不存在时
 			logger.Info(err)
-			return nil, nil // 该错误无需返回
+			return nil, nil, nil // 该错误无需返回
 		} else {
 			logger.Warningf("failed to list %v upgradable package %v", system.SystemUpdate.JobType(), err)
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	return apt.GenOnlineUpdatePackagesByEmulateInstall(pkgList, []string{
@@ -396,12 +400,18 @@ func loadPkgStatusVersion() (map[string]statusVersion, error) {
 	return result, nil
 }
 
+// ver1 >= ver2
 func compareVersionsGe(ver1, ver2 string) bool {
 	gt, err := compareVersionsGeFast(ver1, ver2)
 	if err != nil {
 		return compareVersionsGeDpkg(ver1, ver2)
 	}
 	return gt
+}
+
+// ver1 < ver2
+func compareVersionLt(ver1, ver2 string) bool {
+	return compareVersionsLtDpkg(ver1, ver2)
 }
 
 func compareVersionsGeFast(ver1, ver2 string) (bool, error) {
@@ -421,6 +431,11 @@ func compareVersionsGeDpkg(ver1, ver2 string) bool {
 	return err == nil
 }
 
+func compareVersionsLtDpkg(ver1, ver2 string) bool {
+	err := exec.Command("dpkg", "--compare-versions", "--", ver1, "lt", ver2).Run() // #nosec G204
+	return err == nil
+}
+
 func listDistUpgradePackages(updateType system.UpdateType) ([]string, error) {
 	sourcePath := system.GetCategorySourceMap()[updateType]
 	return apt.ListDistUpgradePackages(sourcePath, nil)
@@ -435,7 +450,6 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
 				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate system package list error, detail is %v:", systemErr))
-
 			}()
 			logger.Warning(systemErr)
 		}

@@ -119,16 +119,7 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 	}
 }
 
-func (m *UpdatePlatformManager) GetSystemUpdateLogs() string {
-	logStr, err := json.Marshal(m.systemUpdateLogs)
-	if err != nil {
-		logger.Warning(err)
-		return ""
-	}
-	return string(logStr)
-}
-
-func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo) string {
+func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo) map[string]CEVInfo {
 	var cveInfos = make(map[string]CEVInfo)
 	for name, _ := range pkgs {
 		for _, id := range m.cvePkgs[name] {
@@ -138,12 +129,7 @@ func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageI
 			cveInfos[id] = CVEs[id]
 		}
 	}
-	logStr, err := json.Marshal(cveInfos)
-	if err != nil {
-		logger.Warning(err)
-		return ""
-	}
-	return string(logStr)
+	return cveInfos
 }
 
 func genPreBuild() string {
@@ -632,58 +618,76 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 
 	for _, pkg := range pkgs.Packages.Core {
 		version := ""
+		hasMatch := false
 		for _, v := range pkg.AllArchVersion {
-			if v.Arch == m.arch {
+			if strings.Contains(v.Arch, m.arch) {
 				version = v.Version
+				hasMatch = true
 				break
 			}
 		}
-		m.targetCorePkgs[pkg.Name] = system.PackageInfo{
-			Name:    pkg.Name,
-			Need:    pkg.Need,
-			Version: version,
+		if hasMatch {
+			m.targetCorePkgs[pkg.Name] = system.PackageInfo{
+				Name:    pkg.Name,
+				Need:    pkg.Need,
+				Version: version,
+			}
 		}
+
 	}
 	for _, pkg := range pkgs.Packages.Select {
 		version := ""
+		hasMatch := false
 		for _, v := range pkg.AllArchVersion {
-			if v.Arch == m.arch {
+			if strings.Contains(v.Arch, m.arch) {
 				version = v.Version
+				hasMatch = true
 				break
 			}
 		}
-		m.selectPkgs[pkg.Name] = system.PackageInfo{
-			Name:    pkg.Name,
-			Version: version,
-			Need:    pkg.Need,
+		if hasMatch {
+			m.selectPkgs[pkg.Name] = system.PackageInfo{
+				Name:    pkg.Name,
+				Version: version,
+				Need:    pkg.Need,
+			}
 		}
 	}
 	for _, pkg := range pkgs.Packages.Freeze {
 		version := ""
+		hasMatch := false
 		for _, v := range pkg.AllArchVersion {
-			if v.Arch == m.arch {
+			if strings.Contains(v.Arch, m.arch) {
 				version = v.Version
+				hasMatch = true
 				break
 			}
 		}
-		m.freezePkgs[pkg.Name] = system.PackageInfo{
-			Name:    pkg.Name,
-			Version: version,
-			Need:    pkg.Need,
+		if hasMatch {
+			m.freezePkgs[pkg.Name] = system.PackageInfo{
+				Name:    pkg.Name,
+				Version: version,
+				Need:    pkg.Need,
+			}
 		}
+
 	}
 	for _, pkg := range pkgs.Packages.Purge {
 		version := ""
+		hasMatch := false
 		for _, v := range pkg.AllArchVersion {
 			if v.Arch == m.arch {
 				version = v.Version
+				hasMatch = true
 				break
 			}
 		}
-		m.purgePkgs[pkg.Name] = system.PackageInfo{
-			Name:    pkg.Name,
-			Version: version,
-			Need:    pkg.Need,
+		if hasMatch {
+			m.purgePkgs[pkg.Name] = system.PackageInfo{
+				Name:    pkg.Name,
+				Version: version,
+				Need:    pkg.Need,
+			}
 		}
 	}
 
@@ -704,16 +708,20 @@ func (m *UpdatePlatformManager) updateCurrentPreInstalledPkgMetaSync() error {
 
 	for _, pkg := range pkgs.Packages.Core {
 		version := ""
+		hasMatch := false
 		for _, v := range pkg.AllArchVersion {
 			if v.Arch == m.arch {
 				version = v.Version
+				hasMatch = true
 				break
 			}
 		}
-		m.baselinePkgs[pkg.Name] = system.PackageInfo{
-			Name:    pkg.Name,
-			Version: version,
-			Need:    pkg.Need,
+		if hasMatch {
+			m.baselinePkgs[pkg.Name] = system.PackageInfo{
+				Name:    pkg.Name,
+				Version: version,
+				Need:    pkg.Need,
+			}
 		}
 	}
 
@@ -814,7 +822,6 @@ type UpdateLogMeta struct {
 
 // 如果更新日志无法获取到,不会返回错误,而是设置默认日志文案
 func (m *UpdatePlatformManager) updateLogMetaSync() error {
-	m.systemUpdateLogs = []UpdateLogMeta{} // TODO 如果报错，那么设置默认文案
 	data, err := m.Report(GetUpdateLog, "", m.token)
 	if err != nil {
 		logger.Warning(err)
