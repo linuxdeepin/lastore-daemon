@@ -525,6 +525,9 @@ func (m *UpdatePlatformManager) Report(reqType requestType, msg string, token st
 			}
 			data = tmp
 		case GetTargetPkgLists:
+			if logger.GetLogLevel() == log.LevelDebug {
+				ioutil.WriteFile("/tmp/platform-pkglist", respData, 0644)
+			}
 			tmp := PreInstalledPkgMeta{}
 			err = json.Unmarshal(msg.Data, &tmp)
 			if err != nil {
@@ -616,25 +619,33 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	m.midCheck = pkgs.MidCheck
 	m.postCheck = pkgs.PostCheck
 
-	for _, pkg := range pkgs.Packages.Core {
-		version := ""
-		hasMatch := false
-		for _, v := range pkg.AllArchVersion {
-			if strings.Contains(v.Arch, m.arch) {
-				version = v.Version
-				hasMatch = true
-				break
+	if logger.GetLogLevel() == log.LevelDebug {
+		m.targetCorePkgs["deepin-camera"] = system.PackageInfo{
+			Name:    "deepin-camera",
+			Version: "1.4.13-1",
+			Need:    "strict",
+		}
+	} else {
+		for _, pkg := range pkgs.Packages.Core {
+			version := ""
+			hasMatch := false
+			for _, v := range pkg.AllArchVersion {
+				if strings.Contains(v.Arch, m.arch) {
+					version = v.Version
+					hasMatch = true
+					break
+				}
+			}
+			if hasMatch {
+				m.targetCorePkgs[pkg.Name] = system.PackageInfo{
+					Name:    pkg.Name,
+					Need:    pkg.Need,
+					Version: version,
+				}
 			}
 		}
-		if hasMatch {
-			m.targetCorePkgs[pkg.Name] = system.PackageInfo{
-				Name:    pkg.Name,
-				Need:    pkg.Need,
-				Version: version,
-			}
-		}
-
 	}
+
 	for _, pkg := range pkgs.Packages.Select {
 		version := ""
 		hasMatch := false
@@ -798,14 +809,6 @@ func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.PackageInfo {
 	// for name, info := range m.selectPkgs {
 	// 	infos[name] = info
 	// }
-
-	if logger.GetLogLevel() == log.LevelDebug {
-		infos["deepin-camera"] = system.PackageInfo{
-			Name:    "deepin-camera",
-			Version: "1.4.13-1",
-			Need:    "strict",
-		}
-	}
 	return infos
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -469,7 +470,16 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 		}
 	}
-
+	// 安装失败删除配置文件
+	err = delRebootCheckOption(all)
+	if err != nil {
+		logger.Warning(err)
+	}
+	// 安装失败修改默认入口
+	err = m.grub.changeGrubDefaultEntry(normalBootEntry)
+	if err != nil {
+		logger.Warning(err)
+	}
 	go func() {
 		m.inhibitAutoQuitCountAdd()
 		defer m.inhibitAutoQuitCountSub()
@@ -525,15 +535,20 @@ func (m *Manager) cancelAllUpdateJob() error {
 
 func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
 	var packages []string
-	for name, _ := range pkgsMap {
-		packages = append(packages, name)
+	for _, info := range pkgsMap {
+		packages = append(packages, fmt.Sprintf("%v=%v", info.Name, info.Version))
 	}
-	cmdStr := fmt.Sprintf("apt-get download %v -c /var/lib/lastore/apt_v2_common.conf --allow-change-held-packages -o Dir::Etc::SourceParts=/dev/null -o Dir::Etc::SourceList=/var/lib/lastore/offline.list", strings.Join(packages, " "))
+	cmdStr := fmt.Sprintf("apt-get download %v -c /var/lib/lastore/apt_v2_common.conf --allow-change-held-packages -o Dir::State::lists=/var/lib/lastore/offline_list -o Dir::Etc::SourceParts=/dev/null -o Dir::Etc::SourceList=/var/lib/lastore/offline.list", strings.Join(packages, " "))
 	cmd := exec.Command("/bin/sh", "-c", cmdStr)
 	cmd.Dir = "/var/cache/lastore/archives" // 该路径和/var/lib/lastore/apt_v2_common.conf保持一致
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
 	err := cmd.Run()
 	if err != nil {
 		logger.Info(err)
+		logger.Info(errBuf.String())
 		return err
 	}
 	return nil
@@ -550,7 +565,6 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			return "", err
 		}
 		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
-		job.option["--ignore-check"] = ""
 		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
 			"/var/cache/lastore/archives",
 			m.offline.upgradeAblePackages,
@@ -649,6 +663,9 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 	if typ&system.SecurityUpdate != 0 {
 		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.SecurityUpdate])...)
 	}
+	if typ&system.OfflineUpdate != 0 {
+		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.OfflineUpdate])...)
+	}
 	for _, url := range urls {
 		prefixMap[strings.ReplaceAll(utils.URIToPath(url), "/", "_")] = struct{}{}
 	}
@@ -665,7 +682,7 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 		if strings.HasSuffix(info.Name(), "Packages") {
 			for _, prefix := range prefixs {
 				if strings.HasPrefix(info.Name(), prefix) {
-					res = append(res, filepath.Join("/var/lib/apt/lists", info.Name()))
+					res = append(res, filepath.Join(listPath, info.Name()))
 				}
 			}
 		}

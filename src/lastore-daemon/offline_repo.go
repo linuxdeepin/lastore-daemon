@@ -19,8 +19,8 @@ import (
 const (
 	verifyBin   = "/usr/bin/deepin-iso-verify"
 	unzipBin    = "/usr/bin/ar"
-	unzipOupDir = "/var/lib/lastore/unzip_cache"
-	mountFsDir  = "/var/lib/lastore/mount_fs"
+	unzipOupDir = "/var/lib/lastore/unzipcache"
+	mountFsDir  = "/var/lib/lastore/mountfs"
 )
 
 type OfflineUpgradeType uint

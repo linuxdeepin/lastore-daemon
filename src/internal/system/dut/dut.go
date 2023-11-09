@@ -166,7 +166,7 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
 		args = append(args, "--meta-cfg")
 		args = append(args, system.DutOfflineMetaConfPath)
 		// 离线更新暂不涉及precheck和midcheck
-		return nil
+		// return nil
 	} else {
 		args = append(args, "--meta-cfg")
 		args = append(args, system.DutOnlineMetaConfPath)

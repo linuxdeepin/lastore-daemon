@@ -423,6 +423,14 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	return m.distUpgradePartly(sender, mode, needBackup)
 }
 
+// PrepareFullScreenUpgrade option json -> struct
+// type fullUpgradeOption struct {
+// 	DoUpgrade         bool
+// 	DoUpgradeMode     system.UpdateType
+// 	IsPowerOff        bool
+// 	PreGreeterCheck   bool
+// 	AfterGreeterCheck bool
+// }
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
 	checkExecPath := func() (bool, error) {
 		// 只有dde-lock可以设置
@@ -457,7 +465,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-
+	logger.Info("start PrepareFullScreenUpgrade")
 	if isOffline {
 		content, err := json.Marshal(&fullUpgradeOption{
 			DoUpgrade:         true,
@@ -473,10 +481,12 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
 	} else {
 		opt := fullUpgradeOption{}
-		err = json.Unmarshal([]byte(option), &opt)
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
+		if len(option) > 0 {
+			err = json.Unmarshal([]byte(option), &opt)
+			if err != nil {
+				logger.Warning(err)
+				return dbusutil.ToError(err)
+			}
 		}
 		// 在线更新时填充部分属性
 		opt.DoUpgrade = true
@@ -521,6 +531,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 			logger.Warning(err)
 			break
 		} else {
+			logger.Info("terminate seat")
 			return nil
 		}
 	}
@@ -531,6 +542,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
+	logger.Info("RestartUnit lightdm")
 	return nil
 }
 func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
