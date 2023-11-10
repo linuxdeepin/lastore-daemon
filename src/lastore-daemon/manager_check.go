@@ -78,6 +78,11 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	} else {
 		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
 	}
+	if checkOrder == firstCheck {
+		job.option["--stage1"] = ""
+	} else {
+		job.option["--stage2"] = ""
+	}
 	job.setPreHooks(map[string]func() error{
 		string(system.RunningStatus): func() error {
 			inhibit(true)

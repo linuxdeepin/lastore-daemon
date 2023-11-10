@@ -426,7 +426,7 @@ func ListInstallPackages(packages []string) ([]string, error) {
 
 var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
 var _installRegex2 = regexp.MustCompile(`Inst (.*) \(([^ ]+) .*\)`)
-var _removeRegex = regexp.MustCompile(`Remv (.*) `)
+var _removeRegex = regexp.MustCompile(`Remv (.*) \[(.*)]`)
 
 // GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
 func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
@@ -473,8 +473,8 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 				if len(removeMatches) > 1 {
 					removePackages[removeMatches[1]] = system.PackageInfo{
 						Name:    removeMatches[1],
-						Version: "1.0",
-						Need:    "exist",
+						Version: removeMatches[2],
+						Need:    "strict",
 					}
 				}
 			}

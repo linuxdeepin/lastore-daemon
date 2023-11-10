@@ -59,24 +59,29 @@ const (
 	failed
 )
 
+type Binary struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 type OfflineRepoInfo struct {
 	Type    OfflineUpgradeType `json:"type"`
 	Version string             `json:"version"`
 	Data    struct {
-		Archs          string `json:"archs"`
-		Binary         string `json:"binary"`
-		CveDescription string `json:"cveDescription"`
-		CveId          string `json:"cveId"`
-		Description    string `json:"description"`
-		FixedVersion   string `json:"fixedVersion"`
-		PubTime        string `json:"pubTime"`
-		Score          string `json:"score"`
-		Source         string `json:"source"`
-		Status         string `json:"status"`
-		SystemType     string `json:"systemType"`
-		VulCategory    string `json:"vulCategory"`
-		VulLevel       string `json:"vulLevel"`
-		VulName        string `json:"vulName"`
+		Archs          string   `json:"archs"`
+		Binary         []Binary `json:"binary"`
+		CveDescription string   `json:"cveDescription"`
+		CveId          string   `json:"cveId"`
+		Description    string   `json:"description"`
+		FixedVersion   string   `json:"fixedVersion"`
+		PubTime        string   `json:"pubTime"`
+		Score          string   `json:"score"`
+		Source         string   `json:"source"`
+		Status         string   `json:"status"`
+		SystemType     string   `json:"systemType"`
+		VulCategory    string   `json:"vulCategory"`
+		VulLevel       string   `json:"vulLevel"`
+		VulName        string   `json:"vulName"`
 	} `json:"data"`
 	message string
 }
