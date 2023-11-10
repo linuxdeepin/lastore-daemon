@@ -415,6 +415,7 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 				job.subRetryCount(true) // retry 设置为 0
 				job.PropsMu.Lock()
 				job.setError(jobErr)
+				job.errLogPath = jobErr.ErrorLog
 				job.PropsMu.Unlock()
 			} else if job.retry == 0 {
 				job.PropsMu.Lock()

@@ -142,8 +142,9 @@ type System interface {
 }
 
 type JobError struct {
-	Type   JobErrorType
-	Detail string
+	Type     JobErrorType
+	Detail   string
+	ErrorLog []string
 }
 
 func (e *JobError) GetType() string {

@@ -59,6 +59,8 @@ type Job struct {
 	afterChangedHooksMu sync.Mutex
 
 	updateTyp system.UpdateType
+
+	errLogPath []string
 }
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
@@ -128,6 +130,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	} else {
 		changed = true
 		j.setError(info.Error)
+		j.errLogPath = info.Error.ErrorLog
 	}
 
 	if info.Cancelable != j.Cancelable {
@@ -167,6 +170,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 				ok := errors.As(err, &jobErr)
 				if ok {
 					j.setError(jobErr)
+					j.errLogPath = jobErr.ErrorLog
 					_ = TransitionJobState(j, system.FailedStatus)
 					// 当需要迁移到success时，Cancelable为false，当hook报错时，需要将Cancelable设置为true
 					j.Cancelable = true

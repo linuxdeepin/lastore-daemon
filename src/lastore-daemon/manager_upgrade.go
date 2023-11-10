@@ -485,7 +485,15 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		defer m.inhibitAutoQuitCountSub()
 		m.updatePlatform.postSystemUpgradeMessage(upgradeFailed, job, mode)
 		m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
-		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v%v", mode, job.Description, dut.GetDutErrorMessage()))
+		var allErrMsg []string
+		for _, logPath := range job.errLogPath {
+			content, err := ioutil.ReadFile(logPath)
+			if err != nil {
+				logger.Warning(err)
+			}
+			allErrMsg = append(allErrMsg, string(content))
+		}
+		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v%v;all error message is %v", mode, job.Description, dut.GetDutErrorMessage(), strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	m.updatePlatform.recoverVersionLink()

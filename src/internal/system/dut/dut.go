@@ -56,9 +56,10 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 }
 
 type ErrorContent struct {
-	Code ErrorCode
-	Msg  []string
-	Ext  DetailErrorMsg
+	Code    ErrorCode
+	Msg     []string
+	Ext     DetailErrorMsg
+	LogPath []string
 }
 
 type DetailErrorMsg struct {
@@ -117,8 +118,9 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			if content.Ext.Code&ExtCode(v) != 0 {
 				logger.Warningf("short error msg:%v", strings.Join(content.Ext.Msg, ";"))
 				return &system.JobError{
-					Type:   k,
-					Detail: strings.Join(content.Ext.Msg, ";"), // TODO 获取详细的更新错误信息
+					Type:     k,
+					Detail:   strings.Join(content.Ext.Msg, ";"),
+					ErrorLog: content.LogPath,
 				}
 			}
 		}
