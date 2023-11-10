@@ -740,20 +740,20 @@ func (m *UpdatePlatformManager) updateCurrentPreInstalledPkgMetaSync() error {
 }
 
 type CEVInfo struct {
-	SyncTime       string `json:"synctime"`        // "CVE类型"
-	CveId          string `json:"cveid"`           // "CVE编号"
-	Source         string `json:"source"`          // "包名"
-	FixedVersion   string `json:"fixed_version"`   // "修复版本"
-	Archs          string `json:"archs"`           // "架构信息"
-	Score          string `json:"score"`           // "评分"
-	Status         string `json:"status"`          // "修复状态"
-	VulCategory    string `json:"vul_category"`    // "漏洞类型"
-	VulName        string `json:"vul_name"`        // "漏洞名称"
-	VulLevel       string `json:"vul_level"`       // "⻛险等级"
-	PubTime        string `json:"pub_time"`        // "CVE公开时间"
-	Binary         string `json:"binary"`          // "二进制包"
-	Description    string `json:"description"`     // "漏洞描述"
-	CveDescription string `json:"cve_description"` // "漏洞描述(英文)"
+	SyncTime       string `json:"synctime"`       // "CVE类型"
+	CveId          string `json:"cveId"`          // "CVE编号"
+	Source         string `json:"source"`         // "包名"
+	FixedVersion   string `json:"fixedVersion"`   // "修复版本"
+	Archs          string `json:"archs"`          // "架构信息"
+	Score          string `json:"score"`          // "评分"
+	Status         string `json:"status"`         // "修复状态"
+	VulCategory    string `json:"vulCategory"`    // "漏洞类型"
+	VulName        string `json:"vulName"`        // "漏洞名称"
+	VulLevel       string `json:"vulLevel"`       // "⻛险等级"
+	PubTime        string `json:"pubTime"`        // "CVE公开时间"
+	Binary         string `json:"binary"`         // "二进制包"
+	Description    string `json:"description"`    // "漏洞描述"
+	CveDescription string `json:"cveDescription"` // "漏洞描述(英文)"
 }
 
 type CEVMeta struct {

@@ -644,7 +644,7 @@ func (m *Manager) genRepoInfo(typ system.UpdateType, listPath string) []dut.Repo
 	var repoInfos []dut.RepoInfo
 	for _, file := range getPackagesPathList(typ, listPath) {
 		info := dut.RepoInfo{
-			Name:       file,
+			Name:       filepath.Base(file),
 			FilePath:   file,
 			HashSha256: "",
 		}
