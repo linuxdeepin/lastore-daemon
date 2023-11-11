@@ -166,7 +166,8 @@ func getSystemArchitectures() []system.Architecture {
 
 func GenerateUpdateInfos(outputPath string) error {
 	var upgradeInfo []system.UpgradeInfo
-	for category, sourcePath := range system.GetCategorySourceMap() {
+	for _, category := range system.AllInstallUpdateType() {
+		sourcePath := system.GetCategorySourceMap()[category]
 		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)
 		if err != nil {
 			if os.IsNotExist(err) { // 该类型源文件不存在时,无需将错误写入到文件中

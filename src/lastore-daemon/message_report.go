@@ -1117,7 +1117,7 @@ func (m *UpdatePlatformManager) postSystemUpgradeMessage(upgradeStatus int, j *J
 			_ = response.Body.Close()
 		}()
 		body, _ := ioutil.ReadAll(response.Body)
-		logger.Info(string(body))
+		logger.Debug("postSystemUpgradeMessage response is:", string(body))
 	} else {
 		logger.Warning(err)
 	}

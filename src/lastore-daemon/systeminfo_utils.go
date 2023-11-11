@@ -23,6 +23,7 @@ import (
 
 	"github.com/godbus/dbus"
 	"github.com/jouyouyun/hardware/utils"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 
 	hhardware "github.com/jouyouyun/hardware"
 )
@@ -331,22 +332,26 @@ const (
 )
 
 func getCustomInfoAndOemId() (bool, string, error) {
-	if !verifyOemFile() {
-		logger.Warning("verify oem-info failure")
-		return false, "", nil
+	if !utils2.IsFileExist(oemInfoFile) || !utils2.IsFileExist(oemSignFile) {
+		return false, "", errors.New("oemInfoFile or oemSignFile not exist")
 	}
 	var info oemInfo
 	err := system.DecodeJson(oemInfoFile, &info)
 	if err != nil {
 		return false, "", err
 	}
+
+	if !verifyOemFile(oemPubKey, oemInfoFile) {
+		logger.Warning("verify oem-info failure")
+		return false, "", nil
+	}
 	return info.CustomInfo.CustomizedKernel, info.Basic.IsoId, nil
 }
 
 // 定制标识校验
-func verifyOemFile() bool {
+func verifyOemFile(key, file string) bool {
 	// pem解码
-	block, _ := pem.Decode([]byte(oemPubKey))
+	block, _ := pem.Decode([]byte(key))
 	if block == nil {
 		return false
 	}
@@ -360,7 +365,7 @@ func verifyOemFile() bool {
 	publicKey := pubKeyInterface.(*rsa.PublicKey)
 	// sha256计算
 	hash := sha256.New()
-	encContent, err := ioutil.ReadFile(oemInfoFile)
+	encContent, err := ioutil.ReadFile(file)
 	if err != nil {
 		logger.Warning(err)
 		return false

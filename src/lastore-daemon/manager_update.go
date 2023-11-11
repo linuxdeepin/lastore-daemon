@@ -30,7 +30,6 @@ func prepareUpdateSource() {
 	for _, partialFilePath := range partialFilePaths {
 		infos, err := ioutil.ReadDir(partialFilePath)
 		if err != nil {
-			logger.Warning(err)
 			continue
 		}
 		for _, info := range infos {
@@ -120,7 +119,6 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 			},
 			string(system.SucceedStatus): func() error {
 				m.refreshUpdateInfos(true)
-				job.setPropProgress(0.90)
 				m.PropsMu.Lock()
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
@@ -243,33 +241,28 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	wg.Add(1)
 	go func() {
 		systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(platFormPackageList)
-		if systemErr == nil && systemInstallPkgList != nil {
-			var packageList []string
-			for k, v := range systemInstallPkgList {
-				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
-			}
-			propPkgMap[system.SystemUpdate.JobType()] = packageList
-		}
 		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {
 		securityInstallPkgList, securityRemovePkgList, securityErr = getSecurityUpdatePackageList()
-		if securityErr == nil && securityInstallPkgList != nil {
-			var packageList []string
-			for k, v := range securityInstallPkgList {
-				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
-			}
-			propPkgMap[system.SecurityUpdate.JobType()] = packageList
-		}
 		wg.Done()
 	}()
 	wg.Wait()
-	m.updater.setClassifiedUpdatablePackages(propPkgMap)
 	if systemErr == nil && systemInstallPkgList != nil {
+		var packageList []string
+		for k, v := range systemInstallPkgList {
+			packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
+		}
+		propPkgMap[system.SystemUpdate.JobType()] = packageList
 		m.allUpgradableInfo[system.SystemUpdate] = systemInstallPkgList
 	}
 	if securityErr == nil && securityInstallPkgList != nil {
+		var packageList []string
+		for k, v := range securityInstallPkgList {
+			packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
+		}
+		propPkgMap[system.SecurityUpdate.JobType()] = packageList
 		m.allUpgradableInfo[system.SecurityUpdate] = securityInstallPkgList
 	}
 
@@ -279,6 +272,7 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	if securityErr == nil && securityRemovePkgList != nil {
 		m.allRemovePkgInfo[system.SecurityUpdate] = securityRemovePkgList
 	}
+	m.updater.setClassifiedUpdatablePackages(propPkgMap)
 	return systemErr, securityErr
 }
 

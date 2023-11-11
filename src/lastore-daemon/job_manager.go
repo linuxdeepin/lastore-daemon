@@ -158,7 +158,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
-		job._InitProgressRange(0.11, 0.8)
+		job._InitProgressRange(0.11, 0.9)
 	case system.OfflineUpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.OfflineUpdateJobType, LockQueue, environ)
 		job._InitProgressRange(0.11, 0.9)

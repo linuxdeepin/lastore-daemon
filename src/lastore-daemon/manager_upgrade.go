@@ -47,7 +47,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	var inhibitFd dbus.UnixFD = -1
 	why := Tr("Backing up and installing updates...")
 	inhibit := func(enable bool) {
-		logger.Infof("handle inhibit:%v fd:%v", enable, inhibitFd)
+		logger.Infof("DistUpgradePartly:handle inhibit:%v fd:%v", enable, inhibitFd)
 		if enable {
 			if inhibitFd == -1 {
 				fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)

@@ -193,15 +193,14 @@ func UpdateOtherSystemSourceDir(otherSourceList []string) error {
 	if err != nil {
 		logger.Warning(err)
 	}
+	if len(otherSourceList) == 0 {
+		logger.Info("not exist other Source need check update")
+		return nil
+	}
 	// #nosec G301
 	err = os.MkdirAll(OtherSystemSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
-	}
-
-	if len(otherSourceList) == 0 {
-		logger.Info("not exist other Source need check update")
-		return nil
 	}
 	// 创建对应的软链接
 	for _, filePath := range otherSourceList {
@@ -220,7 +219,7 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 	for _, t := range AllCheckUpdateType() {
 		category := updateType & t
 		if category != 0 {
-			sourcePath := GetCategorySourceMap()[category]
+			sourcePath := GetCategorySourceMap()[t]
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
