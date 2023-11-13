@@ -599,10 +599,18 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			pkgMap = m.allUpgradableInfo[mode]
 			removeMap = m.allRemovePkgInfo[mode]
 		}
-		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			"/var/cache/lastore/archives",
-			pkgMap,
-			m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
+		if mode == system.SecurityUpdate {
+			uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
+				"/var/cache/lastore/archives",
+				pkgMap,
+				m.allUpgradableInfo[mode], m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
+		} else {
+			uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
+				"/var/cache/lastore/archives",
+				pkgMap,
+				m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
+		}
+
 		if err != nil {
 			logger.Warning(err)
 			return "", err
