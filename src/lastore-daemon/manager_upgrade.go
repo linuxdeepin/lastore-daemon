@@ -576,7 +576,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
 			"/var/cache/lastore/archives",
 			m.offline.upgradeAblePackages,
-			m.offline.upgradeAblePackages, nil, m.offline.upgradeAblePackages, m.offline.removePackages, nil, m.genRepoInfo(mode, system.OfflineListPath))
+			m.offline.upgradeAblePackages, nil, m.offline.upgradeAblePackages, m.offline.removePackages, nil, genRepoInfo(mode, system.OfflineListPath))
 		if err != nil {
 			logger.Warning(err)
 			return "", err
@@ -602,7 +602,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
 			"/var/cache/lastore/archives",
 			pkgMap,
-			m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), m.genRepoInfo(mode, system.OnlineListPath))
+			m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
 		if err != nil {
 			logger.Warning(err)
 			return "", err
@@ -640,7 +640,7 @@ func (m *Manager) mergePackages(repo1PkgMap, repo2PkgMap map[string]system.Packa
 }
 
 // 生成repo信息
-func (m *Manager) genRepoInfo(typ system.UpdateType, listPath string) []dut.RepoInfo {
+func genRepoInfo(typ system.UpdateType, listPath string) []dut.RepoInfo {
 	var repoInfos []dut.RepoInfo
 	for _, file := range getPackagesPathList(typ, listPath) {
 		info := dut.RepoInfo{

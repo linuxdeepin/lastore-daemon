@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"internal/system"
 	"internal/system/apt"
+	"internal/system/dut"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -59,29 +60,24 @@ const (
 	failed
 )
 
-type Binary struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
 type OfflineRepoInfo struct {
 	Type    OfflineUpgradeType `json:"type"`
 	Version string             `json:"version"`
 	Data    struct {
-		Archs          string   `json:"archs"`
-		Binary         []Binary `json:"binary"`
-		CveDescription string   `json:"cveDescription"`
-		CveId          string   `json:"cveId"`
-		Description    string   `json:"description"`
-		FixedVersion   string   `json:"fixedVersion"`
-		PubTime        string   `json:"pubTime"`
-		Score          string   `json:"score"`
-		Source         string   `json:"source"`
-		Status         string   `json:"status"`
-		SystemType     string   `json:"systemType"`
-		VulCategory    string   `json:"vulCategory"`
-		VulLevel       string   `json:"vulLevel"`
-		VulName        string   `json:"vulName"`
+		Archs          string `json:"archs"`
+		Binary         string `json:"binary"`
+		CveDescription string `json:"cveDescription"`
+		CveId          string `json:"cveId"`
+		Description    string `json:"description"`
+		FixedVersion   string `json:"fixedVersion"`
+		PubTime        string `json:"pubTime"`
+		Score          string `json:"score"`
+		Source         string `json:"source"`
+		Status         string `json:"status"`
+		SystemType     string `json:"systemType"`
+		VulCategory    string `json:"vulCategory"`
+		VulLevel       string `json:"vulLevel"`
+		VulName        string `json:"vulName"`
 	} `json:"data"`
 	message string
 }
@@ -332,12 +328,16 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 					Detail: "check offline oup file error:" + err.Error(),
 				}
 			}
-
-			if checkRootSpace() {
-				m.offline.checkResult.SystemCheckState = success
+			if len(m.offline.upgradeAblePackages) > 0 {
+				if m.offline.checkOfflineSystemState() {
+					m.offline.checkResult.SystemCheckState = success
+				} else {
+					m.offline.checkResult.SystemCheckState = failed
+				}
 			} else {
-				m.offline.checkResult.SystemCheckState = failed
+				m.offline.checkResult.SystemCheckState = success
 			}
+
 			logger.Info(m.offline.GetCheckInfo())
 			job.setPropProgress(1)
 			go func() {
@@ -390,4 +390,22 @@ func checkRootSpace() bool {
 		}
 	}
 	return isSatisfied
+}
+
+func (m *OfflineManager) checkOfflineSystemState() bool {
+	_, err := dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
+		"/var/cache/lastore/archives",
+		m.upgradeAblePackages,
+		m.upgradeAblePackages, nil, m.upgradeAblePackages, m.removePackages, nil, genRepoInfo(system.OfflineUpdate, system.OfflineListPath))
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+
+	err = dut.CheckSystem(dut.PreCheck, true, nil)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	return true
 }
