@@ -523,6 +523,7 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	// }
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
+	m.updatePlatform.postStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
 	return nil
 }
 
