@@ -137,8 +137,11 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					m.updatePlatform.postSystemUpgradeMessage(upgradeSucceed, job, checkMode)
 					m.updatePlatform.reportLog(upgradeStatusReport, true, "")
 				}()
-				m.updatePlatform.UpdateBaseline()
-				m.updatePlatform.recoverVersionLink()
+				// 只要系统更新，需要更新baseline文件
+				if checkMode&system.SystemUpdate != 0 {
+					m.updatePlatform.UpdateBaseline()
+					m.updatePlatform.recoverVersionLink()
+				}
 			}
 			return nil
 		},

@@ -222,11 +222,14 @@ func (m *UpdatePlatformManager) UpdateBaseline() {
 
 // 进行安装更新前，需要复制文件替换软连接
 func (m *UpdatePlatformManager) replaceVersionCache() {
-	err := os.RemoveAll(cacheVersion)
-	if err != nil {
-		logger.Warning(err)
+	if utils.IsSymlink(cacheVersion) {
+		// 如果cacheVersion已经是文件了，那么不再用源文件替换
+		err := os.RemoveAll(cacheVersion)
+		if err != nil {
+			logger.Warning(err)
+		}
+		copyFile(realVersion, cacheVersion)
 	}
-	copyFile(realVersion, cacheVersion)
 }
 
 // 安装更新并检查完成后，需要用软连接替换文件

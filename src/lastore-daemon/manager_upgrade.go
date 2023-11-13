@@ -406,7 +406,9 @@ func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
 	}
 	m.statusManager.SetUpdateStatus(mode, system.Upgrading)
 	// 替换cache文件,防止更新失败后os-version是错误的
-	m.updatePlatform.replaceVersionCache()
+	if mode&system.SystemUpdate != 0 {
+		m.updatePlatform.replaceVersionCache()
+	}
 }
 
 func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
@@ -496,7 +498,8 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v%v;all error message is %v", mode, job.Description, dut.GetDutErrorMessage(), strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
-	m.updatePlatform.recoverVersionLink()
+	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
+	// m.updatePlatform.recoverVersionLink()
 	return nil
 }
 
