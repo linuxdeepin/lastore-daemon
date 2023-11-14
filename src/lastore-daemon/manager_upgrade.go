@@ -10,6 +10,7 @@ import (
 	"internal/system"
 	"internal/system/dut"
 	"io/ioutil"
+	"net/url"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -696,7 +697,8 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 	for _, info := range infos {
 		if strings.HasSuffix(info.Name(), "Packages") {
 			for _, prefix := range prefixs {
-				if strings.HasPrefix(info.Name(), prefix) {
+				unquotedStr, _ := url.QueryUnescape(info.Name())
+				if strings.HasPrefix(unquotedStr, prefix) {
 					res = append(res, filepath.Join(listPath, info.Name()))
 				}
 			}
