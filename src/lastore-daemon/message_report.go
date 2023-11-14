@@ -400,106 +400,147 @@ var Urls = map[requestType]requestContent{
 
 const secret = "DflXyFwTmaoGmbDkVj8uD62XGb01pkJn"
 
-// Report 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) Report(reqType requestType, msg string, token string) (data interface{}, err error) {
-	// 设置请求url
-	policyUrl := m.requestUrl + Urls[reqType].path
+func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
+	policyUrl := m.requestUrl + Urls[GetVersion].path
 	client := &http.Client{
 		Timeout: 40 * time.Second,
 	}
-	var sign string
-	var xTime string
-	var tarFilePath string
-	var request *http.Request
-	var body *bytes.Buffer
-	body = bytes.NewBuffer([]byte{})
-	// 设置请求参数
-	switch reqType {
-	case GetTargetPkgLists:
-		values := url.Values{}
-		values.Add("baseline", m.targetBaseline)
-		policyUrl = policyUrl + "?" + values.Encode()
-	case GetCurrentPkgLists:
-		values := url.Values{}
-		values.Add("baseline", m.preBaseline)
-		policyUrl = policyUrl + "?" + values.Encode()
-	case GetPkgCVEs:
-		// values := url.Values{}
-		// values.Add("synctime", m.config.LastCVESyncTime)
-		// policyUrl = policyUrl + "?" + values.Encode()
-	case GetUpdateLog:
-		values := url.Values{}
-		values.Add("baseline", m.targetBaseline)
-		values.Add("isUnstable", fmt.Sprintf("%d", isUnstable()))
-		policyUrl = policyUrl + "?" + values.Encode()
-	case PostProcess:
-		buf := bytes.NewBufferString(msg)
-		tarFilePath = fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
-		xzFile, err := os.Create(tarFilePath)
-		if err != nil {
-			logger.Warning("create file failed:", err)
-			return nil, err
-		}
-		xzCmd := exec.Command("xz", "-z", "-c")
-		xzCmd.Stdin = buf
-		xzCmd.Stdout = xzFile
-		if err := xzCmd.Run(); err != nil {
-			_ = xzFile.Close()
-			logger.Warning("exec xz command err:", err)
-			return nil, err
-		}
+	request, err := http.NewRequest(Urls[GetVersion].method, policyUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %v ", GetVersion.string(), err.Error())
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+	return client.Do(request)
+}
+
+func (m *UpdatePlatformManager) genTargetPkgListsResponse() (*http.Response, error) {
+	policyUrl := m.requestUrl + Urls[GetTargetPkgLists].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	values := url.Values{}
+	values.Add("baseline", m.targetBaseline)
+	policyUrl = policyUrl + "?" + values.Encode()
+	request, err := http.NewRequest(Urls[GetTargetPkgLists].method, policyUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %v ", GetTargetPkgLists.string(), err.Error())
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+	return client.Do(request)
+}
+
+func (m *UpdatePlatformManager) genCurrentPkgListsResponse() (*http.Response, error) {
+	policyUrl := m.requestUrl + Urls[GetCurrentPkgLists].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	values := url.Values{}
+	values.Add("baseline", m.preBaseline)
+	policyUrl = policyUrl + "?" + values.Encode()
+	request, err := http.NewRequest(Urls[GetCurrentPkgLists].method, policyUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %v ", GetCurrentPkgLists.string(), err.Error())
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+	return client.Do(request)
+}
+
+func (m *UpdatePlatformManager) genCVEInfoResponse() (*http.Response, error) {
+	policyUrl := m.requestUrl + Urls[GetPkgCVEs].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	// values := url.Values{}
+	// values.Add("synctime", m.config.LastCVESyncTime)
+	// policyUrl = policyUrl + "?" + values.Encode()
+	request, err := http.NewRequest(Urls[GetPkgCVEs].method, policyUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %v ", GetPkgCVEs.string(), err.Error())
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+	return client.Do(request)
+}
+
+func (m *UpdatePlatformManager) genUpdateLogResponse() (*http.Response, error) {
+	policyUrl := m.requestUrl + Urls[GetUpdateLog].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	values := url.Values{}
+	values.Add("baseline", m.targetBaseline)
+	values.Add("isUnstable", fmt.Sprintf("%d", isUnstable()))
+	policyUrl = policyUrl + "?" + values.Encode()
+	request, err := http.NewRequest(Urls[GetUpdateLog].method, policyUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %v ", GetUpdateLog.string(), err.Error())
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+	return client.Do(request)
+}
+
+func (m *UpdatePlatformManager) genPostProcessMsgResponse(msg string) (*http.Response, error) {
+	policyUrl := m.requestUrl + Urls[PostProcess].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	buf := bytes.NewBufferString(msg)
+	tarFilePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
+	if log.LevelDebug != logger.GetLogLevel() {
+		defer os.RemoveAll(tarFilePath)
+	}
+	xzFile, err := os.Create(tarFilePath)
+	if err != nil {
+		logger.Warning("create file failed:", err)
+		return nil, err
+	}
+	xzCmd := exec.Command("xz", "-z", "-c")
+	xzCmd.Stdin = buf
+	xzCmd.Stdout = xzFile
+	if err := xzCmd.Run(); err != nil {
 		_ = xzFile.Close()
-
-		hash := sha256.New()
-		xTime = fmt.Sprintf("%d", time.Now().Unix())
-
-		byt, err := ioutil.ReadFile(tarFilePath)
-		if err != nil {
-			logger.Warning("open xz file failed:", err)
-			return nil, err
-		}
-		body = bytes.NewBuffer(byt)
-
-		hash.Write([]byte(fmt.Sprintf("%s%s%s", secret, xTime, byt)))
-		sign = base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(hash.Sum(nil))))
+		logger.Warning("exec xz command err:", err)
+		return nil, err
 	}
-	request, err = http.NewRequest(Urls[reqType].method, policyUrl, body)
+	_ = xzFile.Close()
+
+	hash := sha256.New()
+	xTime := fmt.Sprintf("%d", time.Now().Unix())
+
+	xzFileContent, err := ioutil.ReadFile(tarFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("%v new request failed: %v ", reqType.string(), err.Error())
+		logger.Warning("open xz file failed:", err)
+		return nil, err
 	}
+	body := bytes.NewBuffer(xzFileContent)
 
-	// 设置header
-	if reqType == PostProcess {
-		// 如果是更新过程日志上报，设置header
-		hardwareId, err := getHardwareId()
-		if err != nil {
-			return nil, fmt.Errorf("%v failed to get hardware id: %v ", reqType.string(), err.Error())
-		}
-
-		request.Header.Set("X-MachineID", hardwareId)
-		request.Header.Set("X-CurrentBaseline", m.preBaseline)
-		request.Header.Set("X-Baseline", m.targetBaseline)
-		request.Header.Set("X-Time", xTime)
-		request.Header.Set("X-Sign", sign)
-	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(token)))
-	response, err := client.Do(request)
+	hash.Write([]byte(fmt.Sprintf("%s%s%s", secret, xTime, xzFileContent)))
+	sign := base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(hash.Sum(nil))))
+	request, err := http.NewRequest(Urls[PostProcess].method, policyUrl, body)
 	if err != nil {
-		return nil, fmt.Errorf("%v failed to do request: %v ", reqType.string(), err.Error())
+		return nil, fmt.Errorf("%v new request failed: %v ", PostProcess.string(), err.Error())
 	}
-	defer func() {
-		_ = response.Body.Close()
-	}()
-	var respData []byte
+	hardwareId, err := getHardwareId()
+	if err != nil {
+		return nil, fmt.Errorf("%v failed to get hardware id: %v ", PostProcess.string(), err.Error())
+	}
 
-	switch response.StatusCode {
-	case http.StatusOK:
-		respData, err = ioutil.ReadAll(response.Body)
+	request.Header.Set("X-MachineID", hardwareId)
+	request.Header.Set("X-CurrentBaseline", m.preBaseline)
+	request.Header.Set("X-Baseline", m.targetBaseline)
+	request.Header.Set("X-Time", xTime)
+	request.Header.Set("X-Sign", sign)
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.token)))
+	return client.Do(request)
+}
+
+func getResponseData(response *http.Response, reqType requestType) (json.RawMessage, error) {
+	if http.StatusOK == response.StatusCode {
+		respData, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return nil, fmt.Errorf("%v failed to read response body: %v ", reqType.string(), err.Error())
+			return nil, fmt.Errorf("%v failed to read response body: %v ", response.Request.RequestURI, err.Error())
 		}
 		if reqType == GetVersion {
-			logger.Infof("%v request for %s ,body:%s respData:%s ", reqType.string(), policyUrl, msg, string(respData))
+			logger.Infof("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 		}
 		msg := &tokenMessage{}
 		err = json.Unmarshal(respData, msg)
@@ -510,69 +551,81 @@ func (m *UpdatePlatformManager) Report(reqType requestType, msg string, token st
 			errorMsg := &tokenErrorMessage{}
 			err = json.Unmarshal(respData, errorMsg)
 			if err != nil {
-				return nil, fmt.Errorf("%v failed to Unmarshal respData to tokenErrorMessage: %v ", reqType.string(), err.Error())
+				return nil, fmt.Errorf("%v request for %s", reqType.string(), response.Request.RequestURI)
 			}
-			return nil, fmt.Errorf("%v request for %s err:%s", reqType.string(), policyUrl, errorMsg.Msg)
+			return nil, fmt.Errorf("%v request for %s err:%s", reqType.string(), response.Request.RequestURI, errorMsg.Msg)
 		}
-		switch reqType {
-		case GetVersion:
-			tmp := updateMessage{}
-			err = json.Unmarshal(msg.Data, &tmp)
-			if err != nil {
-				return nil, fmt.Errorf("%v failed to Unmarshal msg.Data to updateMessage: %v ", reqType.string(), err.Error())
-			}
-			data = tmp
-		case GetTargetPkgLists:
-			if logger.GetLogLevel() == log.LevelDebug {
-				ioutil.WriteFile("/tmp/platform-pkglist", respData, 0644)
-			}
-			tmp := PreInstalledPkgMeta{}
-			err = json.Unmarshal(msg.Data, &tmp)
-			if err != nil {
-				return nil, fmt.Errorf("%v failed to Unmarshal msg.Data to PreInstalledPkgMeta: %v ", reqType.string(), err.Error())
-			}
-			data = tmp
-		case GetCurrentPkgLists:
-			tmp := PreInstalledPkgMeta{}
-			err = json.Unmarshal(msg.Data, &tmp)
-			if err != nil {
-				return nil, fmt.Errorf("%v failed to Unmarshal msg.Data to PreInstalledPkgMeta: %v ", reqType.string(), err.Error())
-			}
-			data = tmp
-		case GetPkgCVEs:
-			tmp := CEVMeta{}
-			err = json.Unmarshal(msg.Data, &tmp)
-			if err != nil {
-				return nil, fmt.Errorf("%v failed to Unmarshal msg.Data to CEVMeta: %v ", reqType.string(), err.Error())
-			}
-			data = tmp
-		case GetUpdateLog:
-			var tmp []UpdateLogMeta
-			err = json.Unmarshal(msg.Data, &tmp)
-			if err != nil {
-				return nil, fmt.Errorf("%v failed to Unmarshal msg.Data to UpdateLogMeta: %v ", reqType.string(), err.Error())
-			}
-			data = tmp
-		case PostProcess:
-			return
-		default:
-			return nil, fmt.Errorf("unknown report type:%d", reqType)
-		}
-	default:
-		err = fmt.Errorf("request for %s failed, response code=%d", policyUrl, response.StatusCode)
+		return msg.Data, nil
+	} else {
+		return nil, fmt.Errorf("request for %s failed, response code=%d", response.Request.RequestURI, response.StatusCode)
 	}
-	return
+}
+
+func getVersionData(data json.RawMessage) *updateMessage {
+	tmp := &updateMessage{}
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to updateMessage: %v ", GetVersion.string(), err.Error())
+		return nil
+	}
+	return tmp
+}
+
+func getTargetPkgListData(data json.RawMessage) *PreInstalledPkgMeta {
+	if logger.GetLogLevel() == log.LevelDebug {
+		ioutil.WriteFile("/tmp/platform-pkglist", data, 0644)
+	}
+	tmp := &PreInstalledPkgMeta{}
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to PreInstalledPkgMeta: %v ", GetTargetPkgLists.string(), err.Error())
+		return nil
+	}
+	return tmp
+}
+
+func getCurrentPkgListsData(data json.RawMessage) *PreInstalledPkgMeta {
+	tmp := &PreInstalledPkgMeta{}
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to PreInstalledPkgMeta: %v ", GetCurrentPkgLists.string(), err.Error())
+		return nil
+	}
+	return tmp
+}
+func getUpdateLogData(data json.RawMessage) []UpdateLogMeta {
+	var tmp []UpdateLogMeta
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to UpdateLogMeta: %v ", GetUpdateLog.string(), err.Error())
+		return nil
+	}
+	return tmp
+}
+
+func getCVEData(data json.RawMessage) *CVEMeta {
+	tmp := &CVEMeta{}
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to CVEMeta: %v ", GetPkgCVEs.string(), err.Error())
+		return nil
+	}
+	return tmp
 }
 
 // 检查更新时将token数据发送给更新平台，获取本次更新信息
 func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
-	data, err := m.Report(GetVersion, "", m.token)
+	response, err := m.genVersionResponse()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed get version data %v", err)
 	}
-	msg, ok := data.(updateMessage)
-	if !ok {
-		return errors.New("failed convert to updateMessage")
+	data, err := getResponseData(response, GetVersion)
+	if err != nil {
+		return fmt.Errorf("failed get version data %v", err)
+	}
+	msg := getVersionData(data)
+	if msg == nil {
+		return errors.New("failed get version data")
 	}
 	m.targetBaseline = msg.Version.Baseline
 	m.targetVersion = msg.Version.Version
@@ -605,13 +658,17 @@ type PreInstalledPkgMeta struct {
 
 // 从更新平台获取升级目标版本的软件包清单
 func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
-	data, err := m.Report(GetTargetPkgLists, "", m.token)
+	response, err := m.genTargetPkgListsResponse()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed get target pkg list data %v", err)
 	}
-	pkgs, ok := data.(PreInstalledPkgMeta)
-	if !ok {
-		return errors.New("failed convert to PreInstalledPkgMeta")
+	data, err := getResponseData(response, GetTargetPkgLists)
+	if err != nil {
+		return fmt.Errorf("failed get target pkg list data %v", err)
+	}
+	pkgs := getTargetPkgListData(data)
+	if pkgs == nil {
+		return errors.New("failed get target pkg list data")
 	}
 	m.preCheck = pkgs.PreCheck
 	m.midCheck = pkgs.MidCheck
@@ -697,16 +754,18 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 
 // 从更新平台获取当前版本的预装清单
 func (m *UpdatePlatformManager) updateCurrentPreInstalledPkgMetaSync() error {
-	data, err := m.Report(GetCurrentPkgLists, "", m.token)
+	response, err := m.genCurrentPkgListsResponse()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed get current pkg list data %v", err)
 	}
-	pkgs, ok := data.(PreInstalledPkgMeta)
-	if !ok {
-		logger.Warning("bad format")
-		return err
+	data, err := getResponseData(response, GetCurrentPkgLists)
+	if err != nil {
+		return fmt.Errorf("failed get current pkg list data %v", err)
 	}
-
+	pkgs := getCurrentPkgListsData(data)
+	if pkgs == nil {
+		return errors.New("failed get current pkg list data")
+	}
 	for _, pkg := range pkgs.Packages.Core {
 		version := ""
 		hasMatch := false
@@ -746,22 +805,26 @@ type CEVInfo struct {
 	CveDescription string `json:"cveDescription"` // "漏洞描述(英文)"
 }
 
-type CEVMeta struct {
+type CVEMeta struct {
 	DateTime string    `json:"dateTime"`
 	Cves     []CEVInfo `json:"cves"`
 }
 
 var CVEs map[string]CEVInfo // 保存全局cves信息，方便查询
 
-// 从更新平台获取CVE元数据
+// 从更新平台获取CVE元数据 TODO cve 数据获取采用增量获取
 func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
-	data, err := m.Report(GetPkgCVEs, "", m.token)
+	response, err := m.genCVEInfoResponse()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed get cve meta info %v", err)
 	}
-	cves, ok := data.(CEVMeta)
-	if !ok {
-		return errors.New("failed convert to CEVMeta")
+	data, err := getResponseData(response, GetPkgCVEs)
+	if err != nil {
+		return fmt.Errorf("failed get cve meta info %v", err)
+	}
+	cves := getCVEData(data)
+	if cves == nil {
+		return errors.New("failed get cve meta info")
 	}
 	// 重置CVEs
 	CVEs = make(map[string]CEVInfo)
@@ -815,17 +878,17 @@ type UpdateLogMeta struct {
 
 // 如果更新日志无法获取到,不会返回错误,而是设置默认日志文案
 func (m *UpdatePlatformManager) updateLogMetaSync() error {
-	data, err := m.Report(GetUpdateLog, "", m.token)
+	response, err := m.genUpdateLogResponse()
 	if err != nil {
 		logger.Warning(err)
 		return nil
 	}
-	var ok bool
-	m.systemUpdateLogs, ok = data.([]UpdateLogMeta)
-	if !ok {
-		logger.Warning("failed convert to UpdateLogMeta")
+	data, err := getResponseData(response, GetUpdateLog)
+	if err != nil {
+		logger.Warning(err)
 		return nil
 	}
+	m.systemUpdateLogs = getUpdateLogData(data)
 	return nil
 }
 
@@ -1019,12 +1082,18 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 
 // postStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
 func (m *UpdatePlatformManager) postStatusMessage(body string) {
-	logger.Debug("post msg:", body)
-	_, err := m.Report(PostProcess, body, m.token)
+	logger.Debug("post status msg:", body)
+	response, err := m.genPostProcessMsgResponse(body)
 	if err != nil {
-		logger.Warning(err)
+		logger.Warningf("post status message failed:%v", err)
 		return
 	}
+	data, err := getResponseData(response, PostProcess)
+	if err != nil {
+		logger.Warningf("get post status response failed:%v", err)
+		return
+	}
+	logger.Info(string(data))
 }
 
 // 更新平台上报
