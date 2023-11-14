@@ -477,11 +477,6 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 	if err != nil {
 		logger.Warning(err)
 	}
-	// 安装失败修改默认入口
-	err = m.grub.changeGrubDefaultEntry(normalBootEntry)
-	if err != nil {
-		logger.Warning(err)
-	}
 	go func() {
 		m.inhibitAutoQuitCountAdd()
 		defer m.inhibitAutoQuitCountSub()
