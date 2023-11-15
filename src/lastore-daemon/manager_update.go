@@ -141,6 +141,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					defer m.inhibitAutoQuitCountSub()
 					m.updatePlatform.postStatusMessage("check update success")
 				}()
+				m.savePlatformCache()
 				job.setPropProgress(1.0)
 				return nil
 			},
@@ -237,6 +238,8 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	var systemRemovePkgList map[string]system.PackageInfo
 	var securityInstallPkgList map[string]system.PackageInfo
 	var securityRemovePkgList map[string]system.PackageInfo
+	m.allUpgradableInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
+	m.allRemovePkgInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {

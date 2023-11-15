@@ -85,6 +85,7 @@ func main() {
 		return
 	}
 	manager.initAgent()
+	manager.initPlatformManager()
 	err = serverObject.SetWriteCallback(updater, "AutoInstallUpdates", updater.autoInstallUpdatesWriteCallback)
 	if err != nil {
 		logger.Error("failed to set write cb for property AutoInstallUpdates:", err)

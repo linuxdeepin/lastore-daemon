@@ -60,10 +60,6 @@ func updateTokenConfigFile() string {
 	if err != nil {
 		logger.Warning(err)
 	}
-	// TODO: 使用教育版token，获取仓库
-	// if logger.GetLogLevel() == log.LevelDebug {
-	// token = "a=edu-20-std;b=Desktop;c=E;v=20.1060.11068.101.100;i=905923cfb835f3649e79fa90b28dad6fa973425a12d1b6a2ebd3dcf4a52eab92;m=Hygon C86 3250 8-core Processor;ac=amd64;cu=0;sn=N9DA5MAAAFPSL66NBNEAAVS5G;vs=Dhyana+;oid=f1800c30-ceb6-58a4-bcb2-0e4a565947a6;pid=;baseline=edu-20-std-0002;st="
-	// }
 	return token
 }
 

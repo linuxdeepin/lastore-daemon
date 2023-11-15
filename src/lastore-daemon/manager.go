@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"internal/system/dut"
@@ -109,8 +110,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 		systemd:             systemd1.NewManager(service.Conn()),
 		sysPower:            power.NewPower(service.Conn()),
 		abObj:               abrecovery.NewABRecovery(service.Conn()),
-		allUpgradableInfo:   make(map[system.UpdateType]map[string]system.PackageInfo),
-		allRemovePkgInfo:    make(map[system.UpdateType]map[string]system.PackageInfo),
 	}
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)
@@ -204,7 +203,11 @@ func (m *Manager) initStatusManager() {
 func (m *Manager) initAgent() {
 	m.userAgents = newUserAgentMap()
 	m.userAgents.recoverLastoreAgents(m.service, m.handleSessionNew)
+}
+
+func (m *Manager) initPlatformManager() {
 	m.updatePlatform = newUpdatePlatformManager(m.config, m.userAgents)
+	m.loadPlatformCache()
 }
 
 func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -759,4 +762,54 @@ func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]st
 		}
 		wg.Wait()
 	}
+}
+
+type platformCacheContent struct {
+	UpgradableInfo map[system.UpdateType]map[string]system.PackageInfo
+	RemovePkgInfo  map[system.UpdateType]map[string]system.PackageInfo
+	CoreListPkgs   map[string]system.PackageInfo
+	BaselinePkgs   map[string]system.PackageInfo
+	SelectPkgs     map[string]system.PackageInfo
+	PreCheck       string
+	MidCheck       string
+	PostCheck      string
+}
+
+func (m *Manager) savePlatformCache() {
+	cache := platformCacheContent{}
+	cache.UpgradableInfo = m.allUpgradableInfo
+	cache.RemovePkgInfo = m.allRemovePkgInfo
+	cache.CoreListPkgs = m.updatePlatform.targetCorePkgs
+	cache.BaselinePkgs = m.updatePlatform.baselinePkgs
+	cache.SelectPkgs = m.updatePlatform.selectPkgs
+	cache.PreCheck = m.updatePlatform.preCheck
+	cache.MidCheck = m.updatePlatform.midCheck
+	cache.PostCheck = m.updatePlatform.postCheck
+	content, err := json.Marshal(cache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = m.config.SetOnlineCache(string(content))
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+}
+
+func (m *Manager) loadPlatformCache() {
+	cache := platformCacheContent{}
+	err := json.Unmarshal([]byte(m.config.onlineCache), &cache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	m.allUpgradableInfo = cache.UpgradableInfo
+	m.allRemovePkgInfo = cache.RemovePkgInfo
+	m.updatePlatform.targetCorePkgs = cache.CoreListPkgs
+	m.updatePlatform.baselinePkgs = cache.BaselinePkgs
+	m.updatePlatform.selectPkgs = cache.SelectPkgs
+	m.updatePlatform.preCheck = cache.PreCheck
+	m.updatePlatform.midCheck = cache.MidCheck
+	m.updatePlatform.postCheck = cache.PostCheck
 }

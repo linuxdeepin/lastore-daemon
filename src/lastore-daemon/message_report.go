@@ -27,7 +27,6 @@ import (
 
 	"github.com/godbus/dbus"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
-	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
@@ -74,11 +73,6 @@ const (
 	realBaseline  = "/etc/os-baseline"
 	realVersion   = "/etc/os-version"
 )
-
-func isZH() bool {
-	lang := gettext.QueryLang()
-	return strings.HasPrefix(lang, "zh")
-}
 
 func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformManager {
 	platformUrl := os.Getenv("UPDATE_PLATFORM_URL")
@@ -572,9 +566,6 @@ func getVersionData(data json.RawMessage) *updateMessage {
 }
 
 func getTargetPkgListData(data json.RawMessage) *PreInstalledPkgMeta {
-	if logger.GetLogLevel() == log.LevelDebug {
-		ioutil.WriteFile("/tmp/platform-pkglist", data, 0644)
-	}
 	tmp := &PreInstalledPkgMeta{}
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
@@ -666,6 +657,7 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	if err != nil {
 		return fmt.Errorf("failed get target pkg list data %v", err)
 	}
+
 	pkgs := getTargetPkgListData(data)
 	if pkgs == nil {
 		return errors.New("failed get target pkg list data")

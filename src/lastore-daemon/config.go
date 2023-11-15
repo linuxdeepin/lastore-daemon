@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"sync"
 	"time"
 
@@ -70,6 +71,7 @@ type Config struct {
 	updateStatus             string
 
 	classifiedUpdatablePackages map[string][]string // TODO
+	onlineCache                 string
 
 	filePath string
 	statusMu sync.RWMutex
@@ -142,7 +144,6 @@ const (
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
-	dSettingsKeyClassifiedUpdatablePackages          = "classified-updatable-packages"
 
 	// TODO： LastCVESyncTime 属性不要保存dconfig中，以后再考虑保存位置
 	dSettingsKeyLastCVESyncTime = "last-cve-sync-time"
@@ -437,6 +438,25 @@ func getConfigFromDSettings() *Config {
 	} else {
 		c.updateStatus = v.Value().(string)
 	}
+	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
+	content, err := ioutil.ReadFile(classifiedCachePath)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.classifiedUpdatablePackages = make(map[string][]string)
+		err = json.Unmarshal(content, &c.classifiedUpdatablePackages)
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
+
+	content, err = ioutil.ReadFile(onlineCachePath)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.onlineCache = string(content)
+	}
+
 	return c
 }
 
@@ -655,9 +675,24 @@ func (c *Config) SetUpdateStatus(status string) error {
 	return c.save(dSettingsKeyUpdateStatus, status)
 }
 
+const (
+	onlineCachePath     = "/tmp/platform_cache.json"
+	classifiedCachePath = "/tmp/classified_cache.json"
+)
+
 func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) error {
+	content, err := json.Marshal(pkgMap)
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
 	c.classifiedUpdatablePackages = pkgMap
-	return c.save(dSettingsKeyClassifiedUpdatablePackages, pkgMap)
+	return ioutil.WriteFile(classifiedCachePath, content, 0644)
+}
+
+func (c *Config) SetOnlineCache(cache string) error {
+	c.onlineCache = cache
+	return ioutil.WriteFile(onlineCachePath, []byte(cache), 0644)
 }
 
 func (c *Config) save(key string, v interface{}) error {
