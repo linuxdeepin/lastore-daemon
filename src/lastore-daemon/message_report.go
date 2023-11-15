@@ -110,11 +110,6 @@ func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformMa
 		requestUrl:                        platformUrl,
 		cvePkgs:                           make(map[string][]string),
 		token:                             updateTokenConfigFile(),
-		targetCorePkgs:                    make(map[string]system.PackageInfo),
-		baselinePkgs:                      make(map[string]system.PackageInfo),
-		selectPkgs:                        make(map[string]system.PackageInfo),
-		freezePkgs:                        make(map[string]system.PackageInfo),
-		purgePkgs:                         make(map[string]system.PackageInfo),
 		arch:                              arch,
 	}
 }
@@ -622,29 +617,21 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	m.midCheck = pkgs.MidCheck
 	m.postCheck = pkgs.PostCheck
 
-	if logger.GetLogLevel() == log.LevelDebug {
-		m.targetCorePkgs["deepin-camera"] = system.PackageInfo{
-			Name:    "deepin-camera",
-			Version: "1.4.13-1",
-			Need:    "strict",
-		}
-	} else {
-		for _, pkg := range pkgs.Packages.Core {
-			version := ""
-			hasMatch := false
-			for _, v := range pkg.AllArchVersion {
-				if strings.Contains(v.Arch, m.arch) {
-					version = v.Version
-					hasMatch = true
-					break
-				}
+	for _, pkg := range pkgs.Packages.Core {
+		version := ""
+		hasMatch := false
+		for _, v := range pkg.AllArchVersion {
+			if strings.Contains(v.Arch, m.arch) {
+				version = v.Version
+				hasMatch = true
+				break
 			}
-			if hasMatch {
-				m.targetCorePkgs[pkg.Name] = system.PackageInfo{
-					Name:    pkg.Name,
-					Need:    pkg.Need,
-					Version: version,
-				}
+		}
+		if hasMatch {
+			m.targetCorePkgs[pkg.Name] = system.PackageInfo{
+				Name:    pkg.Name,
+				Need:    pkg.Need,
+				Version: version,
 			}
 		}
 	}
@@ -1001,6 +988,11 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	var wg sync.WaitGroup
 	var errList []string
+	m.targetCorePkgs = make(map[string]system.PackageInfo)
+	m.baselinePkgs = make(map[string]system.PackageInfo)
+	m.selectPkgs = make(map[string]system.PackageInfo)
+	m.freezePkgs = make(map[string]system.PackageInfo)
+	m.purgePkgs = make(map[string]system.PackageInfo)
 	syncFuncList := []func() error{
 		m.updateLogMetaSync,                    // 日志
 		m.updateTargetPkgMetaSync,              // 目标版本信息
