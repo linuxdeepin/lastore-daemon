@@ -551,8 +551,7 @@ var genJobId = func() func(string) string {
 		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType,
 			system.UpdateSourceJobType, system.CleanJobType, system.PrepareSystemUpgradeJobType,
 			system.PrepareAppStoreUpgradeJobType, system.PrepareSecurityUpgradeJobType, system.PrepareUnknownUpgradeJobType,
-			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType, system.CheckSystemJobType,
-			system.OfflineUpdateJobType:
+			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType, system.CheckSystemJobType:
 			return jobType
 		default:
 			__count++

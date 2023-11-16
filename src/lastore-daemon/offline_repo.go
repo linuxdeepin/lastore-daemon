@@ -288,7 +288,7 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 	defer m.do.Unlock()
 	var isExist bool
 	// 如果控制中心正在检查更新，那么离线检查需要特殊处理
-	isExist, job, err = m.jobManager.CreateJob("", system.OfflineUpdateJobType, nil, environ, nil)
+	isExist, job, err = m.jobManager.CreateJob("", system.OfflineUpdateJobType, paths, environ, nil)
 	if err != nil {
 		logger.Warningf("create offline update Job error: %v", err)
 		return nil, err
