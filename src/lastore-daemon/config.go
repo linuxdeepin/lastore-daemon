@@ -56,8 +56,6 @@ type Config struct {
 
 	AllowPostSystemUpgradeMessageVersion []string // 只有数组内的系统版本被允许发送更新完成的数据
 
-	LastCVESyncTime string // 上次同步CVE信息时间(服务器返回时间)
-
 	dsLastoreManager         ConfigManager.Manager
 	useDSettings             bool
 	upgradeStatus            system.UpgradeStatusAndReason
@@ -144,9 +142,6 @@ const (
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
-
-	// TODO： LastCVESyncTime 属性不要保存dconfig中，以后再考虑保存位置
-	dSettingsKeyLastCVESyncTime = "last-cve-sync-time"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -389,13 +384,6 @@ func getConfigFromDSettings() *Config {
 		c.downloadSpeedLimitConfig = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCVESyncTime)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.LastCVESyncTime = v.Value().(string)
-	}
-
 	updateLastoreDaemonStatus := func() {
 		v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastoreDaemonStatus)
 		if err != nil {
@@ -497,11 +485,6 @@ func (c *Config) connectConfigChanged(key string, cb func(lastoreDaemonStatus, i
 func (c *Config) UpdateLastCheckTime() error {
 	c.LastCheckTime = time.Now()
 	return c.save(dSettingsKeyLastCheckTime, c.LastCheckTime.Format(configTimeLayout))
-}
-
-func (c *Config) UpdateLastCVESyncTime(syncTime string) error {
-	c.LastCVESyncTime = syncTime
-	return c.save(dSettingsKeyLastCVESyncTime, syncTime)
 }
 
 func (c *Config) UpdateLastCleanTime() error {

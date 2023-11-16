@@ -439,14 +439,14 @@ func (m *UpdatePlatformManager) genCurrentPkgListsResponse() (*http.Response, er
 	return client.Do(request)
 }
 
-func (m *UpdatePlatformManager) genCVEInfoResponse() (*http.Response, error) {
+func (m *UpdatePlatformManager) genCVEInfoResponse(syncTime string) (*http.Response, error) {
 	policyUrl := m.requestUrl + Urls[GetPkgCVEs].path
 	client := &http.Client{
 		Timeout: 40 * time.Second,
 	}
-	// values := url.Values{}
-	// values.Add("synctime", m.config.LastCVESyncTime)
-	// policyUrl = policyUrl + "?" + values.Encode()
+	values := url.Values{}
+	values.Add("synctime", syncTime)
+	policyUrl = policyUrl + "?" + values.Encode()
 	request, err := http.NewRequest(Urls[GetPkgCVEs].method, policyUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetPkgCVEs.string(), err.Error())
@@ -599,7 +599,7 @@ func getCVEData(data json.RawMessage) *CVEMeta {
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
 		logger.Warningf("%v failed to Unmarshal msg.Data to CVEMeta: %v ", GetPkgCVEs.string(), err.Error())
-		return nil
+		return tmp
 	}
 	return tmp
 }
@@ -804,9 +804,35 @@ type CVEMeta struct {
 
 var CVEs map[string]CEVInfo // 保存全局cves信息，方便查询
 
-// 从更新平台获取CVE元数据 TODO cve 数据获取采用增量获取
+const cveLocalInfo = "/var/lib/lastore/cve_local_info.json"
+
+func loadLocalCVEData() []byte {
+	data, err := ioutil.ReadFile(cveLocalInfo)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	return data
+}
+
+func saveCEVData(meta CVEMeta) {
+	data, err := json.Marshal(meta)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = ioutil.WriteFile(cveLocalInfo, data, 0644)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+}
+
+// 从更新平台获取CVE元数据
 func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
-	response, err := m.genCVEInfoResponse()
+	localData := loadLocalCVEData()
+	localCVE := getCVEData(localData)
+	response, err := m.genCVEInfoResponse(localCVE.DateTime)
 	if err != nil {
 		return fmt.Errorf("failed get cve meta info %v", err)
 	}
@@ -818,6 +844,8 @@ func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
 	if cves == nil {
 		return errors.New("failed get cve meta info")
 	}
+	cves.Cves = append(cves.Cves, localCVE.Cves...)
+	saveCEVData(*cves)
 	// 重置CVEs
 	CVEs = make(map[string]CEVInfo)
 	m.cveDataTime = cves.DateTime
@@ -840,8 +868,6 @@ func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
 		}
 
 	}
-
-	_ = m.config.UpdateLastCVESyncTime(m.cveDataTime)
 	return nil
 }
 
