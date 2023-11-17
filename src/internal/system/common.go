@@ -119,28 +119,20 @@ type UpgradeStatusAndReason struct {
 
 const (
 	GrubTitleRollbackPrefix = "BEGIN /etc/grub.d/11_deepin_ab_recovery"
-	GrubTitleRollbackIndex  = 1
+	GrubTitleRollbackSuffix = "END /etc/grub.d/11_deepin_ab_recovery"
 	GrubTitleNormalPrefix   = "BEGIN /etc/grub.d/10_linux"
-	GrubTitleNormalIndex    = 0
+	GrubTitleNormalSuffix   = "END /etc/grub.d/10_linux"
 )
 
-func GetGrubRollbackTitle(grub grub2.Grub2, grubPath string) string {
-	title := getGrubTitleByPrefix(grubPath, GrubTitleRollbackPrefix)
-	if title == "" {
-		return getGrubTitleByIndex(grub, GrubTitleRollbackIndex) // TODO: 该逻辑会导致进入系统还原,而不是rollback
-	}
-	return title
+func GetGrubRollbackTitle(grubPath string) string {
+	return getGrubTitleByPrefix(grubPath, GrubTitleRollbackPrefix, GrubTitleRollbackSuffix)
 }
 
-func GetGrubNormalTitle(grub grub2.Grub2, grubPath string) string {
-	title := getGrubTitleByPrefix(grubPath, GrubTitleNormalPrefix)
-	if title == "" {
-		return getGrubTitleByIndex(grub, GrubTitleNormalIndex)
-	}
-	return title
+func GetGrubNormalTitle(grubPath string) string {
+	return getGrubTitleByPrefix(grubPath, GrubTitleNormalPrefix, GrubTitleNormalSuffix)
 }
 
-func getGrubTitleByPrefix(grubPath string, start string) (entryTitle string) {
+func getGrubTitleByPrefix(grubPath string, start, end string) (entryTitle string) {
 	fileContent, err := ioutil.ReadFile(grubPath)
 	if err != nil {
 		logger.Warning(err)
@@ -155,6 +147,10 @@ func getGrubTitleByPrefix(grubPath string, start string) (entryTitle string) {
 		if !needNext {
 			needNext = strings.Contains(line, start)
 		} else {
+			if strings.Contains(line, end) {
+				logger.Warningf("%v not found %v entry", grubPath, start)
+				return ""
+			}
 			if strings.HasPrefix(line, "menuentry ") {
 				title, ok := parseTitle(line)
 				if ok {

@@ -61,21 +61,14 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	var err error
 	switch to {
 	case rollbackBootEntry:
-		title = system.GetGrubRollbackTitle(m.grub, grubScriptFile)
+		title = system.GetGrubRollbackTitle(grubScriptFile)
 	case normalBootEntry:
-		title = system.GetGrubNormalTitle(m.grub, grubScriptFile)
+		title = system.GetGrubNormalTitle(grubScriptFile)
 	}
 	if strings.TrimSpace(title) == "" {
 		return fmt.Errorf("failed to get %v entry form %v", to, grubScriptFile)
 	}
-	logger.Debug("change grub default entry to:", title)
-	defaultEntry, err := m.grub.DefaultEntry().Get(0)
-	if err != nil {
-		return err
-	}
-	if defaultEntry == title {
-		return nil
-	}
+	logger.Info("try change grub default entry to:", title)
 	entryTitles, err := m.grub.GetSimpleEntryTitles(0)
 	if err != nil {
 		return err

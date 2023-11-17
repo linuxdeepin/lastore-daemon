@@ -395,6 +395,7 @@ func (m *Manager) handleSysPowerChanged(job *Job) {
 func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
 	if needChangeGrub {
 		// 开始更新时修改grub默认入口为rollback
+		// TODO 备份完成后调用grub2模块接口修改grub，由于grub2模块没有实时获取grub数据，可能需要kill grub2(或者grub2可以更新数据)在调用接口
 		err := m.grub.changeGrubDefaultEntry(rollbackBootEntry)
 		if err != nil {
 			logger.Warning(err)
