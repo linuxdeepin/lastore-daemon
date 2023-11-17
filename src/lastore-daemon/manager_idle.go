@@ -189,7 +189,6 @@ func (m *Manager) loadLastoreCache() {
 
 func (m *Manager) saveLastoreCache() {
 	m.saveUpdateSourceOnce()
-	// m.saveCacheJob() // TODO job缓存需要修改  目前来看failed和paused状态可以
 	m.userAgents.saveRecordContent(userAgentRecordPath)
 }
 

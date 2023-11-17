@@ -133,7 +133,6 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	return nil
 }
 func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
-	// TODO
 	logger.Info("progress message form dut is:", line)
 	var content ErrorContent
 	err := json.Unmarshal([]byte(line), &content)

@@ -274,7 +274,6 @@ func (m *OfflineManager) CleanCache() error {
 	return os.RemoveAll(unzipOupDir)
 }
 
-// TODO 上报检查结果
 func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option string) (job *Job, err error) {
 	var environ map[string]string
 	if !system.IsAuthorized() || !system.IsActiveCodeExist() {
@@ -366,7 +365,6 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 }
 
 func checkRootSpace() bool {
-	// TODO 检查安装空间是否满足
 	isSatisfied := false
 	addSize, err := system.QuerySourceAddSize(system.OfflineUpdate)
 	if err != nil {

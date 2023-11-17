@@ -226,7 +226,6 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 // TransitionUpdateStatusValid 用于判断前后类型是否可以迁移
 // 非下载中不能迁移到下载暂停(updateInfo重复触发暂停);
 // 下载完成不能迁移到下载中(串联下载时用于规避);
-// TODO
 func TransitionUpdateStatusValid(oldStatus, newStatus system.UpdateModeStatus) bool {
 	// map的key为旧状态,value为不能迁移的新状态合集
 	invalidationMap := map[system.UpdateModeStatus][]system.UpdateModeStatus{

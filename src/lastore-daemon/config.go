@@ -68,7 +68,7 @@ type Config struct {
 	lastoreDaemonStatus      lastoreDaemonStatus
 	updateStatus             string
 
-	classifiedUpdatablePackages map[string][]string // TODO
+	classifiedUpdatablePackages map[string][]string
 	onlineCache                 string
 
 	filePath string

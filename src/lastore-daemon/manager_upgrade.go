@@ -218,7 +218,6 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
 // needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
-// TODO 处理离线更新
 func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
 	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec upgrade")
@@ -492,7 +491,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 			}
 			allErrMsg = append(allErrMsg, string(content))
 		}
-		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v%v;all error message is %v", mode, job.Description, dut.GetDutErrorMessage(), strings.Join(allErrMsg, "\n")))
+		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode, job.Description, strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
