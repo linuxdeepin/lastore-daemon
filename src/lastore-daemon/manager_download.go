@@ -117,29 +117,23 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			// 下载限速的配置修改需要在job失败重试的时候修改配置(此处失败为手动终止设置的失败状态)
 			m.handleDownloadLimitChanged(job)
 		}
+		j.realRunningHookFn = func() {
+			m.PropsMu.Lock()
+			m.isDownloading = true
+			m.PropsMu.Unlock()
+			m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
+			sendDownloadingOnce.Do(func() {
+				msg := gettext.Tr("New version available! Downloading...")
+				action := []string{
+					"view",
+					gettext.Tr("View"),
+				}
+				hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			})
+			return
+		}
 		j.setPreHooks(map[string]func() error{
-			string(system.ReadyStatus): func() error {
-				m.PropsMu.Lock()
-				m.isDownloading = true
-				m.PropsMu.Unlock()
-				return nil
-			},
-			string(system.RunningStatus): func() error {
-				m.PropsMu.Lock()
-				m.isDownloading = true
-				m.PropsMu.Unlock()
-				m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
-				sendDownloadingOnce.Do(func() {
-					msg := gettext.Tr("New version available! Downloading...")
-					action := []string{
-						"view",
-						gettext.Tr("View"),
-					}
-					hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
-					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-				})
-				return nil
-			},
 			string(system.PausedStatus): func() error {
 				m.statusManager.SetUpdateStatus(mode, system.DownloadPause)
 				return nil

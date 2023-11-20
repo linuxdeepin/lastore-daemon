@@ -206,6 +206,7 @@ func canTransition(oldStatus, newStatus system.UpdateModeStatus) bool {
 
 // SetUpdateStatus 外部调用,会对设置的状态进行过滤
 func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newStatus system.UpdateModeStatus) {
+	changed := false
 	m.statusMapMu.Lock()
 	for _, typ := range system.AllInstallUpdateType() {
 		if mode&typ != 0 && m.checkMode&typ != 0 {
@@ -214,9 +215,17 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 				logger.Infof("inhibit %v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
 				continue
 			}
-			logger.Infof("%v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
-			m.updateModeStatusObj[typ.JobType()] = newStatus
+			if oldStatus != newStatus {
+				logger.Infof("%v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
+				m.updateModeStatusObj[typ.JobType()] = newStatus
+				changed = true
+			}
+
 		}
+	}
+	if !changed {
+		m.statusMapMu.Unlock()
+		return
 	}
 	m.syncUpdateStatusNoLock()
 	m.statusMapMu.Unlock()

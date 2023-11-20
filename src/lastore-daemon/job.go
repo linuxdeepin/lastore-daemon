@@ -42,9 +42,10 @@ type Job struct {
 
 	Cancelable bool
 
-	queueName      string
-	retry          int
-	subRetryHookFn func(*Job) // hook执行规则是在retry--之前执行hook
+	queueName         string
+	retry             int
+	subRetryHookFn    func(*Job) // hook执行规则是在retry--之前执行hook
+	realRunningHookFn func()
 
 	// adjust the progress range, used by some download job type
 	progressRangeBegin float64
@@ -140,6 +141,10 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	}
 	logger.Debugf("updateInfo %v <- %v\n", j, info)
 
+	// TODO 下载时重复触发
+	if info.Status == system.RunningStatus && j.realRunningHookFn != nil {
+		j.realRunningHookFn()
+	}
 	cProgress := buildProgress(info.Progress, j.progressRangeBegin, j.progressRangeEnd)
 	if cProgress > j.Progress {
 		changed = true

@@ -688,9 +688,13 @@ func (m *Manager) ChangePrepareDistUpgradeJobOption() {
 	for _, jobType := range prepareUpgradeTypeList {
 		job := m.jobManager.findJobById(genJobId(jobType))
 		if job != nil {
-			err := m.jobManager.ForceAbortAndRetry(job)
-			if err != nil {
-				logger.Warning(err)
+			if job.Status == system.PausedStatus {
+				m.handleDownloadLimitChanged(job)
+			} else {
+				err := m.jobManager.ForceAbortAndRetry(job)
+				if err != nil {
+					logger.Warning(err)
+				}
 			}
 		}
 	}
