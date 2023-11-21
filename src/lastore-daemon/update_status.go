@@ -201,6 +201,9 @@ func canTransition(oldStatus, newStatus system.UpdateModeStatus) bool {
 	if newStatus == system.NotDownload && oldStatus == system.WaitRunUpgrade {
 		return false
 	}
+	if newStatus == system.NotDownload && oldStatus == system.UpgradeErr {
+		return false
+	}
 	return true
 }
 
