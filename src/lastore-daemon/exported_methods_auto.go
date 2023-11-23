@@ -236,6 +236,11 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"id"},
 		},
 		{
+			Name:   "SetP2PUpdateEnable",
+			Fn:     v.SetP2PUpdateEnable,
+			InArgs: []string{"enable"},
+		},
+		{
 			Name:   "SetUpdateNotify",
 			Fn:     v.SetUpdateNotify,
 			InArgs: []string{"enable"},

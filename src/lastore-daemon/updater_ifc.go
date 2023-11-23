@@ -233,3 +233,12 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 	}
 	return nil
 }
+
+func (u *Updater) SetP2PUpdateEnable(enable bool) *dbus.Error {
+	err := u.setP2PUpdateEnable(enable)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	return nil
+}

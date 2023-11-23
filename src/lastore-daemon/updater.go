@@ -16,7 +16,12 @@ import (
 	"internal/system"
 
 	"github.com/godbus/dbus"
+	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+)
+
+const (
+	p2pService = "uos-p2p.service"
 )
 
 type ApplicationUpdateInfo struct {
@@ -45,6 +50,7 @@ type Updater struct {
 	AutoDownloadUpdates bool
 	UpdateNotify        bool
 	MirrorSource        string
+	systemdManager      systemd1.Manager
 
 	config *Config
 	// dbusutil-gen: equal=nil
@@ -68,6 +74,9 @@ type Updater struct {
 	UpdateTarget string
 
 	OfflineInfo string
+
+	P2PUpdateEnable  bool // p2p更新是否开启
+	P2PUpdateSupport bool // 是否支持p2p更新
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
@@ -84,6 +93,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		IdleDownloadConfig:          config.idleDownloadConfig,
 		DownloadSpeedLimitConfig:    config.downloadSpeedLimitConfig,
 		ClassifiedUpdatablePackages: config.classifiedUpdatablePackages,
+		systemdManager:              systemd1.NewManager(service.Conn()),
 	}
 	err := json.Unmarshal([]byte(u.IdleDownloadConfig), &u.idleDownloadConfigObj)
 	if err != nil {
@@ -92,6 +102,29 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	err = json.Unmarshal([]byte(u.DownloadSpeedLimitConfig), &u.downloadSpeedLimitConfigObj)
 	if err != nil {
 		logger.Warning(err)
+	}
+	state, err := u.systemdManager.GetUnitFileState(0, p2pService)
+	if err != nil {
+		logger.Warning("get p2p service state err:", err)
+		u.P2PUpdateEnable = false
+		u.P2PUpdateSupport = false
+	} else {
+		u.P2PUpdateEnable = false
+		u.P2PUpdateSupport = true
+		if state == "enabled" {
+			unit, err := u.getP2PUnit()
+			if err != nil {
+				logger.Warning("get p2p unit err:", err)
+			} else {
+				value, err := unit.Unit().ActiveState().Get(0)
+				if err != nil {
+					logger.Warning("get p2p SubState err:", err)
+				}
+				if value == "active" {
+					u.P2PUpdateEnable = true
+				}
+			}
+		}
 	}
 	return u
 }
@@ -248,5 +281,48 @@ func (u *Updater) SetOfflineInfo(res OfflineCheckResult) error {
 		return err
 	}
 	u.setPropOfflineInfo(string(content))
+	return nil
+}
+
+func (u *Updater) getP2PUnit() (systemd1.Unit, error) {
+	p2pPath, err := u.systemdManager.GetUnit(0, p2pService)
+	if err != nil {
+		return nil, err
+	}
+	unit, err := systemd1.NewUnit(u.service.Conn(), p2pPath)
+	if err != nil {
+		return nil, err
+	}
+	return unit, nil
+}
+
+func (u *Updater) setP2PUpdateEnable(enable bool) error {
+	if !u.P2PUpdateSupport {
+		return fmt.Errorf("unsupport p2p update")
+	}
+	if u.P2PUpdateEnable == enable {
+		return nil
+	}
+	files := []string{p2pService}
+	if enable {
+		_, _, err := u.systemdManager.EnableUnitFiles(0, files, false, true)
+		if err != nil {
+			return fmt.Errorf("enable p2p UnitFile err:%v", err)
+		}
+		_, err = u.systemdManager.StartUnit(0, p2pService, "replace")
+		if err != nil {
+			return fmt.Errorf("p2p StartUnit err:%v", err)
+		}
+	} else {
+		_, err := u.systemdManager.DisableUnitFiles(0, files, false)
+		if err != nil {
+			return fmt.Errorf("disable p2p UnitFile err:%v", err)
+		}
+		_, err = u.systemdManager.StopUnit(0, p2pService, "replace")
+		if err != nil {
+			return fmt.Errorf("p2p StopUnit err:%v", err)
+		}
+	}
+	u.setPropP2PUpdateEnable(enable)
 	return nil
 }
