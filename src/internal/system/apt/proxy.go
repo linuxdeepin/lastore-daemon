@@ -421,7 +421,7 @@ func ListInstallPackages(packages []string) ([]string, error) {
 
 var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
 var _installRegex2 = regexp.MustCompile(`Inst (.*) \(([^ ]+) .*\)`)
-var _removeRegex = regexp.MustCompile(`Remv (.*) \[(.*)]`)
+var _removeRegex = regexp.MustCompile(`Remv (\S+)\s\[([^]]+)]`)
 
 // GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
 func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
@@ -454,10 +454,10 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 		allLine := strings.Split(outBuf.String(), "\n")
 		for _, line := range allLine {
 			matches := _installRegex.FindStringSubmatch(line)
-			if len(matches) < 2 {
+			if len(matches) < 3 {
 				matches = _installRegex2.FindStringSubmatch(line)
 			}
-			if len(matches) > 2 {
+			if len(matches) >= 3 {
 				allInstallPackages[matches[1]] = system.PackageInfo{
 					Name:    matches[1],
 					Version: matches[2],
@@ -465,7 +465,7 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 				}
 			} else {
 				removeMatches := _removeRegex.FindStringSubmatch(line)
-				if len(removeMatches) > 1 {
+				if len(removeMatches) >= 3 {
 					removePackages[removeMatches[1]] = system.PackageInfo{
 						Name:    removeMatches[1],
 						Version: removeMatches[2],
