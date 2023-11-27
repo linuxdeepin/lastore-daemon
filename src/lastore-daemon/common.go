@@ -143,6 +143,10 @@ func makeEnvironWithSender(m *Manager, sender dbus.Sender) (map[string]string, e
 	if err != nil {
 		return nil, err
 	}
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		return nil, err
+	}
 	p := procfs.Process(pid)
 	envVars, err := p.Environ()
 	if err != nil {
@@ -151,6 +155,7 @@ func makeEnvironWithSender(m *Manager, sender dbus.Sender) (map[string]string, e
 		environ["DISPLAY"] = envVars.Get("DISPLAY")
 		environ["XAUTHORITY"] = envVars.Get("XAUTHORITY")
 		environ["DEEPIN_LASTORE_LANG"] = getLang(envVars)
+		environ["PACKAGEKIT_CALLER_UID"] = fmt.Sprint(uid)
 	}
 	return environ, nil
 }
