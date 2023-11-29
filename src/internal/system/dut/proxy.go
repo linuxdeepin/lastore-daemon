@@ -199,7 +199,7 @@ func genPkgList(pkgMap map[string]system.PackageInfo) []system.PackageInfo {
 		info := system.PackageInfo{
 			Name:    v.Name,
 			Version: v.Version,
-			Need:    "strict",
+			Need:    skipVersion,
 		}
 		list = append(list, info)
 	}

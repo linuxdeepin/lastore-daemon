@@ -428,12 +428,14 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 	allInstallPackages := make(map[string]system.PackageInfo)
 	removePackages := make(map[string]system.PackageInfo)
 	args := []string{
-		"install", "-s",
+		"dist-upgrade", "-s",
 		"-c", system.LastoreAptV2CommonConfPath,
 		"-o", "Debug::NoLocking=1",
 	}
 	args = append(args, option...)
-	args = append(args, packages...)
+	if len(packages) > 0 {
+		args = append(args, packages...)
+	}
 	cmd := exec.Command("apt-get", args...) // #nosec G204
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
@@ -461,7 +463,7 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 				allInstallPackages[matches[1]] = system.PackageInfo{
 					Name:    matches[1],
 					Version: matches[2],
-					Need:    "strict",
+					Need:    "skipversion",
 				}
 			} else {
 				removeMatches := _removeRegex.FindStringSubmatch(line)
@@ -469,7 +471,7 @@ func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string)
 					removePackages[removeMatches[1]] = system.PackageInfo{
 						Name:    removeMatches[1],
 						Version: removeMatches[2],
-						Need:    "strict",
+						Need:    "skipversion",
 					}
 				}
 			}

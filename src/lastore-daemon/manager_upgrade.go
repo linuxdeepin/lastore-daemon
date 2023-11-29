@@ -599,17 +599,44 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			pkgMap = m.allUpgradableInfo[mode]
 			removeMap = m.allRemovePkgInfo[mode]
 		}
-		if mode == system.SecurityUpdate {
-			uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-				"/var/cache/lastore/archives",
-				pkgMap,
-				m.allUpgradableInfo[mode], m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
+
+		corelistMap := make(map[string]system.PackageInfo)
+		if m.corelist != nil && len(m.corelist) > 0 {
+			for _, pkgName := range m.corelist {
+				corelistMap[pkgName] = system.PackageInfo{
+					Name:    pkgName,
+					Version: "",
+					Need:    "skipversion",
+				}
+			}
 		} else {
-			uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-				"/var/cache/lastore/archives",
-				pkgMap,
-				m.updatePlatform.targetCorePkgs, m.updatePlatform.selectPkgs, m.updatePlatform.baselinePkgs, removeMap, m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
+			loadCoreList := func() map[string]system.PackageInfo {
+				corelistMap := make(map[string]system.PackageInfo)
+				data, err := ioutil.ReadFile(corelistVarPath)
+				if err != nil {
+					return nil
+				}
+				var pkgList PackageList
+				err = json.Unmarshal(data, &pkgList)
+				if err != nil {
+					return nil
+				}
+				for _, pkg := range pkgList.PkgList {
+					corelistMap[pkg.PkgName] = system.PackageInfo{
+						Name:    pkg.PkgName,
+						Version: "",
+						Need:    "skipversion",
+					}
+				}
+				return nil
+			}
+			corelistMap = loadCoreList()
 		}
+		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
+			"/var/cache/lastore/archives",
+			pkgMap,
+			corelistMap, nil, nil, removeMap,
+			m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
 
 		if err != nil {
 			logger.Warning(err)

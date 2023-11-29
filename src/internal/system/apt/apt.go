@@ -5,8 +5,10 @@
 package apt
 
 import (
+	"bytes"
 	"fmt"
 	"internal/system"
+	"io/ioutil"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -244,4 +246,31 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Detail: stdErrStr,
 		}
 	}
+}
+
+func DownloadPackages(packages []string, environ map[string]string, options map[string]string) (string, error) {
+	var args = []string{}
+	for k, v := range options {
+		args = append(args, "-o", k+"="+v)
+	}
+
+	args = append(args, "-c", system.LastoreAptV2CommonConfPath)
+	args = append(args, "download")
+	args = append(args, packages...)
+	logger.Debug("downlaod package with args:", args)
+	cmd := exec.Command("apt-get", args...)
+	tmpPath, err := ioutil.TempDir("/tmp", "apt-download-")
+	if err != nil {
+		return "", err
+	}
+	cmd.Path = tmpPath
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	err = cmd.Run()
+	if err != nil {
+		return "", parseJobError(errBuf.String(), "")
+	}
+	return tmpPath, nil
 }

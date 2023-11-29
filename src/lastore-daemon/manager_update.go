@@ -17,6 +17,8 @@ import (
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/gettext"
+	"github.com/linuxdeepin/go-lib/strv"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 	debVersion "pault.ag/go/debian/version"
 )
 
@@ -57,8 +59,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				logger.Warning(err1)
 			}
 			err1 = m.updateAutoCheckSystemUnit()
-			if err != nil {
-				logger.Warning(err)
+			if err1 != nil {
+				logger.Warning(err1)
 			}
 		}
 	}()
@@ -229,8 +231,96 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	return job, nil
 }
 
+const (
+	corelistPath    = "/usr/share/core-list/corelist"
+	corelistVarPath = "/var/lib/lastore/corelist"
+	corelistPkgName = "deepin-package-list"
+)
+
+// 下载并解压corelist
+func downloadAndDecompressCorelist() (string, error) {
+	downloadPackages := []string{corelistPkgName}
+	options := map[string]string{
+		"Dir::Etc::SourceList":  system.GetCategorySourceMap()[system.SystemUpdate],
+		"Dir::Etc::SourceParts": "/dev/null",
+	}
+	downloadPkg, err := apt.DownloadPackages(downloadPackages, nil, options)
+	if err != nil {
+		// 下载失败则直接去本地目录查找
+		logger.Warningf("download %v failed:%v", downloadPackages, err)
+		return corelistPath, nil
+	}
+	// 去下载路径查找
+	files, err := ioutil.ReadDir(downloadPkg)
+	if err != nil {
+		return "", err
+	}
+	var debFile string
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), corelistPkgName) && strings.HasSuffix(file.Name(), ".deb") {
+			debFile = filepath.Join(downloadPkg, file.Name())
+			break
+		}
+	}
+	if debFile != "" {
+		tmpDir, err := ioutil.TempDir("/tmp", corelistPkgName+".XXXXXX")
+		if err != nil {
+			return "", err
+		}
+		cmd := exec.Command("dpkg-deb", "-x", debFile, tmpDir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err = cmd.Run()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(tmpDir, corelistPath), nil
+	} else {
+		return "", fmt.Errorf("corelist deb not found")
+	}
+}
+
+type Package struct {
+	PkgName string `json:"PkgName"`
+	Version string `json:"Version"`
+}
+
+type PackageList struct {
+	PkgList []Package `json:"PkgList"`
+	Version string    `json:"Version"`
+}
+
+func parseCorelist() ([]string, error) {
+	// 1. download corelist to /var/cache/lastore/archives/
+	// 2. 使用dpkg-deb解压deb得到corelist文件
+	corefile, err := downloadAndDecompressCorelist()
+	if err != nil {
+		return nil, err
+	}
+	// 将corelist 备份到/var/lib/lastore/中
+	if err != utils2.CopyFile(corefile, corelistVarPath) {
+		logger.Warning("backup coreList failed:", err)
+	}
+	// 3. 解析文件获取corelist必装列表
+	data, err := ioutil.ReadFile(corefile)
+	if err != nil {
+		return nil, err
+	}
+	var pkgList PackageList
+	err = json.Unmarshal(data, &pkgList)
+	if err != nil {
+		return nil, err
+	}
+	var pkgs []string
+	for _, pkg := range pkgList.PkgList {
+		pkgs = append(pkgs, pkg.PkgName)
+	}
+	return pkgs, nil
+}
+
 // 生成系统更新内容和安全更新内容
-func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.PackageInfo) (error, error) {
+func (m *Manager) generateUpdateInfo() (error, error) {
 	propPkgMap := make(map[string][]string) // updater的ClassifiedUpdatablePackages用
 	var systemErr error = nil
 	var securityErr error = nil
@@ -240,12 +330,25 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	var securityRemovePkgList map[string]system.PackageInfo
 	m.allUpgradableInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
 	m.allRemovePkgInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
+
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(platFormPackageList)
-		wg.Done()
-	}()
+	// 检查更新前，先下载解析corelist，获取必装清单
+	corelist, err := parseCorelist()
+
+	if err != nil {
+		systemErr = err
+	} else {
+		if !strv.Strv(corelist).Contains(corelistPkgName) {
+			corelist = append(corelist, corelistPkgName)
+		}
+		m.corelist = corelist
+		logger.Debug("generateUpdateInfo get corelist:", corelist)
+		wg.Add(1)
+		go func() {
+			systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(corelist)
+			wg.Done()
+		}()
+	}
 	wg.Add(1)
 	go func() {
 		securityInstallPkgList, securityRemovePkgList, securityErr = getSecurityUpdatePackageList()
@@ -253,6 +356,20 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	}()
 	wg.Wait()
 	if systemErr == nil && systemInstallPkgList != nil {
+		// 如果卸载列表中有corelist，则系统更新列表置空，上报日志
+		var removeCorelist []string
+		for _, pkgName := range corelist {
+			if _, ok := systemRemovePkgList[pkgName]; ok {
+				removeCorelist = append(removeCorelist, pkgName)
+			}
+		}
+		if len(removeCorelist) > 0 {
+			// 上报日志
+			m.updatePlatform.postStatusMessage(fmt.Sprintf("there was corelist remove, detail is %v:", removeCorelist))
+			// 清空系统可升级包列表
+			systemInstallPkgList = nil
+			systemRemovePkgList = nil
+		}
 		var packageList []string
 		for k, v := range systemInstallPkgList {
 			packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
@@ -279,24 +396,20 @@ func (m *Manager) generateUpdateInfo(platFormPackageList map[string]system.Packa
 	return systemErr, securityErr
 }
 
-func getSystemUpdatePackageList(platFormPackageMap map[string]system.PackageInfo) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getSystemUpdatePackageList(corelist []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	var err error
-	var localCache map[string]statusVersion
-	var repoUpgradableList []string
+	// var localCache map[string]statusVersion
 	var emulateInstallPkgList map[string]system.PackageInfo
 	var emulateRemovePkgList map[string]system.PackageInfo
 	// 获取本地deb信息
-	localCache, err = loadPkgStatusVersion()
-	if err != nil {
-		logger.Warning(err)
-		return nil, nil, err
-	}
-	for name, _ := range platFormPackageMap {
-		repoUpgradableList = append(repoUpgradableList, name)
-	}
-	logger.Info("repoUpgradableList:", repoUpgradableList)
+	// localCache, err = loadPkgStatusVersion()
+	// if err != nil {
+	// 	logger.Warning(err)
+	// 	return nil, nil, err
+	// }
+
 	// 模拟安装更新平台下发所有包(不携带版本号)，获取可升级包的版本
-	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(repoUpgradableList, []string{
+	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(corelist, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SystemUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
 		"-o", "Dir::Etc::preferences=/dev/null", // 系统更新仓库来自更新平台，为了不收本地优先级配置影响，覆盖本地优先级配置
@@ -305,42 +418,32 @@ func getSystemUpdatePackageList(platFormPackageMap map[string]system.PackageInfo
 	if err != nil {
 		return nil, nil, err
 	}
-	for _, platformPkgInfo := range platFormPackageMap {
-		repoPkgInfo, ok := emulateInstallPkgList[platformPkgInfo.Name]
-		if ok {
-			// 该包可升级，但是可升级版本小于更新平台下发版本，此时将不允许升级
-			if !compareVersionsGe(repoPkgInfo.Version, platformPkgInfo.Version) {
-				return nil, nil, fmt.Errorf("%v can not install to version %v", platformPkgInfo.Name, platformPkgInfo.Version)
-			}
-		} else {
-			// 该包不能升级，需要判断是否在本地存在高版本包
-			localPkgInfo, ok := localCache[platformPkgInfo.Name]
-			if ok {
-				// 本地有该包，但是版本小于更新平台版本
-				if !compareVersionsGe(localPkgInfo.version, repoPkgInfo.Version) {
-					return nil, nil, fmt.Errorf("local exist low version package and %v can not install to version：%v in repo", repoPkgInfo.Name, repoPkgInfo.Version)
-				}
-			} else {
-				// 本地无该包
-				return nil, nil, fmt.Errorf("local and repo not exist %v", platformPkgInfo.Name)
-			}
-		}
-	}
+	// for _, platformPkgInfo := range platFormPackageMap {
+	// 	repoPkgInfo, ok := emulateInstallPkgList[platformPkgInfo.Name]
+	// 	if ok {
+	// 		// 该包可升级，但是可升级版本小于更新平台下发版本，此时将不允许升级
+	// 		if !compareVersionsGe(repoPkgInfo.Version, platformPkgInfo.Version) {
+	// 			return nil, nil, fmt.Errorf("%v can not install to version %v", platformPkgInfo.Name, platformPkgInfo.Version)
+	// 		}
+	// 	} else {
+	// 		// 该包不能升级，需要判断是否在本地存在高版本包
+	// 		localPkgInfo, ok := localCache[platformPkgInfo.Name]
+	// 		if ok {
+	// 			// 本地有该包，但是版本小于更新平台版本
+	// 			if !compareVersionsGe(localPkgInfo.version, repoPkgInfo.Version) {
+	// 				return nil, nil, fmt.Errorf("local exist low version package and %v can not install to version：%v in repo", repoPkgInfo.Name, repoPkgInfo.Version)
+	// 			}
+	// 		} else {
+	// 			// 本地无该包
+	// 			return nil, nil, fmt.Errorf("local and repo not exist %v", platformPkgInfo.Name)
+	// 		}
+	// 	}
+	// }
 	return emulateInstallPkgList, emulateRemovePkgList, nil
 }
 
 func getSecurityUpdatePackageList() (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
-	pkgList, err := listDistUpgradePackages(system.SecurityUpdate) // 仓库检查出所有可以升级的包
-	if err != nil {
-		if os.IsNotExist(err) { // 该类型源文件不存在时
-			logger.Info(err)
-			return nil, nil, nil // 该错误无需返回
-		} else {
-			logger.Warningf("failed to list %v upgradable package %v", system.SystemUpdate.JobType(), err)
-			return nil, nil, err
-		}
-	}
-	return apt.GenOnlineUpdatePackagesByEmulateInstall(pkgList, []string{
+	return apt.GenOnlineUpdatePackagesByEmulateInstall(nil, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SecurityUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
 	})
@@ -441,7 +544,7 @@ func listDistUpgradePackages(updateType system.UpdateType) ([]string, error) {
 func (m *Manager) refreshUpdateInfos(sync bool) {
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
-		systemErr, securityErr := m.generateUpdateInfo(m.updatePlatform.GetSystemMeta())
+		systemErr, securityErr := m.generateUpdateInfo()
 		if systemErr != nil {
 			go func() {
 				m.inhibitAutoQuitCountAdd()
