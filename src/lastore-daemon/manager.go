@@ -173,7 +173,6 @@ func (m *Manager) initDSettingsChangedHandle() {
 		if bit == disableUpdate {
 			_ = m.updateTimerUnit(lastoreOnline)
 			_ = m.updateTimerUnit(lastoreAutoCheck)
-			_ = m.updateTimerUnit(watchUpdateInfo)
 		}
 	})
 }

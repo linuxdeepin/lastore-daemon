@@ -48,7 +48,6 @@ const (
 	lastoreAutoCheck         UnitName = "lastoreAutoCheck"
 	lastoreAutoUpdateToken   UnitName = "lastoreAutoUpdateToken"
 	watchOsVersion           UnitName = "watchOsVersion"
-	watchUpdateInfo          UnitName = "watchUpdateInfo"
 	lastoreAutoDownload      UnitName = "lastoreAutoDownload"
 	lastoreAbortAutoDownload UnitName = "lastoreAbortAutoDownload"
 )
@@ -72,13 +71,6 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
-		}
-		unitMap[watchUpdateInfo] = []string{
-			"--path-property=PathModified=/var/lib/lastore/update_infos.json",
-			"--property=StartLimitBurst=0",
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, UpdateInfosChanged), // 监听update_infos.json文件
 		}
 	}
 	unitMap[lastoreAutoClean] = []string{
