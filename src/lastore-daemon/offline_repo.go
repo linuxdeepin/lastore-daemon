@@ -24,12 +24,13 @@ const (
 	mountFsDir  = "/var/lib/lastore/mountfs"
 )
 
-type OfflineUpgradeType uint
+type OfflineUpgradeType int
 
 const (
-	unknown OfflineUpgradeType = iota // 同时存在两种类型时
-	offlineSystem
-	offlineCEV
+	offlineTypeError OfflineUpgradeType = -1 // 同时存在两种类型时
+	unknown          OfflineUpgradeType = 0
+	offlineSystem    OfflineUpgradeType = 1
+	offlineCEV       OfflineUpgradeType = 2
 )
 
 type Indicator func(progress float64)
@@ -52,12 +53,12 @@ func NewOfflineManager() *OfflineManager {
 	}
 }
 
-type CheckState uint
+type CheckState int
 
 const (
-	nocheck CheckState = iota
-	success
-	failed
+	nocheck CheckState = 0
+	success CheckState = 1
+	failed  CheckState = -1
 )
 
 type OfflineRepoInfo struct {
@@ -84,23 +85,23 @@ type OfflineRepoInfo struct {
 
 type OupResultInfo struct {
 	CveId             string             // CVE ID
-	oupType           OfflineUpgradeType // 离线包类型 unit类型 0 未知  1 系统仓库  2 安全补丁
-	CompletenessCheck CheckState         // 完整性检查	unit类型  0 未检查 1 检查通过 2检查不通过
-	SystemTypeCheck   CheckState         // 系统版本检查  unit类型  0 未检查 1 检查通过 2检查不通过
-	ArchCheck         CheckState         // 架构检查		unit类型  0 未检查 1 检查通过 2检查不通过
+	oupType           OfflineUpgradeType // 离线包类型   int 类型 0 未知  1 系统仓库  2 安全补丁
+	CompletenessCheck CheckState         // 完整性检查	int 类型  0 未检查 1 检查通过 -1 检查不通过
+	SystemTypeCheck   CheckState         // 系统版本检查  int 类型  0 未检查 1 检查通过 -1 检查不通过
+	ArchCheck         CheckState         // 架构检查		int 类型  0 未检查 1 检查通过 -1 检查不通过
 }
 
 type OfflineCheckResult struct {
 	// 检查oup包即可完成下面5项数据的补充
-	OfflineUpgradeType OfflineUpgradeType // 离线包类型 unit类型 0 未知  1 系统仓库  2 安全补丁
+	OfflineUpgradeType OfflineUpgradeType // 离线包类型 int 类型 -1 错误 0 未知  1 系统仓库  2 安全补丁
 	OupCount           int
-	OupCheckState      CheckState // 整体检查是否通过 unit类型  0 未检查 1 检查通过 2检查不通过
+	OupCheckState      CheckState // 整体检查是否通过 int 类型  0 未检查 1 检查通过 -1 检查不通过
 	CheckResultInfo    map[string]*OupResultInfo
-	DiskCheckState     CheckState // 解压空间是否满足 unit类型  0 未检查 1 检查通过 2检查不通过
+	DiskCheckState     CheckState // 解压空间是否满足 int 类型  0 未检查 1 检查通过 -1 检查不通过
 
 	// 建立离线仓库检查更新后补充下面两项数据
 	DebCount         int        // apt update后,获取可更新包的数量
-	SystemCheckState CheckState // apt update后,通过系统更新工具做环境检查 unit类型  0 未检查 1 检查通过 2检查不通过
+	SystemCheckState CheckState // apt update后,通过系统更新工具做环境检查 int 类型  0 未检查 1 检查通过 -1 检查不通过
 }
 
 // PrepareUpdateOffline  离线检查更新之前触发：需要完成缓存清理、解压、验签、挂载
@@ -138,14 +139,10 @@ func (m *OfflineManager) PrepareUpdateOffline(paths []string, indicator Indicato
 			return err
 		}
 		m.checkResult.DiskCheckState = success
-		info, err := getInfo(unzipPath)
-		if err != nil {
-			return err
-		}
-		m.localOupInfoMap[filepath.Base(path)] = info
 
 		// 进行完整性检查、系统版本检查、架构检查
 		var checkInfo OupResultInfo
+		var info OfflineRepoInfo
 		for {
 			err = verify(unzipPath)
 			if err != nil {
@@ -154,7 +151,11 @@ func (m *OfflineManager) PrepareUpdateOffline(paths []string, indicator Indicato
 			} else {
 				checkInfo.CompletenessCheck = success
 			}
-
+			info, err = getInfo(unzipPath)
+			if err != nil {
+				return err
+			}
+			m.localOupInfoMap[filepath.Base(path)] = info
 			if info.Type == offlineSystem {
 				hasSystemOup = true
 				m.checkResult.OfflineUpgradeType = offlineSystem
@@ -165,7 +166,7 @@ func (m *OfflineManager) PrepareUpdateOffline(paths []string, indicator Indicato
 			}
 			if hasCVEOup && hasSystemOup {
 				err = errors.New("multiple oup file type")
-				m.checkResult.OfflineUpgradeType = unknown
+				m.checkResult.OfflineUpgradeType = offlineTypeError
 				break
 			}
 
