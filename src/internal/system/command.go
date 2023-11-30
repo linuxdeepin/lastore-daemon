@@ -136,13 +136,25 @@ func (c *Command) atExit() {
 		})
 	case ExitFailure:
 		err := c.ParseJobError(c.Stderr.String(), c.Stdout.String())
-		c.Indicator(JobProgressInfo{
-			JobId:      c.JobId,
-			Status:     FailedStatus,
-			Progress:   -1.0,
-			Cancelable: true,
-			Error:      err,
-		})
+		if err != nil {
+			c.Indicator(JobProgressInfo{
+				JobId:      c.JobId,
+				Status:     FailedStatus,
+				Progress:   -1.0,
+				Cancelable: true,
+				Error:      err,
+			})
+		} else {
+			// 解析错误后，确定错误为非阻塞性错误，那么认为是成功
+			c.Indicator(JobProgressInfo{
+				JobId:      c.JobId,
+				Status:     SucceedStatus,
+				Progress:   1.0,
+				Cancelable: false,
+				Error:      nil,
+			})
+		}
+
 	case ExitPause:
 		c.Indicator(JobProgressInfo{
 			JobId:      c.JobId,

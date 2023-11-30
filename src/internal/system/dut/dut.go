@@ -113,7 +113,14 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Detail: err.Error(),
 		}
 	}
-	if content.Code != ChkSuccess {
+	switch content.Code {
+	case ChkSuccess:
+		logger.Infof("job success output:%v", stdOutStr)
+		return nil
+	case ChkNonblockError:
+		logger.Warningf("job error ChkNonblockError:%v", stdErrStr)
+		return nil
+	default:
 		for k, v := range GetErrorBitMap() {
 			if content.Ext.Code&ExtCode(v) != 0 {
 				logger.Warningf("short error msg:%v", strings.Join(content.Ext.Msg, ";"))
@@ -130,7 +137,6 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Detail: strings.Join(content.Ext.Msg, ";"),
 		}
 	}
-	return nil
 }
 func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	logger.Info("progress message form dut is:", line)
