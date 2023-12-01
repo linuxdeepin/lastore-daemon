@@ -198,10 +198,25 @@ func canTransition(oldStatus, newStatus system.UpdateModeStatus) bool {
 	if newStatus == system.NotDownload && oldStatus == system.Upgraded {
 		return false
 	}
+	if newStatus == system.IsDownloading && oldStatus == system.Upgraded {
+		return false
+	}
 	if newStatus == system.NotDownload && oldStatus == system.WaitRunUpgrade {
 		return false
 	}
+	if newStatus == system.IsDownloading && oldStatus == system.WaitRunUpgrade {
+		return false
+	}
+	if newStatus == system.IsDownloading && oldStatus == system.UpgradeErr {
+		return false
+	}
 	if newStatus == system.NotDownload && oldStatus == system.UpgradeErr {
+		return false
+	}
+	if newStatus == system.NotDownload && oldStatus == system.Upgrading {
+		return false
+	}
+	if newStatus == system.IsDownloading && oldStatus == system.Upgrading {
 		return false
 	}
 	return true
