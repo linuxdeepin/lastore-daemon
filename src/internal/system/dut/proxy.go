@@ -6,6 +6,7 @@ import (
 	"internal/system"
 	"internal/system/apt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -19,6 +20,13 @@ type DutSystem struct {
 
 func NewSystem(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
 	aptImpl := apt.New(systemSourceList, nonUnknownList, otherList)
+	if !utils.IsFileExist(system.PlatFormSourceFile) {
+		file, err := os.Create(system.PlatFormSourceFile)
+		if err != nil {
+			logger.Warning("creating file:", err)
+		}
+		defer file.Close()
+	}
 	return &DutSystem{
 		APTSystem: aptImpl,
 	}
