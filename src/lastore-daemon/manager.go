@@ -82,7 +82,7 @@ type Manager struct {
 	allUpgradableInfo map[system.UpdateType]map[string]system.PackageInfo
 	allRemovePkgInfo  map[system.UpdateType]map[string]system.PackageInfo
 
-	corelist []string
+	coreList []string
 }
 
 /*

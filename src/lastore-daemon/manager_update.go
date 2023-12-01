@@ -232,14 +232,14 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 }
 
 const (
-	corelistPath    = "/usr/share/core-list/corelist"
-	corelistVarPath = "/var/lib/lastore/corelist"
-	corelistPkgName = "deepin-package-list"
+	coreListPath    = "/usr/share/core-list/corelist"
+	coreListVarPath = "/var/lib/lastore/corelist"
+	coreListPkgName = "deepin-package-list"
 )
 
-// 下载并解压corelist
-func downloadAndDecompressCorelist() (string, error) {
-	downloadPackages := []string{corelistPkgName}
+// 下载并解压coreList
+func downloadAndDecompressCoreList() (string, error) {
+	downloadPackages := []string{coreListPkgName}
 	options := map[string]string{
 		"Dir::Etc::SourceList":  system.GetCategorySourceMap()[system.SystemUpdate],
 		"Dir::Etc::SourceParts": "/dev/null",
@@ -248,7 +248,7 @@ func downloadAndDecompressCorelist() (string, error) {
 	if err != nil {
 		// 下载失败则直接去本地目录查找
 		logger.Warningf("download %v failed:%v", downloadPackages, err)
-		return corelistPath, nil
+		return coreListPath, nil
 	}
 	// 去下载路径查找
 	files, err := ioutil.ReadDir(downloadPkg)
@@ -257,13 +257,13 @@ func downloadAndDecompressCorelist() (string, error) {
 	}
 	var debFile string
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), corelistPkgName) && strings.HasSuffix(file.Name(), ".deb") {
+		if strings.HasPrefix(file.Name(), coreListPkgName) && strings.HasSuffix(file.Name(), ".deb") {
 			debFile = filepath.Join(downloadPkg, file.Name())
 			break
 		}
 	}
 	if debFile != "" {
-		tmpDir, err := ioutil.TempDir("/tmp", corelistPkgName+".XXXXXX")
+		tmpDir, err := ioutil.TempDir("/tmp", coreListPkgName+".XXXXXX")
 		if err != nil {
 			return "", err
 		}
@@ -275,9 +275,9 @@ func downloadAndDecompressCorelist() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return filepath.Join(tmpDir, corelistPath), nil
+		return filepath.Join(tmpDir, coreListPath), nil
 	} else {
-		return "", fmt.Errorf("corelist deb not found")
+		return "", fmt.Errorf("coreList deb not found")
 	}
 }
 
@@ -291,18 +291,18 @@ type PackageList struct {
 	Version string    `json:"Version"`
 }
 
-func parseCorelist() ([]string, error) {
-	// 1. download corelist to /var/cache/lastore/archives/
-	// 2. 使用dpkg-deb解压deb得到corelist文件
-	corefile, err := downloadAndDecompressCorelist()
+func parseCoreList() ([]string, error) {
+	// 1. download coreList to /var/cache/lastore/archives/
+	// 2. 使用dpkg-deb解压deb得到coreList文件
+	corefile, err := downloadAndDecompressCoreList()
 	if err != nil {
 		return nil, err
 	}
-	// 将corelist 备份到/var/lib/lastore/中
-	if err != utils2.CopyFile(corefile, corelistVarPath) {
+	// 将coreList 备份到/var/lib/lastore/中
+	if err != utils2.CopyFile(corefile, coreListVarPath) {
 		logger.Warning("backup coreList failed:", err)
 	}
-	// 3. 解析文件获取corelist必装列表
+	// 3. 解析文件获取coreList必装列表
 	data, err := ioutil.ReadFile(corefile)
 	if err != nil {
 		return nil, err
@@ -332,20 +332,20 @@ func (m *Manager) generateUpdateInfo() (error, error) {
 	m.allRemovePkgInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
 
 	var wg sync.WaitGroup
-	// 检查更新前，先下载解析corelist，获取必装清单
-	corelist, err := parseCorelist()
+	// 检查更新前，先下载解析coreList，获取必装清单
+	coreList, err := parseCoreList()
 
 	if err != nil {
 		systemErr = err
 	} else {
-		if !strv.Strv(corelist).Contains(corelistPkgName) {
-			corelist = append(corelist, corelistPkgName)
+		if !strv.Strv(coreList).Contains(coreListPkgName) {
+			coreList = append(coreList, coreListPkgName)
 		}
-		m.corelist = corelist
-		logger.Debug("generateUpdateInfo get corelist:", corelist)
+		m.coreList = coreList
+		logger.Debug("generateUpdateInfo get coreList:", coreList)
 		wg.Add(1)
 		go func() {
-			systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(corelist)
+			systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(coreList)
 			wg.Done()
 		}()
 	}
@@ -356,16 +356,16 @@ func (m *Manager) generateUpdateInfo() (error, error) {
 	}()
 	wg.Wait()
 	if systemErr == nil && systemInstallPkgList != nil {
-		// 如果卸载列表中有corelist，则系统更新列表置空，上报日志
-		var removeCorelist []string
-		for _, pkgName := range corelist {
+		// 如果卸载列表中有coreList，则系统更新列表置空，上报日志
+		var removeCoreList []string
+		for _, pkgName := range coreList {
 			if _, ok := systemRemovePkgList[pkgName]; ok {
-				removeCorelist = append(removeCorelist, pkgName)
+				removeCoreList = append(removeCoreList, pkgName)
 			}
 		}
-		if len(removeCorelist) > 0 {
+		if len(removeCoreList) > 0 {
 			// 上报日志
-			m.updatePlatform.postStatusMessage(fmt.Sprintf("there was corelist remove, detail is %v:", removeCorelist))
+			m.updatePlatform.postStatusMessage(fmt.Sprintf("there was coreList remove, detail is %v:", removeCoreList))
 			// 清空系统可升级包列表
 			systemInstallPkgList = nil
 			systemRemovePkgList = nil
@@ -396,7 +396,7 @@ func (m *Manager) generateUpdateInfo() (error, error) {
 	return systemErr, securityErr
 }
 
-func getSystemUpdatePackageList(corelist []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getSystemUpdatePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	var err error
 	// var localCache map[string]statusVersion
 	var emulateInstallPkgList map[string]system.PackageInfo
@@ -409,7 +409,7 @@ func getSystemUpdatePackageList(corelist []string) (map[string]system.PackageInf
 	// }
 
 	// 模拟安装更新平台下发所有包(不携带版本号)，获取可升级包的版本
-	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(corelist, []string{
+	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(coreList, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SystemUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
 		"-o", "Dir::Etc::preferences=/dev/null", // 系统更新仓库来自更新平台，为了不收本地优先级配置影响，覆盖本地优先级配置

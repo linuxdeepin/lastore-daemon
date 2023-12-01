@@ -600,10 +600,10 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			removeMap = m.allRemovePkgInfo[mode]
 		}
 
-		corelistMap := make(map[string]system.PackageInfo)
-		if m.corelist != nil && len(m.corelist) > 0 {
-			for _, pkgName := range m.corelist {
-				corelistMap[pkgName] = system.PackageInfo{
+		coreListMap := make(map[string]system.PackageInfo)
+		if m.coreList != nil && len(m.coreList) > 0 {
+			for _, pkgName := range m.coreList {
+				coreListMap[pkgName] = system.PackageInfo{
 					Name:    pkgName,
 					Version: "",
 					Need:    "skipversion",
@@ -611,8 +611,8 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			}
 		} else {
 			loadCoreList := func() map[string]system.PackageInfo {
-				corelistMap := make(map[string]system.PackageInfo)
-				data, err := ioutil.ReadFile(corelistVarPath)
+				coreListMap := make(map[string]system.PackageInfo)
+				data, err := ioutil.ReadFile(coreListVarPath)
 				if err != nil {
 					return nil
 				}
@@ -622,7 +622,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 					return nil
 				}
 				for _, pkg := range pkgList.PkgList {
-					corelistMap[pkg.PkgName] = system.PackageInfo{
+					coreListMap[pkg.PkgName] = system.PackageInfo{
 						Name:    pkg.PkgName,
 						Version: "",
 						Need:    "skipversion",
@@ -630,12 +630,12 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 				}
 				return nil
 			}
-			corelistMap = loadCoreList()
+			coreListMap = loadCoreList()
 		}
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
 			"/var/cache/lastore/archives",
 			pkgMap,
-			corelistMap, nil, nil, removeMap,
+			coreListMap, nil, nil, removeMap,
 			m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
 
 		if err != nil {
