@@ -268,6 +268,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		logger.Info(JobExistError)
 		return job, nil
 	}
+	job.retry = 0
 	// 笔记本电池电量监听
 	m.handleSysPowerChanged(job)
 	uuid, err = m.prepareDutUpgrade(job, mode)
