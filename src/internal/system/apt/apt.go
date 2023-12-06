@@ -263,7 +263,7 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 	if err != nil {
 		return "", err
 	}
-	cmd.Path = tmpPath
+	cmd.Dir = tmpPath
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
