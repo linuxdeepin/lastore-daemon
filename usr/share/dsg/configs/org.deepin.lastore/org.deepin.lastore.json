@@ -344,6 +344,17 @@
       "description": "The status of each updated item",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "platform-update":{
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "PlatformUpdate",
+      "description": "The switch of using the platform to update",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }

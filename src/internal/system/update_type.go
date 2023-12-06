@@ -87,10 +87,20 @@ const (
 	OfflineSourceFile       = "/var/lib/lastore/offline.list"        // 在offline_repo.go 中的 UpdateOfflineSourceFile 更新
 )
 
+var SystemUpdateSource string = SoftLinkSystemSourceDir
+
+func SetSystemUpdate(platform bool) {
+	if platform {
+		SystemUpdateSource = PlatFormSourceFile
+	} else {
+		SystemUpdateSource = SoftLinkSystemSourceDir
+	}
+}
+
 // GetCategorySourceMap 缺省更新类型与对应仓库的map
 func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
-		SystemUpdate:      PlatFormSourceFile,
+		SystemUpdate:      SystemUpdateSource,
 		AppStoreUpdate:    AppStoreSourceFile,
 		SecurityUpdate:    SecuritySourceFile,
 		UnknownUpdate:     UnknownSourceDir,

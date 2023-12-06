@@ -192,19 +192,29 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
 				err = m.updatePlatform.genUpdatePolicyByToken()
 				if err != nil {
-					job.retry = 0
-					return &system.JobError{
-						Type:   system.ErrorPlatformUnreachable,
-						Detail: "failed to get update policy by token" + err.Error(),
+					if m.config.platformUpdate {
+						job.retry = 0
+						return &system.JobError{
+							Type:   system.ErrorPlatformUnreachable,
+							Detail: "failed to get update policy by token" + err.Error(),
+						}
+					} else {
+						logger.Warning("updatePlatform gen token failed", err)
+						return nil
 					}
 				}
+
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
 				if err != nil {
 					logger.Warning(err)
-					job.retry = 0
-					return &system.JobError{
-						Type:   system.ErrorPlatformUnreachable,
-						Detail: "failed to get update info by update platform" + err.Error(),
+					if m.config.platformUpdate {
+						job.retry = 0
+						return &system.JobError{
+							Type:   system.ErrorPlatformUnreachable,
+							Detail: "failed to get update info by update platform" + err.Error(),
+						}
+					} else {
+						return nil
 					}
 				}
 				m.updater.setPropUpdateTarget(m.updatePlatform.getUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
@@ -240,9 +250,20 @@ const (
 // 下载并解压coreList
 func downloadAndDecompressCoreList() (string, error) {
 	downloadPackages := []string{coreListPkgName}
-	options := map[string]string{
-		"Dir::Etc::SourceList":  system.GetCategorySourceMap()[system.SystemUpdate],
-		"Dir::Etc::SourceParts": "/dev/null",
+	systemSource := system.GetCategorySourceMap()[system.SystemUpdate]
+	var options map[string]string
+	if info, err := os.Stat(systemSource); err == nil {
+		if info.IsDir() {
+			options = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": systemSource,
+			}
+		} else {
+			options = map[string]string{
+				"Dir::Etc::SourceList":  systemSource,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
 	}
 	downloadPkg, err := apt.DownloadPackages(downloadPackages, nil, options)
 	if err != nil {
@@ -409,12 +430,25 @@ func getSystemUpdatePackageList(coreList []string) (map[string]system.PackageInf
 	// }
 
 	// 模拟安装更新平台下发所有包(不携带版本号)，获取可升级包的版本
-	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(coreList, []string{
-		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SystemUpdate]),
-		"-o", "Dir::Etc::SourceParts=/dev/null",
-		"-o", "Dir::Etc::preferences=/dev/null", // 系统更新仓库来自更新平台，为了不收本地优先级配置影响，覆盖本地优先级配置
-		"-o", "Dir::Etc::PreferencesParts=/dev/null",
-	})
+	systemSource := system.GetCategorySourceMap()[system.SystemUpdate]
+	var options []string
+	if info, err := os.Stat(systemSource); err == nil {
+		if info.IsDir() {
+			options = []string{
+				"-o", "Dir::Etc::sourcelist=/dev/null",
+				"-o", fmt.Sprintf("Dir::Etc::SourceParts=%v", systemSource),
+			}
+		} else {
+			options = []string{
+				"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", systemSource),
+				"-o", "Dir::Etc::SourceParts=/dev/null",
+				"-o", "Dir::Etc::preferences=/dev/null", // 系统更新仓库来自更新平台，为了不收本地优先级配置影响，覆盖本地优先级配置
+				"-o", "Dir::Etc::PreferencesParts=/dev/null",
+			}
+		}
+	}
+
+	emulateInstallPkgList, emulateRemovePkgList, err = apt.GenOnlineUpdatePackagesByEmulateInstall(coreList, options)
 	if err != nil {
 		return nil, nil, err
 	}

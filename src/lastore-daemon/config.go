@@ -67,6 +67,7 @@ type Config struct {
 	downloadSpeedLimitConfig string
 	lastoreDaemonStatus      lastoreDaemonStatus
 	updateStatus             string
+	platformUpdate           bool
 
 	classifiedUpdatablePackages map[string][]string
 	onlineCache                 string
@@ -142,6 +143,7 @@ const (
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
+	dSettingsKeyPlatformUpdate                       = "platform-update"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -425,6 +427,13 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.updateStatus = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUpdate)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.platformUpdate = v.Value().(bool)
 	}
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
 	content, err := ioutil.ReadFile(classifiedCachePath)

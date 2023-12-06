@@ -74,6 +74,7 @@ func main() {
 
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 	aptImpl := dut.NewSystem(config.systemSourceList, config.nonUnknownList, config.otherSourceList)
+	system.SetSystemUpdate(config.platformUpdate) // 设置是否通过平台更新
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, aptImpl, config)

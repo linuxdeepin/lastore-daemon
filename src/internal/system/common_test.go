@@ -22,10 +22,15 @@ func TestUpdateType_JobType(t *testing.T) {
 }
 
 func Test_GetCategorySourceMap(t *testing.T) {
+	SetSystemUpdate(true)
 	sourceMap := GetCategorySourceMap()
 	assert.Equal(t, PlatFormSourceFile, sourceMap[SystemUpdate])
 	assert.Equal(t, SecuritySourceFile, sourceMap[SecurityUpdate])
 	assert.Equal(t, UnknownSourceDir, sourceMap[UnknownUpdate])
+
+	SetSystemUpdate(false)
+	sourceMap = GetCategorySourceMap()
+	assert.Equal(t, SoftLinkSystemSourceDir, sourceMap[SystemUpdate])
 }
 
 func Test_getGrubTitleByPrefix(t *testing.T) {
