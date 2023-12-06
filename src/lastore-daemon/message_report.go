@@ -77,7 +77,7 @@ const (
 func newUpdatePlatformManager(c *Config, agents *userAgentMap) *UpdatePlatformManager {
 	platformUrl := os.Getenv("UPDATE_PLATFORM_URL")
 	if len(platformUrl) == 0 {
-		platformUrl = "https://update-platform-pre.uniontech.com"
+		platformUrl = "https://update-platform.uniontech.com"
 	}
 
 	if !utils.IsFileExist(cacheVersion) {
