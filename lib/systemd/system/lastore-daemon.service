@@ -9,3 +9,6 @@ BusName=com.deepin.lastore
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
 StandardOutput=null
 StandardError=null
+
+[Install]
+WantedBy=multi-user.target
