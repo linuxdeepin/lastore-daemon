@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"internal/system"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -115,6 +116,15 @@ func archCheck(info OfflineRepoInfo) error {
 	return nil
 }
 
+func getOupType(info OfflineRepoInfo) (OfflineUpgradeType, error) {
+	switch info.Type {
+	case offlineSystem, offlineCEV, toBType:
+		return info.Type, nil
+	default:
+		return unknownType, errors.New("")
+	}
+}
+
 func mount(dir string) (string, error) {
 	fsPath := filepath.Join(dir, "repo.sfs")
 	mountDir := filepath.Join(mountFsDir, filepath.Base(dir))
@@ -137,4 +147,13 @@ func mount(dir string) (string, error) {
 func isMountPoint(path string) bool {
 	err := exec.Command("mountpoint", path).Run()
 	return err == nil
+}
+
+// repos: 离线仓库地址列表 单个地址eg:deb [trusted=yes] file:///home/lee/patch/temp/ eagle main
+func updateOfflineSourceFile(localOupRepoPaths []string) error {
+	var repos []string
+	for _, dir := range localOupRepoPaths {
+		repos = append(repos, fmt.Sprintf("deb [trusted=yes] file://%v/ eagle main contrib non-free", dir))
+	}
+	return ioutil.WriteFile(system.GetCategorySourceMap()[system.OfflineUpdate], []byte(strings.Join(repos, "\n")), 0644)
 }

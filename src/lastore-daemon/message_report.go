@@ -539,9 +539,11 @@ func getResponseData(response *http.Response, reqType requestType) (json.RawMess
 		msg := &tokenMessage{}
 		err = json.Unmarshal(respData, msg)
 		if err != nil {
+			logger.Warningf("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 			return nil, fmt.Errorf("%v failed to Unmarshal respData to tokenMessage: %v ", reqType.string(), err.Error())
 		}
 		if !msg.Result {
+			logger.Warningf("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 			errorMsg := &tokenErrorMessage{}
 			err = json.Unmarshal(respData, errorMsg)
 			if err != nil {
