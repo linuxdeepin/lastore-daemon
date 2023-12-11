@@ -45,9 +45,16 @@ func newGrubManager(sysBus *dbus.Conn, loop *dbusutil.SignalLoop) *grubManager {
 // 下次启动默认进入第一个入口启动
 func (m *grubManager) createTempGrubEntry() error {
 	// loongarch 将GRUB引导加载程序安装到硬盘的引导扇区
-	err := exec.Command("grub-install").Run()
+	arch, err := getArchInfo()
 	if err != nil {
-		return err
+		logger.Warning(err)
+	} else {
+		if arch == "loongarch64" {
+			err = exec.Command("grub-install").Run()
+			if err != nil {
+				return err
+			}
+		}
 	}
 	err = exec.Command("grub-reboot", "0").Run()
 	if err != nil {
