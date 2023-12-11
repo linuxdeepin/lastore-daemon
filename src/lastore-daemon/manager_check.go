@@ -115,6 +115,11 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				if err != nil {
 					logger.Warning(err)
 				}
+				// 第一次检查成功后，修改状态，防止dde-session-daemon启动后发出错误通知。第二次检查无论成功或失败，都会通知给用户，如果无法进入桌面，用户手动重启回滚，那么也无需在回滚界面提示用户。
+				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
+				if err != nil {
+					logger.Warning(err)
+				}
 			}
 			if checkOrder == secondCheck {
 				// TODO 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置，lastore 状态修改为ready
@@ -123,10 +128,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					logger.Warning(err)
 				}
 				err = m.grub.changeGrubDefaultEntry(normalBootEntry)
-				if err != nil {
-					logger.Warning(err)
-				}
-				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
 				if err != nil {
 					logger.Warning(err)
 				}
