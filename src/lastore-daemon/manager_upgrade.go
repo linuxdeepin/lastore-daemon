@@ -664,7 +664,7 @@ func (m *Manager) mergePackages(repo1PkgMap, repo2PkgMap map[string]system.Packa
 		sysInfo, ok := res[name]
 		if ok {
 			// 当两个仓库存在相同包，留版本高的包
-			if compareVersionsGe(secInfo.Version, sysInfo.Name) {
+			if compareVersionsGe(secInfo.Version, sysInfo.Version) {
 				res[name] = secInfo
 			}
 		} else {
