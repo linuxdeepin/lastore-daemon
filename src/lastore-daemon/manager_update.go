@@ -17,7 +17,6 @@ import (
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/gettext"
-	"github.com/linuxdeepin/go-lib/strv"
 	utils2 "github.com/linuxdeepin/go-lib/utils"
 	debVersion "pault.ag/go/debian/version"
 )
@@ -320,7 +319,8 @@ func parseCoreList() ([]string, error) {
 		return nil, err
 	}
 	// 将coreList 备份到/var/lib/lastore/中
-	if err != utils2.CopyFile(corefile, coreListVarPath) {
+	err = utils2.CopyFile(corefile, coreListVarPath)
+	if err != nil {
 		logger.Warning("backup coreList failed:", err)
 	}
 	// 3. 解析文件获取coreList必装列表
@@ -359,9 +359,6 @@ func (m *Manager) generateUpdateInfo() (error, error) {
 	if err != nil {
 		systemErr = err
 	} else {
-		if !strv.Strv(coreList).Contains(coreListPkgName) {
-			coreList = append(coreList, coreListPkgName)
-		}
 		m.coreList = coreList
 		logger.Debug("generateUpdateInfo get coreList:", coreList)
 		wg.Add(1)
