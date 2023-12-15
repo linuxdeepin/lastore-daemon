@@ -72,20 +72,18 @@ func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[stri
 }
 
 func checkSystemDependsError() error {
+	err := apt.CheckPkgSystemError(false)
+	if err != nil {
+		logger.Warningf("apt-get check failed:%v", err)
+		return err
+	}
 	cmd := exec.Command("deepin-system-fixpkg", "check")
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
-	err := cmd.Run()
+	err = cmd.Run()
 	if err == nil {
-		err = apt.CheckPkgSystemError(false)
-		if err != nil {
-			return &system.JobError{
-				Type:   system.ErrorUnknown,
-				Detail: err.Error(),
-			}
-		}
 		return nil
 	}
 	return parsePkgSystemError(errBuf.String(), outBuf.String())
