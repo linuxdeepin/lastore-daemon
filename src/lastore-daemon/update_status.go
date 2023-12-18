@@ -401,7 +401,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 			defer wg.Done()
 			oldStatus := m.updateModeStatusObj[currentMode.JobType()]
 			newStatus := oldStatus
-			needDownloadSize, allPackageSize, err := system.QueryPackageDownloadSize(currentMode, allPkgMap[currentMode.JobType()]...)
+			needDownloadSize, allPackageSize, err := system.QuerySourceDownloadSize(currentMode)
 			if err != nil {
 				logger.Warning(err)
 			} else {

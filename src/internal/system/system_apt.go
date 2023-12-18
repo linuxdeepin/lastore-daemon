@@ -143,6 +143,7 @@ func QueryFileCacheSize(path string) (float64, error) {
 func QueryPackageDownloadSize(updateType UpdateType, packages ...string) (float64, float64, error) {
 	startTime := time.Now()
 	if len(packages) == 0 {
+		logger.Warningf("%v %v mode don't have can update package", updateType.JobType(), updateType)
 		return SizeDownloaded, SizeDownloaded, NotFoundError("hasn't any packages")
 	}
 	downloadSize := new(float64)
