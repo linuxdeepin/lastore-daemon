@@ -11,6 +11,7 @@ import (
 	"internal/system"
 	"internal/utils"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/procfs"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 )
 
 /*
@@ -478,6 +480,9 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 			logger.Warning(err)
 			return dbusutil.ToError(err)
 		}
+		if utils2.IsSymlink(optionFilePathTemp) {
+			_ = os.RemoveAll(optionFilePathTemp)
+		}
 		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
 	} else {
 		opt := fullUpgradeOption{}
@@ -496,6 +501,9 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		if err != nil {
 			logger.Warning(err)
 			return dbusutil.ToError(err)
+		}
+		if utils2.IsSymlink(optionFilePathTemp) {
+			_ = os.RemoveAll(optionFilePathTemp)
 		}
 		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
 	}

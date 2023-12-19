@@ -200,6 +200,10 @@ func delRebootCheckOption(order checkType) error {
 		}
 		return ioutil.WriteFile(optionFilePath, content, 0644)
 	case secondCheck, all:
+		err := os.RemoveAll(optionFilePathTemp)
+		if err != nil {
+			logger.Warning(err)
+		}
 		return os.RemoveAll(optionFilePath)
 	default:
 		return errors.New("invalid type")
