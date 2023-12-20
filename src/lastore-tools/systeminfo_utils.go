@@ -73,7 +73,7 @@ func getSystemInfo() SystemInfo {
 		Custom: OemNotCustomState,
 	}
 
-	osVersionInfoMap, err := getOSVersionInfo(cacheVersion)
+	osVersionInfoMap, err := getOSVersionInfo(osVersion)
 	if err != nil {
 		logger.Warning("failed to get os-version:", err)
 	} else {

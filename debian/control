@@ -35,6 +35,7 @@ Depends:
  binutils,
  deepin-system-fixpkg,
  deepin-system-update,
+ xz-utils,
  ${dist:Depends},
  ${misc:Depends},
  ${shlibs:Depends},
