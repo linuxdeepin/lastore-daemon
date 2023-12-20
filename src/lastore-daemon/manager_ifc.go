@@ -584,7 +584,13 @@ func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.Updat
 
 func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder uint32) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	return m.checkUpgrade(sender, checkMode, checkType(checkOrder))
+	job, err := m.checkUpgrade(sender, checkMode, checkType(checkOrder))
+	if err != nil {
+		logger.Warning(err)
+		return "", dbusutil.ToError(err)
+	}
+	logger.Info("CheckUpgrade jobPath:", job)
+	return job, nil
 }
 
 func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option string) (job dbus.ObjectPath, busErr *dbus.Error) {

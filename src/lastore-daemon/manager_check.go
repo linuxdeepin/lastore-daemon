@@ -11,7 +11,6 @@ import (
 	"syscall"
 
 	"github.com/godbus/dbus"
-	"github.com/linuxdeepin/go-lib/dbusutil"
 )
 
 type checkType uint32
@@ -34,7 +33,7 @@ func (c checkType) JobType() string {
 }
 
 // 更新后重启的检查
-func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder checkType) (dbus.ObjectPath, *dbus.Error) {
+func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder checkType) (dbus.ObjectPath, error) {
 	m.updateJobList()
 	if m.rebootTimeoutTimer != nil {
 		m.rebootTimeoutTimer.Stop()
@@ -70,7 +69,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	var err error
 	isExist, job, err = m.jobManager.CreateJob("", system.CheckSystemJobType, nil, nil, nil)
 	if err != nil {
-		return "", dbusutil.ToError(err)
+		return "", err
 	}
 	job.option[dut.PostCheck.String()] = "--check-succeed" // TODO 还有--check-failed 的情况需要处理
 	if checkMode == system.OfflineUpdate {
@@ -152,7 +151,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	}
 
 	if err = m.jobManager.addJob(job); err != nil {
-		return "", dbusutil.ToError(err)
+		return "", err
 	}
 	return job.getPath(), nil
 }
