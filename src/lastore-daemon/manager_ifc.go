@@ -158,7 +158,9 @@ func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string
 	}
 
 	if updateType&system.SecurityUpdate != 0 {
+		m.allUpgradableInfoMu.Lock()
 		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate])
+		m.allUpgradableInfoMu.Unlock()
 	}
 
 	if len(res) == 0 {
@@ -562,7 +564,7 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
-	_, allSize, err := system.QueryPackageDownloadSize(mode, m.updater.getUpdatablePackagesByType(mode)...)
+	_, allSize, err := system.QuerySourceDownloadSize(mode)
 	if err != nil || allSize == system.SizeUnknown {
 		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
 	} else {

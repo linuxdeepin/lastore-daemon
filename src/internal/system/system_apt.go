@@ -43,6 +43,10 @@ const (
 	OfflineListPath = "/var/lib/lastore/offline_list"
 )
 
+const (
+	LocalCachePath = "/var/cache/lastore/archives"
+)
+
 // ListPackageFile list files path contained in the packages
 func ListPackageFile(packages ...string) []string {
 	desktopFiles, err := utils.FilterExecOutput(
@@ -224,7 +228,7 @@ func QuerySourceDownloadSize(updateType UpdateType) (float64, float64, error) {
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}...)
 		}
-
+		logger.Infof("%v download size cmd: %v", updateType.JobType(), cmd.String())
 		lines, err := utils.FilterExecOutput(cmd, time.Second*120, func(line string) bool {
 			_, _, _err := parsePackageSize(line)
 			return _err == nil

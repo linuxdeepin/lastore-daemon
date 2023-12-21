@@ -22,8 +22,8 @@ const (
 	OnlySecurityUpdate UpdateType = 1 << 4 // 仅安全仓库更新，已经废弃，用于处理历史版本升级后的兼容问题
 	OtherSystemUpdate  UpdateType = 1 << 5 // 其他来源系统的仓库更新:对应dconfig non-unknown-sources 字段去掉商店和安全仓库,通常为驱动、hwe仓库(hwe仓库应该从平台获取)，检查该仓库，不显示更新内容
 
-	AllCheckUpdate   = SystemUpdate | AppStoreUpdate | SecurityUpdate | OtherSystemUpdate // 所有需要检查的仓库 TODO 该字段变动，需要检查所有使用者
-	AllInstallUpdate = SystemUpdate | SecurityUpdate                                      // 所有控制中心需要显示的仓库
+	AllCheckUpdate   = SystemUpdate | AppStoreUpdate | SecurityUpdate | UnknownUpdate | OtherSystemUpdate // 所有需要检查的仓库 TODO 该字段变动，需要检查所有使用者
+	AllInstallUpdate = SystemUpdate | SecurityUpdate | UnknownUpdate                                      // 所有控制中心需要显示的仓库
 
 	OfflineUpdate UpdateType = 1 << 6 // 离线仓库，控制中心不检查、不显示；离线更新工具检查和显示；
 )
@@ -47,21 +47,44 @@ func (m UpdateType) JobType() string {
 	}
 }
 
-// AllCheckUpdateType 对应 system.AllCheckUpdate TODO 该字段变动，需要检查所有使用者
-func AllCheckUpdateType() []UpdateType {
+func UpdateTypeBitToArray(mode UpdateType) []UpdateType {
+	var res []UpdateType
+	for _, typ := range AllUpdateType() {
+		if typ&mode == typ {
+			res = append(res, typ)
+		}
+	}
+	return res
+}
+
+func AllUpdateType() []UpdateType {
 	return []UpdateType{
 		SystemUpdate,
 		AppStoreUpdate,
 		SecurityUpdate,
+		UnknownUpdate,
 		OtherSystemUpdate,
 		OfflineUpdate,
 	}
 }
 
+// AllCheckUpdateType 对应 system.AllCheckUpdate
+func AllCheckUpdateType() []UpdateType {
+	return []UpdateType{
+		SystemUpdate,
+		AppStoreUpdate,
+		SecurityUpdate,
+		UnknownUpdate,
+		OtherSystemUpdate,
+	}
+}
+
+// AllInstallUpdateType 对应 system.AllInstallUpdate
 func AllInstallUpdateType() []UpdateType {
 	return []UpdateType{
 		SystemUpdate,
 		SecurityUpdate,
+		UnknownUpdate,
 	}
 }
 

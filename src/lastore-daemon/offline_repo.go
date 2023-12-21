@@ -447,7 +447,7 @@ func checkRootSpace() bool {
 
 func (m *OfflineManager) checkOfflineSystemState() bool {
 	_, err := dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-		"/var/cache/lastore/archives",
+		system.LocalCachePath,
 		m.upgradeAblePackages,
 		m.upgradeAblePackages, nil, m.upgradeAblePackages, m.removePackages, nil, genRepoInfo(system.OfflineUpdate, system.OfflineListPath))
 	if err != nil {

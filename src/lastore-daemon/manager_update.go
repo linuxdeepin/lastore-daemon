@@ -340,81 +340,71 @@ func parseCoreList() ([]string, error) {
 	return pkgs, nil
 }
 
+var getUpgradablePackageListMap = map[system.UpdateType]func([]string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error){
+	system.SystemUpdate:   getSystemUpgradablePackageList,
+	system.SecurityUpdate: getSecurityUpgradablePackageList,
+	system.UnknownUpdate:  getUnknownUpgradablePackageList,
+}
+
 // 生成系统更新内容和安全更新内容
-func (m *Manager) generateUpdateInfo() (error, error) {
+func (m *Manager) generateUpdateInfo() (errList []error) {
 	propPkgMap := make(map[string][]string) // updater的ClassifiedUpdatablePackages用
-	var systemErr error = nil
-	var securityErr error = nil
-	var systemInstallPkgList map[string]system.PackageInfo
-	var systemRemovePkgList map[string]system.PackageInfo
-	var securityInstallPkgList map[string]system.PackageInfo
-	var securityRemovePkgList map[string]system.PackageInfo
+	var propPkgMapMu sync.Mutex
 	m.allUpgradableInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
 	m.allRemovePkgInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
+	var errListMu sync.Mutex
+	appendErrorSafe := func(err error) {
+		errListMu.Lock()
+		errList = append(errList, err)
+		errListMu.Unlock()
+	}
+	updateUpgradableInfoSafe := func(t system.UpdateType, infoMap map[string]system.PackageInfo) {
+		m.allUpgradableInfoMu.Lock()
+		m.allUpgradableInfo[t] = infoMap
+		m.allUpgradableInfoMu.Unlock()
+	}
+	updateRemovePkgInfoSafe := func(t system.UpdateType, infoMap map[string]system.PackageInfo) {
+		m.allRemovePkgInfoMu.Lock()
+		m.allRemovePkgInfo[t] = infoMap
+		m.allRemovePkgInfoMu.Unlock()
+	}
+	updatePropPkgMapSafe := func(t string, packageList []string) {
+		propPkgMapMu.Lock()
+		propPkgMap[t] = packageList
+		propPkgMapMu.Unlock()
+	}
 
 	var wg sync.WaitGroup
-	// 检查更新前，先下载解析coreList，获取必装清单
-	coreList, err := parseCoreList()
-
-	if err != nil {
-		systemErr = err
-	} else {
-		m.coreList = coreList
-		logger.Debug("generateUpdateInfo get coreList:", coreList)
+	for updateType, getFn := range getUpgradablePackageListMap {
 		wg.Add(1)
+		fn := getFn
+		t := updateType
 		go func() {
-			systemInstallPkgList, systemRemovePkgList, systemErr = getSystemUpdatePackageList(coreList)
+			logger.Infof("start get %v upgradable package", t.JobType())
+			installList, removeList, err := fn(m.coreList)
+			if err != nil {
+				appendErrorSafe(err)
+			} else {
+				updateUpgradableInfoSafe(t, installList)
+				updateRemovePkgInfoSafe(t, removeList)
+			}
+			var packageList []string
+			for k, v := range installList {
+				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
+			}
+			updatePropPkgMapSafe(t.JobType(), packageList)
 			wg.Done()
 		}()
 	}
-	wg.Add(1)
-	go func() {
-		securityInstallPkgList, securityRemovePkgList, securityErr = getSecurityUpdatePackageList()
-		wg.Done()
-	}()
 	wg.Wait()
-	if systemErr == nil && systemInstallPkgList != nil {
-		// 如果卸载列表中有coreList，则系统更新列表置空，上报日志
-		var removeCoreList []string
-		for _, pkgName := range coreList {
-			if _, ok := systemRemovePkgList[pkgName]; ok {
-				removeCoreList = append(removeCoreList, pkgName)
-			}
-		}
-		if len(removeCoreList) > 0 {
-			// 上报日志
-			m.updatePlatform.postStatusMessage(fmt.Sprintf("there was coreList remove, detail is %v:", removeCoreList))
-			// 清空系统可升级包列表
-			systemInstallPkgList = nil
-			systemRemovePkgList = nil
-		}
-		var packageList []string
-		for k, v := range systemInstallPkgList {
-			packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
-		}
-		propPkgMap[system.SystemUpdate.JobType()] = packageList
-		m.allUpgradableInfo[system.SystemUpdate] = systemInstallPkgList
-	}
-	if securityErr == nil && securityInstallPkgList != nil {
-		var packageList []string
-		for k, v := range securityInstallPkgList {
-			packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
-		}
-		propPkgMap[system.SecurityUpdate.JobType()] = packageList
-		m.allUpgradableInfo[system.SecurityUpdate] = securityInstallPkgList
-	}
-
-	if systemErr == nil && systemRemovePkgList != nil {
-		m.allRemovePkgInfo[system.SystemUpdate] = systemRemovePkgList
-	}
-	if securityErr == nil && securityRemovePkgList != nil {
-		m.allRemovePkgInfo[system.SecurityUpdate] = securityRemovePkgList
-	}
 	m.updater.setClassifiedUpdatablePackages(propPkgMap)
-	return systemErr, securityErr
+	return
 }
 
-func getSystemUpdatePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getSystemUpgradablePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+	if len(coreList) == 0 {
+		return nil, nil, errors.New("coreList is nil,can not get system update package list")
+	}
 	var err error
 	// var localCache map[string]statusVersion
 	var emulateInstallPkgList map[string]system.PackageInfo
@@ -473,10 +463,17 @@ func getSystemUpdatePackageList(coreList []string) (map[string]system.PackageInf
 	return emulateInstallPkgList, emulateRemovePkgList, nil
 }
 
-func getSecurityUpdatePackageList() (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getSecurityUpgradablePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	return apt.GenOnlineUpdatePackagesByEmulateInstall(nil, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SecurityUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
+	})
+}
+
+func getUnknownUpgradablePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+	return apt.GenOnlineUpdatePackagesByEmulateInstall(nil, []string{
+		"-o", fmt.Sprintf("Dir::Etc::SourceParts=%v", system.GetCategorySourceMap()[system.UnknownUpdate]),
+		"-o", "Dir::Etc::sourcelist=/dev/null",
 	})
 }
 
@@ -575,22 +572,22 @@ func listDistUpgradePackages(updateType system.UpdateType) ([]string, error) {
 func (m *Manager) refreshUpdateInfos(sync bool) {
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
-		systemErr, securityErr := m.generateUpdateInfo()
-		if systemErr != nil {
-			go func() {
-				m.inhibitAutoQuitCountAdd()
-				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate system package list error, detail is %v:", systemErr))
-			}()
-			logger.Warning(systemErr)
+		// 检查更新后，先下载解析coreList，获取必装清单
+		coreList, err := parseCoreList()
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			m.coreList = coreList
+			logger.Debug("generateUpdateInfo get coreList:", coreList)
 		}
-		if securityErr != nil {
+
+		for _, e := range m.generateUpdateInfo() {
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate security package list error, detail is %v:", securityErr))
+				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate package list error, detail is %v:", e))
 			}()
-			logger.Warning(securityErr)
+			logger.Warning(e)
 		}
 		m.statusManager.UpdateModeAllStatusBySize(m.updater.ClassifiedUpdatablePackages)
 		m.statusManager.UpdateCheckCanUpgradeByEachStatus()

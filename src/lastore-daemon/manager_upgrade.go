@@ -306,7 +306,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			}
 
 			if mode&system.SecurityUpdate != 0 {
+				m.allUpgradableInfoMu.Lock()
 				recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate]), upgradeRecordPath)
+				m.allUpgradableInfoMu.Unlock()
 			}
 			_ = m.preSuccessHook(job, needChangeGrub, mode)
 			return nil
@@ -549,7 +551,7 @@ func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
 	}
 	cmdStr := fmt.Sprintf("apt-get download %v -c /var/lib/lastore/apt_v2_common.conf --allow-change-held-packages -o Dir::State::lists=/var/lib/lastore/offline_list -o Dir::Etc::SourceParts=/dev/null -o Dir::Etc::SourceList=/var/lib/lastore/offline.list", strings.Join(packages, " "))
 	cmd := exec.Command("/bin/sh", "-c", cmdStr)
-	cmd.Dir = "/var/cache/lastore/archives" // 该路径和/var/lib/lastore/apt_v2_common.conf保持一致
+	cmd.Dir = system.LocalCachePath // 该路径和/var/lib/lastore/apt_v2_common.conf保持一致
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
@@ -563,6 +565,7 @@ func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
 	return nil
 }
 
+// 生成meta.json和uuid
 func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
 	// 使用dut更新前的准备
 	var uuid string
@@ -575,7 +578,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		}
 		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
 		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-			"/var/cache/lastore/archives",
+			system.LocalCachePath,
 			m.offline.upgradeAblePackages,
 			m.offline.upgradeAblePackages, nil, m.offline.upgradeAblePackages, m.offline.removePackages, nil, genRepoInfo(mode, system.OfflineListPath))
 		if err != nil {
@@ -590,16 +593,13 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		if mode == 0 {
 			return "", errors.New("invalid mode")
 		}
-		hasSystem := mode&system.SystemUpdate != 0
-		hasSecurity := mode&system.SecurityUpdate != 0
-		if hasSystem && hasSecurity {
-			// 如果是系统+安全更新，需要将两个仓库的数据整合，如果有重复deb包，那么需要只保留高版本包
-			pkgMap = m.mergePackages(m.allUpgradableInfo[system.SystemUpdate], m.allUpgradableInfo[system.SecurityUpdate])
-			removeMap = m.mergePackages(m.allRemovePkgInfo[system.SystemUpdate], m.allRemovePkgInfo[system.SecurityUpdate])
-		} else {
-			pkgMap = m.allUpgradableInfo[mode]
-			removeMap = m.allRemovePkgInfo[mode]
-		}
+
+		m.allUpgradableInfoMu.Lock()
+		pkgMap = m.mergePackagesByMode(mode, m.allUpgradableInfo)
+		m.allUpgradableInfoMu.Unlock()
+		m.allRemovePkgInfoMu.Lock()
+		removeMap = m.mergePackagesByMode(mode, m.allRemovePkgInfo)
+		m.allRemovePkgInfoMu.Unlock()
 
 		coreListMap := make(map[string]system.PackageInfo)
 		if m.coreList != nil && len(m.coreList) > 0 {
@@ -634,7 +634,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			coreListMap = loadCoreList()
 		}
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			"/var/cache/lastore/archives",
+			system.LocalCachePath,
 			pkgMap,
 			coreListMap, nil, nil, removeMap,
 			m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
@@ -647,10 +647,13 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 	return uuid, nil
 }
 
-// 融合系统与安全仓库
-func (m *Manager) mergePackages(repo1PkgMap, repo2PkgMap map[string]system.PackageInfo) map[string]system.PackageInfo {
+func (m *Manager) mergePackagesByMode(mode system.UpdateType, needMergePkgMap map[system.UpdateType]map[string]system.PackageInfo) map[string]system.PackageInfo {
+	typeArray := system.UpdateTypeBitToArray(mode)
 	var res map[string]system.PackageInfo
-	jsonStr, err := json.Marshal(repo1PkgMap)
+	if len(typeArray) == 0 {
+		return nil
+	}
+	jsonStr, err := json.Marshal(needMergePkgMap[typeArray[0]])
 	if err != nil {
 		logger.Warning(err)
 		return nil
@@ -660,16 +663,24 @@ func (m *Manager) mergePackages(repo1PkgMap, repo2PkgMap map[string]system.Packa
 		logger.Warning(err)
 		return nil
 	}
-	for name, secInfo := range repo2PkgMap {
-		sysInfo, ok := res[name]
-		if ok {
-			// 当两个仓库存在相同包，留版本高的包
-			if compareVersionsGe(secInfo.Version, sysInfo.Version) {
-				res[name] = secInfo
+
+	if len(typeArray) == 1 {
+		return res
+	}
+
+	typeArray = typeArray[1:]
+	for _, typ := range typeArray {
+		for name, newInfo := range needMergePkgMap[typ] {
+			originInfo, ok := res[name]
+			if ok {
+				// 当两个仓库存在相同包，留版本高的包
+				if compareVersionsGe(newInfo.Version, originInfo.Version) {
+					res[name] = newInfo
+				}
+			} else {
+				// 不存在时直接添加
+				res[name] = newInfo
 			}
-		} else {
-			// 不存在时直接添加
-			res[name] = secInfo
 		}
 	}
 	return res
@@ -709,6 +720,9 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 	}
 	if typ&system.OfflineUpdate != 0 {
 		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.OfflineUpdate])...)
+	}
+	if typ&system.UnknownUpdate != 0 {
+		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.UnknownUpdate])...)
 	}
 	for _, url := range urls {
 		prefixMap[strings.ReplaceAll(utils.URIToPath(url), "/", "_")] = struct{}{}

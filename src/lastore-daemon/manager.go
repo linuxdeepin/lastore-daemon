@@ -79,8 +79,10 @@ type Manager struct {
 	offline            *OfflineManager
 	rebootTimeoutTimer *time.Timer
 
-	allUpgradableInfo map[system.UpdateType]map[string]system.PackageInfo
-	allRemovePkgInfo  map[system.UpdateType]map[string]system.PackageInfo
+	allUpgradableInfo   map[system.UpdateType]map[string]system.PackageInfo
+	allUpgradableInfoMu sync.Mutex
+	allRemovePkgInfo    map[system.UpdateType]map[string]system.PackageInfo
+	allRemovePkgInfoMu  sync.Mutex
 
 	coreList []string
 }
@@ -781,8 +783,12 @@ type platformCacheContent struct {
 
 func (m *Manager) savePlatformCache() {
 	cache := platformCacheContent{}
+	m.allUpgradableInfoMu.Lock()
 	cache.UpgradableInfo = m.allUpgradableInfo
+	m.allUpgradableInfoMu.Unlock()
+	m.allRemovePkgInfoMu.Lock()
 	cache.RemovePkgInfo = m.allRemovePkgInfo
+	m.allRemovePkgInfoMu.Unlock()
 	cache.CoreListPkgs = m.updatePlatform.targetCorePkgs
 	cache.BaselinePkgs = m.updatePlatform.baselinePkgs
 	cache.SelectPkgs = m.updatePlatform.selectPkgs
