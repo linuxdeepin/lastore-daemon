@@ -359,7 +359,7 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 	var err error
 	var errList []string
 	// 保证任务创建顺序
-	for _, t := range system.AllCheckUpdateType() {
+	for _, t := range system.AllInstallUpdateType() {
 		category := updateType & t
 		if category != 0 {
 			var upgradeJob, prepareJob *Job

@@ -203,7 +203,7 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 		}
 	} else {
 		// 查询包(可能不止一个)的大小,即使当前开启的仓库没有包含该包,依旧返回该包的大小
-		_, allPackageSize, err = system.QueryPackageDownloadSize(system.AllCheckUpdate, packages...)
+		_, allPackageSize, err = system.QueryPackageDownloadSize(system.AllInstallUpdate, packages...)
 	}
 	if err != nil || allPackageSize == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), allPackageSize, err)
@@ -557,7 +557,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 }
 func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
 	var sourcePathList []string
-	for _, t := range system.AllCheckUpdateType() {
+	for _, t := range system.AllInstallUpdateType() {
 		category := mode & t
 		if category != 0 {
 			sourcePath := system.GetCategorySourceMap()[category]

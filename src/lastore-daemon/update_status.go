@@ -68,7 +68,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 		m.checkModeChangedCallback(m.checkMode)
 	}
 	obj := &daemonStatus{
-		TriggerBackingUpType: system.AllCheckUpdate,
+		TriggerBackingUpType: system.AllInstallUpdate,
 		ABStatus:             system.NotBackup,
 		ABError:              system.NoABError,
 		UpdateStatus:         make(map[string]system.UpdateModeStatus),
@@ -81,7 +81,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 		for _, typ := range system.AllInstallUpdateType() {
 			m.updateModeStatusObj[typ.JobType()] = system.NotDownload
 		}
-		m.currentTriggerBackingUpType = system.AllCheckUpdate
+		m.currentTriggerBackingUpType = system.AllInstallUpdate
 		m.abStatus = system.NotBackup
 		m.abError = system.NoABError
 		m.syncUpdateStatusNoLock()
@@ -101,7 +101,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 					m.updateModeStatusObj[key] = system.NoUpdate
 				}
 			}
-			m.currentTriggerBackingUpType = system.AllCheckUpdate
+			m.currentTriggerBackingUpType = system.AllInstallUpdate
 			m.abStatus = system.NotBackup
 			m.abError = system.NoABError
 		}
@@ -116,7 +116,7 @@ func filterMode(updateMode, checkMode system.UpdateType) (system.UpdateType, sys
 	var res0 system.UpdateType // updateMode
 	var res1 system.UpdateType // checkMode
 	// 过滤掉不存在的类型，updateMode没有的类型，checkMode的也需要清理
-	for _, typ := range system.AllCheckUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		if updateMode&typ != 0 {
 			res0 |= typ
 			if typ&checkMode != 0 {
@@ -551,7 +551,7 @@ func (m *UpdateModeStatusManager) GetCanPrepareDistUpgradeMode(origin system.Upd
 	defer m.statusMapMu.Unlock()
 	var canPrepareUpgradeMode system.UpdateType
 	checkMode := m.checkMode
-	for _, typ := range system.AllCheckUpdateType() {
+	for _, typ := range system.AllInstallUpdateType() {
 		if origin&typ == 0 {
 			continue
 		}
