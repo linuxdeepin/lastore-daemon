@@ -4,7 +4,7 @@ Description=Update lastore metadata info
 
 [Service]
 Restart=on-failure
-RestartSec=1min
+RestartSec=5s
 
 TimeoutStartSec=infinity
 
