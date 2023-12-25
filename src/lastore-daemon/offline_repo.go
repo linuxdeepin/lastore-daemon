@@ -167,6 +167,7 @@ func (m *OfflineManager) PrepareUpdateOffline(paths []string, indicator Indicato
 				if strings.Contains(err.Error(), "No space left on device") {
 					// 空间不足解压失败
 					m.checkResult.DiskCheckState = failed
+					m.checkResult.OupCheckState = failed
 					return err // 致命错误，整体阻塞
 				}
 				// 其他原因导致解压失败，按照完整性检查不通过处理
