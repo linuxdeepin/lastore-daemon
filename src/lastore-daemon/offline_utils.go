@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -127,7 +129,9 @@ func getOupType(info OfflineRepoInfo) (OfflineUpgradeType, error) {
 
 func mount(dir string) (string, error) {
 	fsPath := filepath.Join(dir, "repo.sfs")
-	mountDir := filepath.Join(mountFsDir, filepath.Base(dir))
+	hash := sha256.New()
+	hash.Write([]byte(filepath.Base(dir)))
+	mountDir := filepath.Join(mountFsDir, hex.EncodeToString(hash.Sum(nil)))
 	err := os.MkdirAll(mountDir, 0755)
 	if err != nil {
 		return "", err
