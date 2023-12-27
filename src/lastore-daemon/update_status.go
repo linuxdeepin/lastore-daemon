@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"internal/config"
 	"internal/system"
 	"sync"
 )
@@ -13,7 +14,7 @@ import (
 type UpdateModeStatusManager struct {
 	checkMode                           system.UpdateType
 	updateMode                          system.UpdateType
-	lsConfig                            *Config
+	lsConfig                            *config.Config
 	systemUpdateStatus                  system.UpdateModeStatus
 	securityUpdateStatus                system.UpdateModeStatus
 	unKnownUpdateStatus                 system.UpdateModeStatus
@@ -41,7 +42,7 @@ type daemonStatus struct {
 	UpdateStatus         map[string]system.UpdateModeStatus
 }
 
-func NewStatusManager(config *Config, callback func(newStatus string)) *UpdateModeStatusManager {
+func NewStatusManager(config *config.Config, callback func(newStatus string)) *UpdateModeStatusManager {
 	m := &UpdateModeStatusManager{
 		lsConfig:                    config,
 		checkMode:                   config.CheckUpdateMode,
@@ -74,7 +75,7 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 		UpdateStatus:         make(map[string]system.UpdateModeStatus),
 	}
 	m.statusMapMu.Lock()
-	err = json.Unmarshal([]byte(m.lsConfig.updateStatus), &obj)
+	err = json.Unmarshal([]byte(m.lsConfig.UpdateStatus), &obj)
 	if err != nil {
 		logger.Warning(err)
 		m.updateModeStatusObj = make(map[string]system.UpdateModeStatus)
@@ -508,12 +509,12 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 }
 
 func (m *UpdateModeStatusManager) updateCanUpgradeStatus(can bool) {
-	oldCanUpgrade := m.lsConfig.getLastoreDaemonStatusByBit(canUpgrade) == canUpgrade
+	oldCanUpgrade := m.lsConfig.GetLastoreDaemonStatusByBit(config.CanUpgrade) == config.CanUpgrade
 	if oldCanUpgrade == can {
 		return
 	}
 	logger.Infof("CanUpgradeStatus transition state from %v to %v", oldCanUpgrade, can)
-	err := m.lsConfig.UpdateLastoreDaemonStatus(canUpgrade, can)
+	err := m.lsConfig.UpdateLastoreDaemonStatus(config.CanUpgrade, can)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -616,4 +617,17 @@ func (m *UpdateModeStatusManager) GetCanDistUpgradeMode(origin system.UpdateType
 
 func (m *UpdateModeStatusManager) GetAllUpdateModeDownloadSize() map[string]float64 {
 	return m.updateModeDownloadSizeMap
+}
+
+// SetFrontForceUpdate 前端(dde-lock dde-dock)强制更新:隐藏关机和重启选项
+func (m *UpdateModeStatusManager) SetFrontForceUpdate(force bool) {
+	oldForceUpdate := m.lsConfig.GetLastoreDaemonStatusByBit(config.ForceUpdate) == config.ForceUpdate
+	if oldForceUpdate == force {
+		return
+	}
+	logger.Infof("ForceUpdateStatus transition state from %v to %v", oldForceUpdate, force)
+	err := m.lsConfig.UpdateLastoreDaemonStatus(config.ForceUpdate, force)
+	if err != nil {
+		logger.Warning(err)
+	}
 }

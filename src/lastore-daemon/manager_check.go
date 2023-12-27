@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"internal/system"
 	"internal/system/dut"
+	"internal/updateplatform"
 	"io/ioutil"
 	"os"
 	"syscall"
@@ -91,9 +92,9 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
-				m.updatePlatform.postSystemUpgradeMessage(upgradeFailed, job, checkMode)
-				m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
+				m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeFailed, job.Description, checkMode)
+				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)
 			err = delRebootCheckOption(all)
@@ -134,13 +135,13 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					// m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
-					m.updatePlatform.postSystemUpgradeMessage(upgradeSucceed, job, checkMode)
-					m.updatePlatform.reportLog(upgradeStatusReport, true, "")
+					m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeSucceed, job.Description, checkMode)
+					m.reportLog(upgradeStatusReport, true, "")
 				}()
 				// 只要系统更新，需要更新baseline文件
 				if checkMode&system.SystemUpdate != 0 {
 					m.updatePlatform.UpdateBaseline()
-					m.updatePlatform.recoverVersionLink()
+					m.updatePlatform.RecoverVersionLink()
 				}
 			}
 			return nil

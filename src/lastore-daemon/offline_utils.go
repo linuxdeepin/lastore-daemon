@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"internal/system"
+	"internal/updateplatform"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -96,7 +97,7 @@ func getInfo(dir string) (OfflineRepoInfo, error) {
 }
 
 func systemTypeCheck(info OfflineRepoInfo) error {
-	infoMap, err := getOSVersionInfo(cacheVersion)
+	infoMap, err := updateplatform.GetOSVersionInfo(updateplatform.CacheVersion)
 	if err != nil {
 		logger.Warning(err)
 		return err

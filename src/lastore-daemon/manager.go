@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"internal/config"
+	"internal/updateplatform"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +33,7 @@ type Manager struct {
 	service   *dbusutil.Service
 	do        sync.Mutex
 	updateApi system.System
-	config    *Config
+	config    *config.Config
 	PropsMu   sync.RWMutex
 	// dbusutil-gen: equal=nil
 	JobList    []dbus.ObjectPath
@@ -73,7 +75,7 @@ type Manager struct {
 	grub           *grubManager
 	userAgents     *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
 	statusManager  *UpdateModeStatusManager
-	updatePlatform *UpdatePlatformManager
+	updatePlatform *updateplatform.UpdatePlatformManager
 	isDownloading  bool
 
 	offline            *OfflineManager
@@ -92,7 +94,7 @@ NOTE: Most of export function of Manager will hold the lock,
 so don't invoke they in inner functions
 */
 
-func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *Manager {
+func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Config) *Manager {
 	archs, err := system.SystemArchitectures()
 	if err != nil {
 		logger.Errorf("Can't detect system supported architectures %v\n", err)
@@ -121,7 +123,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.initStatusManager()
-	hardwareId, err := getHardwareId()
+	hardwareId, err := updateplatform.GetHardwareId(m.config.IncludeDiskInfo)
 	if err != nil {
 		logger.Warning("failed to get HardwareId")
 	} else {
@@ -130,10 +132,10 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *Config) *
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
 	// running 状态下证明需要进行重启后check
-	if c.upgradeStatus.Status == system.UpgradeRunning {
+	if c.UpgradeStatus.Status == system.UpgradeRunning {
 		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
 			// 启动后600s如果没有触发检查，那么上报更新失败
-			m.updatePlatform.postStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds"))
+			m.updatePlatform.PostStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds"))
 			err = delRebootCheckOption(all)
 			if err != nil {
 				logger.Warning(err)
@@ -171,8 +173,8 @@ func (m *Manager) initDbusSignalListen() {
 }
 
 func (m *Manager) initDSettingsChangedHandle() {
-	m.config.connectConfigChanged(dSettingsKeyLastoreDaemonStatus, func(bit lastoreDaemonStatus, value interface{}) {
-		if bit == disableUpdate {
+	m.config.ConnectConfigChanged(config.DSettingsKeyLastoreDaemonStatus, func(bit config.LastoreDaemonStatus, value interface{}) {
+		if bit == config.DisableUpdate {
 			_ = m.updateTimerUnit(lastoreOnline)
 			_ = m.updateTimerUnit(lastoreAutoCheck)
 		}
@@ -208,7 +210,7 @@ func (m *Manager) initAgent() {
 }
 
 func (m *Manager) initPlatformManager() {
-	m.updatePlatform = newUpdatePlatformManager(m.config, m.userAgents)
+	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config)
 	m.loadPlatformCache()
 }
 
@@ -789,12 +791,12 @@ func (m *Manager) savePlatformCache() {
 	m.allRemovePkgInfoMu.Lock()
 	cache.RemovePkgInfo = m.allRemovePkgInfo
 	m.allRemovePkgInfoMu.Unlock()
-	cache.CoreListPkgs = m.updatePlatform.targetCorePkgs
-	cache.BaselinePkgs = m.updatePlatform.baselinePkgs
-	cache.SelectPkgs = m.updatePlatform.selectPkgs
-	cache.PreCheck = m.updatePlatform.preCheck
-	cache.MidCheck = m.updatePlatform.midCheck
-	cache.PostCheck = m.updatePlatform.postCheck
+	cache.CoreListPkgs = m.updatePlatform.TargetCorePkgs
+	cache.BaselinePkgs = m.updatePlatform.BaselinePkgs
+	cache.SelectPkgs = m.updatePlatform.SelectPkgs
+	cache.PreCheck = m.updatePlatform.PreCheck
+	cache.MidCheck = m.updatePlatform.MidCheck
+	cache.PostCheck = m.updatePlatform.PostCheck
 	content, err := json.Marshal(cache)
 	if err != nil {
 		logger.Warning(err)
@@ -809,17 +811,60 @@ func (m *Manager) savePlatformCache() {
 
 func (m *Manager) loadPlatformCache() {
 	cache := platformCacheContent{}
-	err := json.Unmarshal([]byte(m.config.onlineCache), &cache)
+	err := json.Unmarshal([]byte(m.config.OnlineCache), &cache)
 	if err != nil {
 		logger.Warning(err)
 		return
 	}
 	m.allUpgradableInfo = cache.UpgradableInfo
 	m.allRemovePkgInfo = cache.RemovePkgInfo
-	m.updatePlatform.targetCorePkgs = cache.CoreListPkgs
-	m.updatePlatform.baselinePkgs = cache.BaselinePkgs
-	m.updatePlatform.selectPkgs = cache.SelectPkgs
-	m.updatePlatform.preCheck = cache.PreCheck
-	m.updatePlatform.midCheck = cache.MidCheck
-	m.updatePlatform.postCheck = cache.PostCheck
+	m.updatePlatform.TargetCorePkgs = cache.CoreListPkgs
+	m.updatePlatform.BaselinePkgs = cache.BaselinePkgs
+	m.updatePlatform.SelectPkgs = cache.SelectPkgs
+	m.updatePlatform.PreCheck = cache.PreCheck
+	m.updatePlatform.MidCheck = cache.MidCheck
+	m.updatePlatform.PostCheck = cache.PostCheck
+}
+
+// 埋点数据上报
+
+type reportCategory uint32
+
+const (
+	updateStatusReport reportCategory = iota
+	downloadStatusReport
+	upgradeStatusReport
+)
+
+type reportLogInfo struct {
+	Tid    int
+	Result bool
+	Reason string
+}
+
+// 数据埋点接口
+func (m *Manager) reportLog(category reportCategory, status bool, description string) {
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		logInfo := reportLogInfo{
+			Result: status,
+			Reason: description,
+		}
+		switch category {
+		case updateStatusReport:
+			logInfo.Tid = 1000600002
+		case downloadStatusReport:
+			logInfo.Tid = 1000600003
+		case upgradeStatusReport:
+			logInfo.Tid = 1000600004
+		}
+		infoContent, err := json.Marshal(logInfo)
+		if err != nil {
+			logger.Warning(err)
+		}
+		err = agent.ReportLog(0, string(infoContent))
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
 }

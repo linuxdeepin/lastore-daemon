@@ -29,8 +29,8 @@ func (m *Manager) canAutoQuit() bool {
 	m.autoQuitCountMu.Unlock()
 	logger.Info("haveActiveJob", haveActiveJob)
 	logger.Info("inhibitAutoQuitCount", inhibitAutoQuitCount)
-	logger.Info("upgrade status:", m.config.upgradeStatus.Status)
-	return !haveActiveJob && inhibitAutoQuitCount == 0 && m.config.upgradeStatus.Status != system.UpgradeRunning
+	logger.Info("upgrade status:", m.config.UpgradeStatus.Status)
+	return !haveActiveJob && inhibitAutoQuitCount == 0 && m.config.UpgradeStatus.Status != system.UpgradeRunning
 }
 
 type JobContent struct {

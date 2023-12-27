@@ -2,13 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package main
+package updateplatform
 
 import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"errors"
+
 	"math/rand"
 	"strings"
 )

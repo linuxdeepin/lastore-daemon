@@ -355,6 +355,61 @@
       "description": "The switch of using the platform to update",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "platform-url": {
+      "value": "https://update-platform.uniontech.com",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "Update api address",
+      "name[zh_CN]": "更新接口地址",
+      "description[zh_CN]": "更新平台接口地址",
+      "description": "Update api address",
+      "permissions": "readonly",
+      "visibility": "private"
+    },
+    "check-policy-on-calendar": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "CheckPolicyOnCalendar",
+      "description": "check policy on calendar",
+      "name[zh_CN]": "策略检查间隔",
+      "description[zh_CN]": "策略检查间隔 systemd定时器里的OnCalendar参数",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "start-check-range": {
+      "value": [
+        1800,
+        21600
+      ],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "StartCheckRange",
+      "description": "start check range",
+      "name[zh_CN]": "开机检查更新区间",
+      "description[zh_CN]": "开机后随机在该时间段内检查更新",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "include-disk-info": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "IncludeDiskInfo",
+      "description": "machineID  include disk info",
+      "name[zh_CN]": "包含硬盘信息",
+      "description[zh_CN]": "机器ID是否包含硬盘信息",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"internal/config"
 	"internal/system"
 	"os"
 	"testing"
@@ -16,7 +17,7 @@ import (
 
 func Test_handleAutoCheckEvent(t *testing.T) {
 	m := &Manager{
-		config: &Config{
+		config: &config.Config{
 			AutoCheckUpdates:      false,
 			DisableUpdateMetadata: true,
 		},
@@ -27,7 +28,7 @@ func Test_handleAutoCheckEvent(t *testing.T) {
 
 func Test_handleAutoCleanEvent(t *testing.T) {
 	m := &Manager{
-		config: &Config{
+		config: &config.Config{
 			AutoClean: false,
 		},
 	}
@@ -37,7 +38,7 @@ func Test_handleAutoCleanEvent(t *testing.T) {
 
 func Test_getNextUpdateDelay(t *testing.T) {
 	m := &Manager{
-		config: &Config{
+		config: &config.Config{
 			LastCheckTime: time.Now(),
 			CheckInterval: 0,
 		},
@@ -51,11 +52,11 @@ func Test_canAutoQuit(t *testing.T) {
 	m := &Manager{
 		jobList:              nil,
 		inhibitAutoQuitCount: 3,
-		config:               NewConfig(""),
+		config:               config.NewConfig(""),
 	}
 	assert.False(t, m.canAutoQuit())
 	m.inhibitAutoQuitCount = 0
-	m.config.upgradeStatus.Status = system.UpgradeReady
+	m.config.UpgradeStatus.Status = system.UpgradeReady
 	assert.True(t, m.canAutoQuit())
 }
 

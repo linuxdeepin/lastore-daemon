@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	. "internal/config"
 	"internal/system/dut"
 	"os"
 	"path"
@@ -73,8 +74,8 @@ func main() {
 	}
 
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	aptImpl := dut.NewSystem(config.systemSourceList, config.nonUnknownList, config.otherSourceList)
-	system.SetSystemUpdate(config.platformUpdate) // 设置是否通过平台更新
+	aptImpl := dut.NewSystem(config.SystemSourceList, config.NonUnknownList, config.OtherSourceList)
+	system.SetSystemUpdate(config.PlatformUpdate) // 设置是否通过平台更新
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	manager := NewManager(service, aptImpl, config)

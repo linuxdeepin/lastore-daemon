@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package main
+package updateplatform
 
 import (
 	"testing"
@@ -11,11 +11,6 @@ import (
 )
 
 func TestSystemInfoUtil(t *testing.T) {
-	useDbus := NotUseDBus
-	NotUseDBus = true
-	defer func() {
-		NotUseDBus = useDbus
-	}()
-	sys := getSystemInfo()
+	sys := getSystemInfo(true)
 	assert.NotEmpty(t, sys)
 }

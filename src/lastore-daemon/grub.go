@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"internal/system"
+	"internal/updateplatform"
 	"os/exec"
 	"strings"
 	"sync"
@@ -45,7 +46,7 @@ func newGrubManager(sysBus *dbus.Conn, loop *dbusutil.SignalLoop) *grubManager {
 // 下次启动默认进入第一个入口启动
 func (m *grubManager) createTempGrubEntry() error {
 	// loongarch 将GRUB引导加载程序安装到硬盘的引导扇区
-	arch, err := getArchInfo()
+	arch, err := updateplatform.GetArchInfo()
 	if err != nil {
 		logger.Warning(err)
 	} else {

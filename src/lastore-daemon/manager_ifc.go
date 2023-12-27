@@ -154,7 +154,7 @@ func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *d
 func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
 	res := make(map[system.UpdateType]interface{})
 	if updateType&system.SystemUpdate != 0 {
-		res[system.SystemUpdate] = m.updatePlatform.systemUpdateLogs
+		res[system.SystemUpdate] = m.updatePlatform.SystemUpdateLogs
 	}
 
 	if updateType&system.SecurityUpdate != 0 {

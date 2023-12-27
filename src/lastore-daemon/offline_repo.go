@@ -397,7 +397,7 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.postStatusMessage("offline update check success")
+				m.updatePlatform.PostStatusMessage("offline update check success")
 			}()
 
 			return nil
@@ -406,7 +406,7 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("offline update check failed detail is:%v", job.Description))
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("offline update check failed detail is:%v", job.Description))
 			}()
 			m.offline.checkResult.SystemCheckState = failed
 			m.offline.checkResult.DebCount = -1

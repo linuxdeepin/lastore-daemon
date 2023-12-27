@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package main
+package updateplatform
 
 import (
 	"bufio"
@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"internal/system"
 	"io/ioutil"
+	"sync"
+
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,12 +70,12 @@ const (
 	OemCustomState    = "1"
 )
 
-func getSystemInfo() SystemInfo {
+func getSystemInfo(includeDiskInfo bool) SystemInfo {
 	systemInfo := SystemInfo{
 		Custom: OemNotCustomState,
 	}
 
-	osVersionInfoMap, err := getOSVersionInfo(cacheVersion)
+	osVersionInfoMap, err := GetOSVersionInfo(CacheVersion)
 	if err != nil {
 		logger.Warning("failed to get os-version:", err)
 	} else {
@@ -87,7 +89,7 @@ func getSystemInfo() SystemInfo {
 			".")
 	}
 
-	systemInfo.HardwareId, err = getHardwareId()
+	systemInfo.HardwareId, err = GetHardwareId(includeDiskInfo)
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
 	}
@@ -99,7 +101,7 @@ func getSystemInfo() SystemInfo {
 		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
 	}
 
-	systemInfo.Arch, err = getArchInfo()
+	systemInfo.Arch, err = GetArchInfo()
 	if err != nil {
 		logger.Warning("failed to get Arch:", err)
 	}
@@ -156,7 +158,7 @@ func loadFile(filepath string) ([]string, error) {
 	return lines, nil
 }
 
-func getOSVersionInfo(filePath string) (map[string]string, error) {
+func GetOSVersionInfo(filePath string) (map[string]string, error) {
 	versionLines, err := loadFile(filePath)
 	if err != nil {
 		logger.Warning("failed to load os-version file:", err)
@@ -182,8 +184,8 @@ func getOSVersionInfo(filePath string) (map[string]string, error) {
 	return osVersionInfoMap, nil
 }
 
-func getHardwareId() (string, error) {
-	hhardware.IncludeDiskInfo = true
+func GetHardwareId(includeDiskInfo bool) (string, error) {
+	hhardware.IncludeDiskInfo = includeDiskInfo
 	machineID, err := hhardware.GenMachineID()
 	if err != nil {
 		return "", err
@@ -296,7 +298,7 @@ func parseInfoFile(file, delim string) (map[string]string, error) {
 	return ret, nil
 }
 
-func getArchInfo() (string, error) {
+func GetArchInfo() (string, error) {
 	arch, err := exec.Command("dpkg", "--print-architecture").Output()
 	if err != nil {
 		logger.Warningf("GetSystemArchitecture failed:%v\n", arch)
@@ -445,4 +447,39 @@ func getMachineType() string {
 		content = append(content, value)
 	}
 	return strings.Join(content, " ")
+}
+
+var _tokenUpdateMu sync.Mutex
+
+// UpdateTokenConfigFile 更新 99lastore-token.conf 文件的内容
+func UpdateTokenConfigFile(includeDiskInfo bool) string {
+	logger.Debug("start updateTokenConfigFile")
+	_tokenUpdateMu.Lock()
+	defer _tokenUpdateMu.Unlock()
+	systemInfo := getSystemInfo(includeDiskInfo)
+	tokenPath := "/etc/apt/apt.conf.d/99lastore-token.conf"
+	var tokenSlice []string
+	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
+	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
+	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
+	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
+	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
+	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
+	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
+	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
+	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
+	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
+	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
+	tokenSlice = append(tokenSlice, "pid="+systemInfo.ProjectId)
+	tokenSlice = append(tokenSlice, "baseline="+systemInfo.Baseline)
+	tokenSlice = append(tokenSlice, "st="+systemInfo.SystemType)
+	tokenSlice = append(tokenSlice, "mt="+systemInfo.MachineType)
+	token := strings.Join(tokenSlice, ";")
+	token = strings.Replace(token, "\n", "", -1)
+	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
+	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	if err != nil {
+		logger.Warning(err)
+	}
+	return token
 }

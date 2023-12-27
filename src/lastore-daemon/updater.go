@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	. "internal/config"
 	"io/ioutil"
 	"os/exec"
 	"path"
@@ -90,9 +91,9 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		UpdateNotify:                config.UpdateNotify,
 		AutoInstallUpdates:          config.AutoInstallUpdates,
 		AutoInstallUpdateType:       config.AutoInstallUpdateType,
-		IdleDownloadConfig:          config.idleDownloadConfig,
-		DownloadSpeedLimitConfig:    config.downloadSpeedLimitConfig,
-		ClassifiedUpdatablePackages: config.classifiedUpdatablePackages,
+		IdleDownloadConfig:          config.IdleDownloadConfig,
+		DownloadSpeedLimitConfig:    config.DownloadSpeedLimitConfig,
+		ClassifiedUpdatablePackages: config.ClassifiedUpdatablePackages,
 		systemdManager:              systemd1.NewManager(service.Conn()),
 	}
 	err := json.Unmarshal([]byte(u.IdleDownloadConfig), &u.idleDownloadConfigObj)

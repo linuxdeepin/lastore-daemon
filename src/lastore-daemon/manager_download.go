@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"internal/system"
+	"internal/updateplatform"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -26,10 +27,17 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	}
 	m.ensureUpdateSourceOnce()
 	m.updateJobList()
-	mode := m.statusManager.GetCanPrepareDistUpgradeMode(origin) // 正在下载的状态会包含其中,会在创建job中找到对应job(由于不追加下载,因此直接返回之前的job) TODO 如果需要追加下载,需要根据前后path的差异,reload该job
-	if mode == 0 {
-		return nil, errors.New("don't exist can prepareDistUpgrade mode")
+	var mode system.UpdateType
+	// 如果获取到强制更新策略，那么忽略是否选中或者开启更新类型的状态
+	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
+		mode = origin
+	} else {
+		mode = m.statusManager.GetCanPrepareDistUpgradeMode(origin) // 正在下载的状态会包含其中,会在创建job中找到对应job(由于不追加下载,因此直接返回之前的job) TODO 如果需要追加下载,需要根据前后path的差异,reload该job
+		if mode == 0 {
+			return nil, errors.New("don't exist can prepareDistUpgrade mode")
+		}
 	}
+
 	packages := m.updater.getUpdatablePackagesByType(mode)
 	if len(packages) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
@@ -179,8 +187,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
-					m.updatePlatform.reportLog(downloadStatusReport, false, j.Description)
-					m.updatePlatform.postStatusMessage(fmt.Sprintf("download %v package failed, detail is %v", mode, job.Description)) // 上报下载失败状态
+					m.reportLog(downloadStatusReport, false, j.Description)
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package failed, detail is %v", mode, job.Description)) // 上报下载失败状态
 				}()
 				return nil
 			},
@@ -199,10 +207,19 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						m.inhibitAutoQuitCountAdd()
 						defer m.inhibitAutoQuitCountSub()
 						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-						m.updatePlatform.reportLog(downloadStatusReport, true, "")
+						m.reportLog(downloadStatusReport, true, "")
 					}()
+
+					if m.updatePlatform.UpdateNowForce {
+						m.inhibitAutoQuitCountAdd()
+						_, err := m.distUpgradePartly(dbus.Sender(m.service.Conn().Names()[0]), j.updateTyp, true)
+						if err != nil {
+							logger.Error("failed to dist-upgrade:", err)
+						}
+						m.inhibitAutoQuitCountSub()
+					}
 				}
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("download %v package success", mode)) // 上报下载成功状态
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package success", j.updateTyp)) // 上报下载成功状态
 				return nil
 			},
 			string(system.EndStatus): func() error {

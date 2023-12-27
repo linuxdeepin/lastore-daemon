@@ -28,41 +28,6 @@ import (
 	"github.com/linuxdeepin/go-lib/strv"
 )
 
-var _tokenUpdateMu sync.Mutex
-
-// 更新 99lastore-token.conf 文件的内容
-func updateTokenConfigFile() string {
-	logger.Debug("start updateTokenConfigFile")
-	_tokenUpdateMu.Lock()
-	defer _tokenUpdateMu.Unlock()
-	systemInfo := getSystemInfo()
-	tokenPath := path.Join(aptConfDir, tokenConfFileName)
-	var tokenSlice []string
-	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
-	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
-	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
-	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
-	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
-	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
-	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
-	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
-	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
-	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
-	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
-	tokenSlice = append(tokenSlice, "pid="+systemInfo.ProjectId)
-	tokenSlice = append(tokenSlice, "baseline="+systemInfo.Baseline)
-	tokenSlice = append(tokenSlice, "st="+systemInfo.SystemType)
-	tokenSlice = append(tokenSlice, "mt="+systemInfo.MachineType)
-	token := strings.Join(tokenSlice, ";")
-	token = strings.Replace(token, "\n", "", -1)
-	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
-	if err != nil {
-		logger.Warning(err)
-	}
-	return token
-}
-
 var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file)://[^ ]+)`)
 
 // 获取list文件或list.d文件夹中所有list文件的未被屏蔽的仓库地址

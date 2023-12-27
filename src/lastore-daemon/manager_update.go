@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"internal/system"
 	"internal/system/apt"
+	"internal/updateplatform"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -68,7 +69,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		return nil, err
 	}
 	prepareUpdateSource()
-	m.updatePlatform.token = updateTokenConfigFile()
+	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job
 	var isExist bool
@@ -124,7 +125,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					go m.updatePlatform.reportLog(updateStatusReport, true, "")
+					go m.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
 					if !m.updater.AutoDownloadUpdates {
@@ -135,12 +136,12 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				} else {
-					go m.updatePlatform.reportLog(updateStatusReport, false, "")
+					go m.reportLog(updateStatusReport, false, "")
 				}
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
-					m.updatePlatform.postStatusMessage("check update success")
+					m.updatePlatform.PostStatusMessage("check update success")
 				}()
 				m.savePlatformCache()
 				job.setPropProgress(1.0)
@@ -169,8 +170,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
-					m.updatePlatform.reportLog(updateStatusReport, false, job.Description)
-					m.updatePlatform.postStatusMessage(fmt.Sprintf("check update failed, detail is %v ", job.Description))
+					m.reportLog(updateStatusReport, false, job.Description)
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("check update failed, detail is %v ", job.Description))
 				}()
 				return nil
 			},
@@ -189,9 +190,9 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				_ = os.Setenv("https_proxy", environ["https_proxy"])
 				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
-				err = m.updatePlatform.genUpdatePolicyByToken()
+				err = m.updatePlatform.GenUpdatePolicyByToken()
 				if err != nil {
-					if m.config.platformUpdate {
+					if m.config.PlatformUpdate {
 						job.retry = 0
 						return &system.JobError{
 							Type:   system.ErrorPlatformUnreachable,
@@ -206,7 +207,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
 				if err != nil {
 					logger.Warning(err)
-					if m.config.platformUpdate {
+					if m.config.PlatformUpdate {
 						job.retry = 0
 						return &system.JobError{
 							Type:   system.ErrorPlatformUnreachable,
@@ -216,7 +217,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 						return nil
 					}
 				}
-				m.updater.setPropUpdateTarget(m.updatePlatform.getUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
+				m.updater.setPropUpdateTarget(m.updatePlatform.GetUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
 
 				// 从更新平台获取数据并处理完成后,进度更新到10%
 				job.setPropProgress(0.10)
@@ -585,7 +586,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("generate package list error, detail is %v:", e))
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("generate package list error, detail is %v:", e))
 			}()
 			logger.Warning(e)
 		}
@@ -598,6 +599,23 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		}()
 	}
 	m.updateUpdatableProp(m.updater.ClassifiedUpdatablePackages)
+	m.statusManager.SetFrontForceUpdate(m.updatePlatform.Tp == updateplatform.UpdateShutdown)
+	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
+		go func() {
+			m.inhibitAutoQuitCountAdd()
+			logger.Info("auto download force updates")
+			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), system.SystemUpdate, false) // TODO system.SystemUpdate
+			if err != nil {
+				logger.Error("failed to prepare dist-upgrade:", err)
+			}
+			m.inhibitAutoQuitCountSub()
+		}()
+		if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
+			_ = m.updateTimerUnit(lastoreRegularlyUpdate)
+		}
+		// 强制更新开启后，以强制更新下载策略优先
+		return
+	}
 	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && sync && !m.updater.getIdleDownloadEnabled() {
 		logger.Info("auto download updates")
 		go func() {

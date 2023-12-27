@@ -115,7 +115,7 @@ func main() {
 			Value: "http://api.appstore.deepin.org",
 		},
 	}
-	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop}
+	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop, CMDCheckPolicy}
 
 	err := app.Run(os.Args)
 	if err != nil {

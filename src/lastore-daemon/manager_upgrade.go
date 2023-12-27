@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"internal/system"
 	"internal/system/dut"
+	"internal/updateplatform"
 	"io/ioutil"
 	"net/url"
 	"os/exec"
@@ -24,21 +25,21 @@ import (
 	"github.com/linuxdeepin/go-lib/utils"
 )
 
-func (m *Manager) distUpgradePartly(sender dbus.Sender, mode system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
 	// 创建job，但是不添加到任务队列中
 	var upgradeJob *Job
 	var createJobErr error
 	var startJobErr error
-	if mode&system.OfflineUpdate != 0 {
-		// info := m.offline.GetOfflineUpdateInfo()
-		// if len(info) == 0 {
-		// 	return "", dbusutil.ToError(errors.New("don't exist offline upgrade info"))
-		// }
-	} else {
-		mode = m.statusManager.GetCanDistUpgradeMode(mode) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
+	var mode system.UpdateType
+	// 非离线安装需要过滤可更新的选项
+	if origin&system.OfflineUpdate == 0 {
+		mode = m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
 		if mode == 0 {
 			return "", dbusutil.ToError(errors.New("don't exist can distUpgrade mode"))
 		}
+	}
+	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
+		mode = origin
 	}
 	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, true)
 	if createJobErr != nil {
@@ -274,7 +275,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	uuid, err = m.prepareDutUpgrade(job, mode)
 	if err != nil {
 		logger.Warning(err)
-		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
+		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
 		return nil, err
 	}
 	logger.Info(uuid)
@@ -297,12 +298,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
 			if systemErr != nil {
 				logger.Info(systemErr)
-				m.updatePlatform.postStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
 				return systemErr
 			}
 
 			if mode&system.SystemUpdate != 0 {
-				recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.systemUpdateLogs, upgradeRecordPath)
+				recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
 			}
 
 			if mode&system.SecurityUpdate != 0 {
@@ -411,7 +412,7 @@ func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
 	m.statusManager.SetUpdateStatus(mode, system.Upgrading)
 	// 替换cache文件,防止更新失败后os-version是错误的
 	if mode&system.SystemUpdate != 0 {
-		m.updatePlatform.replaceVersionCache()
+		m.updatePlatform.ReplaceVersionCache()
 	}
 }
 
@@ -484,8 +485,8 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 	go func() {
 		m.inhibitAutoQuitCountAdd()
 		defer m.inhibitAutoQuitCountSub()
-		m.updatePlatform.postSystemUpgradeMessage(upgradeFailed, job, mode)
-		m.updatePlatform.reportLog(upgradeStatusReport, false, job.Description)
+		m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeFailed, job.Description, mode)
+		m.reportLog(upgradeStatusReport, false, job.Description)
 		var allErrMsg []string
 		for _, logPath := range job.errLogPath {
 			content, err := ioutil.ReadFile(logPath)
@@ -494,7 +495,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 			}
 			allErrMsg = append(allErrMsg, string(content))
 		}
-		m.updatePlatform.postStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode, job.Description, strings.Join(allErrMsg, "\n")))
+		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode, job.Description, strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
@@ -522,7 +523,7 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	// }
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
-	m.updatePlatform.postStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
+	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
 	return nil
 }
 
@@ -637,7 +638,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			system.LocalCachePath,
 			pkgMap,
 			coreListMap, nil, nil, removeMap,
-			m.updatePlatform.getRules(), genRepoInfo(mode, system.OnlineListPath))
+			m.updatePlatform.GetRules(), genRepoInfo(mode, system.OnlineListPath))
 
 		if err != nil {
 			logger.Warning(err)

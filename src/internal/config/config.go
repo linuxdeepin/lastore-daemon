@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package main
+package config
 
 import (
 	"encoding/json"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/log"
 
 	"internal/system"
 
@@ -21,12 +22,15 @@ import (
 const MinCheckInterval = time.Minute
 const ConfigVersion = "0.1"
 
-// 由于lastore-daemon会闲时退出,dde-session-shell和dde-control-center需要获取实时状态时需要从dconfig获取,而不是从lastore-daemon获取
-type lastoreDaemonStatus uint32
+// LastoreDaemonStatus 由于lastore-daemon会闲时退出,dde-session-shell和dde-control-center需要获取实时状态时需要从dconfig获取,而不是从lastore-daemon获取
+type LastoreDaemonStatus uint32
+
+var logger = log.NewLogger("lastore/config")
 
 const (
-	canUpgrade    lastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
-	disableUpdate lastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
+	CanUpgrade    LastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
+	DisableUpdate LastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
+	ForceUpdate   LastoreDaemonStatus = 1 << 2 // 关机强制更新
 )
 
 type Config struct {
@@ -56,26 +60,31 @@ type Config struct {
 
 	AllowPostSystemUpgradeMessageVersion []string // 只有数组内的系统版本被允许发送更新完成的数据
 
-	dsLastoreManager         ConfigManager.Manager
-	useDSettings             bool
-	upgradeStatus            system.UpgradeStatusAndReason
-	idleDownloadConfig       string
-	systemSourceList         []string
-	nonUnknownList           []string
-	otherSourceList          []string // TODO
-	needDownloadSize         float64
-	downloadSpeedLimitConfig string
-	lastoreDaemonStatus      lastoreDaemonStatus
-	updateStatus             string
-	platformUpdate           bool
+	dsLastoreManager   ConfigManager.Manager
+	useDSettings       bool
+	UpgradeStatus      system.UpgradeStatusAndReason
+	IdleDownloadConfig string
+	SystemSourceList   []string
+	NonUnknownList     []string
+	OtherSourceList    []string // TODO
 
-	classifiedUpdatablePackages map[string][]string
-	onlineCache                 string
+	DownloadSpeedLimitConfig string
+	lastoreDaemonStatus      LastoreDaemonStatus
+	UpdateStatus             string
+	PlatformUpdate           bool
+
+	PlatformUrl     string // 更新接口地址
+	CheckPolicyCron string // 策略检查间隔
+	StartCheckRange []int  // 开机检查更新区间
+	IncludeDiskInfo bool   // machineID是否包含硬盘信息
+
+	ClassifiedUpdatablePackages map[string][]string
+	OnlineCache                 string
 
 	filePath string
 	statusMu sync.RWMutex
 
-	dsettingsChangedCbMap   map[string]func(lastoreDaemonStatus, interface{})
+	dsettingsChangedCbMap   map[string]func(LastoreDaemonStatus, interface{})
 	dsettingsChangedCbMapMu sync.Mutex
 }
 
@@ -141,9 +150,13 @@ const (
 	dSettingsKeySystemSourceList                     = "system-sources"
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
-	dSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
+	DSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
 	dSettingsKeyPlatformUpdate                       = "platform-update"
+	dSettingsKeyPlatformUrl                          = "platform-url"
+	dSettingsKeyCheckPolicyOnCalendar                = "check-policy-on-calendar"
+	dSettingsKeyStartCheckRange                      = "start-check-range"
+	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -348,7 +361,7 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		statusContent := v.Value().(string)
-		err = json.Unmarshal([]byte(statusContent), &c.upgradeStatus)
+		err = json.Unmarshal([]byte(statusContent), &c.UpgradeStatus)
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -358,7 +371,7 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.idleDownloadConfig = v.Value().(string)
+		c.IdleDownloadConfig = v.Value().(string)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemSourceList)
@@ -366,7 +379,7 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		for _, s := range v.Value().([]dbus.Variant) {
-			c.systemSourceList = append(c.systemSourceList, s.Value().(string))
+			c.SystemSourceList = append(c.SystemSourceList, s.Value().(string))
 		}
 	}
 
@@ -375,7 +388,7 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		for _, s := range v.Value().([]dbus.Variant) {
-			c.nonUnknownList = append(c.nonUnknownList, s.Value().(string))
+			c.NonUnknownList = append(c.NonUnknownList, s.Value().(string))
 		}
 	}
 
@@ -383,29 +396,29 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.downloadSpeedLimitConfig = v.Value().(string)
+		c.DownloadSpeedLimitConfig = v.Value().(string)
 	}
 
 	updateLastoreDaemonStatus := func() {
-		v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastoreDaemonStatus)
+		v, err = c.dsLastoreManager.Value(0, DSettingsKeyLastoreDaemonStatus)
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			c.lastoreDaemonStatus = lastoreDaemonStatus(v.Value().(float64))
+			c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(float64))
 		}
 	}
 	updateLastoreDaemonStatus()
 	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
 		switch key {
-		case dSettingsKeyLastoreDaemonStatus:
+		case DSettingsKeyLastoreDaemonStatus:
 			oldStatus := c.lastoreDaemonStatus
 			updateLastoreDaemonStatus()
 			newStatus := c.lastoreDaemonStatus
-			if (oldStatus & disableUpdate) != (newStatus & disableUpdate) {
+			if (oldStatus & DisableUpdate) != (newStatus & DisableUpdate) {
 				c.dsettingsChangedCbMapMu.Lock()
 				cb := c.dsettingsChangedCbMap[key]
 				if cb != nil {
-					go cb(disableUpdate, c.lastoreDaemonStatus)
+					go cb(DisableUpdate, c.lastoreDaemonStatus)
 				}
 				c.dsettingsChangedCbMapMu.Unlock()
 			}
@@ -426,22 +439,71 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.updateStatus = v.Value().(string)
+		c.UpdateStatus = v.Value().(string)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUpdate)
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.platformUpdate = v.Value().(bool)
+		c.PlatformUpdate = v.Value().(bool)
 	}
+
+	var url string
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUrl)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		url = v.Value().(string)
+	}
+	if len(url) == 0 {
+		c.PlatformUrl = "https://update-platform.uniontech.com"
+	} else {
+		c.PlatformUrl = url
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckPolicyOnCalendar)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.CheckPolicyCron = v.Value().(string)
+	}
+
+	var checkRange []float64
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		for _, s := range v.Value().([]dbus.Variant) {
+			checkRange = append(checkRange, s.Value().(float64))
+		}
+	}
+
+	if len(checkRange) != 2 {
+		c.StartCheckRange = []int{1800, 21600}
+	} else {
+		if checkRange[0] < checkRange[1] {
+			c.StartCheckRange = []int{int(checkRange[0]), int(checkRange[1])}
+		} else {
+			c.StartCheckRange = []int{int(checkRange[1]), int(checkRange[0])}
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncludeDiskInfo)
+	if err != nil {
+		logger.Warning(err)
+		c.IncludeDiskInfo = true
+	} else {
+		c.IncludeDiskInfo = v.Value().(bool)
+	}
+
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
 	content, err := ioutil.ReadFile(classifiedCachePath)
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.classifiedUpdatablePackages = make(map[string][]string)
-		err = json.Unmarshal(content, &c.classifiedUpdatablePackages)
+		c.ClassifiedUpdatablePackages = make(map[string][]string)
+		err = json.Unmarshal(content, &c.ClassifiedUpdatablePackages)
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -451,7 +513,7 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.onlineCache = string(content)
+		c.OnlineCache = string(content)
 	}
 
 	return c
@@ -482,9 +544,9 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	return
 }
 
-func (c *Config) connectConfigChanged(key string, cb func(lastoreDaemonStatus, interface{})) {
+func (c *Config) ConnectConfigChanged(key string, cb func(LastoreDaemonStatus, interface{})) {
 	if c.dsettingsChangedCbMap == nil {
-		c.dsettingsChangedCbMap = make(map[string]func(lastoreDaemonStatus, interface{}))
+		c.dsettingsChangedCbMap = make(map[string]func(LastoreDaemonStatus, interface{}))
 	}
 	c.dsettingsChangedCbMapMu.Lock()
 	c.dsettingsChangedCbMap[key] = cb
@@ -578,7 +640,7 @@ func (c *Config) SetAllowPostSystemUpgradeMessageVersion(version []string) error
 
 func (c *Config) SetUpgradeStatusAndReason(status system.UpgradeStatusAndReason) error {
 	logger.Infof("Update UpgradeStatusAndReason to %+v", status)
-	c.upgradeStatus = status
+	c.UpgradeStatus = status
 	v, err := json.Marshal(status)
 	if err != nil {
 		logger.Warning(err)
@@ -592,7 +654,7 @@ func (c *Config) SetUseDSettings(use bool) error {
 }
 
 func (c *Config) SetIdleDownloadConfig(idleConfig string) error {
-	c.idleDownloadConfig = idleConfig
+	c.IdleDownloadConfig = idleConfig
 	return c.save(dSettingsKeyIdleDownloadConfig, idleConfig)
 }
 
@@ -627,19 +689,19 @@ func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
 // }
 
 func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
-	c.downloadSpeedLimitConfig = config
+	c.DownloadSpeedLimitConfig = config
 	return c.save(dSettingsKeyDownloadSpeedLimit, config)
 }
 
-func (c *Config) SetLastoreDaemonStatus(status lastoreDaemonStatus) error {
+func (c *Config) SetLastoreDaemonStatus(status LastoreDaemonStatus) error {
 	c.statusMu.Lock()
 	c.lastoreDaemonStatus = status
 	c.statusMu.Unlock()
-	return c.save(dSettingsKeyLastoreDaemonStatus, status)
+	return c.save(DSettingsKeyLastoreDaemonStatus, status)
 }
 
 // UpdateLastoreDaemonStatus isSet: true 该位置1; false 该位清零
-func (c *Config) UpdateLastoreDaemonStatus(status lastoreDaemonStatus, isSet bool) error {
+func (c *Config) UpdateLastoreDaemonStatus(status LastoreDaemonStatus, isSet bool) error {
 	c.statusMu.Lock()
 	if isSet {
 		c.lastoreDaemonStatus |= status
@@ -647,23 +709,23 @@ func (c *Config) UpdateLastoreDaemonStatus(status lastoreDaemonStatus, isSet boo
 		c.lastoreDaemonStatus &= ^status
 	}
 	c.statusMu.Unlock()
-	return c.save(dSettingsKeyLastoreDaemonStatus, c.lastoreDaemonStatus)
+	return c.save(DSettingsKeyLastoreDaemonStatus, c.lastoreDaemonStatus)
 }
 
-func (c *Config) getLastoreDaemonStatus() lastoreDaemonStatus {
+func (c *Config) GetLastoreDaemonStatus() LastoreDaemonStatus {
 	c.statusMu.RLock()
 	defer c.statusMu.RUnlock()
 	return c.lastoreDaemonStatus
 }
 
-func (c *Config) getLastoreDaemonStatusByBit(key lastoreDaemonStatus) lastoreDaemonStatus {
+func (c *Config) GetLastoreDaemonStatusByBit(key LastoreDaemonStatus) LastoreDaemonStatus {
 	c.statusMu.RLock()
 	defer c.statusMu.RUnlock()
 	return c.lastoreDaemonStatus & key
 }
 
 func (c *Config) SetUpdateStatus(status string) error {
-	c.updateStatus = status
+	c.UpdateStatus = status
 	return c.save(dSettingsKeyUpdateStatus, status)
 }
 
@@ -678,12 +740,12 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 		logger.Warning(err)
 		return err
 	}
-	c.classifiedUpdatablePackages = pkgMap
+	c.ClassifiedUpdatablePackages = pkgMap
 	return ioutil.WriteFile(classifiedCachePath, content, 0644)
 }
 
 func (c *Config) SetOnlineCache(cache string) error {
-	c.onlineCache = cache
+	c.OnlineCache = cache
 	return ioutil.WriteFile(onlineCachePath, []byte(cache), 0644)
 }
 
