@@ -5,6 +5,7 @@
 package updateplatform
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
 	"crypto/sha256"
@@ -16,6 +17,7 @@ import (
 	. "internal/config"
 	"internal/system"
 	"internal/system/dut"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -485,17 +487,18 @@ func (m *UpdatePlatformManager) genUpdateLogResponse() (*http.Response, error) {
 	return client.Do(request)
 }
 
-func (m *UpdatePlatformManager) genPostProcessMsgResponse(msg string) (*http.Response, error) {
+// genPostProcessResponse 生成数据，发送请求，并返回response.
+// buf: 数据输入,io.Reader.
+// filePath: 生成的xz压缩的中间文件.
+func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath string) (*http.Response, error) {
 	policyUrl := m.requestUrl + Urls[PostProcess].path
 	client := &http.Client{
 		Timeout: 40 * time.Second,
 	}
-	buf := bytes.NewBufferString(msg)
-	tarFilePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
 	if log.LevelDebug != logger.GetLogLevel() {
-		defer os.RemoveAll(tarFilePath)
+		defer os.RemoveAll(filePath)
 	}
-	xzFile, err := os.Create(tarFilePath)
+	xzFile, err := os.Create(filePath)
 	if err != nil {
 		logger.Warning("create file failed:", err)
 		return nil, err
@@ -513,7 +516,7 @@ func (m *UpdatePlatformManager) genPostProcessMsgResponse(msg string) (*http.Res
 	hash := sha256.New()
 	xTime := fmt.Sprintf("%d", time.Now().Unix())
 
-	xzFileContent, err := ioutil.ReadFile(tarFilePath)
+	xzFileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		logger.Warning("open xz file failed:", err)
 		return nil, err
@@ -1145,7 +1148,91 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
 func (m *UpdatePlatformManager) PostStatusMessage(body string) {
 	logger.Debug("post status msg:", body)
-	response, err := m.genPostProcessMsgResponse(body)
+	buf := bytes.NewBufferString(body)
+	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
+	response, err := m.genPostProcessResponse(buf, filePath)
+	if err != nil {
+		logger.Warningf("post status message failed:%v", err)
+		return
+	}
+	data, err := getResponseData(response, PostProcess)
+	if err != nil {
+		logger.Warningf("get post status response failed:%v", err)
+		return
+	}
+	logger.Info(string(data))
+}
+
+func tarFiles(files []string, outFile string) error {
+	// 创建tar包文件
+	tarFile, err := os.Create(outFile)
+	if err != nil {
+		logger.Warning("create tar failed:", err)
+		return err
+	}
+	defer tarFile.Close()
+
+	// 创建tar包写入器
+	tarWriter := tar.NewWriter(tarFile)
+	defer tarWriter.Close()
+	// 将文件添加到tar包中
+	for _, filePath := range files {
+		file, err := os.Open(filePath)
+		if err != nil {
+			logger.Warning("open file failed:", err)
+			return err
+		}
+		defer file.Close()
+
+		// 获取文件信息
+		info, err := file.Stat()
+		if err != nil {
+			logger.Warning("get file info err:", err)
+			return err
+		}
+
+		// 创建tar头部信息
+		header := new(tar.Header)
+		header.Name = filepath.Base(filePath)
+		header.Size = info.Size()
+		header.Mode = int64(info.Mode())
+		header.ModTime = info.ModTime()
+
+		// 写入tar头部信息
+		if err := tarWriter.WriteHeader(header); err != nil {
+			logger.Warning("create tar header failed:", err)
+			return err
+		}
+
+		// 写入文件内容到tar包
+		if _, err := io.Copy(tarWriter, file); err != nil {
+			logger.Warning("input data to tar failed:", err)
+			return err
+		}
+	}
+	return nil
+}
+
+// PostUpdateLogFiles 将更新日志上传
+func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
+	hardwareId, err := GetHardwareId(m.config.IncludeDiskInfo)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	outFilename := fmt.Sprintf("/tmp/%s_%s_%s_%s.tar", "update", hardwareId, utils.GenUuid(), time.Now().Format("20231019102233444"))
+	err = tarFiles(files, outFilename)
+	if err != nil {
+		logger.Warningf("tar log files failed:%v", err)
+		return
+	}
+	tarFile, err := os.Open(outFilename)
+	if err != nil {
+		logger.Warning("open file failed:", err)
+		return
+	}
+	defer tarFile.Close()
+	response, err := m.genPostProcessResponse(tarFile, outFilename+".xz")
 	if err != nil {
 		logger.Warningf("post status message failed:%v", err)
 		return
