@@ -120,7 +120,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	}
 	if len(m.config.CheckPolicyCron) != 0 { // 需要按照间隔让lastore-tools刷新policy数据
 		unitMap[lastoreCronCheck] = []string{
-			fmt.Sprintf(`--on-calendar="%v"`, m.config.CheckPolicyCron),
+			fmt.Sprintf(`--on-calendar=%v`, m.config.CheckPolicyCron),
 			"/bin/bash",
 			"-c",
 			"/usr/bin/lastore-tools checkpolicy",
