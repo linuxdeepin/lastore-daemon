@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/godbus/dbus"
 )
@@ -68,6 +69,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	var job *Job
 	var isExist bool
 	var err error
+	var startTime time.Time
 	isExist, job, err = m.jobManager.CreateJob("", system.CheckSystemJobType, nil, nil, nil)
 	if err != nil {
 		return "", err
@@ -109,7 +111,8 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 		},
 		string(system.SucceedStatus): func() error {
 			inhibit(false)
-			if checkOrder == firstCheck {
+			switch checkOrder {
+			case firstCheck:
 				// TODO 去掉第一次检查，此时如果重启，那么再次启动时不会再进行该检查
 				err = delRebootCheckOption(checkOrder)
 				if err != nil {
@@ -120,8 +123,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				if err != nil {
 					logger.Warning(err)
 				}
-			}
-			if checkOrder == secondCheck {
+			case secondCheck:
 				// TODO 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置，lastore 状态修改为ready
 				err = delRebootCheckOption(secondCheck)
 				if err != nil {
@@ -144,6 +146,10 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					m.updatePlatform.RecoverVersionLink()
 				}
 			}
+			if time.Now().Sub(startTime) < 2*time.Second {
+				time.Sleep(2 * time.Second) // 检查太快的时候造成的感观不太好，而且有可能造成前端来不及响应，因此增加延迟
+			}
+
 			return nil
 		},
 	})
@@ -154,6 +160,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	if err = m.jobManager.addJob(job); err != nil {
 		return "", err
 	}
+	startTime = time.Now()
 	return job.getPath(), nil
 }
 
