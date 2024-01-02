@@ -305,12 +305,12 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(OptionToArgs(args), packages...))
 	c.SetEnv(environ)
 	return safeStart(c)
 }
 
-func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, args map[string]string) error {
+func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
 	err := CheckPkgSystemError(true)
 	if err != nil {
@@ -321,7 +321,7 @@ func (p *APTSystem) DistUpgrade(jobId string, environ map[string]string, args ma
 			return err
 		}
 	}
-	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, OptionToArgs(args))
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, append(OptionToArgs(args), packages...))
 	c.SetEnv(environ)
 	return safeStart(c)
 }
@@ -423,7 +423,7 @@ var _installRegex = regexp.MustCompile(`Inst (.*) \[.*] \(([^ ]+) .*\)`)
 var _installRegex2 = regexp.MustCompile(`Inst (.*) \(([^ ]+) .*\)`)
 var _removeRegex = regexp.MustCompile(`Remv (\S+)\s\[([^]]+)]`)
 
-// GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数
+// GenOnlineUpdatePackagesByEmulateInstall option 需要带上仓库参数 // TODO 存在正则范围不够的情况，导致风险，需要替换成ListDistUpgradePackages
 func GenOnlineUpdatePackagesByEmulateInstall(packages []string, option []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	allInstallPackages := make(map[string]system.PackageInfo)
 	removePackages := make(map[string]system.PackageInfo)
@@ -488,7 +488,6 @@ func ListDistUpgradePackages(sourcePath string, option []string) ([]string, erro
 		"dist-upgrade", "--assume-no",
 		"-o", "Debug::NoLocking=1",
 	}
-	args = append(args, option...)
 	if info, err := os.Stat(sourcePath); err == nil {
 		if info.IsDir() {
 			args = append(args, "-o", "Dir::Etc::SourceList=/dev/null")
@@ -500,7 +499,7 @@ func ListDistUpgradePackages(sourcePath string, option []string) ([]string, erro
 	} else {
 		return nil, err
 	}
-
+	args = append(args, option...)
 	cmd := exec.Command("apt-get", args...) // #nosec G204
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf

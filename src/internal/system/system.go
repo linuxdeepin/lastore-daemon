@@ -131,7 +131,7 @@ type System interface {
 	DownloadSource(jobId string, environ map[string]string, cmdArgs map[string]string) error
 	Install(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
-	DistUpgrade(jobId string, environ map[string]string, cmdArgs map[string]string) error
+	DistUpgrade(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
 	UpdateSource(jobId string, environ map[string]string, cmdArgs map[string]string) error
 	Clean(jobId string) error
 	Abort(jobId string) error

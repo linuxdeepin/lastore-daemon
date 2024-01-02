@@ -97,12 +97,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
 		isExist, job, err = m.jobManager.CreateJob(jobName, jobType, nil, environ, nil)
 	} else {
+		m.updater.PropsMu.Lock()
 		option := map[string]interface{}{
 			"UpdateMode":   mode,
 			"DownloadSize": m.statusManager.GetAllUpdateModeDownloadSize(),
 			"PackageMap":   m.updater.ClassifiedUpdatablePackages,
 		}
 		isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ, option)
+		m.updater.PropsMu.Unlock()
 	}
 	if err != nil {
 		logger.Warningf("Prepare DistUpgrade error: %v\n", err)
@@ -233,7 +235,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
 					// 除了下载失败和下载成功之外,之前的状态为 IsDownloading DownloadPause 的都通过size进行状态修正
 					if j.Status != system.FailedStatus && j.Status != system.SucceedStatus {
-						m.statusManager.updateModeStatusBySize(j.updateTyp, m.updater.ClassifiedUpdatablePackages)
+						m.statusManager.updateModeStatusBySize(j.updateTyp)
 					}
 					m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 				}

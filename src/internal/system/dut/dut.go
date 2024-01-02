@@ -172,8 +172,6 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
 	if ifOffline {
 		args = append(args, "--meta-cfg")
 		args = append(args, system.DutOfflineMetaConfPath)
-		// 离线更新暂不涉及precheck和midcheck
-		// return nil
 	} else {
 		args = append(args, "--meta-cfg")
 		args = append(args, system.DutOnlineMetaConfPath)
@@ -187,7 +185,30 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
 	if err != nil {
+		if typ == PreCheck {
+			return parsePreCheckError(errBuf.String())
+		}
 		return parsePkgSystemError(errBuf.String(), "")
 	}
 	return nil
+}
+
+func parsePreCheckError(stdErrStr string) *system.JobError {
+	logger.Info("error message form dut precheck is:", stdErrStr)
+	var content ErrorContent
+	err := json.Unmarshal([]byte(stdErrStr), &content)
+	if err != nil {
+		return nil
+	}
+
+	switch content.Code {
+	case ChkDynError:
+		logger.Warningf("job error ChkNonblockError:%v", stdErrStr)
+		return &system.JobError{
+			Type:   system.ErrorScript,
+			Detail: stdErrStr,
+		}
+	default:
+		return nil
+	}
 }

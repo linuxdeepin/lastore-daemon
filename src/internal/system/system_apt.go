@@ -497,3 +497,30 @@ func parseInstallAddSize(line string) (float64, error) {
 	}
 	return SizeUnknown, fmt.Errorf("%q invalid", line)
 }
+
+func CheckInstallAddSize(updateType UpdateType) bool {
+	isSatisfied := false
+	addSize, err := QuerySourceAddSize(updateType)
+	if err != nil {
+		logger.Warning(err)
+	}
+	logger.Debugf("add size is %v", addSize)
+	content, err := exec.Command("/bin/sh", []string{
+		"-c",
+		"df -BK --output='avail' /usr|awk 'NR==2'",
+	}...).CombinedOutput()
+	if err != nil {
+		logger.Warning(string(content))
+	} else {
+		spaceStr := strings.Replace(string(content), "K", "", -1)
+		spaceStr = strings.TrimSpace(spaceStr)
+		spaceNum, err := strconv.Atoi(spaceStr)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			spaceNum = spaceNum * 1000
+			isSatisfied = spaceNum > int(addSize)
+		}
+	}
+	return isSatisfied
+}

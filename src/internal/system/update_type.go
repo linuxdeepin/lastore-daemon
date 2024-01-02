@@ -256,6 +256,9 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
+	if updateType&OfflineUpdate != 0 {
+		sourcePathList = append(sourcePathList, GetCategorySourceMap()[updateType])
+	}
 	// 由于103x版本兼容，检查更新时需要检查商店仓库
 	// if updateType&AppStoreUpdate != 0 {
 	// 	updateType &= ^AppStoreUpdate

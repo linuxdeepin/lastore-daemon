@@ -140,17 +140,6 @@ func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *db
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
-func (m *Manager) UpdatablePackages(updateType string) (pkgs []string, busErr *dbus.Error) {
-	switch updateType {
-	case system.SystemUpdate.JobType():
-		return m.updater.ClassifiedUpdatablePackages[updateType], nil
-	case system.SecurityUpdate.JobType():
-		return m.updater.ClassifiedUpdatablePackages[updateType], nil
-	default:
-		return nil, dbusutil.ToError(fmt.Errorf("%s", "Unknown update type"))
-	}
-}
-
 func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
 	res := make(map[system.UpdateType]interface{})
 	if updateType&system.SystemUpdate != 0 {
@@ -158,9 +147,7 @@ func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string
 	}
 
 	if updateType&system.SecurityUpdate != 0 {
-		m.allUpgradableInfoMu.Lock()
-		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate])
-		m.allUpgradableInfoMu.Unlock()
+		res[system.SecurityUpdate] = m.updatePlatform.GetCVEUpdateLogs(m.updater.getUpdatablePackagesByType(system.SecurityUpdate))
 	}
 
 	if len(res) == 0 {

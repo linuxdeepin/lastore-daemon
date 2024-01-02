@@ -49,14 +49,12 @@ func (p *DutSystem) UpdateSource(jobId string, environ map[string]string, args m
 	return p.APTSystem.UpdateSource(jobId, environ, args)
 }
 
-func (p *DutSystem) DistUpgrade(jobId string, environ map[string]string, args map[string]string) error {
+func (p *DutSystem) DistUpgrade(jobId string, packages []string, environ map[string]string, args map[string]string) error {
 	err := checkSystemDependsError()
 	if err != nil {
 		return err
 	}
-	c := newDUTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, OptionToArgs(args))
-	c.SetEnv(environ)
-	return c.Start()
+	return p.APTSystem.DistUpgrade(jobId, packages, environ, args)
 }
 
 func (p *DutSystem) FixError(jobId string, errType string, environ map[string]string, args map[string]string) error {

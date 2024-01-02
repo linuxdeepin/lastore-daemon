@@ -34,7 +34,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.Install(j.Id, j.Packages, j.environ, j.option)
 
 	case system.DistUpgradeJobType:
-		return sys.DistUpgrade(j.Id, j.environ, j.option)
+		return sys.DistUpgrade(j.Id, j.Packages, j.environ, j.option)
 
 	case system.RemoveJobType:
 		return sys.Remove(j.Id, j.Packages, j.environ)

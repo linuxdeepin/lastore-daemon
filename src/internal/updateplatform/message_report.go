@@ -120,9 +120,9 @@ func NewUpdatePlatformManager(c *Config) *UpdatePlatformManager {
 	}
 }
 
-func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs map[string]system.PackageInfo) map[string]CEVInfo {
+func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs []string) map[string]CEVInfo {
 	var cveInfos = make(map[string]CEVInfo)
-	for name, _ := range pkgs {
+	for _, name := range pkgs {
 		for _, id := range m.cvePkgs[name] {
 			if _, ok := cveInfos[id]; ok {
 				continue

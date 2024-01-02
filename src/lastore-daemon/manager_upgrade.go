@@ -12,6 +12,7 @@ import (
 	"internal/updateplatform"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -228,7 +229,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		logger.Warning(err)
 		return nil, dbusutil.ToError(err)
 	}
-	_ = mapMethodCaller(execPath, cmdLine) // TODO 需要对调用者进行鉴权
+	caller := mapMethodCaller(execPath, cmdLine) // TODO 需要对调用者进行鉴权
 	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
@@ -239,7 +240,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 	// 判断是否有可离线更新内容
 	if mode == system.OfflineUpdate {
-		if len(m.offline.upgradeAblePackages) == 0 {
+		if len(m.offline.upgradeAblePackageList) == 0 {
 			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
 		}
 	} else {
@@ -252,79 +253,118 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	var isExist bool
 	var job *Job
 	var uuid string
-	m.do.Lock()
-	defer m.do.Unlock()
-	if isClassify {
-		// TODO classifiedUpgrade 逻辑
-		isExist, job, err = m.jobManager.CreateJob("", GetUpgradeInfoMap()[mode].UpgradeJobId, packages, environ, nil)
-	} else {
-		isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, packages, environ, nil)
-	}
-
-	if err != nil {
-		logger.Warningf("create DistUpgrade Job error: %v", err)
-		return nil, err
-	}
-	if isExist {
-		logger.Info(JobExistError)
-		return job, nil
-	}
-	job.retry = 0
-	// 笔记本电池电量监听
-	m.handleSysPowerChanged(job)
-	uuid, err = m.prepareDutUpgrade(job, mode)
-	if err != nil {
-		logger.Warning(err)
-		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
-		return nil, err
-	}
-	logger.Info(uuid)
-	// 设置hook
-	job.setPreHooks(map[string]func() error{
-		string(system.RunningStatus): func() error {
-			systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil)
-			if systemErr != nil {
-				logger.Warning(systemErr)
-				return systemErr
-			}
-			m.preRunningHook(needChangeGrub, mode)
-			return nil
-		},
-		string(system.FailedStatus): func() error {
-			_ = m.preFailedHook(job, mode)
-			return nil
-		},
-		string(system.SucceedStatus): func() error {
-			systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
-			if systemErr != nil {
-				logger.Info(systemErr)
-				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
-				return systemErr
-			}
-
-			if mode&system.SystemUpdate != 0 {
-				recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
-			}
-
-			if mode&system.SecurityUpdate != 0 {
-				m.allUpgradableInfoMu.Lock()
-				recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.allUpgradableInfo[system.SecurityUpdate]), upgradeRecordPath)
-				m.allUpgradableInfoMu.Unlock()
-			}
-			_ = m.preSuccessHook(job, needChangeGrub, mode)
-			return nil
-		},
-		string(system.EndStatus): func() error {
-			m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
-			return nil
-		},
-	})
-	if needAdd { // 分类下载的job需要外部判断是否add
-		if err := m.jobManager.addJob(job); err != nil {
-			return nil, err
+	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
+		m.do.Lock()
+		defer m.do.Unlock()
+		if isClassify {
+			jobType := GetUpgradeInfoMap()[mode].UpgradeJobId
+			isExist, job, err = m.jobManager.CreateJob("", jobType, nil, environ, nil)
+		} else {
+			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, m.coreList, environ, nil)
 		}
-	}
+		if err != nil {
+			logger.Warningf("DistUpgrade error: %v\n", err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if isExist {
+			return JobExistError
+		}
+		job.caller = caller
+		job.retry = 0
+		info, err := os.Stat(path)
+		if err != nil {
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if info.IsDir() {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": path,
+			}
+		} else {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  path,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
+		m.handleSysPowerChanged(job)
+		uuid, err = m.prepareAptCheck(job, mode)
+		if err != nil {
+			logger.Warning(err)
+			m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		logger.Info(uuid)
+		// 设置hook
+		job.setPreHooks(map[string]func() error{
+			string(system.RunningStatus): func() error {
+				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
+				if systemErr != nil {
+					logger.Info(systemErr)
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
+					return systemErr
+				}
+				if !system.CheckInstallAddSize(mode) {
+					return &system.JobError{
+						Type:   system.ErrorInsufficientSpace,
+						Detail: "There is not enough space on the disk to upgrade",
+					}
+				}
+				m.preRunningHook(needChangeGrub, mode)
+				return nil
+			},
+			string(system.FailedStatus): func() error {
+				_ = m.preFailedHook(job, mode)
+				return nil
+			},
+			string(system.SucceedStatus): func() error {
+				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
+				if systemErr != nil {
+					logger.Info(systemErr)
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
+					return systemErr
+				}
 
+				if mode&system.SystemUpdate != 0 {
+					recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
+				}
+
+				if mode&system.SecurityUpdate != 0 {
+					recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.updater.getUpdatablePackagesByType(system.SecurityUpdate)), upgradeRecordPath)
+				}
+				_ = m.preSuccessHook(job, needChangeGrub, mode)
+				return nil
+			},
+			string(system.EndStatus): func() error {
+				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
+				if unref != nil {
+					unref()
+				}
+				return nil
+			},
+		})
+		if needAdd { // 分类下载的job需要外部判断是否add
+			if err := m.jobManager.addJob(job); err != nil {
+				if unref != nil {
+					unref()
+				}
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, JobExistError) { // exist的err通过最后的return返回即可
+		logger.Warning(err)
+		return nil, err
+	}
 	cancelErr := m.cancelAllUpdateJob()
 	if cancelErr != nil {
 		logger.Warning(cancelErr)
@@ -495,6 +535,12 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 			}
 			allErrMsg = append(allErrMsg, string(content))
 		}
+		msg, err := ioutil.ReadFile("/var/log/apt/term.log")
+		if err != nil {
+			logger.Warning("failed to get upgrade failed lod:", err)
+		} else {
+			allErrMsg = append(allErrMsg, string(msg))
+		}
 		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode, job.Description, strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
@@ -566,7 +612,7 @@ func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
 	return nil
 }
 
-// 生成meta.json和uuid
+// 生成meta.json和uuid 暂时不使用dut，使用apt
 func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
 	// 使用dut更新前的准备
 	var uuid string
@@ -595,12 +641,12 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 			return "", errors.New("invalid mode")
 		}
 
-		m.allUpgradableInfoMu.Lock()
-		pkgMap = m.mergePackagesByMode(mode, m.allUpgradableInfo)
-		m.allUpgradableInfoMu.Unlock()
-		m.allRemovePkgInfoMu.Lock()
-		removeMap = m.mergePackagesByMode(mode, m.allRemovePkgInfo)
-		m.allRemovePkgInfoMu.Unlock()
+		// m.allUpgradableInfoMu.Lock()
+		// pkgMap = m.mergePackagesByMode(mode, m.allUpgradableInfo)
+		// m.allUpgradableInfoMu.Unlock()
+		// m.allRemovePkgInfoMu.Lock()
+		// removeMap = m.mergePackagesByMode(mode, m.allRemovePkgInfo)
+		// m.allRemovePkgInfoMu.Unlock()
 
 		coreListMap := make(map[string]system.PackageInfo)
 		if m.coreList != nil && len(m.coreList) > 0 {
@@ -646,6 +692,85 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		}
 	}
 	return uuid, nil
+}
+
+// 生成meta.json和uuid
+func (m *Manager) prepareAptCheck(job *Job, mode system.UpdateType) (string, error) {
+	var uuid string
+	var err error
+	// pkgMap repo和system.LocalCachePath都是占位用，没有起到真正的作用
+	pkgMap := make(map[string]system.PackageInfo)
+	pkgMap["lastore-daemon"] = system.PackageInfo{
+		Name:    "lastore-daemon",
+		Version: "1.0",
+		Need:    "exist",
+	}
+	var repo []dut.RepoInfo
+	if mode == system.OfflineUpdate {
+		repo = genRepoInfo(system.OfflineUpdate, system.OfflineListPath)
+	} else {
+		repo = genRepoInfo(system.SecurityUpdate, system.OnlineListPath)
+	}
+
+	// coreList 生成
+	coreListMap := make(map[string]system.PackageInfo)
+	if m.coreList != nil && len(m.coreList) > 0 {
+		for _, pkgName := range m.coreList {
+			coreListMap[pkgName] = system.PackageInfo{
+				Name:    pkgName,
+				Version: "",
+				Need:    "skipversion",
+			}
+		}
+	} else {
+		loadCoreList := func() map[string]system.PackageInfo {
+			coreListMap := make(map[string]system.PackageInfo)
+			data, err := ioutil.ReadFile(coreListVarPath)
+			if err != nil {
+				return nil
+			}
+			var pkgList PackageList
+			err = json.Unmarshal(data, &pkgList)
+			if err != nil {
+				return nil
+			}
+			for _, pkg := range pkgList.PkgList {
+				coreListMap[pkg.PkgName] = system.PackageInfo{
+					Name:    pkg.PkgName,
+					Version: "",
+					Need:    "skipversion",
+				}
+			}
+			return nil
+		}
+		coreListMap = loadCoreList()
+	}
+	// 使用dut检查前的准备
+	if mode == system.OfflineUpdate {
+		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
+			system.LocalCachePath,
+			pkgMap,
+			coreListMap, nil, nil, nil, nil, repo)
+		if err != nil {
+			logger.Warning(err)
+			return "", err
+		}
+	} else {
+		mode &= system.AllInstallUpdate
+		if mode == 0 {
+			return "", errors.New("invalid mode")
+		}
+		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
+			system.LocalCachePath,
+			pkgMap,
+			coreListMap, nil, nil, nil,
+			m.updatePlatform.GetRules(), repo)
+		if err != nil {
+			logger.Warning(err)
+			return "", err
+		}
+	}
+	return uuid, err
 }
 
 func (m *Manager) mergePackagesByMode(mode system.UpdateType, needMergePkgMap map[system.UpdateType]map[string]system.PackageInfo) map[string]system.PackageInfo {

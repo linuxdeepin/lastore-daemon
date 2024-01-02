@@ -341,33 +341,22 @@ func parseCoreList() ([]string, error) {
 	return pkgs, nil
 }
 
+// 暂时废弃获取可更新列表的详细信息
 var getUpgradablePackageListMap = map[system.UpdateType]func([]string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error){
-	system.SystemUpdate:   getSystemUpgradablePackageList,
-	system.SecurityUpdate: getSecurityUpgradablePackageList,
-	system.UnknownUpdate:  getUnknownUpgradablePackageList,
+	system.SystemUpdate:   getSystemUpgradablePackagesMap,
+	system.SecurityUpdate: getSecurityUpgradablePackagesMap,
+	system.UnknownUpdate:  getUnknownUpgradablePackagesMap,
 }
 
 // 生成系统更新内容和安全更新内容
 func (m *Manager) generateUpdateInfo() (errList []error) {
 	propPkgMap := make(map[string][]string) // updater的ClassifiedUpdatablePackages用
 	var propPkgMapMu sync.Mutex
-	m.allUpgradableInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
-	m.allRemovePkgInfo = make(map[system.UpdateType]map[string]system.PackageInfo)
 	var errListMu sync.Mutex
 	appendErrorSafe := func(err error) {
 		errListMu.Lock()
 		errList = append(errList, err)
 		errListMu.Unlock()
-	}
-	updateUpgradableInfoSafe := func(t system.UpdateType, infoMap map[string]system.PackageInfo) {
-		m.allUpgradableInfoMu.Lock()
-		m.allUpgradableInfo[t] = infoMap
-		m.allUpgradableInfoMu.Unlock()
-	}
-	updateRemovePkgInfoSafe := func(t system.UpdateType, infoMap map[string]system.PackageInfo) {
-		m.allRemovePkgInfoMu.Lock()
-		m.allRemovePkgInfo[t] = infoMap
-		m.allRemovePkgInfoMu.Unlock()
 	}
 	updatePropPkgMapSafe := func(t string, packageList []string) {
 		propPkgMapMu.Lock()
@@ -376,24 +365,18 @@ func (m *Manager) generateUpdateInfo() (errList []error) {
 	}
 
 	var wg sync.WaitGroup
-	for updateType, getFn := range getUpgradablePackageListMap {
+	for updateType, getFn := range getUpgradablePackageList {
 		wg.Add(1)
 		fn := getFn
 		t := updateType
 		go func() {
 			logger.Infof("start get %v upgradable package", t.JobType())
-			installList, removeList, err := fn(m.coreList)
+			installList, err := fn(m.coreList)
 			if err != nil {
 				appendErrorSafe(err)
 			} else {
-				updateUpgradableInfoSafe(t, installList)
-				updateRemovePkgInfoSafe(t, removeList)
+				updatePropPkgMapSafe(t.JobType(), installList)
 			}
-			var packageList []string
-			for k, v := range installList {
-				packageList = append(packageList, fmt.Sprintf("%v=%v", k, v.Version))
-			}
-			updatePropPkgMapSafe(t.JobType(), packageList)
 			wg.Done()
 		}()
 	}
@@ -402,20 +385,14 @@ func (m *Manager) generateUpdateInfo() (errList []error) {
 	return
 }
 
-func getSystemUpgradablePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getSystemUpgradablePackagesMap(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	if len(coreList) == 0 {
 		return nil, nil, errors.New("coreList is nil,can not get system update package list")
 	}
 	var err error
-	// var localCache map[string]statusVersion
+
 	var emulateInstallPkgList map[string]system.PackageInfo
 	var emulateRemovePkgList map[string]system.PackageInfo
-	// 获取本地deb信息
-	// localCache, err = loadPkgStatusVersion()
-	// if err != nil {
-	// 	logger.Warning(err)
-	// 	return nil, nil, err
-	// }
 
 	// 模拟安装更新平台下发所有包(不携带版本号)，获取可升级包的版本
 	systemSource := system.GetCategorySourceMap()[system.SystemUpdate]
@@ -440,42 +417,42 @@ func getSystemUpgradablePackageList(coreList []string) (map[string]system.Packag
 	if err != nil {
 		return nil, nil, err
 	}
-	// for _, platformPkgInfo := range platFormPackageMap {
-	// 	repoPkgInfo, ok := emulateInstallPkgList[platformPkgInfo.Name]
-	// 	if ok {
-	// 		// 该包可升级，但是可升级版本小于更新平台下发版本，此时将不允许升级
-	// 		if !compareVersionsGe(repoPkgInfo.Version, platformPkgInfo.Version) {
-	// 			return nil, nil, fmt.Errorf("%v can not install to version %v", platformPkgInfo.Name, platformPkgInfo.Version)
-	// 		}
-	// 	} else {
-	// 		// 该包不能升级，需要判断是否在本地存在高版本包
-	// 		localPkgInfo, ok := localCache[platformPkgInfo.Name]
-	// 		if ok {
-	// 			// 本地有该包，但是版本小于更新平台版本
-	// 			if !compareVersionsGe(localPkgInfo.version, repoPkgInfo.Version) {
-	// 				return nil, nil, fmt.Errorf("local exist low version package and %v can not install to version：%v in repo", repoPkgInfo.Name, repoPkgInfo.Version)
-	// 			}
-	// 		} else {
-	// 			// 本地无该包
-	// 			return nil, nil, fmt.Errorf("local and repo not exist %v", platformPkgInfo.Name)
-	// 		}
-	// 	}
-	// }
 	return emulateInstallPkgList, emulateRemovePkgList, nil
 }
 
-func getSecurityUpgradablePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getSecurityUpgradablePackagesMap(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	return apt.GenOnlineUpdatePackagesByEmulateInstall(nil, []string{
 		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.SecurityUpdate]),
 		"-o", "Dir::Etc::SourceParts=/dev/null",
 	})
 }
 
-func getUnknownUpgradablePackageList(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
+func getUnknownUpgradablePackagesMap(coreList []string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error) {
 	return apt.GenOnlineUpdatePackagesByEmulateInstall(nil, []string{
 		"-o", fmt.Sprintf("Dir::Etc::SourceParts=%v", system.GetCategorySourceMap()[system.UnknownUpdate]),
 		"-o", "Dir::Etc::sourcelist=/dev/null",
 	})
+}
+
+var getUpgradablePackageList = map[system.UpdateType]func([]string) ([]string, error){
+	system.SystemUpdate:   getSystemUpgradablePackageList,
+	system.SecurityUpdate: getSecurityUpgradablePackageList,
+	system.UnknownUpdate:  getUnknownUpgradablePackageList,
+}
+
+func getSystemUpgradablePackageList(coreList []string) ([]string, error) {
+	if len(coreList) == 0 {
+		return nil, errors.New("coreList is nil,can not get system update package list")
+	}
+	return apt.ListDistUpgradePackages(system.GetCategorySourceMap()[system.SystemUpdate], coreList)
+}
+
+func getSecurityUpgradablePackageList(coreList []string) ([]string, error) {
+	return apt.ListDistUpgradePackages(system.GetCategorySourceMap()[system.SecurityUpdate], coreList)
+}
+
+func getUnknownUpgradablePackageList(coreList []string) ([]string, error) {
+	return apt.ListDistUpgradePackages(system.GetCategorySourceMap()[system.UnknownUpdate], coreList)
 }
 
 // 判断包对应版本是否存在
@@ -590,11 +567,28 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}()
 			logger.Warning(e)
 		}
-		m.statusManager.UpdateModeAllStatusBySize(m.updater.ClassifiedUpdatablePackages)
+		m.statusManager.UpdateModeAllStatusBySize()
 		m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 	} else {
+		// 初始化时获取coreList数据
+		data, err := ioutil.ReadFile(coreListVarPath)
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
+		var pkgList PackageList
+		err = json.Unmarshal(data, &pkgList)
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
+		var pkgs []string
+		for _, pkg := range pkgList.PkgList {
+			pkgs = append(pkgs, pkg.PkgName)
+		}
+		m.coreList = pkgs
 		go func() {
-			m.statusManager.UpdateModeAllStatusBySize(m.updater.ClassifiedUpdatablePackages)
+			m.statusManager.UpdateModeAllStatusBySize()
 			m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 		}()
 	}

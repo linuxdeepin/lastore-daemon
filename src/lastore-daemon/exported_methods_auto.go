@@ -163,12 +163,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"path"},
 		},
 		{
-			Name:    "UpdatablePackages",
-			Fn:      v.UpdatablePackages,
-			InArgs:  []string{"updateType"},
-			OutArgs: []string{"pkgs"},
-		},
-		{
 			Name:    "UpdateOfflineSource",
 			Fn:      v.UpdateOfflineSource,
 			InArgs:  []string{"paths", "option"},

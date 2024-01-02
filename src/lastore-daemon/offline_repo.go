@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/godbus/dbus"
@@ -49,10 +48,11 @@ func (t OfflineUpgradeType) string() string {
 
 type Indicator func(progress float64)
 type OfflineManager struct {
-	localOupRepoPaths   []string // repo.sfs挂载后的路径
-	checkResult         OfflineCheckResult
-	upgradeAblePackages map[string]system.PackageInfo // 离线更新可更新包
-	removePackages      map[string]system.PackageInfo
+	localOupRepoPaths      []string // repo.sfs挂载后的路径
+	checkResult            OfflineCheckResult
+	upgradeAblePackages    map[string]system.PackageInfo // 离线更新可更新包 临时废弃
+	removePackages         map[string]system.PackageInfo // 离线更新需要卸载的包 临时废弃
+	upgradeAblePackageList []string
 }
 
 func NewOfflineManager() *OfflineManager {
@@ -127,7 +127,8 @@ type OfflineCheckResult struct {
 	CheckResultInfo map[string]*OupResultInfo
 	DiskCheckState  CheckState // 解压空间是否满足 int 类型  0 未检查 1 检查通过 -1 检查不通过
 
-	// 建立离线仓库检查更新后补充下面两项数据
+	// 建立离线仓库检查更新后补充下面三项数据
+	AptCheck         CheckState // apt update是否通过 int 类型  0 未检查 1 检查通过 -1 检查不通过
 	DebCount         int        // apt update后,获取可更新包的数量
 	SystemCheckState CheckState // apt update后,通过系统更新工具做环境检查 int 类型  0 未检查 1 检查通过 -1 检查不通过
 }
@@ -143,6 +144,7 @@ func (m *OfflineManager) PrepareUpdateOffline(paths []string, indicator Indicato
 		OupCheckState:    nocheck,
 		CheckResultInfo:  make(map[string]*OupResultInfo),
 		DiskCheckState:   nocheck,
+		AptCheck:         nocheck,
 		DebCount:         -1,
 		SystemCheckState: nocheck,
 	}
@@ -280,20 +282,37 @@ func (m *OfflineManager) PrintCheckResult() {
 	logger.Infof("system check is %v", m.checkResult.SystemCheckState.string())
 }
 
-// AfterUpdateOffline 离线检查成功之后触发，汇总前端需要的数据：可升级包数量,磁盘升级空间检测结果
-func (m *OfflineManager) AfterUpdateOffline() error {
-	installPkgs, removePkgs, err := apt.GenOnlineUpdatePackagesByEmulateInstall(nil, []string{
+// AfterUpdateOffline 离线检查成功之后触发，汇总前端需要的数据：系统环境检查(依赖检查、安装空间检查)、可升级包数量
+func (m *OfflineManager) AfterUpdateOffline(coreList []string) error {
+	m.checkResult.AptCheck = success
+	// 依赖和dpkg中断检查
+	err := apt.CheckPkgSystemError(false)
+	if err != nil {
+		logger.Warningf("check pkg system error:%v", err)
+		m.checkResult.SystemCheckState = failed
+		m.checkResult.DebCount = -1
+		return err
+	}
+	// 安装空间检查
+	if !system.CheckInstallAddSize(system.OfflineUpdate) {
+		m.checkResult.SystemCheckState = failed
+		return &system.JobError{
+			Type:   system.ErrorInsufficientSpace,
+			Detail: "There is not enough space on the disk to upgrade",
+		}
+	}
+	m.checkResult.SystemCheckState = success
+	// 可升级包数量
+	args := []string{
 		"-o", "Dir::State::lists=/var/lib/lastore/offline_list",
-		"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", system.GetCategorySourceMap()[system.OfflineUpdate]),
-		"-o", "Dir::Etc::SourceParts=/dev/null",
-	})
+	}
+	args = append(args, coreList...)
+	installPkgs, err := apt.ListDistUpgradePackages(system.GetCategorySourceMap()[system.OfflineUpdate], args)
 	if err != nil {
 		return err
 	}
-
 	m.checkResult.DebCount = len(installPkgs)
-	m.upgradeAblePackages = installPkgs
-	m.removePackages = removePkgs
+	m.upgradeAblePackageList = installPkgs
 	return nil
 }
 
@@ -312,15 +331,16 @@ func (m *OfflineManager) CleanCache() error {
 				err = cmd.Run()
 				if err != nil {
 					logger.Warningf("failed to umount: %v %v", outBuf.String(), errBuf.String())
+				} else {
+					err = os.RemoveAll(mountPoint)
+					if err != nil {
+						logger.Warningf("failed to remove: %v %v", mountPoint, err)
+					}
 				}
 			}
 		}
 	}
 	m.localOupRepoPaths = []string{}
-	err = os.RemoveAll(mountFsDir)
-	if err != nil {
-		return err
-	}
 	return os.RemoveAll(unzipOupDir)
 }
 
@@ -373,7 +393,7 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			return nil
 		},
 		string(system.SucceedStatus): func() error {
-			err = m.offline.AfterUpdateOffline()
+			err = m.offline.AfterUpdateOffline(m.coreList)
 			if err != nil {
 				logger.Warning(err)
 				return &system.JobError{
@@ -381,17 +401,6 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 					Detail: "check offline oup file error:" + err.Error(),
 				}
 			}
-			if len(m.offline.upgradeAblePackages) > 0 {
-				if m.offline.checkOfflineSystemState() {
-					m.offline.checkResult.SystemCheckState = success
-				} else {
-					m.offline.checkResult.SystemCheckState = failed
-					m.offline.checkResult.DebCount = -1
-				}
-			} else {
-				m.offline.checkResult.SystemCheckState = success
-			}
-
 			m.offline.PrintCheckResult()
 			job.setPropProgress(1)
 			go func() {
@@ -408,7 +417,9 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 				defer m.inhibitAutoQuitCountSub()
 				m.updatePlatform.PostStatusMessage(fmt.Sprintf("offline update check failed detail is:%v", job.Description))
 			}()
-			m.offline.checkResult.SystemCheckState = failed
+			if m.offline.checkResult.AptCheck == nocheck {
+				m.offline.checkResult.AptCheck = failed
+			}
 			m.offline.checkResult.DebCount = -1
 			return nil
 		},
@@ -420,32 +431,7 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 	return job, nil
 }
 
-func checkRootSpace() bool {
-	isSatisfied := false
-	addSize, err := system.QuerySourceAddSize(system.OfflineUpdate)
-	if err != nil {
-		logger.Warning(err)
-	}
-	content, err := exec.Command("/bin/sh", []string{
-		"-c",
-		"df -BK --output='avail' /var|awk 'NR==2'",
-	}...).CombinedOutput()
-	if err != nil {
-		logger.Warning(string(content))
-	} else {
-		spaceStr := strings.Replace(string(content), "K", "", -1)
-		spaceStr = strings.TrimSpace(spaceStr)
-		spaceNum, err := strconv.Atoi(spaceStr)
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			spaceNum = spaceNum * 1000
-			isSatisfied = spaceNum > int(addSize)
-		}
-	}
-	return isSatisfied
-}
-
+// 临时废弃
 func (m *OfflineManager) checkOfflineSystemState() bool {
 	_, err := dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
 		system.LocalCachePath,

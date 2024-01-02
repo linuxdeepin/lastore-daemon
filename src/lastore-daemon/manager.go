@@ -81,11 +81,6 @@ type Manager struct {
 	offline            *OfflineManager
 	rebootTimeoutTimer *time.Timer
 
-	allUpgradableInfo   map[system.UpdateType]map[string]system.PackageInfo
-	allUpgradableInfoMu sync.Mutex
-	allRemovePkgInfo    map[system.UpdateType]map[string]system.PackageInfo
-	allRemovePkgInfoMu  sync.Mutex
-
 	coreList []string
 }
 
@@ -773,24 +768,16 @@ func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]st
 }
 
 type platformCacheContent struct {
-	UpgradableInfo map[system.UpdateType]map[string]system.PackageInfo
-	RemovePkgInfo  map[system.UpdateType]map[string]system.PackageInfo
-	CoreListPkgs   map[string]system.PackageInfo
-	BaselinePkgs   map[string]system.PackageInfo
-	SelectPkgs     map[string]system.PackageInfo
-	PreCheck       string
-	MidCheck       string
-	PostCheck      string
+	CoreListPkgs map[string]system.PackageInfo
+	BaselinePkgs map[string]system.PackageInfo
+	SelectPkgs   map[string]system.PackageInfo
+	PreCheck     string
+	MidCheck     string
+	PostCheck    string
 }
 
 func (m *Manager) savePlatformCache() {
 	cache := platformCacheContent{}
-	m.allUpgradableInfoMu.Lock()
-	cache.UpgradableInfo = m.allUpgradableInfo
-	m.allUpgradableInfoMu.Unlock()
-	m.allRemovePkgInfoMu.Lock()
-	cache.RemovePkgInfo = m.allRemovePkgInfo
-	m.allRemovePkgInfoMu.Unlock()
 	cache.CoreListPkgs = m.updatePlatform.TargetCorePkgs
 	cache.BaselinePkgs = m.updatePlatform.BaselinePkgs
 	cache.SelectPkgs = m.updatePlatform.SelectPkgs
@@ -816,8 +803,6 @@ func (m *Manager) loadPlatformCache() {
 		logger.Warning(err)
 		return
 	}
-	m.allUpgradableInfo = cache.UpgradableInfo
-	m.allRemovePkgInfo = cache.RemovePkgInfo
 	m.updatePlatform.TargetCorePkgs = cache.CoreListPkgs
 	m.updatePlatform.BaselinePkgs = cache.BaselinePkgs
 	m.updatePlatform.SelectPkgs = cache.SelectPkgs
