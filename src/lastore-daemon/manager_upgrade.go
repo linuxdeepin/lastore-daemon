@@ -38,6 +38,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		if mode == 0 {
 			return "", dbusutil.ToError(errors.New("don't exist can distUpgrade mode"))
 		}
+	} else {
+		mode = origin
 	}
 	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
 		mode = origin
