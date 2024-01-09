@@ -9,6 +9,7 @@ BusName=com.deepin.lastore
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
 StandardOutput=null
 StandardError=null
+Environment=GOTRACEBACK=crash
 
 [Install]
 WantedBy=multi-user.target

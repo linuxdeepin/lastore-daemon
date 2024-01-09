@@ -6,3 +6,4 @@ After=display-manager.service
 Type=dbus
 BusName=com.deepin.lastore.Smartmirror
 ExecStart=/usr/libexec/lastore-daemon/lastore-smartmirror-daemon
+Environment=GOTRACEBACK=crash
