@@ -159,14 +159,16 @@ func copyFile(src, dst string) {
 }
 
 type updateTarget struct {
-	TargetVersion string
-	CheckTime     string
+	TargetVersion   string
+	TargetOsVersion string
+	CheckTime       string
 }
 
 func (m *UpdatePlatformManager) GetUpdateTarget() string {
 	target := &updateTarget{
-		TargetVersion: m.targetBaseline,
-		CheckTime:     m.checkTime,
+		TargetOsVersion: m.targetVersion,
+		TargetVersion:   m.targetBaseline,
+		CheckTime:       m.checkTime,
 	}
 	content, err := json.Marshal(target)
 	if err != nil {
