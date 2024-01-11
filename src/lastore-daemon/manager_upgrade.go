@@ -294,6 +294,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				"Dir::Etc::SourceParts": "/dev/null",
 			}
 		}
+
+		if mode == system.OfflineUpdate {
+			job.option["Dir::State::lists"] = system.OfflineListPath
+		}
+
 		m.handleSysPowerChanged(job)
 		uuid, err = m.prepareAptCheck(job, mode)
 		if err != nil {
