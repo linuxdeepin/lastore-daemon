@@ -119,7 +119,8 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		}
 		for _, typ := range system.AllInstallUpdateType() {
 			if typ&mode != 0 {
-				partJob := NewJob(jm.service, genJobId(jobType), jobName, packageMap[typ.JobType()], system.DownloadJobType, DownloadQueue, environ)
+				// 使用dist-upgrade解决"有正在安装job时，依赖环境发生改变而导致检查依赖错误的问题"
+				partJob := NewJob(jm.service, genJobId(jobType), jobName, packageMap[typ.JobType()], system.PrepareDistUpgradeJobType, DownloadQueue, environ)
 				if utils.IsDir(system.GetCategorySourceMap()[typ]) {
 					partJob.option = map[string]string{
 						"Dir::Etc::SourceList":  "/dev/null",
@@ -132,6 +133,8 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 					}
 				}
 				partJob.updateTyp = typ
+				// 如果有job正在安装，可能会出现helf-installed的情况导致报错，增加重试次数，提高下载成功的概率
+				partJob.retry = 3
 				if len(jobList) >= 1 {
 					jobList[len(jobList)-1].next = partJob
 				}

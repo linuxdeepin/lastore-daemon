@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"internal/config"
 	"internal/system"
+	"strings"
 	"sync"
 )
 
@@ -407,6 +408,16 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 				logger.Warning(err)
 				// 初始化配置值为noDownload，如果query失败，不会变更，造成前端状态异常
 				// 升级问题处理
+
+				// 如果有job正在安装，而且出现了half-installed导致的报错，走重试继续
+				if strings.Contains(err.Error(), "needs to be reinstalled, but I can't find an archive for it.") {
+					for _, modeStat := range m.updateModeStatusObj {
+						if modeStat == system.Upgrading {
+							logger.Warning("package half-installed, need retry!")
+							return
+						}
+					}
+				}
 				if oldStatus != system.NoUpdate {
 					m.updateModeStatusObj[currentMode.JobType()] = system.NoUpdate
 					changed = true
