@@ -535,12 +535,12 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetCleanIntervalCacheOverLimit(oldConfig.CleanIntervalCacheOverLimit)
 	_ = c.SetAutoInstallUpdates(oldConfig.AutoInstallUpdates)
 	_ = c.SetAutoInstallUpdateType(oldConfig.AutoInstallUpdateType)
-	_ = c.SetAllowPostSystemUpgradeMessageVersion(oldConfig.AllowPostSystemUpgradeMessageVersion)
+	_ = c.SetAllowPostSystemUpgradeMessageVersion(append(oldConfig.AllowPostSystemUpgradeMessageVersion, c.AllowPostSystemUpgradeMessageVersion...))
 	_ = c.SetCheckInterval(oldConfig.CheckInterval)
 	_ = c.SetCleanInterval(oldConfig.CleanInterval)
 	_ = c.SetRepository(oldConfig.Repository)
 	_ = c.SetMirrorsUrl(oldConfig.MirrorsUrl)
-	_ = c.SetAllowInstallRemovePkgExecPaths(oldConfig.AllowInstallRemovePkgExecPaths)
+	_ = c.SetAllowInstallRemovePkgExecPaths(append(oldConfig.AllowInstallRemovePkgExecPaths, c.AllowInstallRemovePkgExecPaths...))
 	return
 }
 
