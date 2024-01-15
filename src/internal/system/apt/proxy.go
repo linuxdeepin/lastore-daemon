@@ -159,10 +159,11 @@ func parsePkgSystemError(out, err []byte) error {
 	switch {
 	case bytes.Contains(err, []byte("dpkg was interrupted")):
 		return &system.JobError{
-			Type: system.ErrorDpkgInterrupted,
+			Type:   system.ErrorDpkgInterrupted,
+			Detail: string(err),
 		}
 
-	case bytes.Contains(err, []byte("Unmet dependencies")):
+	case bytes.Contains(err, []byte("Unmet dependencies")), bytes.Contains(err, []byte("generated breaks")):
 		var detail string
 		idx := bytes.Index(out,
 			[]byte("The following packages have unmet dependencies:"))
@@ -186,7 +187,7 @@ func parsePkgSystemError(out, err []byte) error {
 		}
 
 	default:
-		detail := string(err)
+		detail := string(append(out, err...))
 		return &system.JobError{
 			Type:   system.ErrorUnknown,
 			Detail: detail,
@@ -507,7 +508,7 @@ func ListDistUpgradePackages(sourcePath string, option []string) ([]string, erro
 	cmd.Stderr = &errBuf
 	// NOTE: 这里不能使用命令的退出码来判断，因为 --assume-no 会让命令的退出码为 1
 	_ = cmd.Run()
-
+	logger.Debug("cmd is ", cmd.String())
 	const upgraded = "The following packages will be upgraded:"
 	const newInstalled = "The following NEW packages will be installed:"
 	if bytes.Contains(outBuf.Bytes(), []byte(upgraded)) ||
