@@ -133,8 +133,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 					}
 				}
 				partJob.updateTyp = typ
-				// 如果有job正在安装，可能会出现helf-installed的情况导致报错，增加重试次数，提高下载成功的概率
-				partJob.retry = 3
 				if len(jobList) >= 1 {
 					jobList[len(jobList)-1].next = partJob
 				}
