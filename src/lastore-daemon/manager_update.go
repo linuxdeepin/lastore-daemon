@@ -49,7 +49,7 @@ func prepareUpdateSource() {
 func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error) {
 	var err error
 	var environ map[string]string
-	if !system.IsAuthorized() || !system.IsActiveCodeExist() {
+	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec update")
 	}
 	defer func() {
