@@ -1,13 +1,11 @@
 package dut
 
 import (
-	"bytes"
 	"encoding/json"
 	"internal/system"
 	"internal/system/apt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -42,10 +40,11 @@ func OptionToArgs(options map[string]string) []string {
 }
 
 func (p *DutSystem) UpdateSource(jobId string, environ map[string]string, args map[string]string) error {
-	err := checkSystemDependsError()
-	if err != nil {
-		return err
-	}
+	// 依赖错误放到后面检查
+	// err := checkSystemDependsError()
+	// if err != nil {
+	// 	return err
+	// }
 	return p.APTSystem.UpdateSource(jobId, environ, args)
 }
 
@@ -58,9 +57,7 @@ func (p *DutSystem) DistUpgrade(jobId string, packages []string, environ map[str
 }
 
 func (p *DutSystem) FixError(jobId string, errType string, environ map[string]string, args map[string]string) error {
-	c := newDUTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, OptionToArgs(args)...))
-	c.SetEnv(environ)
-	return c.Start()
+	return p.APTSystem.FixError(jobId, errType, environ, args)
 }
 
 func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[string]string, args map[string]string) error {
@@ -75,16 +72,18 @@ func checkSystemDependsError() error {
 		logger.Warningf("apt-get check failed:%v", err)
 		return err
 	}
-	cmd := exec.Command("deepin-system-fixpkg", "check")
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	err = cmd.Run()
-	if err == nil {
-		return nil
-	}
-	return parsePkgSystemError(errBuf.String(), outBuf.String())
+	// 系统工具检查依赖目前还有问题，先不用系统工具检查
+	// cmd := exec.Command("deepin-system-fixpkg", "check")
+	// var outBuf bytes.Buffer
+	// cmd.Stdout = &outBuf
+	// var errBuf bytes.Buffer
+	// cmd.Stderr = &errBuf
+	// err = cmd.Run()
+	// if err == nil {
+	// 	return nil
+	// }
+	// return parsePkgSystemError(errBuf.String(), outBuf.String())
+	return nil
 }
 
 type checkType uint

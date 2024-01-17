@@ -193,7 +193,7 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
 	return nil
 }
 
-func parsePreCheckError(stdErrStr string) *system.JobError {
+func parsePreCheckError(stdErrStr string) error {
 	logger.Info("error message form dut precheck is:", stdErrStr)
 	var content ErrorContent
 	err := json.Unmarshal([]byte(stdErrStr), &content)

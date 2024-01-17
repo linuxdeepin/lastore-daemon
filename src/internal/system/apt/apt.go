@@ -240,6 +240,13 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			Detail: stdErrStr,
 		}
 
+	case strings.Contains(stdErrStr, "The list of sources could not be read"):
+		detail := stdErrStr
+		return &system.JobError{
+			Type:   system.ErrorInvalidSourcesList,
+			Detail: detail,
+		}
+
 	default:
 		return &system.JobError{
 			Type:   system.ErrorUnknown,

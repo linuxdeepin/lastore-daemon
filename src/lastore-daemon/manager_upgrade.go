@@ -313,7 +313,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		// 设置hook
 		job.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
-				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
+				systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
 					logger.Info(systemErr)
 					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
