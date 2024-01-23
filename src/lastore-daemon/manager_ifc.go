@@ -184,7 +184,7 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
 	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
-		_, allPackageSize, err = system.QuerySourceDownloadSize(mode)
+		_, allPackageSize, err = system.QuerySourceDownloadSize(mode, nil)
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -208,7 +208,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	mode := m.UpdateMode
 	m.PropsMu.RUnlock()
 	if packages == nil || len(packages) == 0 { // 如果传的参数为空,则根据updateMode获取所有需要下载包的大小
-		size, _, err = system.QuerySourceDownloadSize(mode)
+		size, _, err = system.QuerySourceDownloadSize(mode, nil)
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -551,7 +551,7 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
-	_, allSize, err := system.QuerySourceDownloadSize(mode)
+	_, allSize, err := system.QuerySourceDownloadSize(mode, nil)
 	if err != nil || allSize == system.SizeUnknown {
 		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
 	} else {

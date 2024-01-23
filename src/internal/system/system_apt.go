@@ -204,7 +204,7 @@ func QueryPackageDownloadSize(updateType UpdateType, packages ...string) (float6
 }
 
 // QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量,return arg0:需要下载的量;arg1:所有包的大小;arg2:error
-func QuerySourceDownloadSize(updateType UpdateType) (float64, float64, error) {
+func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, float64, error) {
 	startTime := time.Now()
 	downloadSize := new(float64)
 	allPackageSize := new(float64)
@@ -218,15 +218,15 @@ func QuerySourceDownloadSize(updateType UpdateType) (float64, float64, error) {
 		if utils2.IsDir(path) {
 			// #nosec G204
 			cmd = exec.Command("/usr/bin/apt-get",
-				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+				append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
-					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}, pkgList...)...)
 		} else {
 			// #nosec G204
 			cmd = exec.Command("/usr/bin/apt-get",
-				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+				append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
-					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}...)
+					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}, pkgList...)...)
 		}
 		logger.Infof("%v download size cmd: %v", updateType.JobType(), cmd.String())
 		lines, err := utils.FilterExecOutput(cmd, time.Second*120, func(line string) bool {

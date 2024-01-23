@@ -567,7 +567,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}()
 			logger.Warning(e)
 		}
-		m.statusManager.UpdateModeAllStatusBySize()
+		m.statusManager.UpdateModeAllStatusBySize(m.coreList)
 		m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 	} else {
 		// 初始化时获取coreList数据
@@ -588,7 +588,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		}
 		m.coreList = pkgs
 		go func() {
-			m.statusManager.UpdateModeAllStatusBySize()
+			m.statusManager.UpdateModeAllStatusBySize(m.coreList)
 			m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 		}()
 	}

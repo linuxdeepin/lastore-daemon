@@ -382,12 +382,12 @@ func (m *UpdateModeStatusManager) SetCheckMode(mode system.UpdateType) system.Up
 }
 
 // UpdateModeAllStatusBySize 根据size计算更新所有状态,会把除了安装失败之外的所有错误去除
-func (m *UpdateModeStatusManager) UpdateModeAllStatusBySize() {
-	m.updateModeStatusBySize(system.AllInstallUpdate)
+func (m *UpdateModeStatusManager) UpdateModeAllStatusBySize(coreList []string) {
+	m.updateModeStatusBySize(system.AllInstallUpdate, coreList)
 }
 
 // 单项计算
-func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType) {
+func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType, coreList []string) {
 	// 该处的处理,不会将更新项的状态修改为Upgraded.该状态只有可能在DistUpgrade中处理
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
@@ -403,7 +403,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType)
 			defer wg.Done()
 			oldStatus := m.updateModeStatusObj[currentMode.JobType()]
 			newStatus := oldStatus
-			needDownloadSize, allPackageSize, err := system.QuerySourceDownloadSize(currentMode)
+			needDownloadSize, allPackageSize, err := system.QuerySourceDownloadSize(currentMode, coreList)
 			if err != nil {
 				logger.Warning(err)
 				// 初始化配置值为noDownload，如果query失败，不会变更，造成前端状态异常
