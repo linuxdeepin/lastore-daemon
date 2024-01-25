@@ -17,7 +17,6 @@ case "$1" in
             rm -f /etc/machine-id
             systemd-machine-id-setup
         fi
-        systemctl disable lastore-daemon.service > /dev/null || true
         ;;
 esac
 
