@@ -69,7 +69,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	var job *Job
 	var isExist bool
 	var err error
-	var startTime time.Time
 	isExist, job, err = m.jobManager.CreateJob("", system.CheckSystemJobType, nil, nil, nil)
 	if err != nil {
 		return "", err
@@ -85,8 +84,27 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	} else {
 		job.option["--stage2"] = ""
 	}
+
+	// 设置假的进度条，每200ms增长0.1的进度
+	var fakeProgress chan bool = make(chan bool, 1)
+	setFakeProgress := func(maxValue float64) {
+		for job.Progress < maxValue && job.Status != system.FailedStatus {
+			job.setPropProgress(job.Progress + 0.1)
+			time.Sleep(time.Millisecond * 200)
+		}
+		fakeProgress <- true
+	}
+
+	job.setAfterHooks(map[string]func() error{
+		string(system.RunningStatus): func() error {
+			<-fakeProgress
+			return nil
+		},
+	})
 	job.setPreHooks(map[string]func() error{
 		string(system.RunningStatus): func() error {
+			// 起个go和job并行
+			go setFakeProgress(0.9)
 			inhibit(true)
 			return nil
 		},
@@ -146,10 +164,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					m.updatePlatform.RecoverVersionLink()
 				}
 			}
-			if time.Now().Sub(startTime) < 2*time.Second {
-				time.Sleep(2 * time.Second) // 检查太快的时候造成的感观不太好，而且有可能造成前端来不及响应，因此增加延迟
-			}
-
 			return nil
 		},
 	})
@@ -160,7 +174,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	if err = m.jobManager.addJob(job); err != nil {
 		return "", err
 	}
-	startTime = time.Now()
 	return job.getPath(), nil
 }
 

@@ -81,6 +81,15 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	if strings.TrimSpace(title) == "" {
 		return fmt.Errorf("failed to get %v entry form %v", to, grubScriptFile)
 	}
+	curEntryTitle, err := m.grub.DefaultEntry().Get(0)
+	if err != nil {
+		return err
+	}
+	// 如果DefaultEntry一样，就不再设置了，不然会下面的会超时
+	if curEntryTitle == title {
+		logger.Info("grub default entry need not to change:", curEntryTitle)
+		return nil
+	}
 	logger.Info("try change grub default entry to:", title)
 	entryTitles, err := m.grub.GetSimpleEntryTitles(0)
 	if err != nil {
