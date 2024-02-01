@@ -110,6 +110,9 @@ const (
 	ErrorMissCoreFile  JobErrorType = "missCoreFile"
 	ErrorScript        JobErrorType = "scriptError"
 	ErrorProgressCheck JobErrorType = "progressCheckError"
+
+	// running状态
+	ErrorNeedCheck JobErrorType = "needCheck"
 )
 
 type UpgradeStatusAndReason struct {

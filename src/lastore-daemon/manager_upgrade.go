@@ -358,6 +358,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				return nil
 			},
 		})
+		job.setAfterHooks(map[string]func() error{
+			string(system.SucceedStatus): func() error {
+				return m.atferSuccessHook()
+			},
+		})
 		if needAdd { // 分类下载的job需要外部判断是否add
 			if err := m.jobManager.addJob(job); err != nil {
 				if unref != nil {
@@ -577,6 +582,15 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
 	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
+	return nil
+}
+
+func (m *Manager) atferSuccessHook() error {
+	// 状态更新为running,设置reason为needcheck
+	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeRunning, ReasonCode: system.ErrorNeedCheck})
+	if err != nil {
+		logger.Warning(err)
+	}
 	return nil
 }
 
