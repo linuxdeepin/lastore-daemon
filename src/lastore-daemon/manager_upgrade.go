@@ -574,11 +574,6 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	if err != nil {
 		logger.Warning(err)
 	}
-	// 需要改成在重启后检查完成时修改为ready，此处应该保持为running状态
-	// err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
-	// if err != nil {
-	// 	logger.Warning(err)
-	// }
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
 	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
@@ -586,8 +581,8 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 }
 
 func (m *Manager) atferSuccessHook() error {
-	// 状态更新为running,设置reason为needcheck
-	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeRunning, ReasonCode: system.ErrorNeedCheck})
+	// 防止后台更新后注销再次进入桌面，导致错误发出通知。因此更新成功后设置为ready。由于保持running是为了处理更新异常中断场景，因此更新安装成功后，无需保持running状态。
+	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
 	if err != nil {
 		logger.Warning(err)
 	}
