@@ -725,7 +725,7 @@ func (m *Manager) prepareAptCheck(job *Job, mode system.UpdateType) (string, err
 	if mode == system.OfflineUpdate {
 		repo = genRepoInfo(system.OfflineUpdate, system.OfflineListPath)
 	} else {
-		repo = genRepoInfo(system.SecurityUpdate, system.OnlineListPath)
+		repo = genRepoInfo(mode, system.OnlineListPath)
 	}
 
 	// coreList 生成
