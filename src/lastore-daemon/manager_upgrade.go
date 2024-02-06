@@ -360,7 +360,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		})
 		job.setAfterHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				return m.atferSuccessHook()
+				return m.afterSuccessHook()
 			},
 		})
 		if needAdd { // 分类下载的job需要外部判断是否add
@@ -530,7 +530,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		}
 	}
 	// 安装失败删除配置文件
-	err = delRebootCheckOption(all)
+	err = m.delRebootCheckOption(all)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -570,7 +570,7 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 		}
 	}
 	// 设置重启后的检查项
-	err := setRebootCheckOption(mode)
+	err := m.setRebootCheckOption(mode)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -580,7 +580,7 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 	return nil
 }
 
-func (m *Manager) atferSuccessHook() error {
+func (m *Manager) afterSuccessHook() error {
 	// 防止后台更新后注销再次进入桌面，导致错误发出通知。因此更新成功后设置为ready。由于保持running是为了处理更新异常中断场景，因此更新安装成功后，无需保持running状态。
 	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
 	if err != nil {

@@ -117,7 +117,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)
-			err = delRebootCheckOption(all)
+			err = m.delRebootCheckOption(all)
 			if err != nil {
 				logger.Warning(err)
 			}
@@ -132,7 +132,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			switch checkOrder {
 			case firstCheck:
 				// TODO 去掉第一次检查，此时如果重启，那么再次启动时不会再进行该检查
-				err = delRebootCheckOption(checkOrder)
+				err = m.delRebootCheckOption(checkOrder)
 				if err != nil {
 					logger.Warning(err)
 				}
@@ -143,7 +143,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				}
 			case secondCheck:
 				// TODO 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置，lastore 状态修改为ready
-				err = delRebootCheckOption(secondCheck)
+				err = m.delRebootCheckOption(secondCheck)
 				if err != nil {
 					logger.Warning(err)
 				}
@@ -190,7 +190,7 @@ const (
 	optionFilePathTemp = "/tmp/deepin_update_option.json"
 )
 
-func setRebootCheckOption(mode system.UpdateType) error {
+func (m *Manager) setRebootCheckOption(mode system.UpdateType) error {
 	option := &fullUpgradeOption{
 		DoUpgrade:         false,
 		DoUpgradeMode:     mode,
@@ -202,10 +202,14 @@ func setRebootCheckOption(mode system.UpdateType) error {
 	if err != nil {
 		return err
 	}
+	_, _, err = m.systemd.EnableUnitFiles(0, []string{"lastore-after-upgrade-check.service"}, false, true)
+	if err != nil {
+		logger.Warning(err)
+	}
 	return ioutil.WriteFile(optionFilePath, content, 0644)
 }
 
-func delRebootCheckOption(order checkType) error {
+func (m *Manager) delRebootCheckOption(order checkType) error {
 	switch order {
 	case firstCheck:
 		option := &fullUpgradeOption{}
@@ -221,6 +225,10 @@ func delRebootCheckOption(order checkType) error {
 		return ioutil.WriteFile(optionFilePath, content, 0644)
 	case secondCheck, all:
 		err := os.RemoveAll(optionFilePathTemp)
+		if err != nil {
+			logger.Warning(err)
+		}
+		_, err = m.systemd.DisableUnitFiles(0, []string{"lastore-after-upgrade-check.service"}, false)
 		if err != nil {
 			logger.Warning(err)
 		}
