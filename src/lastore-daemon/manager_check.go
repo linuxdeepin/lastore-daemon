@@ -186,7 +186,7 @@ type fullUpgradeOption struct {
 }
 
 const (
-	optionFilePath     = "/etc/deepin/deepin_update_option.json" // 和upgrade_check.sh脚本中对应
+	optionFilePath     = "/etc/deepin/deepin_update_option.json" // 和gen_upgrade_check_config.sh脚本中对应
 	optionFilePathTemp = "/tmp/deepin_update_option.json"
 )
 
