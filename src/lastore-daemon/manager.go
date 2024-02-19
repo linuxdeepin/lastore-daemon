@@ -21,6 +21,7 @@ import (
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
+	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	ofdbus "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.dbus"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.systemd1"
@@ -126,6 +127,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	}
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
+	m.syncThirdPartyDconfig()
 	// running 状态下证明需要进行重启后check
 	if c.UpgradeStatus.Status == system.UpgradeRunning {
 		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
@@ -488,6 +490,54 @@ func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Erro
 	newMode := m.statusManager.SetUpdateMode(writeMode)
 	pw.Value = newMode
 	return nil
+}
+
+func (m *Manager) syncThirdPartyDconfig() {
+	const (
+		dccDsettingsId         = "org.deepin.dde.control-center"
+		dccUpdateDsettingsName = "org.deepin.dde.control-center.update"
+		dccKeyThirdPartySource = "updateThirdPartySource"
+	)
+	ds := ConfigManager.NewConfigManager(m.service.Conn())
+	dsPath, err := ds.AcquireManager(0, dccDsettingsId, dccUpdateDsettingsName, "")
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	dsDCCManager, err := ConfigManager.NewManager(m.service.Conn(), dsPath)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	systemSigLoop := dbusutil.NewSignalLoop(m.service.Conn(), 10)
+	systemSigLoop.Start()
+	dsDCCManager.InitSignalExt(systemSigLoop, true)
+	v, err := dsDCCManager.Value(0, dccKeyThirdPartySource)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	logger.Info("updateThirdPartySource is ", v.Value().(string))
+
+	syncUpdateMode := func(enable string) {
+		if enable == "Hidden" {
+			newMode := m.UpdateMode & (^system.UnknownUpdate)
+			m.statusManager.SetUpdateMode(newMode)
+		}
+	}
+	syncUpdateMode(v.Value().(string))
+	_, err = dsDCCManager.ConnectValueChanged(func(key string) {
+		switch key {
+		case "updateThirdPartySource":
+			v, err := dsDCCManager.Value(0, dccKeyThirdPartySource)
+			if err != nil {
+				logger.Warning(err)
+				return
+			}
+			syncUpdateMode(v.Value().(string))
+		}
+	})
+	return
 }
 
 func (m *Manager) checkUpdateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
