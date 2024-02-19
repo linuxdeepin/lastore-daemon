@@ -103,7 +103,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			"DownloadSize": m.statusManager.GetAllUpdateModeDownloadSize(),
 			"PackageMap":   m.updater.ClassifiedUpdatablePackages,
 		}
-		isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, nil, environ, option)
+		isExist, job, err = m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, m.coreList, environ, option)
 		m.updater.PropsMu.Unlock()
 	}
 	if err != nil {

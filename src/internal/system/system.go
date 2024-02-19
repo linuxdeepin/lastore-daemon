@@ -128,7 +128,7 @@ type ParseJobError func(stdErrStr string, stdOutStr string) *JobError
 
 type System interface {
 	DownloadPackages(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
-	DownloadSource(jobId string, environ map[string]string, cmdArgs map[string]string) error
+	DownloadSource(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
 	Install(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error
 	Remove(jobId string, packages []string, environ map[string]string) error
 	DistUpgrade(jobId string, packages []string, environ map[string]string, cmdArgs map[string]string) error

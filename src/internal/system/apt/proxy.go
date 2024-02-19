@@ -274,7 +274,7 @@ func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ ma
 	return c.Start()
 }
 
-func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, args map[string]string) error {
+func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[string]string, args map[string]string) error {
 	// 无需检查依赖错误
 	/*
 		err := CheckPkgSystemError(false)
@@ -283,7 +283,7 @@ func (p *APTSystem) DownloadSource(jobId string, environ map[string]string, args
 		}
 	*/
 
-	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, OptionToArgs(args))
+	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, append(packages, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	return c.Start()
 }

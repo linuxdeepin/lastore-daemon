@@ -28,7 +28,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 		return sys.DownloadPackages(j.Id, j.Packages, j.environ, j.option)
 
 	case system.PrepareDistUpgradeJobType:
-		return sys.DownloadSource(j.Id, j.environ, j.option)
+		return sys.DownloadSource(j.Id, j.Packages, j.environ, j.option)
 
 	case system.InstallJobType:
 		return sys.Install(j.Id, j.Packages, j.environ, j.option)
