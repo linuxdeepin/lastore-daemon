@@ -33,7 +33,7 @@ const (
 )
 
 func Tr(text string) string {
-	return text
+	return gettext.Tr(text)
 }
 
 var logger = log.NewLogger("lastore/lastore-daemon")
