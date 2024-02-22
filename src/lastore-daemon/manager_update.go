@@ -315,17 +315,17 @@ type PackageList struct {
 func parseCoreList() ([]string, error) {
 	// 1. download coreList to /var/cache/lastore/archives/
 	// 2. 使用dpkg-deb解压deb得到coreList文件
-	corefile, err := downloadAndDecompressCoreList()
+	coreFilePath, err := downloadAndDecompressCoreList()
 	if err != nil {
 		return nil, err
 	}
 	// 将coreList 备份到/var/lib/lastore/中
-	err = utils2.CopyFile(corefile, coreListVarPath)
+	err = utils2.CopyFile(coreFilePath, coreListVarPath)
 	if err != nil {
 		logger.Warning("backup coreList failed:", err)
 	}
 	// 3. 解析文件获取coreList必装列表
-	data, err := ioutil.ReadFile(corefile)
+	data, err := ioutil.ReadFile(coreFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -441,9 +441,6 @@ var getUpgradablePackageList = map[system.UpdateType]func([]string) ([]string, e
 }
 
 func getSystemUpgradablePackageList(coreList []string) ([]string, error) {
-	if len(coreList) == 0 {
-		return nil, errors.New("coreList is nil,can not get system update package list")
-	}
 	return apt.ListDistUpgradePackages(system.GetCategorySourceMap()[system.SystemUpdate], coreList)
 }
 
