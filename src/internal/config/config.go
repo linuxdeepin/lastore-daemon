@@ -92,7 +92,9 @@ func NewConfig(configPath string) *Config {
 	dc := getConfigFromDSettings()
 	dc.filePath = configPath
 	if !dc.useDSettings { // 从config文件迁移至DSettings
-		var c *Config
+		var c *Config = &Config{
+			UpdateMode: system.SystemUpdate | system.SecurityUpdate,
+		}
 		err := system.DecodeJson(configPath, &c)
 		if err != nil {
 			logger.Debugf("Can't load config file: %v\n", err)
