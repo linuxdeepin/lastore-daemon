@@ -394,7 +394,7 @@ func recordUpgradeLog(uuid string, mode system.UpdateType, originChangelog inter
 
 	info := recordInfo{
 		UUID:            uuid,
-		UpgradeTime:     time.Now().String(),
+		UpgradeTime:     time.Now().Format("2006-01-02"),
 		UpgradeMode:     mode,
 		OriginChangelog: originChangelog,
 	}
