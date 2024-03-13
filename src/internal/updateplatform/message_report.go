@@ -998,6 +998,11 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 				}
 				if targetVersionInt > globalVersion {
 					m.SystemUpdateLogs = getUpdateLogData(data)
+				} else {
+					m.SystemUpdateLogs = append(m.SystemUpdateLogs, UpdateLogMeta{
+						CnLog: "修复部分系统已知问题与缺陷",
+						EnLog: "Fixing some of the system's known problems and defects",
+					})
 				}
 			}
 		}
