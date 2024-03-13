@@ -585,6 +585,17 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		}
 		m.coreList = pkgs
 		go func() {
+			// 刷新一下包信息
+			if isFirstBoot() {
+				for _, e := range m.generateUpdateInfo() {
+					go func() {
+						m.inhibitAutoQuitCountAdd()
+						defer m.inhibitAutoQuitCountSub()
+						m.updatePlatform.PostStatusMessage(fmt.Sprintf("generate package list error, detail is %v:", e))
+					}()
+					logger.Warning(e)
+				}
+			}
 			m.statusManager.UpdateModeAllStatusBySize(m.coreList)
 			m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 		}()

@@ -56,7 +56,7 @@ install: gen_mo
 	cp bin/lastore-smartmirror-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
-	cp -rf etc ${DESTDIR}${PREFIX}/etc
+	cp -rf etc ${DESTDIR}${PREFIX}/
 
 	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/
 	cp -rf var/lib/lastore/* ${DESTDIR}${PREFIX}/var/lib/lastore/

@@ -97,8 +97,8 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 				switch value {
 				case system.IsDownloading, system.DownloadPause, system.DownloadErr:
 					m.updateModeStatusObj[key] = system.NotDownload
-				case system.UpgradeErr, system.Upgrading, system.WaitRunUpgrade:
-					m.updateModeStatusObj[key] = system.CanUpgrade
+				case system.UpgradeErr, system.Upgrading, system.WaitRunUpgrade, system.CanUpgrade:
+					m.updateModeStatusObj[key] = system.NotDownload
 				case system.Upgraded:
 					m.updateModeStatusObj[key] = system.NoUpdate
 				}
@@ -106,6 +106,10 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 			m.currentTriggerBackingUpType = system.AllInstallUpdate
 			m.abStatus = system.NotBackup
 			m.abError = system.NoABError
+			err := m.lsConfig.UpdateLastoreDaemonStatus(config.CanUpgrade, false)
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 		m.syncUpdateStatusNoLock()
 	}
