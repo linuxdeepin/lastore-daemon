@@ -517,7 +517,7 @@ func getConfigFromDSettings() *Config {
 	} else {
 		c.OnlineCache = string(content)
 	}
-
+	c.OtherSourceList = append(c.OtherSourceList, "/etc/apt/sources.list.d/driver.list")
 	return c
 }
 
