@@ -34,8 +34,8 @@ func New(systemSourceList []string, nonUnknownList []string, otherList []string)
 	p := APTSystem{
 		CmdSet: make(map[string]*system.Command),
 	}
-	WaitDpkgLockRelease()
-	_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run() // TODO
+	//WaitDpkgLockRelease()
+	//_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run() // TODO
 	p.initSource(systemSourceList, nonUnknownList, otherList)
 	return p
 }
