@@ -996,12 +996,24 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 					logger.Warning(err)
 					return nil
 				}
+				logData := getUpdateLogData(data)
 				if targetVersionInt > globalVersion {
-					m.SystemUpdateLogs = getUpdateLogData(data)
+					m.SystemUpdateLogs = logData
 				} else {
+					var lastLog UpdateLogMeta
+					if logData != nil && len(logData) > 0 {
+						lastLog = logData[0]
+					}
+
 					m.SystemUpdateLogs = append(m.SystemUpdateLogs, UpdateLogMeta{
-						CnLog: "修复部分系统已知问题与缺陷",
-						EnLog: "Fixing some of the system's known problems and defects",
+						Baseline:      lastLog.Baseline,
+						ShowVersion:   fmt.Sprintf("%v", globalVersion),
+						CnLog:         "修复部分系统已知问题与缺陷",
+						EnLog:         "Fixing some of the system's known problems and defects",
+						LogType:       lastLog.LogType,
+						IsUnstable:    lastLog.IsUnstable,
+						SystemVersion: lastLog.SystemVersion,
+						PublishTime:   lastLog.PublishTime,
 					})
 				}
 			}
