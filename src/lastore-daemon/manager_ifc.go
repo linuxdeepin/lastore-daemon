@@ -415,13 +415,14 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 }
 
 // PrepareFullScreenUpgrade option json -> struct
-// type fullUpgradeOption struct {
-// 	DoUpgrade         bool
-// 	DoUpgradeMode     system.UpdateType
-// 	IsPowerOff        bool
-// 	PreGreeterCheck   bool
-// 	AfterGreeterCheck bool
-// }
+//
+//	type fullUpgradeOption struct {
+//		DoUpgrade         bool
+//		DoUpgradeMode     system.UpdateType
+//		IsPowerOff        bool
+//		PreGreeterCheck   bool
+//		AfterGreeterCheck bool
+//	}
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
 	checkExecPath := func() (bool, error) {
 		// 只有dde-lock可以设置
@@ -551,7 +552,11 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
-	_, allSize, err := system.QuerySourceDownloadSize(mode, nil)
+	var pkgList []string
+	if mode&system.SystemUpdate != 0 {
+		pkgList = m.coreList
+	}
+	_, allSize, err := system.QuerySourceDownloadSize(mode, pkgList)
 	if err != nil || allSize == system.SizeUnknown {
 		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
 	} else {
