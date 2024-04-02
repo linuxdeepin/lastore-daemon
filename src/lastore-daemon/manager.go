@@ -160,7 +160,10 @@ func (m *Manager) initDbusSignalListen() {
 	m.sysDBusDaemon.InitSignalExt(m.signalLoop, true)
 	_, err = m.sysDBusDaemon.ConnectNameOwnerChanged(func(name string, oldOwner string, newOwner string) {
 		if strings.HasPrefix(name, ":") && oldOwner != "" && newOwner == "" {
-			m.userAgents.handleNameLost(name)
+			// 当lastore-daemon启动时还没初始化完成，刚好收到NameOwnerChanged，导致崩溃
+			if m.userAgents != nil {
+				m.userAgents.handleNameLost(name)
+			}
 		}
 	})
 	if err != nil {
