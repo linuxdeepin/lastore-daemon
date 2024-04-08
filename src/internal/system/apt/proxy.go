@@ -77,7 +77,9 @@ func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 		cancelable = false
 	case "pmerror":
 		progress = -1
-		status = system.FailedStatus
+		if id != system.DistUpgradeJobType {
+			status = system.FailedStatus
+		}
 
 	default:
 		//	case "pmconffile", "media-change":

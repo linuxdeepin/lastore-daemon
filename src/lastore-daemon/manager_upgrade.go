@@ -553,7 +553,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 		} else {
 			allErrMsg = append(allErrMsg, string(msg))
 		}
-		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode, job.Description, strings.Join(allErrMsg, "\n")))
+		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode.JobType(), job.Description, strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
