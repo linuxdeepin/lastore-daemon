@@ -9,4 +9,3 @@ RestartSec=5s
 TimeoutStartSec=infinity
 
 ExecStart=/var/lib/lastore/scripts/update_metadata_info -now
-Environment=GOTRACEBACK=crash
