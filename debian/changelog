@@ -1,3 +1,9 @@
+lastore-daemon (6.2.4.1) UNRELEASED; urgency=medium
+
+  * revert: https://github.com/Zeno-sole/lastore-daemon/commit/5e31d651f5b9636cb47e651dc895fc751d975fb8
+
+ -- LiChengGang <lichenggang@uniontech.com>  Mon, 13 May 2024 14:09:55 +0800
+
 lastore-daemon (6.2.4) stable; urgency=medium
 
   * chore: add legacy AM daemon compat service to allowlist
