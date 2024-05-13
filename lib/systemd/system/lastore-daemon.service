@@ -4,5 +4,5 @@ After=display-manager.service
 
 [Service]
 Type=notify
-NotifyAccess=all
+NotifyAccess=main
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon

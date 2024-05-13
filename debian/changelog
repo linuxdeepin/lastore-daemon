@@ -1,3 +1,12 @@
+lastore-daemon (6.2.5) stable; urgency=medium
+
+  * fix: Set NotifyAccess to main in lastore-daemon.service
+    防止进程运行时，非主进程向 /run/systemd/notify 发送信号，导致
+    lastore-daemon 未退出，被 systemd 超时 SIGKILL 掉
+    https://github.com/linuxdeepin/developer-center/issues/8532
+
+ -- Tianyu Chen <sweetyfish@deepin.org>  Mon, 13 May 2024 16:35:28 +0800
+
 lastore-daemon (6.2.4) stable; urgency=medium
 
   * chore: add legacy AM daemon compat service to allowlist
