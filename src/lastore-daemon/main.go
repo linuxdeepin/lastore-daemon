@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"sync"
@@ -142,12 +141,6 @@ func main() {
 		logger.Error("failed to request name:", err)
 		return
 	}
-
-	go func() {
-		logger.Info("systemd-notify --ready")
-		cmd := exec.Command("systemd-notify", "--ready")
-		cmd.Run()
-	}()
 
 	// Force notify changed at the first time
 	manager.PropsMu.RLock()
