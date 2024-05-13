@@ -146,7 +146,9 @@ func main() {
 	go func() {
 		logger.Info("systemd-notify --ready")
 		cmd := exec.Command("systemd-notify", "--ready")
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			logger.Error("Error running systemd-notify command:", err)
+		}
 	}()
 
 	// Force notify changed at the first time
