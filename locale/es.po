@@ -9,17 +9,17 @@
 # Sergio Morales <smmorales.mx@gmail.com>, 2023
 # Isaías Gätjens M <igatjens@gmail.com>, 2023
 # deepiner, 2023
-# jose luis <josemdance@outlook.com>, 2023
-# Zaraza, 2023
+# Zaraza, 2024
+# jose luis <josemdance@outlook.com>, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-05-25 16:25+0800\n"
+"POT-Creation-Date: 2024-05-21 13:20+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Zaraza, 2023\n"
+"Last-Translator: jose luis <josemdance@outlook.com>, 2024\n"
 "Language-Team: Spanish (https://app.transifex.com/linuxdeepin/teams/3617/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -27,60 +27,131 @@ msgstr ""
 "Language: es\n"
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:44
+#: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
 msgstr "Instalando actualizaciones"
 
-#: ../src/lastore-daemon/inhibitor.go:46
+#: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
 msgstr "Tareas en proceso..."
 
-#: ../src/lastore-daemon/inhibitor.go:48
+#: ../src/lastore-daemon/inhibitor.go:49
 msgid "Preventing from shutting down"
 msgstr "Prevenir apagado del equipo"
 
-#: ../src/lastore-daemon/main.go:161 ../src/lastore-daemon/main.go:165
+#: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
 msgstr "Centro de Control"
 
-#: ../src/lastore-daemon/main.go:163
+#: ../src/lastore-daemon/main.go:172
 msgid "App Store"
 msgstr "Tienda de Aplicaciones"
 
-#: ../src/lastore-daemon/manager.go:312
+#: ../src/lastore-daemon/manager.go:333
 msgid "Removed successfully"
 msgstr "Eliminado correctamente"
 
-#: ../src/lastore-daemon/manager.go:316
+#: ../src/lastore-daemon/manager.go:338
 msgid "Failed to remove the app"
 msgstr "La eliminación de la aplicación falló"
 
-#: ../src/lastore-daemon/manager.go:319
+#: ../src/lastore-daemon/manager.go:341
 msgid "Retry"
 msgstr "Reintentar"
 
-#: ../src/lastore-daemon/manager.go:321
+#: ../src/lastore-daemon/manager.go:343
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: ../src/lastore-daemon/manager.go:478
-msgid "New version available!"
-msgstr "Nueva edición del sistema disponible"
+#: ../src/lastore-daemon/manager.go:441
+msgid "Package cache wiped"
+msgstr "Borrado del caché de paquetes"
 
-#: ../src/lastore-daemon/manager.go:479 ../src/lastore-daemon/manager.go:497
-#: ../src/lastore-daemon/manager.go:953 ../src/lastore-daemon/manager.go:996
+#: ../src/lastore-daemon/manager_check.go:44
+msgid "Checking and installing updates..."
+msgstr "Comprobando e instalando actualizaciones..."
+
+#: ../src/lastore-daemon/manager_download.go:78
+#: ../src/lastore-daemon/manager_download.go:172
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr ""
+"La descarga de actualizaciones falló. Primero libere %n GB de espacio en "
+"disco."
+
+#: ../src/lastore-daemon/manager_download.go:136
+msgid "New version available! Downloading..."
+msgstr "¡Nueva versión disponible! Descargando..."
+
+#: ../src/lastore-daemon/manager_download.go:139
+#: ../src/lastore-daemon/manager_download.go:184
+#: ../src/lastore-daemon/manager_update.go:134
+#: ../src/lastore-daemon/manager_update.go:160
 msgid "View"
 msgstr "Ver"
 
-#: ../src/lastore-daemon/manager.go:496
+#: ../src/lastore-daemon/manager_download.go:177
+#: ../src/lastore-daemon/manager_upgrade.go:500
+msgid "Updates failed: damaged files. Please update again."
+msgstr "Actualizaciones fallidas: archivos dañados. Actualice de nuevo."
+
+#: ../src/lastore-daemon/manager_download.go:178
+#: ../src/lastore-daemon/manager_upgrade.go:501
+msgid "Try Again"
+msgstr "Inténtelo de nuevo"
+
+#: ../src/lastore-daemon/manager_download.go:183
+msgid "Downloading updates failed. Please check your network."
+msgstr "La descarga de actualizaciones falló. Por favor, compruebe su red."
+
+#: ../src/lastore-daemon/manager_download.go:200
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+"Descarga completada. Puede instalar actualizaciones al apagar o reiniciar."
+
+#: ../src/lastore-daemon/manager_download.go:203
+msgid "Update Now"
+msgstr "Actualizar ahora"
+
+#: ../src/lastore-daemon/manager_download.go:205
+msgid "Dismiss"
+msgstr "Rechazada"
+
+#: ../src/lastore-daemon/manager_update.go:133
+msgid "New version available!"
+msgstr "Nueva edición del sistema disponible"
+
+#: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
 msgstr "Error al buscar actualizaciones. Por favor, compruebe su red."
 
-#: ../src/lastore-daemon/manager.go:502
+#: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr "Error al buscar actualizaciones. Por favor, primero limpie su disco."
 
-#: ../src/lastore-daemon/manager.go:625
+#: ../src/lastore-daemon/manager_upgrade.go:53
+msgid "Backing up and installing updates..."
+msgstr "Haciendo copia de seguridad e instalando actualizaciones..."
+
+#: ../src/lastore-daemon/manager_upgrade.go:135
+#: ../src/lastore-daemon/manager_upgrade.go:158
+#: ../src/lastore-daemon/manager_upgrade.go:192
+msgid "Backup failed!"
+msgstr "La copia de seguridad falló!"
+
+#: ../src/lastore-daemon/manager_upgrade.go:136
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Proceed to Update"
+msgstr "Proceder a la actualización"
+
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Back Up Again"
+msgstr "Crear copia de seguridad nuevamente"
+
+#: ../src/lastore-daemon/manager_upgrade.go:415
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
@@ -88,15 +159,7 @@ msgstr ""
 "La capacidad de la batería es inferior al 60%. Para obtener actualizaciones "
 "exitosas, conéctese."
 
-#: ../src/lastore-daemon/manager.go:704 ../src/lastore-daemon/manager.go:989
-msgid "Updates failed: damaged files. Please update again."
-msgstr "Actualizaciones fallidas: archivos dañados. Actualice de nuevo."
-
-#: ../src/lastore-daemon/manager.go:705 ../src/lastore-daemon/manager.go:990
-msgid "Try Again"
-msgstr "Inténtelo de nuevo"
-
-#: ../src/lastore-daemon/manager.go:711
+#: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
@@ -104,73 +167,32 @@ msgstr ""
 "Las actualización fallo: espacio en disco insuficiente. Reinicie para evitar"
 " el efecto en su sistema."
 
-#: ../src/lastore-daemon/manager.go:712 ../src/lastore-daemon/manager.go:725
+#: ../src/lastore-daemon/manager_upgrade.go:508
+#: ../src/lastore-daemon/manager_upgrade.go:521
 msgid "Reboot"
 msgstr "Reiniciar"
 
-#: ../src/lastore-daemon/manager.go:716
+#: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
 msgstr "La actualización falló: espacio de disco insuficiente"
 
-#: ../src/lastore-daemon/manager.go:724
+#: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
 "Las actualización fallo. Reinicie para evitar el efecto en su sistema."
 
-#: ../src/lastore-daemon/manager.go:729
+#: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
 msgstr "Actualización fallida"
 
-#: ../src/lastore-daemon/manager.go:894 ../src/lastore-daemon/manager.go:984
-#, c-format
-msgid "Downloading updates failed. Please free up %n GB disk space first."
+#: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Restart the computer to use the system and applications properly."
 msgstr ""
-"La descarga de actualizaciones falló. Primero libere %n GB de espacio en "
-"disco."
 
-#: ../src/lastore-daemon/manager.go:950
-msgid "New version available! Downloading..."
-msgstr "¡Nueva versión disponible! Descargando..."
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Reboot Later"
+msgstr "Reiniciar luego"
 
-#: ../src/lastore-daemon/manager.go:995
-msgid "Downloading updates failed. Please check your network."
-msgstr "La descarga de actualizaciones falló. Por favor, compruebe su red."
-
-#: ../src/lastore-daemon/manager.go:1019
-msgid ""
-"Downloading completed. You can install updates when shutdown or reboot."
-msgstr ""
-"Descarga completada. Puede instalar actualizaciones al apagar o reiniciar."
-
-#: ../src/lastore-daemon/manager.go:1022
-msgid "Update Now"
-msgstr "Actualizar ahora"
-
-#: ../src/lastore-daemon/manager.go:1024
-msgid "Dismiss"
-msgstr "Rechazada"
-
-#: ../src/lastore-daemon/manager.go:1139
-msgid "Package cache wiped"
-msgstr "Borrado del caché de paquetes"
-
-#: ../src/lastore-daemon/manager_ifc.go:391
-msgid "Backing up and installing updates..."
-msgstr "Haciendo copia de seguridad e instalando actualizaciones..."
-
-#: ../src/lastore-daemon/manager_ifc.go:470
-#: ../src/lastore-daemon/manager_ifc.go:493
-#: ../src/lastore-daemon/manager_ifc.go:527
-msgid "Backup failed!"
-msgstr "La copia de seguridad falló!"
-
-#: ../src/lastore-daemon/manager_ifc.go:471
-#: ../src/lastore-daemon/manager_ifc.go:494
-#: ../src/lastore-daemon/manager_ifc.go:528
-msgid "Proceed to Update"
-msgstr "Proceder a la actualización"
-
-#: ../src/lastore-daemon/manager_ifc.go:494
-#: ../src/lastore-daemon/manager_ifc.go:528
-msgid "Back Up Again"
-msgstr "Crear copia de seguridad nuevamente"
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Reboot Now"
+msgstr "Reiniciar ahora"

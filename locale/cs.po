@@ -4,18 +4,18 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# fri, 2023
+# Petr Balvín <petrbalvin@petalmail.com>, 2023
 # Pavel Borecki <pavel.borecki@gmail.com>, 2023
-# Petr Balvín, 2023
+# fri, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-05-25 16:25+0800\n"
+"POT-Creation-Date: 2024-05-21 13:20+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Petr Balvín, 2023\n"
+"Last-Translator: fri, 2024\n"
 "Language-Team: Czech (https://app.transifex.com/linuxdeepin/teams/3617/cs/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -23,77 +23,142 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n <= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:44
+#: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
 msgstr "Instalují se aktualizace..."
 
-#: ../src/lastore-daemon/inhibitor.go:46
+#: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
 msgstr "Probíhají úlohy…"
 
-#: ../src/lastore-daemon/inhibitor.go:48
+#: ../src/lastore-daemon/inhibitor.go:49
 msgid "Preventing from shutting down"
 msgstr "Brání ve vypnutí"
 
-#: ../src/lastore-daemon/main.go:161 ../src/lastore-daemon/main.go:165
+#: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
 msgstr "Ovládací panely"
 
-#: ../src/lastore-daemon/main.go:163
+#: ../src/lastore-daemon/main.go:172
 msgid "App Store"
 msgstr "Katalog aplikací"
 
-#: ../src/lastore-daemon/manager.go:312
+#: ../src/lastore-daemon/manager.go:333
 msgid "Removed successfully"
 msgstr "Úspěšně odebráno"
 
-#: ../src/lastore-daemon/manager.go:316
+#: ../src/lastore-daemon/manager.go:338
 msgid "Failed to remove the app"
 msgstr "Aplikaci se nepodařilo odebrat"
 
-#: ../src/lastore-daemon/manager.go:319
+#: ../src/lastore-daemon/manager.go:341
 msgid "Retry"
 msgstr "Zkusit znovu"
 
-#: ../src/lastore-daemon/manager.go:321
+#: ../src/lastore-daemon/manager.go:343
 msgid "Cancel"
 msgstr "Zrušit"
 
-#: ../src/lastore-daemon/manager.go:478
-msgid "New version available!"
-msgstr "K dispozici je nová verze!"
+#: ../src/lastore-daemon/manager.go:441
+msgid "Package cache wiped"
+msgstr "Mezipaměť balíčků vyčištěna"
 
-#: ../src/lastore-daemon/manager.go:479 ../src/lastore-daemon/manager.go:497
-#: ../src/lastore-daemon/manager.go:953 ../src/lastore-daemon/manager.go:996
+#: ../src/lastore-daemon/manager_check.go:44
+msgid "Checking and installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:78
+#: ../src/lastore-daemon/manager_download.go:172
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr ""
+"Stažení aktualizací se nezdařilo. Nejprve prosím uvolněte %n GB místa na "
+"disku."
+
+#: ../src/lastore-daemon/manager_download.go:136
+msgid "New version available! Downloading..."
+msgstr "Nová verze k dispozici! Stahování…"
+
+#: ../src/lastore-daemon/manager_download.go:139
+#: ../src/lastore-daemon/manager_download.go:184
+#: ../src/lastore-daemon/manager_update.go:134
+#: ../src/lastore-daemon/manager_update.go:160
 msgid "View"
 msgstr "Pohled"
 
-#: ../src/lastore-daemon/manager.go:496
-msgid "Failed to check for updates. Please check your network."
-msgstr "Nepodařilo se zkontrolovat aktualizace. Zkontrolujte prosím svou síť."
-
-#: ../src/lastore-daemon/manager.go:502
-msgid "Failed to check for updates. Please clean up your disk first."
-msgstr "Nepodařilo se zkontrolovat aktualizace. Nejprve vyčistěte disk."
-
-#: ../src/lastore-daemon/manager.go:625
-msgid ""
-"The battery capacity is lower than 60%. To get successful updates, please "
-"plug in."
-msgstr ""
-"Kapacita baterie je nižší než 60 %. Chcete-li získat úspěšné aktualizace, "
-"připojte zařízení k síti."
-
-#: ../src/lastore-daemon/manager.go:704 ../src/lastore-daemon/manager.go:989
+#: ../src/lastore-daemon/manager_download.go:177
+#: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
 "Aktualizace se nezdařila: poškozené soubory. Aktualizujte prosím znovu."
 
-#: ../src/lastore-daemon/manager.go:705 ../src/lastore-daemon/manager.go:990
+#: ../src/lastore-daemon/manager_download.go:178
+#: ../src/lastore-daemon/manager_upgrade.go:501
 msgid "Try Again"
 msgstr "Zkusit znovu"
 
-#: ../src/lastore-daemon/manager.go:711
+#: ../src/lastore-daemon/manager_download.go:183
+msgid "Downloading updates failed. Please check your network."
+msgstr "Stažení aktualizací se nezdařilo. Zkontrolujte připojení k síti."
+
+#: ../src/lastore-daemon/manager_download.go:200
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+"Stahování dokončeno. Aktualizace můžete nainstalovat při vypnutí nebo "
+"restartu."
+
+#: ../src/lastore-daemon/manager_download.go:203
+msgid "Update Now"
+msgstr "Aktualizovat nyní"
+
+#: ../src/lastore-daemon/manager_download.go:205
+msgid "Dismiss"
+msgstr "Odmítnout"
+
+#: ../src/lastore-daemon/manager_update.go:133
+msgid "New version available!"
+msgstr "Nová verze k dispozici!"
+
+#: ../src/lastore-daemon/manager_update.go:159
+msgid "Failed to check for updates. Please check your network."
+msgstr ""
+"Nepodařilo se zkontrolovat aktualizace. Zkontrolujte připojení k síti."
+
+#: ../src/lastore-daemon/manager_update.go:165
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr "Nepodařilo se zkontrolovat aktualizace. Nejprve vyčistěte disk."
+
+#: ../src/lastore-daemon/manager_upgrade.go:53
+msgid "Backing up and installing updates..."
+msgstr "Zálohování a instalace aktualizací..."
+
+#: ../src/lastore-daemon/manager_upgrade.go:135
+#: ../src/lastore-daemon/manager_upgrade.go:158
+#: ../src/lastore-daemon/manager_upgrade.go:192
+msgid "Backup failed!"
+msgstr "Zálohování se nezdařilo!"
+
+#: ../src/lastore-daemon/manager_upgrade.go:136
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Proceed to Update"
+msgstr "Přejít k aktualizaci"
+
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Back Up Again"
+msgstr "Znovu zazálohovat"
+
+#: ../src/lastore-daemon/manager_upgrade.go:415
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr ""
+"Nabití akumulátoru je nižší než 60%. Aby se aktualizace podařilo úspěšně "
+"nainstalovat, připojte zařízení k napájení z elektrické sítě."
+
+#: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
@@ -101,75 +166,33 @@ msgstr ""
 "Aktualizace se nezdařila: nedostatek místa na disku. Restartujte systém, "
 "abyste se vyhnuli dopadu na systém."
 
-#: ../src/lastore-daemon/manager.go:712 ../src/lastore-daemon/manager.go:725
+#: ../src/lastore-daemon/manager_upgrade.go:508
+#: ../src/lastore-daemon/manager_upgrade.go:521
 msgid "Reboot"
 msgstr "Restartovat"
 
-#: ../src/lastore-daemon/manager.go:716
+#: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
 msgstr "Aktualizace se nezdařily: nedostatek místa na úložišti"
 
-#: ../src/lastore-daemon/manager.go:724
+#: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
 "Aktualizace se nezdařila. Restartujte systém, abyste se vyhnuli dopadu na "
 "systém."
 
-#: ../src/lastore-daemon/manager.go:729
+#: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
 msgstr "Aktualizace se nezdařila"
 
-#: ../src/lastore-daemon/manager.go:894 ../src/lastore-daemon/manager.go:984
-#, c-format
-msgid "Downloading updates failed. Please free up %n GB disk space first."
+#: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Restart the computer to use the system and applications properly."
 msgstr ""
-"Stažení aktualizací se nezdařilo. Nejprve prosím uvolněte %n GB místa na "
-"disku."
 
-#: ../src/lastore-daemon/manager.go:950
-msgid "New version available! Downloading..."
-msgstr "K dispozici je nová verze! Stahování..."
-
-#: ../src/lastore-daemon/manager.go:995
-msgid "Downloading updates failed. Please check your network."
-msgstr "Stažení aktualizací se nezdařilo. Zkontrolujte síť."
-
-#: ../src/lastore-daemon/manager.go:1019
-msgid ""
-"Downloading completed. You can install updates when shutdown or reboot."
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Reboot Later"
 msgstr ""
-"Stahování dokončeno. Aktualizace můžete nainstalovat při vypnutí nebo "
-"restartu."
 
-#: ../src/lastore-daemon/manager.go:1022
-msgid "Update Now"
-msgstr "Aktualizovat nyní"
-
-#: ../src/lastore-daemon/manager.go:1024
-msgid "Dismiss"
-msgstr "Odmítnout"
-
-#: ../src/lastore-daemon/manager.go:1139
-msgid "Package cache wiped"
-msgstr "Vyrovnávací paměť balíčků vyčištěna"
-
-#: ../src/lastore-daemon/manager_ifc.go:391
-msgid "Backing up and installing updates..."
-msgstr "Zálohování a instalace aktualizací..."
-
-#: ../src/lastore-daemon/manager_ifc.go:470
-#: ../src/lastore-daemon/manager_ifc.go:493
-#: ../src/lastore-daemon/manager_ifc.go:527
-msgid "Backup failed!"
-msgstr "Zálohování se nezdařilo!"
-
-#: ../src/lastore-daemon/manager_ifc.go:471
-#: ../src/lastore-daemon/manager_ifc.go:494
-#: ../src/lastore-daemon/manager_ifc.go:528
-msgid "Proceed to Update"
-msgstr "Přejít k aktualizaci"
-
-#: ../src/lastore-daemon/manager_ifc.go:494
-#: ../src/lastore-daemon/manager_ifc.go:528
-msgid "Back Up Again"
-msgstr "Znovu zálohovat"
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Reboot Now"
+msgstr "Restartovat nyní"
