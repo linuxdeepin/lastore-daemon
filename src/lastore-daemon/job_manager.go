@@ -164,8 +164,55 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.OfflineUpdateJobType, LockQueue, environ)
 		job._InitProgressRange(0.11, 0.9)
 	case system.DistUpgradeJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
-		job._InitProgressRange(0, 0.99)
+		mode, ok := jobArgc["UpdateMode"].(system.UpdateType)
+		if !ok {
+			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
+		}
+		path, ok := jobArgc["WrapperModePath"].(string)
+		if !ok {
+			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
+		}
+		supportIgnore, ok := jobArgc["SupportDpkgScriptIgnore"].(bool)
+		if !ok {
+			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
+		}
+
+		var includeUnknown bool
+		if mode&system.UnknownUpdate != 0 && mode != system.UnknownUpdate {
+			// 不仅仅只存在第三方更新
+			includeUnknown = true
+		}
+
+		if includeUnknown && supportIgnore {
+			// 非第三方job
+			commonJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
+			commonJob._InitProgressRange(0, 0.70)
+			commonJob.updateTyp = mode
+			commonJob.retry = 0
+			// 第三方job
+			thirdJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
+			thirdJob._InitProgressRange(0.71, 0.99)
+			if utils.IsDir(path) {
+				thirdJob.option = map[string]string{
+					"Dir::Etc::SourceList":  "/dev/null",
+					"Dir::Etc::SourceParts": system.GetCategorySourceMap()[system.UnknownUpdate],
+				}
+			} else {
+				thirdJob.option = map[string]string{
+					"Dir::Etc::SourceList":  system.GetCategorySourceMap()[system.UnknownUpdate],
+					"Dir::Etc::SourceParts": "/dev/null",
+				}
+			}
+			thirdJob.option["DPkg::Options::"] = "--script-ignore-error"
+			thirdJob.updateTyp = mode
+			thirdJob.retry = 0
+			commonJob.next = thirdJob
+			job = commonJob
+		} else {
+			job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
+			job._InitProgressRange(0, 0.99)
+		}
+
 	case system.UpdateJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.CleanJobType:
@@ -569,7 +616,7 @@ type upgradeJobInfo struct {
 	UpgradeJobType string // 更新Job的类型
 }
 
-// GetUpgradeInfoMap 更新种类和具体job类型的映射
+// GetUpgradeInfoMap 更新种类和具体job类型的映射  classify使用
 func GetUpgradeInfoMap() map[system.UpdateType]upgradeJobInfo {
 	return map[system.UpdateType]upgradeJobInfo{
 		system.SystemUpdate: {

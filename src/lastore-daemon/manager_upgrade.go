@@ -12,7 +12,6 @@ import (
 	"internal/updateplatform"
 	"io/ioutil"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -223,6 +222,9 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 // distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
 // needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
 func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
+	m.checkDpkgCapabilityOnce.Do(func() {
+		m.supportDpkgScriptIgnore = checkSupportDpkgScriptIgnore()
+	})
 	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec upgrade")
 	}
@@ -255,14 +257,28 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	var isExist bool
 	var job *Job
 	var uuid string
-	err = system.CustomSourceWrapper(mode, func(path string, unref func()) error {
+	mergeMode := mode
+	if mode != system.UnknownUpdate {
+		mergeMode = mode & (^system.UnknownUpdate)
+	}
+	/*
+		1. 仅有第三方仓库或没有第三方仓库时,mergeMode为当期更新内容,和原有逻辑一致;
+		2. 多仓库包含第三方时,先融合非第三方仓库内容生成path,CreateJob中,分别创建排除第三方的更新job和第三方更新job,源配置分别在CreateJob后和CreateJob时设置;
+		TODO: 该处逻辑和下载逻辑代码将业务和机制耦合太死,需要根据现有需求规划对该部分做新的设计;
+	*/
+	err = system.CustomSourceWrapper(mergeMode, func(path string, unref func()) error {
 		m.do.Lock()
 		defer m.do.Unlock()
 		if isClassify {
 			jobType := GetUpgradeInfoMap()[mode].UpgradeJobId
 			isExist, job, err = m.jobManager.CreateJob("", jobType, nil, environ, nil)
 		} else {
-			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, m.coreList, environ, nil)
+			option := map[string]interface{}{
+				"UpdateMode":              mode, // 原始mode
+				"WrapperModePath":         path,
+				"SupportDpkgScriptIgnore": m.supportDpkgScriptIgnore,
+			}
+			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, m.coreList, environ, option)
 		}
 		if err != nil {
 			logger.Warningf("DistUpgrade error: %v\n", err)
@@ -275,15 +291,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			return JobExistError
 		}
 		job.caller = caller
-		job.retry = 0
-		info, err := os.Stat(path)
-		if err != nil {
-			if unref != nil {
-				unref()
-			}
-			return err
-		}
-		if info.IsDir() {
+
+		if utils.IsDir(path) {
 			job.option = map[string]string{
 				"Dir::Etc::SourceList":  "/dev/null",
 				"Dir::Etc::SourceParts": path,
@@ -299,8 +308,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			job.option["Dir::State::lists"] = system.OfflineListPath
 		}
 
-		m.handleSysPowerChanged(job)
-		uuid, err = m.prepareAptCheck(job, mode)
+		if mode == system.UnknownUpdate {
+			job.option["DPkg::Options::"] = "--script-ignore-error"
+		}
+
+		m.handleSysPowerChanged()
+		uuid, err = m.prepareAptCheck(mode)
 		if err != nil {
 			logger.Warning(err)
 			m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
@@ -310,8 +323,17 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			return err
 		}
 		logger.Info(uuid)
+
 		// 设置hook
-		job.setPreHooks(map[string]func() error{
+		// TODO 目前最多两个job关联,先这样写,后续规划抽象每个更新类型做处理.
+		var endJob *Job
+		startJob := job
+		if job.next != nil {
+			endJob = job.next
+		} else {
+			endJob = job
+		}
+		startJob.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
@@ -332,6 +354,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				_ = m.preFailedHook(job, mode)
 				return nil
 			},
+		})
+
+		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
 				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
 				if systemErr != nil {
@@ -350,17 +375,22 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				_ = m.preSuccessHook(job, needChangeGrub, mode)
 				return nil
 			},
+			string(system.FailedStatus): func() error {
+				_ = m.preFailedHook(job, mode)
+				return nil
+			},
+		})
+
+		endJob.setAfterHooks(map[string]func() error{
+			string(system.SucceedStatus): func() error {
+				return m.afterSuccessHook()
+			},
 			string(system.EndStatus): func() error {
 				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
 				if unref != nil {
 					unref()
 				}
 				return nil
-			},
-		})
-		job.setAfterHooks(map[string]func() error{
-			string(system.SucceedStatus): func() error {
-				return m.afterSuccessHook()
 			},
 		})
 		if needAdd { // 分类下载的job需要外部判断是否add
@@ -385,7 +415,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	return job, nil
 }
 
-func (m *Manager) handleSysPowerChanged(job *Job) {
+func (m *Manager) handleSysPowerChanged() {
 	isLaptop, err := m.sysPower.HasBattery().Get(0)
 	if err == nil && isLaptop {
 		var lowPowerNotifyId uint32 = 0
@@ -407,10 +437,7 @@ func (m *Manager) handleSysPowerChanged(job *Job) {
 		handleSysPowerBatteryEvent := func() {
 			handleSysPowerBatteryEventMu.Lock()
 			defer handleSysPowerBatteryEventMu.Unlock()
-			if job.Status != system.RunningStatus {
-				return
-			}
-			if onBatteryGlobal && batteryPercentage < 60.0 && (job.Status == system.RunningStatus || job.Status == system.ReadyStatus) && lowPowerNotifyId == 0 {
+			if onBatteryGlobal && batteryPercentage < 60.0 && m.statusManager.isUpgrading() && lowPowerNotifyId == 0 {
 				go func() {
 					msg := gettext.Tr("The battery capacity is lower than 60%. To get successful updates, please plug in.")
 					lowPowerNotifyId = m.sendNotify(updateNotifyShow, 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
@@ -718,7 +745,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 }
 
 // 生成meta.json和uuid
-func (m *Manager) prepareAptCheck(job *Job, mode system.UpdateType) (string, error) {
+func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 	var uuid string
 	var err error
 	// pkgMap repo和system.LocalCachePath都是占位用，没有起到真正的作用

@@ -14,13 +14,17 @@ import (
 
 func TestJobManager(t *testing.T) {
 	jm := NewJobManager(nil, apt.NewSystem(nil, nil, nil), nil)
-
+	option := map[string]interface{}{
+		"UpdateMode":              system.SystemUpdate, // 原始mode
+		"WrapperModePath":         "",
+		"SupportDpkgScriptIgnore": true,
+	}
 	// 空包只走流程
-	_, _, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, nil)
+	_, _, err := jm.CreateJob(system.DistUpgradeJobType, system.InstallJobType, nil, nil, option)
 	assert.NoError(t, err)
 	assert.Equal(t, jm.findJobByType(system.DistUpgradeJobType, nil), (*Job)(nil))
 
-	_, jobDistUpgrade2, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil, nil)
+	_, jobDistUpgrade2, err := jm.CreateJob("", system.DistUpgradeJobType, nil, nil, option)
 	assert.NoError(t, err)
 	err = jm.addJob(jobDistUpgrade2)
 	assert.NoError(t, err)

@@ -646,3 +646,14 @@ func (m *UpdateModeStatusManager) SetFrontForceUpdate(force bool) {
 		logger.Warning(err)
 	}
 }
+
+func (m *UpdateModeStatusManager) isUpgrading() bool {
+	m.statusMapMu.Lock()
+	defer m.statusMapMu.Unlock()
+	for _, v := range m.updateModeStatusObj {
+		if v == system.WaitRunUpgrade || v == system.Upgrading {
+			return true
+		}
+	}
+	return false
+}

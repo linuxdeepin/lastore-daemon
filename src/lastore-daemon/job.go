@@ -238,7 +238,14 @@ func (j *Job) getPreHook(name string) func() error {
 // 当success的hook报错时,需要在 updateInfo 处理error;running的hook错误在StartSystemJob中处理;其他四类状态应该不会有hook报错的情况.
 func (j *Job) setPreHooks(hooks map[string]func() error) {
 	j.preChangeStatusHooksMu.Lock()
-	j.preChangeStatusHooks = hooks
+	if j.preChangeStatusHooks == nil {
+		j.preChangeStatusHooks = make(map[string]func() error)
+	}
+	if hooks != nil {
+		for k, v := range hooks {
+			j.preChangeStatusHooks[k] = v
+		}
+	}
 	j.preChangeStatusHooksMu.Unlock()
 }
 
@@ -276,7 +283,14 @@ func (j *Job) getAfterHook(name string) func() error {
 // after hook中 success状态的hook不要返回error
 func (j *Job) setAfterHooks(hooks map[string]func() error) {
 	j.afterChangedHooksMu.Lock()
-	j.afterChangedHooks = hooks
+	if j.afterChangedHooks == nil {
+		j.afterChangedHooks = make(map[string]func() error)
+	}
+	if hooks != nil {
+		for k, v := range hooks {
+			j.afterChangedHooks[k] = v
+		}
+	}
 	j.afterChangedHooksMu.Unlock()
 }
 

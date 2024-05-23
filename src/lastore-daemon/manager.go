@@ -83,6 +83,9 @@ type Manager struct {
 	rebootTimeoutTimer *time.Timer
 
 	coreList []string
+
+	checkDpkgCapabilityOnce sync.Once
+	supportDpkgScriptIgnore bool
 }
 
 /*

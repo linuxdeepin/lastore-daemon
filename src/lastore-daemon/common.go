@@ -422,3 +422,12 @@ func getHistoryChangelog(path string) (changeLogs string) {
 	}
 	return string(content)
 }
+
+func checkSupportDpkgScriptIgnore() bool {
+	output, err := exec.Command("/bin/sh", "-c", "dpkg --script-ignore-error --audit").Output()
+	if err != nil {
+		logger.Warning("audit dpkg script ignore capability:", err, string(output))
+		return false
+	}
+	return true
+}
