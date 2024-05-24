@@ -586,11 +586,12 @@ func (m *Manager) afterSuccessHook() error {
 	if err != nil {
 		logger.Warning(err)
 	}
+	summary := gettext.Tr("Updates successful")
 	msg := gettext.Tr("Restart the computer to use the system and applications properly.")
 	action := []string{"reboot", gettext.Tr("Reboot Now"), "cancel", gettext.Tr("Reboot Later")}
 	hints := map[string]dbus.Variant{
 		"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
-	go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+	go m.sendNotify(updateNotifyShow, 0, "system-updated", summary, msg, action, hints, system.NotifyExpireTimeoutNoHide)
 
 	return nil
 }
