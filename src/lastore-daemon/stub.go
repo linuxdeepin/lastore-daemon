@@ -146,7 +146,10 @@ func DestroyJobDBus(j *Job) {
 	if NotUseDBus {
 		return
 	}
-	j.notifyAll()
+	// 有next的job无需广播状态，会导致前端判断异常
+	if j.next == nil {
+		j.notifyAll()
+	}
 	<-time.After(time.Millisecond * 100)
 	err := j.service.StopExport(j)
 	if err != nil {

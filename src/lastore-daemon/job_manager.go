@@ -168,10 +168,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		if !ok {
 			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
 		}
-		path, ok := jobArgc["WrapperModePath"].(string)
-		if !ok {
-			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
-		}
 		supportIgnore, ok := jobArgc["SupportDpkgScriptIgnore"].(bool)
 		if !ok {
 			return false, nil, fmt.Errorf("invalid arg %+v", jobArgc)
@@ -192,14 +188,15 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 			// 第三方job
 			thirdJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
 			thirdJob._InitProgressRange(0.71, 0.99)
-			if utils.IsDir(path) {
+			thirdPath := system.GetCategorySourceMap()[system.UnknownUpdate]
+			if utils.IsDir(thirdPath) {
 				thirdJob.option = map[string]string{
 					"Dir::Etc::SourceList":  "/dev/null",
-					"Dir::Etc::SourceParts": system.GetCategorySourceMap()[system.UnknownUpdate],
+					"Dir::Etc::SourceParts": thirdPath,
 				}
 			} else {
 				thirdJob.option = map[string]string{
-					"Dir::Etc::SourceList":  system.GetCategorySourceMap()[system.UnknownUpdate],
+					"Dir::Etc::SourceList":  thirdPath,
 					"Dir::Etc::SourceParts": "/dev/null",
 				}
 			}

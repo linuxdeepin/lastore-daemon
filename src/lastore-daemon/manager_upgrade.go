@@ -275,7 +275,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		} else {
 			option := map[string]interface{}{
 				"UpdateMode":              mode, // 原始mode
-				"WrapperModePath":         path,
 				"SupportDpkgScriptIgnore": m.supportDpkgScriptIgnore,
 			}
 			isExist, job, err = m.jobManager.CreateJob("", system.DistUpgradeJobType, m.coreList, environ, option)
