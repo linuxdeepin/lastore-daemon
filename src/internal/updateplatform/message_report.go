@@ -73,6 +73,7 @@ type UpdatePlatformManager struct {
 	Tp             UpdateTp  // 更新策略类型:1.非强制更新，2.强制更新/立即更新，3.强制更新/关机或重启时更新，4.强制更新/指定时间更新
 	UpdateTime     time.Time // 更新时间(指定时间更新时的时间)
 	UpdateNowForce bool      // 立即更新
+	mu             sync.Mutex
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -81,6 +82,10 @@ const (
 	cacheBaseline = "/var/lib/lastore/os-baseline.b"
 	realBaseline  = "/etc/os-baseline"
 	realVersion   = "/etc/os-version"
+
+	KeyNow      string = "now"      // 立即更新
+	KeyShutdown string = "shutdown" // 关机更新
+	KeyLayout   string = "15:04"
 )
 
 func NewUpdatePlatformManager(c *Config) *UpdatePlatformManager {
@@ -222,6 +227,7 @@ func getGeneralValueFromKeyFile(path, key string) string {
 // UpdateBaseline 更新安装并检查成功后，同步baseline文件
 func (m *UpdatePlatformManager) UpdateBaseline() {
 	copyFile(cacheBaseline, realBaseline)
+	m.preBaseline = getCurrentBaseline()
 }
 
 // 进行安装更新前，需要复制文件替换软连接
@@ -643,7 +649,7 @@ func IsForceUpdate(tp UpdateTp) bool {
 }
 
 // GenUpdatePolicyByToken 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
+func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
 	response, err := m.genVersionResponse()
 	if err != nil {
 		return fmt.Errorf("failed get version data %v", err)
@@ -666,13 +672,6 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
 	if m.Tp == UpdateRegularly {
 		m.UpdateTime, _ = time.Parse(time.RFC3339, msg.Policy.Data.UpdateTime)
 	}
-	// 距更新时间3min内则立即更新，超过时间服务器会更新定时时间
-	nowTime := time.Now()
-	dot := time.Duration(3) * time.Minute
-	bTime := nowTime.Add(dot)
-	if m.Tp == UpdateNow || (m.Tp == UpdateRegularly && m.UpdateTime.Before(bTime) && m.UpdateTime.After(nowTime)) {
-		m.UpdateNowForce = true
-	}
 
 	m.UpdateBaselineCache()
 	// 生成仓库和InRelease
@@ -680,7 +679,56 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
 	m.checkInReleaseFromPlatform()
 
 	return nil
+}
 
+func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
+	err := m.genUpdatePolicyByToken()
+	// 根据配置更新Tp
+	switch m.Tp {
+	case UpdateNow:
+		m.config.SetInstallUpdateTime(KeyNow)
+	case UpdateShutdown:
+		m.config.SetInstallUpdateTime(KeyShutdown)
+	case UpdateRegularly:
+	default:
+		logger.Debug("Config update time:", m.config.UpdateTime)
+		switch m.config.UpdateTime {
+		case KeyNow:
+			m.Tp = UpdateNow
+		case KeyShutdown:
+			m.Tp = UpdateShutdown
+		default:
+			updateTime, err := time.Parse(time.RFC3339, m.config.UpdateTime)
+			if err == nil {
+				m.Tp = UpdateRegularly
+				m.UpdateTime = updateTime
+			} else {
+				logger.Warning(err)
+			}
+		}
+	}
+	logger.Info("Policy tp:", m.Tp, "update time:", m.UpdateTime)
+	logger.Info("pre Baseline:", m.preBaseline, "target Baseline：", m.targetBaseline)
+	if len(m.targetBaseline) == 0 || m.preBaseline == m.targetBaseline {
+		m.Tp = NormalUpdate
+	}
+	m.UpdateNowForce = false
+	switch m.Tp {
+	case UpdateNow:
+		m.UpdateNowForce = true
+	case UpdateRegularly:
+		// 距更新时间3min内则立即更新
+		nowTime := time.Now()
+		dot := time.Duration(3) * time.Minute
+		bTime := nowTime.Add(dot)
+		updateTime := time.Date(nowTime.Year(), nowTime.Month(), nowTime.Day(), m.UpdateTime.Hour(), m.UpdateTime.Minute(), 0, 0, nowTime.Location())
+		if m.Tp == UpdateRegularly && updateTime.Before(bTime) && updateTime.After(nowTime) {
+			m.UpdateNowForce = true
+		}
+		m.config.SetInstallUpdateTime(m.UpdateTime.Format(time.RFC3339))
+	}
+	logger.Info("Force Update:", IsForceUpdate(m.Tp), "update Immediate:", m.UpdateNowForce, "updateTime:", m.UpdateTime)
+	return err
 }
 
 type packageLists struct {
@@ -1345,6 +1393,8 @@ func (m *UpdatePlatformManager) needPostSystemUpgradeMessage(mode system.UpdateT
 
 // PostSystemUpgradeMessage 发送系统更新成功或失败的状态
 func (m *UpdatePlatformManager) PostSystemUpgradeMessage(upgradeStatus int, Description string, updateType system.UpdateType) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if !m.needPostSystemUpgradeMessage(updateType) {
 		return
 	}
@@ -1373,31 +1423,21 @@ func (m *UpdatePlatformManager) PostSystemUpgradeMessage(upgradeStatus int, Desc
 		logger.Warning(err)
 		return
 	}
-	client := &http.Client{
-		Timeout: 4 * time.Second,
-	}
 	logger.Debug(postContent)
-	encryptMsg, err := EncryptMsg(content)
+	base64EncodeString := base64.StdEncoding.EncodeToString(content)
+
+	args := []string{
+		"postupgrade",
+		base64EncodeString,
+	}
+	cmd := exec.Command("lastore-tools", args...)
+	logger.Info(cmd.String())
+	var errBuffer bytes.Buffer
+	cmd.Stderr = &errBuffer
+	err = cmd.Run()
 	if err != nil {
 		logger.Warning(err)
-		return
-	}
-	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
-	requestUrl := m.requestUrl + "/api/v1/update/status"
-	request, err := http.NewRequest("POST", requestUrl, strings.NewReader(base64EncodeString))
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	response, err := client.Do(request)
-	if err == nil {
-		defer func() {
-			_ = response.Body.Close()
-		}()
-		body, _ := ioutil.ReadAll(response.Body)
-		logger.Debug("postSystemUpgradeMessage response is:", string(body))
-	} else {
-		logger.Warning(err)
+		logger.Warning(errBuffer.String())
 	}
 }
 

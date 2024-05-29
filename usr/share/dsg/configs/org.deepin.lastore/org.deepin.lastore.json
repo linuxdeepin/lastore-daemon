@@ -382,6 +382,19 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "post-upgrade-on-calendar": {
+      "value": "*:0",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "PostUpgradeOnCalendar",
+      "description": "post upgrade on calendar",
+      "name[zh_CN]": "更新上报间隔",
+      "description[zh_CN]": "更新上报间隔 systemd定时器里的OnCalendar参数",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "start-check-range": {
       "value": [
         1800,
@@ -408,6 +421,19 @@
       "description": "machineID  include disk info",
       "name[zh_CN]": "包含硬盘信息",
       "description[zh_CN]": "机器ID是否包含硬盘信息",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "update-time": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpdateTime",
+      "description": "Update Time",
+      "name[zh_CN]": "定时更新",
+      "description[zh_CN]": "定时更新",
       "permissions": "readwrite",
       "visibility": "private"
     }

@@ -77,6 +77,8 @@ type Config struct {
 	CheckPolicyCron string // 策略检查间隔
 	StartCheckRange []int  // 开机检查更新区间
 	IncludeDiskInfo bool   // machineID是否包含硬盘信息
+	PostUpgradeCron string // 更新上报间隔
+	UpdateTime      string // 定时更新
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
@@ -159,6 +161,8 @@ const (
 	dSettingsKeyCheckPolicyOnCalendar                = "check-policy-on-calendar"
 	dSettingsKeyStartCheckRange                      = "start-check-range"
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
+	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
+	dSettingsKeyUpdateTime                           = "update-time"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -471,6 +475,13 @@ func getConfigFromDSettings() *Config {
 		c.CheckPolicyCron = v.Value().(string)
 	}
 
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPostUpgradeOnCalendar)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.PostUpgradeCron = v.Value().(string)
+	}
+
 	var checkRange []float64
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
 	if err != nil {
@@ -497,6 +508,13 @@ func getConfigFromDSettings() *Config {
 		c.IncludeDiskInfo = true
 	} else {
 		c.IncludeDiskInfo = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateTime)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.UpdateTime = v.Value().(string)
 	}
 
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
@@ -729,6 +747,11 @@ func (c *Config) GetLastoreDaemonStatusByBit(key LastoreDaemonStatus) LastoreDae
 func (c *Config) SetUpdateStatus(status string) error {
 	c.UpdateStatus = status
 	return c.save(dSettingsKeyUpdateStatus, status)
+}
+
+func (c *Config) SetInstallUpdateTime(delayed string) error {
+	c.UpdateTime = delayed
+	return c.save(dSettingsKeyUpdateTime, c.UpdateTime)
 }
 
 const (

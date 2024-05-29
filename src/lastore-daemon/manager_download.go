@@ -75,7 +75,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.ErrorInsufficientSpace),
 			"You don't have enough free space to download",
 		}
-		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %n GB disk space first."), needDownloadSize/(1000*1000*1000))
+		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), needDownloadSize/(1000*1000*1000))
 		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 		logger.Warning(dbusError.Detail)
 		errStr, _ := json.Marshal(dbusError)
@@ -132,15 +132,17 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			m.isDownloading = true
 			m.PropsMu.Unlock()
 			m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
-			sendDownloadingOnce.Do(func() {
-				msg := gettext.Tr("New version available! Downloading...")
-				action := []string{
-					"view",
-					gettext.Tr("View"),
-				}
-				hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-			})
+			if !m.updatePlatform.UpdateNowForce { // 立即更新则不发通知
+				sendDownloadingOnce.Do(func() {
+					msg := gettext.Tr("New version available! Downloading...")
+					action := []string{
+						"view",
+						gettext.Tr("View"),
+					}
+					hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
+					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+				})
+			}
 			return
 		}
 		j.setPreHooks(map[string]func() error{
@@ -169,7 +171,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 							logger.Warning(err)
 							size = needDownloadSize
 						}
-						msg = fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %n GB disk space first."), size/(1000*1000*1000))
+						msg = fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), size/(1000*1000*1000))
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					} else if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
 						// 下载更新失败，需要apt-get clean后重新下载
@@ -197,18 +199,20 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.SucceedStatus): func() error {
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.CanUpgrade)
 				if j.next == nil {
-					msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
-					action := []string{
-						"updateNow",
-						gettext.Tr("Update Now"),
-						"ignore",
-						gettext.Tr("Dismiss"),
-					}
-					hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Show")}
 					go func() {
 						m.inhibitAutoQuitCountAdd()
 						defer m.inhibitAutoQuitCountSub()
-						m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						if !m.updatePlatform.UpdateNowForce {
+							msg := gettext.Tr("Downloading completed. You can install updates when shutdown or reboot.")
+							action := []string{
+								"updateNow",
+								gettext.Tr("Update Now"),
+								"ignore",
+								gettext.Tr("Dismiss"),
+							}
+							hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Show")}
+							m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						}
 						m.reportLog(downloadStatusReport, true, "")
 					}()
 

@@ -612,6 +612,14 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}
 			m.inhibitAutoQuitCountSub()
 		}()
+		if !m.updatePlatform.UpdateNowForce && !m.updatePlatform.UpdateTime.IsZero() {
+			timeStr := fmt.Sprintf("%d:%d", m.updatePlatform.UpdateTime.Hour(), m.updatePlatform.UpdateTime.Minute())
+			if timeStr != m.updateTime {
+				m.updateTime = timeStr
+				msg := fmt.Sprintf(gettext.Tr("The computer will be updated at %s"), m.updateTime)
+				go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			}
+		}
 		if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
 			_ = m.updateTimerUnit(lastoreRegularlyUpdate)
 		}

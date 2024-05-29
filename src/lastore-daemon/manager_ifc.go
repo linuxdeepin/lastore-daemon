@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"internal/utils"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -543,6 +545,48 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	logger.Info("RestartUnit lightdm")
 	return nil
 }
+
+func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
+	checkExecPath := func() error {
+		// 只有dde-update可以设置
+		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+		if !strings.Contains(execPath, "dde-update") {
+			err = fmt.Errorf("%v not allow to call this method", execPath)
+			logger.Warning(err)
+			return err
+		}
+		return nil
+	}
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil || uid != 0 {
+		err = checkExecPath()
+		if err != nil {
+			return dbusutil.ToError(err)
+		}
+	}
+	args := []string{
+		"-f",
+	}
+	if reboot {
+		args = append(args, "--reboot")
+	}
+	cmd := exec.Command("poweroff", args...)
+	logger.Info(cmd.String())
+	var errBuffer bytes.Buffer
+	cmd.Stderr = &errBuffer
+	err = cmd.Run()
+	if err != nil {
+		logger.Warning(err)
+		logger.Warning(errBuffer.String())
+		return dbusutil.ToError(err)
+	}
+	return nil
+}
+
 func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
 	var sourcePathList []string
 	for _, t := range system.AllInstallUpdateType() {
