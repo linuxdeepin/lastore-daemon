@@ -686,9 +686,7 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
 	// 根据配置更新Tp
 	switch m.Tp {
 	case UpdateNow:
-		m.config.SetInstallUpdateTime(KeyNow)
 	case UpdateShutdown:
-		m.config.SetInstallUpdateTime(KeyShutdown)
 	case UpdateRegularly:
 	default:
 		logger.Debug("Config update time:", m.config.UpdateTime)
