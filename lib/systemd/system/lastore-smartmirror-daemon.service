@@ -6,3 +6,6 @@ After=display-manager.service
 Type=dbus
 BusName=com.deepin.lastore.Smartmirror
 ExecStart=/usr/libexec/lastore-daemon/lastore-smartmirror-daemon
+CapabilityBoundingSet=~CAP_AUDIT_CONTROL
+NoNewPrivileges=true
+MemoryLimit=8G
