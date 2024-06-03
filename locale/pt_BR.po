@@ -9,17 +9,17 @@
 # Cassiano Molinari <chano2808a@gmail.com>, 2023
 # deepiner, 2023
 # Flavio Lima <flaviolimaviolinista@gmail.com>, 2023
+# 380125ae2590f93d3e1eff2258abdf75_6979c31, 2023
 # Alex Wender, 2024
-# 380125ae2590f93d3e1eff2258abdf75_6979c31, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: 380125ae2590f93d3e1eff2258abdf75_6979c31, 2024\n"
+"Last-Translator: Alex Wender, 2024\n"
 "Language-Team: Portuguese (Brazil) (https://app.transifex.com/linuxdeepin/teams/3617/pt_BR/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -186,13 +186,18 @@ msgid "Updates failed."
 msgstr "As atualizações falharam."
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
-msgid "Restart the computer to use the system and applications properly."
-msgstr ""
+msgid "Updates successful"
+msgstr "Atualizações bem-sucedidas"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr ""
+"Reinicie o computador para usar o sistema e os aplicativos normalmente."
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
 msgstr "Reiniciar depois"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
-msgstr "Reiniciar"
+msgstr "Reiniciar agora"

@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Heimen Stoffels <vistausss@fastmail.com>, 2024\n"
 "Language-Team: Dutch (https://app.transifex.com/linuxdeepin/teams/3617/nl/)\n"
@@ -184,13 +184,17 @@ msgid "Updates failed."
 msgstr "Updates mislukt."
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
-msgid "Restart the computer to use the system and applications properly."
-msgstr ""
+msgid "Updates successful"
+msgstr "Je systeem is bijgewerkt"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr "Start de computer opnieuw op om de wijzigingen toe te passen."
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
 msgstr "Later herstarten"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
 msgstr "Nu herstarten"

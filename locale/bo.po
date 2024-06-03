@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: yeshe lhamo <981611630@qq.com>, 2024\n"
 "Language-Team: Tibetan (https://app.transifex.com/linuxdeepin/teams/3617/bo/)\n"
@@ -186,13 +186,18 @@ msgid "Updates failed."
 msgstr "ཐེངས་འདིའི་གསར་སྒྱུར་བྱེད་མ་ཐུབ།"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
-msgid "Restart the computer to use the system and applications properly."
+msgid "Updates successful"
 msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr ""
+"ཁྱོད་ཀྱིས་རྒྱུད་ཁོངས་དང་ཉེར་སྤྱོད་རྒྱུན་ལྡན་ངང་བེད་སྤྱོད་བྱ་ཐུབ་ཆེད་གསར་སྒྱུར་བྱས་རྗེས་ཡང་བསྐྱར་འགོ་སློང་དགོས།"
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
 msgstr "ཏོག་ཙམ་ནས་བསྐྱར་དུ་སློང་བ།"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
 msgstr "ལམ་སེང་བསྐྱར་སློང་བྱེད།"

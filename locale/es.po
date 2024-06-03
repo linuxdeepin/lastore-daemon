@@ -11,15 +11,16 @@
 # deepiner, 2023
 # Zaraza, 2024
 # jose luis <josemdance@outlook.com>, 2024
+# Oscar Duarte, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: jose luis <josemdance@outlook.com>, 2024\n"
+"Last-Translator: Oscar Duarte, 2024\n"
 "Language-Team: Spanish (https://app.transifex.com/linuxdeepin/teams/3617/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -186,13 +187,19 @@ msgid "Updates failed."
 msgstr "Actualización fallida"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
-msgid "Restart the computer to use the system and applications properly."
-msgstr ""
+msgid "Updates successful"
+msgstr "Actualizaciones exitosas"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr ""
+"Reinicia la computadora para usar el sistema y las aplicaciones "
+"correctamente."
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
 msgstr "Reiniciar luego"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
 msgstr "Reiniciar ahora"

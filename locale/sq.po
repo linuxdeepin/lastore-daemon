@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: Besnik Bleta <besnik@programeshqip.org>, 2024\n"
 "Language-Team: Albanian (https://app.transifex.com/linuxdeepin/teams/3617/sq/)\n"
@@ -189,13 +189,18 @@ msgid "Updates failed."
 msgstr "Përditësimet dështuan."
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
-msgid "Restart the computer to use the system and applications properly."
-msgstr ""
+msgid "Updates successful"
+msgstr "Përditësime me sukses"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr ""
+"Që të përdorni si duhet sistemin dhe aplikacionet, rinisni kompjuterin"
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
 msgstr "Riniseni Më Vonë"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
 msgstr "Rinisu Tani"

@@ -6,17 +6,17 @@
 # Translators:
 # deepiner, 2023
 # Fabian Schillig <xorgmc@gmail.com>, 2023
-# Ettore Atalan <atalanttore@googlemail.com>, 2023
 # Maggie Liu <maggie.liufei@gmail.com>, 2024
+# Ettore Atalan <atalanttore@googlemail.com>, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Maggie Liu <maggie.liufei@gmail.com>, 2024\n"
+"Last-Translator: Ettore Atalan <atalanttore@googlemail.com>, 2024\n"
 "Language-Team: German (https://app.transifex.com/linuxdeepin/teams/3617/de/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -66,7 +66,7 @@ msgstr "Paketzwischenspeicher gelöscht"
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "Aktualisierungen werden geprüft und installiert ..."
 
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
@@ -175,13 +175,17 @@ msgid "Updates failed."
 msgstr "Aktualisierungen fehlgeschlagen."
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Updates successful"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
-msgstr ""
+msgstr "Später neu starten"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
 msgstr "Jetzt neu starten"

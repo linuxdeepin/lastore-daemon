@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-21 13:20+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
 "Last-Translator: 阿迪力 买买提明 <251078110@qq.com>, 2024\n"
 "Language-Team: Uyghur (https://app.transifex.com/linuxdeepin/teams/3617/ug/)\n"
@@ -187,15 +187,19 @@ msgid "Updates failed."
 msgstr "بۇ قېتىملىق يېڭىلاش مەغلۇب بولدى"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Updates successful"
+msgstr "يېڭىلاندى"
+
+#: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
 "سىستېما ۋە ئەپلەرنى نورمال ئىشلىتىشىڭىز ئۈچۈن، يېڭىلانغاندىن كېيىن سىستېمىنى"
 " قايتا قوزغىتىڭ"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
 msgstr "سەل تۇرۇپ قايتا قوزغىتىش"
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
 msgstr "ھازىلار قايتا قوزغىتىش"
