@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"internal/config"
 	"internal/system"
 	"internal/system/dut"
 	"internal/updateplatform"
@@ -589,14 +590,41 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 }
 
 func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType) error {
-	if needChangeGrub {
-		// 更新成功后修改grub默认入口为当前系统入口
-		err := m.grub.createTempGrubEntry()
+	if (m.config.PlatformDisabled & config.DisabledRebootCheck) == 0 {
+		if needChangeGrub {
+			// 更新成功后修改grub默认入口为当前系统入口
+			err := m.grub.createTempGrubEntry()
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+		// 设置重启后的检查项
+		err := m.setRebootCheckOption(mode)
 		if err != nil {
 			logger.Warning(err)
 		}
+	} else {
+		err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
+		if err != nil {
+			logger.Warning(err)
+		}
+		err = m.grub.changeGrubDefaultEntry(normalBootEntry)
+		if err != nil {
+			logger.Warning(err)
+		}
+		go func() {
+			m.inhibitAutoQuitCountAdd()
+			defer m.inhibitAutoQuitCountSub()
+			// m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
+			m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeSucceed, job.Description, mode)
+			m.reportLog(upgradeStatusReport, true, "")
+		}()
+		// 只要系统更新，需要更新baseline文件
+		if mode&system.SystemUpdate != 0 {
+			m.updatePlatform.UpdateBaseline()
+			m.updatePlatform.RecoverVersionLink()
+		}
 	}
-
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
 	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))

@@ -682,7 +682,10 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
 }
 
 func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
-	err := m.genUpdatePolicyByToken()
+	var err error
+	if (m.config.PlatformDisabled & DisabledVersion) == 0 {
+		err = m.genUpdatePolicyByToken()
+	}
 	// 根据配置更新Tp
 	switch m.Tp {
 	case UpdateNow:
@@ -1227,16 +1230,23 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	var wg sync.WaitGroup
 	var errList []string
+	var syncFuncList []func() error
 	m.TargetCorePkgs = make(map[string]system.PackageInfo)
 	m.BaselinePkgs = make(map[string]system.PackageInfo)
 	m.SelectPkgs = make(map[string]system.PackageInfo)
 	m.FreezePkgs = make(map[string]system.PackageInfo)
 	m.PurgePkgs = make(map[string]system.PackageInfo)
-	syncFuncList := []func() error{
-		m.updateLogMetaSync,                    // 日志
-		m.updateTargetPkgMetaSync,              // 目标版本信息
-		m.updateCurrentPreInstalledPkgMetaSync, // 基线版本信息
-		m.updateCVEMetaDataSync,                // cve信息
+	if (m.config.PlatformDisabled & DisabledUpdateLog) == 0 {
+		syncFuncList = append(syncFuncList, m.updateLogMetaSync) // 日志
+	}
+	if (m.config.PlatformDisabled & DisabledTargetPkgLists) == 0 {
+		syncFuncList = append(syncFuncList, m.updateTargetPkgMetaSync) // 目标版本信息
+	}
+	if (m.config.PlatformDisabled & DisabledCurrentPkgLists) == 0 {
+		syncFuncList = append(syncFuncList, m.updateCurrentPreInstalledPkgMetaSync) // 基线版本信息
+	}
+	if (m.config.PlatformDisabled & DisabledPkgCVEs) == 0 {
+		syncFuncList = append(syncFuncList, m.updateCVEMetaDataSync) // cve信息
 	}
 	for _, syncFunc := range syncFuncList {
 		wg.Add(1)
@@ -1259,6 +1269,9 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
 func (m *UpdatePlatformManager) PostStatusMessage(body string) {
 	logger.Debug("post status msg:", body)
+	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+		return
+	}
 	buf := bytes.NewBufferString(body)
 	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
 	response, err := m.genPostProcessResponse(buf, filePath)
@@ -1326,6 +1339,9 @@ func tarFiles(files []string, outFile string) error {
 
 // PostUpdateLogFiles 将更新日志上传
 func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
+	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+		return
+	}
 	hardwareId, err := GetHardwareId(m.config.IncludeDiskInfo)
 	if err != nil {
 		logger.Warning(err)
