@@ -426,6 +426,8 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 //		AfterGreeterCheck bool
 //	}
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
+	// 1070以下版本option为空
+	supportOption := len(strings.TrimSpace(option)) > 0
 	checkExecPath := func() (bool, error) {
 		// 只有dde-lock可以设置
 		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
@@ -460,46 +462,43 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		return dbusutil.ToError(err)
 	}
 	logger.Info("start PrepareFullScreenUpgrade")
-	if len(option) > 0 {
-		if isOffline {
-			content, err := json.Marshal(&fullUpgradeOption{
-				DoUpgrade:         true,
-				DoUpgradeMode:     system.OfflineUpdate,
-				IsPowerOff:        false,
-				PreGreeterCheck:   false,
-				AfterGreeterCheck: false,
-			})
-			if err != nil {
-				logger.Warning(err)
-				return dbusutil.ToError(err)
-			}
-			if utils2.IsSymlink(optionFilePathTemp) {
-				_ = os.RemoveAll(optionFilePathTemp)
-			}
-			_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
-		} else {
-			opt := fullUpgradeOption{}
-			if len(option) > 0 {
-				err = json.Unmarshal([]byte(option), &opt)
-				if err != nil {
-					logger.Warning(err)
-					return dbusutil.ToError(err)
-				}
-			}
-			// 在线更新时填充部分属性
-			opt.DoUpgrade = true
-			opt.PreGreeterCheck = false
-			opt.AfterGreeterCheck = false
-			content, err := json.Marshal(opt)
-			if err != nil {
-				logger.Warning(err)
-				return dbusutil.ToError(err)
-			}
-			if utils2.IsSymlink(optionFilePathTemp) {
-				_ = os.RemoveAll(optionFilePathTemp)
-			}
-			_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
+
+	if isOffline {
+		content, err := json.Marshal(&fullUpgradeOption{
+			DoUpgrade:         true,
+			DoUpgradeMode:     system.OfflineUpdate,
+			IsPowerOff:        false,
+			PreGreeterCheck:   false,
+			AfterGreeterCheck: false,
+		})
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
 		}
+		if utils2.IsSymlink(optionFilePathTemp) {
+			_ = os.RemoveAll(optionFilePathTemp)
+		}
+		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
+	} else if supportOption {
+		opt := fullUpgradeOption{}
+		err = json.Unmarshal([]byte(option), &opt)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		// 在线更新时填充部分属性
+		opt.DoUpgrade = true
+		opt.PreGreeterCheck = false
+		opt.AfterGreeterCheck = false
+		content, err := json.Marshal(opt)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		if utils2.IsSymlink(optionFilePathTemp) {
+			_ = os.RemoveAll(optionFilePathTemp)
+		}
+		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
 	}
 
 	for {
