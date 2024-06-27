@@ -87,13 +87,14 @@ type Config struct {
 	UpdateStatus             string
 	PlatformUpdate           bool
 
-	PlatformUrl      string // 更新接口地址
-	CheckPolicyCron  string // 策略检查间隔
-	StartCheckRange  []int  // 开机检查更新区间
-	IncludeDiskInfo  bool   // machineID是否包含硬盘信息
-	PostUpgradeCron  string // 更新上报间隔
-	UpdateTime       string // 定时更新
-	PlatformDisabled DisabledStatus
+	PlatformUrl        string // 更新接口地址
+	CheckPolicyCron    string // 策略检查间隔
+	StartCheckRange    []int  // 开机检查更新区间
+	IncludeDiskInfo    bool   // machineID是否包含硬盘信息
+	PostUpgradeCron    string // 更新上报间隔
+	UpdateTime         string // 定时更新
+	PlatformDisabled   DisabledStatus
+	EnableVersionCheck bool
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
@@ -179,6 +180,7 @@ const (
 	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
 	dSettingsKeyUpdateTime                           = "update-time"
 	dSettingsKeyPlatformDisabled                     = "platform-disabled"
+	dSettingsKeyEnableVersionCheck                   = "enable-version-check"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -538,6 +540,13 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.PlatformDisabled = DisabledStatus(v.Value().(float64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableVersionCheck)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.EnableVersionCheck = v.Value().(bool)
 	}
 
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
