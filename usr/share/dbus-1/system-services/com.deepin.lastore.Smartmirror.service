@@ -1,4 +1,5 @@
 [D-BUS Service]
 Name=com.deepin.lastore.Smartmirror
 Exec=/bin/false
-SystemdService=lastore-smartmirror-daemon.service
+User=deepin-daemon
+SystemdService=dbus-com.deepin.lastore.Smartmirror.service

@@ -1,11 +1,43 @@
 [Unit]
 Description=Deepin Lastore SmartMirror Daemon
 After=display-manager.service
+Wants=dbus.socket
+After=dbus.socket
 
 [Service]
 Type=dbus
 BusName=com.deepin.lastore.Smartmirror
+User=deepin-daemon
 ExecStart=/usr/libexec/lastore-daemon/lastore-smartmirror-daemon
-CapabilityBoundingSet=~CAP_AUDIT_CONTROL
-NoNewPrivileges=true
-MemoryLimit=8G
+StandardOutput=null
+StandardError=journal
+
+ProtectSystem=strict
+StateDirectory=lastore-smartmirror
+InaccessiblePaths=/etc/shadow
+InaccessiblePaths=-/etc/NetworkManager/system-connections
+InaccessiblePaths=-/etc/pam.d
+InaccessiblePaths=-/usr/share/uadp/
+
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+PrivateMounts=yes
+PrivateTmp=yes
+PrivateDevices=yes
+# 需要联网
+#PrivateNetwork=yes
+PrivateUsers=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RemoveIPC=yes
+# 和golang -pie参数冲突，导致进程无法启动
+#MemoryDenyWriteExecute=yes
+MemoryLimit=100M
+
+
+[Install]
+Alias=dbus-com.deepin.lastore.Smartmirror.service
