@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=com.deepin.lastore
 Exec=/bin/false
-SystemdService=lastore-daemon.service
+SystemdService=dbus-com.deepin.lastore.service

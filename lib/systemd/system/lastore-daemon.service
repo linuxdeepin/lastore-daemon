@@ -8,6 +8,8 @@ BusName=com.deepin.lastore
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
 StandardOutput=null
 StandardError=null
-CapabilityBoundingSet=~CAP_AUDIT_CONTROL
-NoNewPrivileges=true
-MemoryLimit=8G
+StateDirectory=lastore
+CacheDirectory=lastore
+
+[Install]
+Alias=dbus-com.deepin.lastore.service
