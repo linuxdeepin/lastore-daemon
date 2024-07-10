@@ -603,7 +603,7 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 			minorVersionInt, _ = strconv.Atoi(version)
 		}
 	}
-	supportRebootCheck := minorVersionInt >= 1070
+	supportRebootCheck := minorVersionInt > 1070
 	if supportRebootCheck && !m.config.GetPlatformStatusDisable(config.DisabledRebootCheck) {
 		if needChangeGrub {
 			// 更新成功后修改grub默认入口为当前系统入口
