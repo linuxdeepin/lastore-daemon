@@ -173,8 +173,8 @@ func (c *Command) IndicateFailed(errType JobErrorType, errDetail string, isFatal
 		Status:     FailedStatus,
 		Cancelable: true,
 		Error: &JobError{
-			Type:   errType,
-			Detail: errDetail,
+			ErrType:   errType,
+			ErrDetail: errDetail,
 		},
 		FatalError: isFatalErr,
 	}
@@ -183,26 +183,14 @@ func (c *Command) IndicateFailed(errType JobErrorType, errDetail string, isFatal
 }
 
 func (c *Command) Abort() error {
-	if c.Cancelable {
-		c.cmdMu.Lock()
-		defer c.cmdMu.Unlock()
-		if c.Cmd.Process == nil {
-			return errors.New("the process has not yet started")
-		}
-
-		logger.Debugf("Abort Command: %v\n", c)
-		c.ExitCode = ExitPause
-		var err error
-		pgid, err := syscall.Getpgid(c.Cmd.Process.Pid)
-		if err != nil {
-			return err
-		}
-		return syscall.Kill(-pgid, 2)
-	}
-	return NotSupportError
+	return c.abort(false)
 }
 
 func (c *Command) AbortWithFailed() error {
+	return c.abort(true)
+}
+
+func (c *Command) abort(withFailed bool) error {
 	if c.Cancelable {
 		c.cmdMu.Lock()
 		defer c.cmdMu.Unlock()
@@ -211,7 +199,11 @@ func (c *Command) AbortWithFailed() error {
 		}
 
 		logger.Debugf("Abort Command: %v\n", c)
-		c.ExitCode = ExitFailure
+		if withFailed {
+			c.ExitCode = ExitFailure
+		} else {
+			c.ExitCode = ExitPause
+		}
 		var err error
 		pgid, err := syscall.Getpgid(c.Cmd.Process.Pid)
 		if err != nil {

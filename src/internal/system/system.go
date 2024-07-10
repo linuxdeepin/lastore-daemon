@@ -143,21 +143,22 @@ type System interface {
 }
 
 type JobError struct {
-	Type     JobErrorType
-	Detail   string
-	ErrorLog []string
+	ErrType      JobErrorType
+	ErrDetail    string
+	IsCheckError bool
+	ErrorLog     []string
 }
 
 func (e *JobError) GetType() string {
-	return "JobError::" + string(e.Type)
+	return string(e.ErrType)
 }
 
 func (e *JobError) GetDetail() string {
-	return e.Detail
+	return e.ErrDetail
 }
 
 func (e *JobError) Error() string {
-	return fmt.Sprintf("JobError Type:%s, Detail: %s", e.Type, e.Detail)
+	return fmt.Sprintf("JobError ErrType:%s, ErrDetail: %s", e.ErrType, e.ErrDetail)
 }
 
 func GetAppStoreAppName() string {

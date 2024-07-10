@@ -466,8 +466,8 @@ func (jm *JobManager) startJobsInQueue(queue *JobQueue) {
 			} else if job.retry == 0 {
 				job.PropsMu.Lock()
 				job.setError(&system.JobError{
-					Type:   "unknown",
-					Detail: "failed to start system job: " + err.Error(),
+					ErrType:   system.ErrorUnknown,
+					ErrDetail: "failed to start system job: " + err.Error(),
 				})
 				job.PropsMu.Unlock()
 			}

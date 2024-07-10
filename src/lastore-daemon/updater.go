@@ -230,7 +230,7 @@ func (u *Updater) SetInstallUpdateTime(sender dbus.Sender, timeStr string) *dbus
 		u.config.SetInstallUpdateTime(updateTime.Format(time.RFC3339))
 	}
 
-	_, err := u.manager.updateSource(sender, u.UpdateNotify) // 自动检查更新按照控制中心更新配置进行检查
+	_, err := u.manager.updateSource(sender) // 自动检查更新按照控制中心更新配置进行检查
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)

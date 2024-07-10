@@ -208,19 +208,8 @@ func buildProgress(p, begin, end float64) float64 {
 	return begin + p*(end-begin)
 }
 
-type Error interface {
-	GetType() string
-	GetDetail() string
-}
-
-func (j *Job) setError(e Error) {
-	errValue := struct {
-		ErrType   string
-		ErrDetail string
-	}{
-		e.GetType(), e.GetDetail(),
-	}
-	jsonBytes, err := json.Marshal(errValue)
+func (j *Job) setError(e *system.JobError) {
+	jsonBytes, err := json.Marshal(e)
 	if err != nil {
 		logger.Warning(err)
 		return

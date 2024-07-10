@@ -161,8 +161,8 @@ func parsePkgSystemError(out, err []byte) error {
 	switch {
 	case bytes.Contains(err, []byte("dpkg was interrupted")):
 		return &system.JobError{
-			Type:   system.ErrorDpkgInterrupted,
-			Detail: string(err),
+			ErrType:   system.ErrorDpkgInterrupted,
+			ErrDetail: string(err),
 		}
 
 	case bytes.Contains(err, []byte("Unmet dependencies")), bytes.Contains(err, []byte("generated breaks")):
@@ -177,22 +177,22 @@ func parsePkgSystemError(out, err []byte) error {
 		}
 
 		return &system.JobError{
-			Type:   system.ErrorDependenciesBroken,
-			Detail: detail,
+			ErrType:   system.ErrorDependenciesBroken,
+			ErrDetail: detail,
 		}
 
 	case bytes.Contains(err, []byte("The list of sources could not be read")):
 		detail := string(err)
 		return &system.JobError{
-			Type:   system.ErrorInvalidSourcesList,
-			Detail: detail,
+			ErrType:   system.ErrorInvalidSourcesList,
+			ErrDetail: detail,
 		}
 
 	default:
 		detail := string(append(out, err...))
 		return &system.JobError{
-			Type:   system.ErrorUnknown,
-			Detail: detail,
+			ErrType:   system.ErrorUnknown,
+			ErrDetail: detail,
 		}
 	}
 }
@@ -236,7 +236,7 @@ func safeStart(c *system.Command) error {
 		err := cmd.Wait()
 		if err != nil {
 			jobErr := parseJobError(stderr.String(), stdout.String())
-			c.IndicateFailed(jobErr.Type, jobErr.Detail, false)
+			c.IndicateFailed(jobErr.ErrType, jobErr.ErrDetail, false)
 			return
 		}
 
@@ -320,7 +320,7 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
 		var e *system.JobError
 		ok := errors.As(err, &e)
-		if !ok || (ok && e.Type != system.ErrorDependenciesBroken) {
+		if !ok || (ok && e.ErrType != system.ErrorDependenciesBroken) {
 			return err
 		}
 	}

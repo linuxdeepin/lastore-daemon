@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -347,7 +348,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				uuid, err = m.prepareAptCheck(mode)
 				if err != nil {
 					logger.Warning(err)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error()))
 					if unref != nil {
 						unref()
 					}
@@ -358,13 +359,14 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
 					logger.Info(systemErr)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
 					return systemErr
 				}
 				if !system.CheckInstallAddSize(mode) {
 					return &system.JobError{
-						Type:   system.ErrorInsufficientSpace,
-						Detail: "There is not enough space on the disk to upgrade",
+						ErrType:      system.ErrorInsufficientSpace,
+						ErrDetail:    "There is not enough space on the disk to upgrade",
+						IsCheckError: true,
 					}
 				}
 				m.preRunningHook(needChangeGrub, mode)
@@ -381,7 +383,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
 				if systemErr != nil {
 					logger.Info(systemErr)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode, systemErr.Error()))
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
 					return systemErr
 				}
 
@@ -520,10 +522,7 @@ func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
 
 func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) error {
 	// 状态更新为failed
-	var errorContent = struct {
-		ErrType   string
-		ErrDetail string
-	}{}
+	var errorContent system.JobError
 	err := json.Unmarshal([]byte(job.Description), &errorContent)
 	if err != nil {
 		logger.Warning(err)
@@ -532,10 +531,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			logger.Warning(err)
 		}
 	} else {
-		errType := errorContent.ErrType
-		if strings.Contains(errType, "JobError::") {
-			errType = strings.ReplaceAll(errType, "JobError::", "")
-		}
+		errType := errorContent.ErrType.String()
 		err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeFailed, ReasonCode: system.JobErrorType(errType)})
 		if err != nil {
 			logger.Warning(err)
@@ -544,14 +540,14 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 		if abErr != nil {
 			canBackup = false
 		}
-		if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
+		if strings.Contains(errType, system.ErrorDamagePackage.String()) {
 			// 包损坏，需要下apt-get clean，然后重试更新
 			cleanAllCache()
 			msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 			action := []string{"retry", gettext.Tr("Try Again")}
 			hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
 			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-		} else if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
+		} else if strings.Contains(errType, system.ErrorInsufficientSpace.String()) {
 			// 空间不足
 			// 已备份
 			msg := gettext.Tr("Updates failed: insufficient disk space. Please reboot to avoid the effect on your system.")
@@ -584,7 +580,15 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 	if err != nil {
 		logger.Warning(err)
 	}
-	m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.UpgradeFailed, job.Description)
+	if errorContent.IsCheckError {
+		m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.CheckFailed, job.Description)
+	} else {
+		errorContent.ErrDetail = ""
+		content, _ := json.Marshal(errorContent)
+		// 安装失败不需要detail，PostStatusMessage会把term.log上报
+		m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.UpgradeFailed, string(content))
+	}
+
 	go func() {
 		m.inhibitAutoQuitCountAdd()
 		defer m.inhibitAutoQuitCountSub()
@@ -598,13 +602,16 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			}
 			allErrMsg = append(allErrMsg, string(content))
 		}
-		msg, err := ioutil.ReadFile("/var/log/apt/term.log")
-		if err != nil {
-			logger.Warning("failed to get upgrade failed lod:", err)
-		} else {
-			allErrMsg = append(allErrMsg, string(msg))
+		if !errorContent.IsCheckError {
+			msg, err := ioutil.ReadFile("/var/log/apt/term.log")
+			if err != nil {
+				logger.Warning("failed to get upgrade failed lod:", err)
+			} else {
+				allErrMsg = append(allErrMsg, fmt.Sprintf("upgrade failed time is %v \n", time.Now()))
+				allErrMsg = append(allErrMsg, string(msg))
+			}
 		}
-		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v;all error message is %v", mode.JobType(), job.Description, strings.Join(allErrMsg, "\n")))
+		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v; all error message is %v", mode.JobType(), job.Description, strings.Join(allErrMsg, "\n")))
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
@@ -663,7 +670,6 @@ func (m *Manager) afterUpgradeCmdSuccessHook() error {
 		"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart"),
 		"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
 	go m.sendNotify(updateNotifyShow, 0, "system-updated", summary, msg, action, hints, system.NotifyExpireTimeoutNoHide)
-
 	return nil
 }
 
@@ -867,7 +873,11 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 			coreListMap, nil, nil, nil, nil, repo)
 		if err != nil {
 			logger.Warning(err)
-			return "", err
+			return "", &system.JobError{
+				ErrType:      system.ErrorUnknown,
+				ErrDetail:    err.Error(),
+				IsCheckError: true,
+			}
 		}
 	} else {
 		mode &= system.AllInstallUpdate

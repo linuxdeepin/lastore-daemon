@@ -139,19 +139,19 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	case strings.Contains(stdErrStr, "Failed to fetch"):
 		if strings.Contains(stdErrStr, "rename failed, Operation not permitted") {
 			return &system.JobError{
-				Type:   system.ErrorOperationNotPermitted,
-				Detail: stdErrStr,
+				ErrType:   system.ErrorOperationNotPermitted,
+				ErrDetail: stdErrStr,
 			}
 		}
 		if strings.Contains(stdErrStr, "No space left on device") {
 			return &system.JobError{
-				Type:   system.ErrorInsufficientSpace,
-				Detail: stdErrStr,
+				ErrType:   system.ErrorInsufficientSpace,
+				ErrDetail: stdErrStr,
 			}
 		}
 		return &system.JobError{
-			Type:   system.ErrorFetchFailed,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorFetchFailed,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "Sub-process /usr/bin/dpkg returned an error code"),
@@ -166,14 +166,14 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 		}
 
 		return &system.JobError{
-			Type:   system.ErrorDpkgError,
-			Detail: detail,
+			ErrType:   system.ErrorDpkgError,
+			ErrDetail: detail,
 		}
 
 	case strings.Contains(stdErrStr, "Unable to locate package"):
 		return &system.JobError{
-			Type:   system.ErrorPkgNotFound,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorPkgNotFound,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "Unable to correct problems,"+
@@ -188,69 +188,69 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			detail = stdOutStr[idx:]
 		}
 		return &system.JobError{
-			Type:   system.ErrorUnmetDependencies,
-			Detail: detail,
+			ErrType:   system.ErrorUnmetDependencies,
+			ErrDetail: detail,
 		}
 
 	case strings.Contains(stdErrStr, "has no installation candidate"):
 		return &system.JobError{
-			Type:   system.ErrorNoInstallationCandidate,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorNoInstallationCandidate,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "You don't have enough free space") || strings.Contains(stdErrStr, "No space left on device"):
 		return &system.JobError{
-			Type:   system.ErrorInsufficientSpace,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorInsufficientSpace,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "There were unauthenticated packages"):
 		return &system.JobError{
-			Type:   system.ErrorUnauthenticatedPackages,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorUnauthenticatedPackages,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "I/O error"):
 		return &system.JobError{
-			Type:   system.ErrorIO,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorIO,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "don't have permission to access"):
 		return &system.JobError{
-			Type:   system.ErrorOperationNotPermitted,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorOperationNotPermitted,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "dpkg: error processing") && strings.Contains(stdErrStr, "--unpack"):
 		return &system.JobError{
-			Type:   system.ErrorDamagePackage,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorDamagePackage,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "Hash Sum mismatch"):
 		return &system.JobError{
-			Type:   system.ErrorDamagePackage,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorDamagePackage,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "Corrupted file"):
 		return &system.JobError{
-			Type:   system.ErrorDamagePackage,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorDamagePackage,
+			ErrDetail: stdErrStr,
 		}
 
 	case strings.Contains(stdErrStr, "The list of sources could not be read"):
 		detail := stdErrStr
 		return &system.JobError{
-			Type:   system.ErrorInvalidSourcesList,
-			Detail: detail,
+			ErrType:   system.ErrorInvalidSourcesList,
+			ErrDetail: detail,
 		}
 
 	default:
 		return &system.JobError{
-			Type:   system.ErrorUnknown,
-			Detail: stdErrStr,
+			ErrType:   system.ErrorUnknown,
+			ErrDetail: stdErrStr,
 		}
 	}
 }

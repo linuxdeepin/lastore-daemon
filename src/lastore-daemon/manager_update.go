@@ -44,7 +44,7 @@ func prepareUpdateSource() {
 
 // updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
 // 任务进度划分: 0-10%-80%-90%-100%
-func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error) {
+func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	var err error
 	var environ map[string]string
 	if !system.IsAuthorized() {
@@ -140,7 +140,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
-					m.updatePlatform.PostStatusMessage("check update success")
+					m.updatePlatform.PostStatusMessage("update source success")
 				}()
 				m.savePlatformCache()
 				job.setPropProgress(1.0)
@@ -148,19 +148,16 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 			},
 			string(system.FailedStatus): func() error {
 				// 网络问题检查更新失败和空间不足下载索引失败,需要发通知
-				var errorContent = struct {
-					ErrType   string
-					ErrDetail string
-				}{}
+				var errorContent system.JobError
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
-					if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) || strings.Contains(errorContent.ErrType, string(system.ErrorIndexDownloadFailed)) {
+					if strings.Contains(errorContent.ErrType.String(), system.ErrorFetchFailed.String()) || strings.Contains(errorContent.ErrType.String(), system.ErrorIndexDownloadFailed.String()) {
 						msg := gettext.Tr("Failed to check for updates. Please check your network.")
 						action := []string{"view", gettext.Tr("View")}
 						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,network")}
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
-					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
+					if strings.Contains(errorContent.ErrType.String(), system.ErrorInsufficientSpace.String()) {
 						msg := gettext.Tr("Failed to check for updates. Please clean up your disk first.")
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 					}
@@ -170,7 +167,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					m.reportLog(updateStatusReport, false, job.Description)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("check update failed, detail is %v ", job.Description))
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("apt-get update failed, detail is %v , option is %+v", job.Description, job.option))
 				}()
 				return nil
 			},
@@ -194,8 +191,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					if m.config.PlatformUpdate {
 						job.retry = 0
 						return &system.JobError{
-							Type:   system.ErrorPlatformUnreachable,
-							Detail: "failed to get update policy by token" + err.Error(),
+							ErrType:   system.ErrorPlatformUnreachable,
+							ErrDetail: "failed to get update policy by token" + err.Error(),
 						}
 					} else {
 						logger.Warning("updatePlatform gen token failed", err)
@@ -209,8 +206,8 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 					if m.config.PlatformUpdate {
 						job.retry = 0
 						return &system.JobError{
-							Type:   system.ErrorPlatformUnreachable,
-							Detail: "failed to get update info by update platform" + err.Error(),
+							ErrType:   system.ErrorPlatformUnreachable,
+							ErrDetail: "failed to get update info by update platform" + err.Error(),
 						}
 					} else {
 						return nil
@@ -548,7 +545,7 @@ func (m *Manager) ensureUpdateSourceOnce() {
 		return
 	}
 
-	_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), false)
+	_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 	if err != nil {
 		logger.Warning(err)
 		return

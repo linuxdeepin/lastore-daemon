@@ -474,7 +474,7 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 	case UpdateTimer:
 		go func() {
 			// 触发检查更新，检查更新时会处理定时更新
-			_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), m.updater.UpdateNotify)
+			_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 			if err != nil {
 				logger.Warning(err)
 			}

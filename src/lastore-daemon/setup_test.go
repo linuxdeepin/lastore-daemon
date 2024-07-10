@@ -51,7 +51,7 @@ func TestSetup(t *testing.T) {
 
 						job.Progress.ConnectChanged(func() {
 							c.Printf("\nAction:%q Name:%q Progress:%f Status:%q\n",
-								job.Type.Get(), job.PackageId.Get(), job.Progress.Get(), job.Status.Get())
+								job.ErrType.Get(), job.PackageId.Get(), job.Progress.Get(), job.Status.Get())
 							if job.Progress.Get() == 1 {
 								done <- true
 							}
@@ -91,7 +91,7 @@ func TestSetup(t *testing.T) {
 					Convey("Wait the package removed", func(c C) {
 						job.Progress.ConnectChanged(func() {
 							c.Printf("\nAction:%q Name:%q Progress:%f Status:%q\n",
-								job.Type.Get(), job.PackageId.Get(), job.Progress.Get(), job.Status.Get())
+								job.ErrType.Get(), job.PackageId.Get(), job.Progress.Get(), job.Status.Get())
 							if job.Progress.Get() == 1 {
 								done <- true
 							}

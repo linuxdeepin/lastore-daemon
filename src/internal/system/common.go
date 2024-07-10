@@ -93,6 +93,10 @@ const (
 
 type JobErrorType string
 
+func (j JobErrorType) String() string {
+	return string(j)
+}
+
 const (
 	NoError                      JobErrorType = "NoError"
 	ErrorUnknown                 JobErrorType = "ErrorUnknown"

@@ -58,7 +58,7 @@ func (m *Manager) updateJobList() {
 
 		jobChanged = true
 
-		if jobChanged && systemOnChanging {
+		if systemOnChanging {
 			break
 		}
 	}

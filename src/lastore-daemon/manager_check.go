@@ -115,7 +115,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description))
 				m.updatePlatform.PostSystemUpgradeMessage(uuid)
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
@@ -147,7 +147,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				}
 				m.handleAfterUpgradeSuccess(checkMode, job.Description, uuid)
 			default:
-				logger.Warning("invaild check status:", checkOrder)
+				logger.Warning("invalid check status:", checkOrder)
 			}
 			return nil
 		},

@@ -297,8 +297,8 @@ func (m *OfflineManager) AfterUpdateOffline(coreList []string) error {
 	if !system.CheckInstallAddSize(system.OfflineUpdate) {
 		m.checkResult.SystemCheckState = failed
 		return &system.JobError{
-			Type:   system.ErrorInsufficientSpace,
-			Detail: "There is not enough space on the disk to upgrade",
+			ErrType:   system.ErrorInsufficientSpace,
+			ErrDetail: "There is not enough space on the disk to upgrade",
 		}
 	}
 	m.checkResult.SystemCheckState = success
@@ -386,8 +386,8 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 					logger.Warning(cleanErr)
 				}
 				return &system.JobError{
-					Type:   system.ErrorOfflineCheck,
-					Detail: "check offline oup file error:" + err.Error(),
+					ErrType:   system.ErrorOfflineCheck,
+					ErrDetail: "check offline oup file error:" + err.Error(),
 				}
 			}
 			return nil
@@ -397,8 +397,8 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 			if err != nil {
 				logger.Warning(err)
 				return &system.JobError{
-					Type:   system.ErrorOfflineCheck,
-					Detail: "check offline oup file error:" + err.Error(),
+					ErrType:   system.ErrorOfflineCheck,
+					ErrDetail: "check offline oup file error:" + err.Error(),
 				}
 			}
 			m.offline.PrintCheckResult()

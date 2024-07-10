@@ -68,16 +68,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	}
 
 	if isInsufficientSpace {
-		dbusError := struct {
-			ErrType string
-			Detail  string
-		}{
-			string(system.ErrorInsufficientSpace),
-			"You don't have enough free space to download",
+		dbusError := system.JobError{
+			ErrType:      system.ErrorInsufficientSpace,
+			ErrDetail:    "You don't have enough free space to download",
+			IsCheckError: true,
 		}
 		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), needDownloadSize/(1000*1000*1000))
 		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-		logger.Warning(dbusError.Detail)
+		logger.Warning(dbusError.Error())
 		errStr, _ := json.Marshal(dbusError)
 		m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
 		m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
@@ -156,13 +154,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
 				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
-				var errorContent = struct {
-					ErrType   string
-					ErrDetail string
-				}{}
+				var errorContent system.JobError
 				err = json.Unmarshal([]byte(j.Description), &errorContent)
 				if err == nil {
-					if strings.Contains(errorContent.ErrType, string(system.ErrorInsufficientSpace)) {
+					if strings.Contains(errorContent.ErrType.String(), system.ErrorInsufficientSpace.String()) {
 						var msg string
 						size, _, err := system.QueryPackageDownloadSize(mode, packages...)
 						if err != nil {
@@ -171,14 +166,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						}
 						msg = fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), size/(1000*1000*1000))
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
-					} else if strings.Contains(errorContent.ErrType, string(system.ErrorDamagePackage)) {
+					} else if strings.Contains(errorContent.ErrType.String(), system.ErrorDamagePackage.String()) {
 						// 下载更新失败，需要apt-get clean后重新下载
 						cleanAllCache()
 						msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 						action := []string{"retry", gettext.Tr("Try Again")}
 						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-					} else if strings.Contains(errorContent.ErrType, string(system.ErrorFetchFailed)) {
+					} else if strings.Contains(errorContent.ErrType.String(), system.ErrorFetchFailed.String()) {
 						// 网络原因下载更新失败
 						msg := gettext.Tr("Downloading updates failed. Please check your network.")
 						action := []string{"view", gettext.Tr("View")}
@@ -190,7 +185,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					m.reportLog(downloadStatusReport, false, j.Description)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package failed, detail is %v", mode, job.Description)) // 上报下载失败状态
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package failed, detail is %v", mode.JobType(), job.Description)) // 上报下载失败状态
 				}()
 				return nil
 			},
@@ -223,7 +218,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						m.inhibitAutoQuitCountSub()
 					}
 				}
-				m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package success", j.updateTyp)) // 上报下载成功状态
+				m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package success", j.updateTyp.JobType())) // 上报下载成功状态
 				return nil
 			},
 			string(system.EndStatus): func() error {

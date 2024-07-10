@@ -92,13 +92,11 @@ const (
 	ErrorScriptBit        = ChkDynamicScriptErr | ChkPkgConfigError
 )
 
-func parsePkgSystemError(stdErrStr string, stdOutStr string) error {
+func parsePkgSystemError(stdErrStr string, stdOutStr string) *system.JobError {
 	err := parseJobError(stdErrStr, stdOutStr)
 	if err != nil {
-		return &system.JobError{
-			Type:   err.Type,
-			Detail: err.Detail,
-		}
+		err.IsCheckError = true
+		return err
 	}
 	return nil
 }
@@ -109,8 +107,8 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	err := json.Unmarshal([]byte(stdErrStr), &content)
 	if err != nil {
 		return &system.JobError{
-			Type:   system.ErrorUnknown,
-			Detail: err.Error(),
+			ErrType:   system.ErrorUnknown,
+			ErrDetail: err.Error(),
 		}
 	}
 	switch content.Code {
@@ -125,16 +123,16 @@ func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
 			if content.Ext.Code&ExtCode(v) != 0 {
 				logger.Warningf("short error msg:%v", strings.Join(content.Ext.Msg, ";"))
 				return &system.JobError{
-					Type:     k,
-					Detail:   strings.Join(content.Ext.Msg, ";"),
-					ErrorLog: content.LogPath,
+					ErrType:   k,
+					ErrDetail: strings.Join(content.Ext.Msg, ";"),
+					ErrorLog:  content.LogPath,
 				}
 			}
 		}
 		// 错误未匹配上，应该是调用者程序错误
 		return &system.JobError{
-			Type:   system.ErrorProgram,
-			Detail: strings.Join(content.Ext.Msg, ";"),
+			ErrType:   system.ErrorProgram,
+			ErrDetail: strings.Join(content.Ext.Msg, ";"),
 		}
 	}
 }
@@ -164,8 +162,8 @@ func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	}
 }
 
-func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
-	bin := "deepin-system-update"
+func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) *system.JobError {
+	bin := "/usr/bin/deepin-system-update"
 	var args []string
 	args = append(args, "check")
 	args = append(args, typ.String())
@@ -185,7 +183,7 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
 	if err != nil {
-		if typ == PreCheck {
+		if typ.String() == PreCheck.String() {
 			return parsePreCheckError(errBuf.String())
 		}
 		return parsePkgSystemError(errBuf.String(), "")
@@ -193,7 +191,7 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) error {
 	return nil
 }
 
-func parsePreCheckError(stdErrStr string) error {
+func parsePreCheckError(stdErrStr string) *system.JobError {
 	logger.Info("error message form dut precheck is:", stdErrStr)
 	var content ErrorContent
 	err := json.Unmarshal([]byte(stdErrStr), &content)
@@ -205,8 +203,9 @@ func parsePreCheckError(stdErrStr string) error {
 	case ChkDynError:
 		logger.Warningf("job error ChkNonblockError:%v", stdErrStr)
 		return &system.JobError{
-			Type:   system.ErrorScript,
-			Detail: stdErrStr,
+			ErrType:      system.ErrorScript,
+			ErrDetail:    stdErrStr,
+			IsCheckError: true,
 		}
 	default:
 		return nil

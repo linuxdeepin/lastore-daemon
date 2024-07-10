@@ -51,6 +51,7 @@ type UpgradeResult int8
 const (
 	UpgradeSucceed UpgradeResult = 0
 	UpgradeFailed  UpgradeResult = 1
+	CheckFailed    UpgradeResult = 2
 )
 
 func (u *UpgradePostMsg) save() {

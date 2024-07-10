@@ -631,7 +631,7 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 
 func (m *Manager) handleAutoCheckEvent() error {
 	if m.config.AutoCheckUpdates {
-		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), m.updater.UpdateNotify)
+		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 		if err != nil {
 			logger.Warning(err)
 			return err
