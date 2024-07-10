@@ -382,7 +382,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 		endJob.setAfterHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				m.config.SetInstallUpdateTime("")
 				return m.afterSuccessHook()
 			},
 			string(system.EndStatus): func() error {
@@ -596,7 +595,11 @@ func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.Upda
 			logger.Warning(err)
 		}
 	}
-
+	// 设置重启后的检查项
+	err := m.setRebootCheckOption(mode)
+	if err != nil {
+		logger.Warning(err)
+	}
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
 	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
