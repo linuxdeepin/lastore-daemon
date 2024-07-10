@@ -5,13 +5,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"internal/config"
 	"internal/updateplatform"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,7 +19,6 @@ import (
 
 	"github.com/godbus/dbus"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
-	accounts "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.accounts"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
 	power "github.com/linuxdeepin/go-dbus-factory/com.deepin.system.power"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
@@ -85,8 +82,7 @@ type Manager struct {
 	offline            *OfflineManager
 	rebootTimeoutTimer *time.Timer
 
-	coreList   []string
-	updateTime string // 定时时间，记录定时更新通知，防止重复发通知
+	coreList []string
 
 	checkDpkgCapabilityOnce sync.Once
 	supportDpkgScriptIgnore bool
@@ -644,14 +640,8 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 		}
 		if active {
 			m.userAgents.setActiveUid(uid)
-			lang := m.userAgents.getActiveLastoreAgentLang()
-			if len(lang) != 0 {
-				// Active的用户切换后,语言环境切换至对应用户的语言环境,用于发通知
-				logger.Info("SetLocale", lang)
-				gettext.SetLocale(gettext.LcAll, lang)
-			} else {
-				m.updateLocaleByUser(uid)
-			}
+			// Active的用户切换后,语言环境切换至对应用户的语言环境,用于发通知
+			gettext.SetLocale(gettext.LcAll, m.userAgents.getActiveLastoreAgentLang())
 		}
 	})
 
@@ -666,13 +656,7 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 	}
 	if active {
 		m.userAgents.setActiveUid(uid)
-		lang := m.userAgents.getActiveLastoreAgentLang()
-		if len(lang) != 0 {
-			logger.Info("SetLocale", lang)
-			gettext.SetLocale(gettext.LcAll, lang)
-		} else {
-			m.updateLocaleByUser(uid)
-		}
+		gettext.SetLocale(gettext.LcAll, m.userAgents.getActiveLastoreAgentLang())
 	}
 }
 
@@ -684,15 +668,6 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 		logger.Warning(err)
 		return
 	}
-	sessionType, err := session.Type().Get(0)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	if sessionType == "tty" {
-		logger.Infof("%v session is tty", sessionPath)
-		return
-	}
 
 	var userInfo login1.UserInfo
 	userInfo, err = session.User().Get(0)
@@ -702,6 +677,11 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 	}
 
 	uidStr := strconv.Itoa(int(userInfo.UID))
+	if !m.userAgents.hasUser(uidStr) {
+		logger.Infof("no this user %v,don't need add session", uidStr)
+		// 不关心这个用户的新 session,因为只有注册了agent的用户的user才需要监听
+		return
+	}
 
 	newlyAdded := m.userAgents.addSession(uidStr, session)
 	if newlyAdded {
@@ -712,28 +692,6 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.ObjectPath) {
 	logger.Info("session removed", sessionId, sessionPath)
 	m.userAgents.removeSession(sessionPath)
-}
-
-func (m *Manager) updateLocaleByUser(uid string) {
-	logger.Info("update locale by user", uid)
-	obj := accounts.NewAccounts(m.service.Conn())
-	path, err := obj.FindUserById(0, uid)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	user, err := accounts.NewUser(m.service.Conn(), dbus.ObjectPath(path))
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	locale, err := user.Locale().Get(0)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	logger.Info("SetLocale", locale)
-	gettext.SetLocale(gettext.LcAll, locale)
 }
 
 func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
@@ -759,68 +717,6 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 		} else {
 			return id
 		}
-	} else {
-		users, err := m.loginManager.ListUsers(0)
-		if err != nil {
-			logger.Warning(err)
-		}
-		app := appName
-		if app == updateNotifyShowOptional {
-			app = updateNotifyShow
-		}
-		actionsArg := "["
-		if len(actions) != 0 {
-			actionsArg = actionsArg + `"` + strings.Join(actions, `","`) + `"`
-		}
-		actionsArg = actionsArg + "]"
-
-		var hintsList []string
-		for key, value := range hints {
-			hintsList = append(hintsList, `"`+key+`":<"`+value.Value().(string)+`">`)
-		}
-		hintsArg := "{" + strings.Join(hintsList, `,`) + "}"
-		timeout := expireTimeout
-		if timeout < 0 {
-			timeout = 5000 // -1: default 5s
-		}
-		args := []string{
-			"gdbus", "call", "--session", "--dest=org.freedesktop.Notifications", "--object-path=/org/freedesktop/Notifications", "--method=org.freedesktop.Notifications.Notify",
-			`'` + app + `'`, strconv.FormatUint(uint64(replacesId), 10), `'` + appIcon + `'`, `'` + summary + `'`, `'` + body + `'`, actionsArg, hintsArg, strconv.FormatInt(int64(timeout), 10),
-		}
-		var id uint32 = 0
-		for _, user := range users {
-			username := user.Name
-			uid := user.UID
-			if m.userAgents.activeUid != strconv.Itoa(int(uid)) {
-				continue
-			}
-			cmdArgs := []string{
-				"-u", username, "DISPLAY=:0", "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/" + strconv.Itoa(int(uid)) + "/bus",
-			}
-			cmdArgs = append(cmdArgs, args...)
-			cmd := exec.Command("sudo", cmdArgs...)
-			logger.Info(cmd.String())
-			var outBuffer bytes.Buffer
-			var errBuffer bytes.Buffer
-			cmd.Stderr = &errBuffer
-			cmd.Stdout = &outBuffer
-			err = cmd.Run()
-			if err != nil {
-				logger.Warning(err)
-				logger.Warning(errBuffer.String())
-			} else {
-				str := outBuffer.String()
-				if len(str) >= 12 {
-					num, err := strconv.ParseUint(str[8:len(str)-3], 10, 0)
-					if err != nil {
-						logger.Warning(err)
-					} else {
-						id = uint32(num)
-					}
-				}
-			}
-		}
-		return id
 	}
 	return 0
 }
@@ -831,35 +727,6 @@ func (m *Manager) closeNotify(id uint32) error {
 		err := agent.CloseNotification(0, id)
 		if err != nil {
 			logger.Warning(err)
-		}
-	} else {
-		users, err := m.loginManager.ListUsers(0)
-		if err != nil {
-			logger.Warning(err)
-		}
-		args := []string{
-			"gdbus", "call", "--session", "--dest=org.freedesktop.Notifications", "--object-path=/org/freedesktop/Notifications", "--method=org.freedesktop.Notifications.CloseNotification",
-			strconv.FormatUint(uint64(id), 10),
-		}
-		for _, user := range users {
-			username := user.Name
-			uid := user.UID
-			if m.userAgents.activeUid != strconv.Itoa(int(uid)) {
-				continue
-			}
-			cmdArgs := []string{
-				"-u", username, "DISPLAY=:0", "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/" + strconv.Itoa(int(uid)) + "/bus",
-			}
-			cmdArgs = append(cmdArgs, args...)
-			cmd := exec.Command("sudo", cmdArgs...)
-			logger.Info(cmd.String())
-			var errBuffer bytes.Buffer
-			cmd.Stderr = &errBuffer
-			err = cmd.Run()
-			if err != nil {
-				logger.Warning(err)
-				logger.Warning(errBuffer.String())
-			}
 		}
 	}
 	return nil

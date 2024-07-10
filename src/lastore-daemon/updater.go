@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	. "internal/config"
-	"internal/updateplatform"
 	"io/ioutil"
 	"os/exec"
 	"path"
@@ -207,35 +206,6 @@ func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	}
 
 	return r
-}
-
-// 设置更新时间的接口
-func (u *Updater) SetInstallUpdateTime(sender dbus.Sender, timeStr string) *dbus.Error {
-	logger.Info("SetInstallUpdateTime", timeStr)
-
-	if len(timeStr) == 0 {
-		u.config.SetInstallUpdateTime(updateplatform.KeyNow)
-	} else if timeStr == updateplatform.KeyNow || timeStr == updateplatform.KeyShutdown {
-		u.config.SetInstallUpdateTime(timeStr)
-	} else {
-		updateTime, err := time.Parse(updateplatform.KeyLayout, timeStr)
-		if err != nil {
-			logger.Warning(err)
-			updateTime, err = time.Parse(time.RFC3339, timeStr)
-			if err != nil {
-				logger.Warning(err)
-				return dbusutil.ToError(err)
-			}
-		}
-		u.config.SetInstallUpdateTime(updateTime.Format(time.RFC3339))
-	}
-
-	_, err := u.manager.updateSource(sender, u.UpdateNotify) // 自动检查更新按照控制中心更新配置进行检查
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-	return nil
 }
 
 const (
