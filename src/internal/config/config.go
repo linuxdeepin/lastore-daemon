@@ -33,19 +33,6 @@ const (
 	ForceUpdate   LastoreDaemonStatus = 1 << 2 // 关机强制更新
 )
 
-type DisabledStatus uint32
-
-const (
-	DisabledRebootCheck     DisabledStatus = 1 << 0 // 禁用重启后的检查项，1063前的版本不兼容需要禁用
-	DisabledVersion         DisabledStatus = 1 << 1 // 禁用version请求
-	DisabledUpdateLog       DisabledStatus = 1 << 2 // 禁用systemupdatelogs请求
-	DisabledTargetPkgLists  DisabledStatus = 1 << 3
-	DisabledCurrentPkgLists DisabledStatus = 1 << 4
-	DisabledPkgCVEs         DisabledStatus = 1 << 5
-	DisabledProcess         DisabledStatus = 1 << 6
-	DisabledResult          DisabledStatus = 1 << 7
-)
-
 type Config struct {
 	Version               string
 	AutoCheckUpdates      bool
@@ -86,13 +73,12 @@ type Config struct {
 	UpdateStatus             string
 	PlatformUpdate           bool
 
-	PlatformUrl      string // 更新接口地址
-	CheckPolicyCron  string // 策略检查间隔
-	StartCheckRange  []int  // 开机检查更新区间
-	IncludeDiskInfo  bool   // machineID是否包含硬盘信息
-	PostUpgradeCron  string // 更新上报间隔
-	UpdateTime       string // 定时更新
-	PlatformDisabled DisabledStatus
+	PlatformUrl     string // 更新接口地址
+	CheckPolicyCron string // 策略检查间隔
+	StartCheckRange []int  // 开机检查更新区间
+	IncludeDiskInfo bool   // machineID是否包含硬盘信息
+	PostUpgradeCron string // 更新上报间隔
+	UpdateTime      string // 定时更新
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
@@ -177,7 +163,6 @@ const (
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
 	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
 	dSettingsKeyUpdateTime                           = "update-time"
-	dSettingsKeyPlatformDisabled                     = "platform-disabled"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -530,13 +515,6 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.UpdateTime = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformDisabled)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.PlatformDisabled = DisabledStatus(v.Value().(float64))
 	}
 
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据

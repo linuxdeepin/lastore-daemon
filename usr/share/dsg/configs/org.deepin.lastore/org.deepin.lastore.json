@@ -436,17 +436,6 @@
       "description[zh_CN]": "定时更新",
       "permissions": "readwrite",
       "visibility": "private"
-    },
-    "platform-disabled":{
-      "value": 1,
-      "serial": 0,
-      "flags": [
-        "global"
-      ],
-      "name": "PlatformDisabledReport",
-      "description": "Disabled report of using the platform to update",
-      "permissions": "readwrite",
-      "visibility": "private"
     }
   }
 }
