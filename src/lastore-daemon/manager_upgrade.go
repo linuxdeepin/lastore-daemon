@@ -15,7 +15,6 @@ import (
 	"net/url"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -373,7 +372,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if mode&system.SecurityUpdate != 0 {
 					recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.updater.getUpdatablePackagesByType(system.SecurityUpdate)), upgradeRecordPath)
 				}
-				_ = m.preUpgradeCmdSuccessHook(job, needChangeGrub, mode)
+				_ = m.preSuccessHook(job, needChangeGrub, mode)
 				return nil
 			},
 			string(system.FailedStatus): func() error {
@@ -384,11 +383,8 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 		endJob.setAfterHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				err := m.config.SetInstallUpdateTime("")
-				if err != nil {
-					logger.Warning(err)
-				}
-				return m.afterUpgradeCmdSuccessHook()
+				m.config.SetInstallUpdateTime("")
+				return m.afterSuccessHook()
 			},
 			string(system.EndStatus): func() error {
 				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
@@ -593,18 +589,8 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 	return nil
 }
 
-func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType) error {
-	var minorVersionInt int
-	info, err := updateplatform.GetOSVersionInfo("/etc/os-version")
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		if version, ok := info["MinorVersion"]; ok {
-			minorVersionInt, _ = strconv.Atoi(version)
-		}
-	}
-	supportRebootCheck := minorVersionInt > 1070
-	if supportRebootCheck && !m.config.GetPlatformStatusDisable(config.DisabledRebootCheck) {
+func (m *Manager) preSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType) error {
+	if (m.config.PlatformDisabled & config.DisabledRebootCheck) == 0 {
 		if needChangeGrub {
 			// 更新成功后修改grub默认入口为当前系统入口
 			err := m.grub.createTempGrubEntry()
@@ -618,8 +604,26 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 			logger.Warning(err)
 		}
 	} else {
-		// 不需要重启检查时,此处可以直接执行整个流程成功的处理逻辑
-		m.handleAfterUpgradeSuccess(mode, job.Description)
+		err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
+		if err != nil {
+			logger.Warning(err)
+		}
+		err = m.grub.changeGrubDefaultEntry(normalBootEntry)
+		if err != nil {
+			logger.Warning(err)
+		}
+		go func() {
+			m.inhibitAutoQuitCountAdd()
+			defer m.inhibitAutoQuitCountSub()
+			// m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
+			m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeSucceed, job.Description, mode)
+			m.reportLog(upgradeStatusReport, true, "")
+		}()
+		// 只要系统更新，需要更新baseline文件
+		if mode&system.SystemUpdate != 0 {
+			m.updatePlatform.UpdateBaseline()
+			m.updatePlatform.RecoverVersionLink()
+		}
 	}
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
@@ -627,7 +631,7 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	return nil
 }
 
-func (m *Manager) afterUpgradeCmdSuccessHook() error {
+func (m *Manager) afterSuccessHook() error {
 	// 防止后台更新后注销再次进入桌面，导致错误发出通知。因此更新成功后设置为ready。由于保持running是为了处理更新异常中断场景，因此更新安装成功后，无需保持running状态。
 	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
 	if err != nil {
@@ -642,26 +646,6 @@ func (m *Manager) afterUpgradeCmdSuccessHook() error {
 	go m.sendNotify(updateNotifyShow, 0, "system-updated", summary, msg, action, hints, system.NotifyExpireTimeoutNoHide)
 
 	return nil
-}
-
-// 整个更新流程走完后(安装、检测(如果需要)全部成功)
-func (m *Manager) handleAfterUpgradeSuccess(mode system.UpdateType, des string) {
-	err := m.grub.changeGrubDefaultEntry(normalBootEntry)
-	if err != nil {
-		logger.Warning(err)
-	}
-	go func() {
-		m.inhibitAutoQuitCountAdd()
-		defer m.inhibitAutoQuitCountSub()
-		// m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
-		m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeSucceed, des, mode)
-		m.reportLog(upgradeStatusReport, true, "")
-	}()
-	// 只要系统更新，需要更新baseline文件
-	if mode&system.SystemUpdate != 0 {
-		m.updatePlatform.UpdateBaseline()
-		m.updatePlatform.RecoverVersionLink()
-	}
 }
 
 // 安装更新时,需要退出所有不在运行的检查更新job

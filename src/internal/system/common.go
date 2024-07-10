@@ -76,13 +76,6 @@ func NormalFileExists(fpath string) bool {
 	return true
 }
 
-// UpgradeStatusAndReason 用于记录整体更新安装的流程状态和原因,dde-session-daemon和回滚界面会根据该配置进行提示
-type UpgradeStatusAndReason struct {
-	Status     UpgradeStatus
-	ReasonCode JobErrorType
-}
-
-// UpgradeStatus 整体更新安装的流程状态
 type UpgradeStatus string
 
 const (
@@ -121,6 +114,11 @@ const (
 	// running状态
 	ErrorNeedCheck JobErrorType = "needCheck"
 )
+
+type UpgradeStatusAndReason struct {
+	Status     UpgradeStatus
+	ReasonCode JobErrorType
+}
 
 const (
 	GrubTitleRollbackPrefix = "BEGIN /etc/grub.d/11_deepin_ab_recovery"

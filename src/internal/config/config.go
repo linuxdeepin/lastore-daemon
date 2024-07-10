@@ -36,7 +36,7 @@ const (
 type DisabledStatus uint32
 
 const (
-	DisabledUnknown         DisabledStatus = 1 << 0 // 禁用重启后的检查项，1063前的版本不兼容需要禁用 // 该配置项不作为配置生效
+	DisabledRebootCheck     DisabledStatus = 1 << 0 // 禁用重启后的检查项，1063前的版本不兼容需要禁用
 	DisabledVersion         DisabledStatus = 1 << 1 // 禁用version请求
 	DisabledUpdateLog       DisabledStatus = 1 << 2 // 禁用systemupdatelogs请求
 	DisabledTargetPkgLists  DisabledStatus = 1 << 3
@@ -44,7 +44,6 @@ const (
 	DisabledPkgCVEs         DisabledStatus = 1 << 5
 	DisabledProcess         DisabledStatus = 1 << 6
 	DisabledResult          DisabledStatus = 1 << 7
-	DisabledRebootCheck     DisabledStatus = 1 << 8 // 禁用重启后的检查项，1063前的版本不兼容需要禁用
 )
 
 type Config struct {
@@ -795,10 +794,6 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 func (c *Config) SetOnlineCache(cache string) error {
 	c.OnlineCache = cache
 	return ioutil.WriteFile(onlineCachePath, []byte(cache), 0644)
-}
-
-func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {
-	return c.PlatformDisabled&status == status
 }
 
 func (c *Config) save(key string, v interface{}) error {
