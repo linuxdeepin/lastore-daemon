@@ -447,18 +447,6 @@
       "description": "Disabled report of using the platform to update",
       "permissions": "readwrite",
       "visibility": "private"
-    },
-    "enable-version-check": {
-      "value": false,
-      "serial": 0,
-      "flags": [
-        "global"
-      ],
-      "name": "EnableVersionCheck",
-      "description": "enable version check to handle action",
-      "description[zh_CN]": "是否开启关于版本号的判断",
-      "permissions": "readwrite",
-      "visibility": "private"
     }
   }
 }

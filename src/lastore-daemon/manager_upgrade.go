@@ -594,20 +594,16 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType) error {
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType) error {
-	supportRebootCheck := true
-	if m.config.EnableVersionCheck {
-		var minorVersionInt int
-		info, err := updateplatform.GetOSVersionInfo("/etc/os-version")
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			if version, ok := info["MinorVersion"]; ok {
-				minorVersionInt, _ = strconv.Atoi(version)
-			}
+	var minorVersionInt int
+	info, err := updateplatform.GetOSVersionInfo("/etc/os-version")
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		if version, ok := info["MinorVersion"]; ok {
+			minorVersionInt, _ = strconv.Atoi(version)
 		}
-		supportRebootCheck = minorVersionInt >= 1070
 	}
-
+	supportRebootCheck := minorVersionInt >= 1070
 	if supportRebootCheck && !m.config.GetPlatformStatusDisable(config.DisabledRebootCheck) {
 		if needChangeGrub {
 			// 更新成功后修改grub默认入口为当前系统入口
