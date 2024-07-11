@@ -28,7 +28,7 @@ import (
 	"github.com/linuxdeepin/go-lib/strv"
 )
 
-var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file)://[^ ]+)`)
+var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file|p2p)://[^ ]+)`)
 
 // 获取list文件或list.d文件夹中所有list文件的未被屏蔽的仓库地址
 func getUpgradeUrls(path string) []string {
