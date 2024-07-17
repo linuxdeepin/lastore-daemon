@@ -309,6 +309,7 @@ func GetArchInfo() (string, error) {
 
 // 获取激活码
 func getSN() (string, error) {
+	logger.Debug("start get SN")
 	systemBus, err := dbus.SystemBus()
 	if err != nil {
 		return "", err
@@ -320,6 +321,7 @@ func getSN() (string, error) {
 		return "", err
 	}
 	v := ret.Value().(string)
+	logger.Debug("end get SN")
 	return v, nil
 }
 
@@ -456,7 +458,9 @@ func UpdateTokenConfigFile(includeDiskInfo bool) string {
 	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
+	logger.Debug("start getSystemInfo")
 	systemInfo := getSystemInfo(includeDiskInfo)
+	logger.Debug("end getSystemInfo")
 	tokenPath := "/etc/apt/apt.conf.d/99lastore-token.conf"
 	var tokenSlice []string
 	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)

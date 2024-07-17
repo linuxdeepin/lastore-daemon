@@ -114,10 +114,10 @@ func NewUpdatePlatformManager(c *Config) *UpdatePlatformManager {
 		targetBaseline:                    getTargetBaseline(),
 		requestUrl:                        platformUrl,
 		cvePkgs:                           make(map[string][]string),
-		Token:                             UpdateTokenConfigFile(c.IncludeDiskInfo),
-		arch:                              arch,
-		Tp:                                UnknownUpdate,
-		UpdateNowForce:                    false,
+		//Token:                             UpdateTokenConfigFile(c.IncludeDiskInfo), // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
+		arch:           arch,
+		Tp:             UnknownUpdate,
+		UpdateNowForce: false,
 	}
 }
 
