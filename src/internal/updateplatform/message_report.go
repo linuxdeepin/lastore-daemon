@@ -83,7 +83,7 @@ const (
 	realVersion   = "/etc/os-version"
 )
 
-func NewUpdatePlatformManager(c *Config) *UpdatePlatformManager {
+func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManager {
 	platformUrl := c.PlatformUrl
 	if len(platformUrl) == 0 {
 		platformUrl = os.Getenv("UPDATE_PLATFORM_URL")
@@ -105,6 +105,10 @@ func NewUpdatePlatformManager(c *Config) *UpdatePlatformManager {
 	if err != nil {
 		logger.Warning(err)
 	}
+	var token string
+	if updateToken {
+		token = UpdateTokenConfigFile(c.IncludeDiskInfo) // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
+	}
 	return &UpdatePlatformManager{
 		config:                            c,
 		allowPostSystemUpgradeMessageType: system.SystemUpdate,
@@ -114,10 +118,10 @@ func NewUpdatePlatformManager(c *Config) *UpdatePlatformManager {
 		targetBaseline:                    getTargetBaseline(),
 		requestUrl:                        platformUrl,
 		cvePkgs:                           make(map[string][]string),
-		//Token:                             UpdateTokenConfigFile(c.IncludeDiskInfo), // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
-		arch:           arch,
-		Tp:             UnknownUpdate,
-		UpdateNowForce: false,
+		Token:                             token,
+		arch:                              arch,
+		Tp:                                UnknownUpdate,
+		UpdateNowForce:                    false,
 	}
 }
 
@@ -643,7 +647,7 @@ func IsForceUpdate(tp UpdateTp) bool {
 }
 
 // GenUpdatePolicyByToken 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
+func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) error {
 	response, err := m.genVersionResponse()
 	if err != nil {
 		return fmt.Errorf("failed get version data %v", err)
@@ -676,8 +680,10 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
 
 	m.UpdateBaselineCache()
 	// 生成仓库和InRelease
-	m.genDepositoryFromPlatform()
-	m.checkInReleaseFromPlatform()
+	if updateInRelease {
+		m.genDepositoryFromPlatform()
+		m.checkInReleaseFromPlatform()
+	}
 
 	return nil
 

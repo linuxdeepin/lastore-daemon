@@ -184,8 +184,8 @@ var updatePlatform *updateplatform.UpdatePlatformManager
 
 func UpdateMonitor() error {
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	updatePlatform = updateplatform.NewUpdatePlatformManager(config)
-	err := updatePlatform.GenUpdatePolicyByToken()
+	updatePlatform = updateplatform.NewUpdatePlatformManager(config, true)
+	err := updatePlatform.GenUpdatePolicyByToken(false)
 	if err != nil {
 		logger.Warning("gen update info failed:", err)
 		return err

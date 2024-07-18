@@ -214,7 +214,7 @@ func (m *Manager) initAgent() {
 
 func (m *Manager) initPlatformManager() {
 	logger.Debug("start initPlatformManager")
-	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config)
+	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config, false)
 	m.loadPlatformCache()
 	logger.Debug("end initPlatformManager")
 }

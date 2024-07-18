@@ -190,7 +190,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 				_ = os.Setenv("https_proxy", environ["https_proxy"])
 				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
-				err = m.updatePlatform.GenUpdatePolicyByToken()
+				err = m.updatePlatform.GenUpdatePolicyByToken(true)
 				if err != nil {
 					if m.config.PlatformUpdate {
 						job.retry = 0
