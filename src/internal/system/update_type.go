@@ -22,10 +22,11 @@ const (
 	OnlySecurityUpdate UpdateType = 1 << 4 // 仅安全仓库更新，已经废弃，用于处理历史版本升级后的兼容问题
 	OtherSystemUpdate  UpdateType = 1 << 5 // 其他来源系统的仓库更新:对应dconfig non-unknown-sources 字段去掉商店和安全仓库,通常为驱动、hwe仓库(hwe仓库应该从平台获取)，检查该仓库，不显示更新内容
 
-	AllCheckUpdate   = SystemUpdate | AppStoreUpdate | SecurityUpdate | UnknownUpdate | OtherSystemUpdate // 所有需要检查的仓库 TODO 该字段变动，需要检查所有使用者
-	AllInstallUpdate = SystemUpdate | SecurityUpdate | UnknownUpdate                                      // 所有控制中心需要显示的仓库
+	AllCheckUpdate   = SystemUpdate | AppStoreUpdate | SecurityUpdate | UnknownUpdate | OtherSystemUpdate | AppendUpdate // 所有需要检查的仓库 TODO 该字段变动，需要检查所有使用者
+	AllInstallUpdate = SystemUpdate | SecurityUpdate | UnknownUpdate                                                     // 所有控制中心需要显示的仓库
 
 	OfflineUpdate UpdateType = 1 << 6 // 离线仓库，控制中心不检查、不显示；离线更新工具检查和显示；
+	AppendUpdate  UpdateType = 1 << 7 // 追加仓库/etc/deepin/lastore-daemon/sources.list.d/ 用于打印管理追加离线包.检查该仓库,不显示更新内容
 )
 
 func (m UpdateType) JobType() string {
@@ -42,6 +43,8 @@ func (m UpdateType) JobType() string {
 		return OfflineUpgradeJobType
 	case OtherSystemUpdate:
 		return OtherUpgradeJobType
+	case AppendUpdate:
+		return AppendUpgradeJobTye
 	default:
 		return ""
 	}
@@ -65,6 +68,7 @@ func AllUpdateType() []UpdateType {
 		UnknownUpdate,
 		OtherSystemUpdate,
 		OfflineUpdate,
+		AppendUpdate,
 	}
 }
 
@@ -76,6 +80,7 @@ func AllCheckUpdateType() []UpdateType {
 		SecurityUpdate,
 		UnknownUpdate,
 		OtherSystemUpdate,
+		AppendUpdate,
 	}
 }
 
@@ -103,11 +108,12 @@ const (
 	HweSourceFile      = "/etc/apt/sources.list.d/" + HweSourceList
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList
 
-	SoftLinkSystemSourceDir = "/var/lib/lastore/SystemSource.d"      // 系统更新仓库
-	PlatFormSourceFile      = "/var/lib/lastore/platform.list"       // 从更新平台获取的仓库,为系统更新仓库,在message_report.go 中的 获取升级版本信息genUpdatePolicyByToken后即可 更新
-	UnknownSourceDir        = "/var/lib/lastore/unknownSource.d"     // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
-	OtherSystemSourceDir    = "/var/lib/lastore/otherSystemSource.d" // 其他需要检查的系统仓库
-	OfflineSourceFile       = "/var/lib/lastore/offline.list"        // 在offline_repo.go 中的 UpdateOfflineSourceFile 更新
+	SoftLinkSystemSourceDir = "/var/lib/lastore/SystemSource.d"           // 系统更新仓库
+	PlatFormSourceFile      = "/var/lib/lastore/platform.list"            // 从更新平台获取的仓库,为系统更新仓库,在message_report.go 中的 获取升级版本信息genUpdatePolicyByToken后即可 更新
+	UnknownSourceDir        = "/var/lib/lastore/unknownSource.d"          // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
+	OtherSystemSourceDir    = "/var/lib/lastore/otherSystemSource.d"      // 其他需要检查的系统仓库
+	OfflineSourceFile       = "/var/lib/lastore/offline.list"             // 在offline_repo.go 中的 UpdateOfflineSourceFile 更新
+	AppendSourceDir         = "/etc/deepin/lastore-daemon/sources.list.d" // 追加仓库的路径
 )
 
 var SystemUpdateSource string = SoftLinkSystemSourceDir
@@ -129,6 +135,7 @@ func GetCategorySourceMap() map[UpdateType]string {
 		UnknownUpdate:     UnknownSourceDir,
 		OtherSystemUpdate: OtherSystemSourceDir,
 		OfflineUpdate:     OfflineSourceFile,
+		AppendUpdate:      AppendSourceDir,
 	}
 }
 

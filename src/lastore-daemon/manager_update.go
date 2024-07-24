@@ -667,7 +667,7 @@ func handleUpdateSourceFailed(j *Job) {
 		j.retry = retry
 	}
 	retryMap := map[int]system.UpdateType{
-		1: system.SystemUpdate | system.SecurityUpdate,
+		1: system.SystemUpdate | system.SecurityUpdate | system.AppendUpdate,
 	}
 	updateType := retryMap[retry]
 	err := system.CustomSourceWrapper(updateType, func(path string, unref func()) error {

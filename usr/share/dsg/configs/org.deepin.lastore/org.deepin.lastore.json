@@ -14,14 +14,14 @@
       "visibility": "private"
     },
     "version": {
-      "value": "1.0",
+      "value": "1.1",
       "serial": 0,
       "flags": [
         "global"
       ],
       "name": "Version",
       "description": "",
-      "permissions": "readwrite",
+      "permissions": "readonly",
       "visibility": "private"
     },
     "auto-check-updates": {

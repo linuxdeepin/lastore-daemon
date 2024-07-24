@@ -28,6 +28,7 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/strv"
+	"github.com/linuxdeepin/go-lib/utils"
 )
 
 type Manager struct {
@@ -284,21 +285,67 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
+	var job *Job
+	var isExist bool
+	var err error
+	err = system.CustomSourceWrapper(system.AllCheckUpdate, func(path string, unref func()) error {
+		m.do.Lock()
+		defer m.do.Unlock()
+		isExist, job, err = m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, nil)
+		if err != nil {
+			logger.Warningf("installPackage %q error: %v\n", packages, err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if isExist {
+			if unref != nil {
+				unref()
+			}
+			logger.Info(JobExistError)
+			return JobExistError
+		}
+		// 设置apt命令参数
 
-	m.do.Lock()
-	defer m.do.Unlock()
-	isExist, job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, nil)
-	if err != nil {
-		logger.Warningf("installPackage %q error: %v\n", packages, err)
+		if utils.IsDir(path) {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": path,
+			}
+		} else {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  path,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
+		if job.next != nil {
+			job.next.option = job.option
+			job.next.setPreHooks(map[string]func() error{
+				string(system.EndStatus): func() error {
+					// wrapper的资源释放
+					if unref != nil {
+						unref()
+					}
+					return nil
+				},
+			})
+		}
+
+		if err = m.jobManager.addJob(job); err != nil {
+			logger.Warning(err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, JobExistError) { // exist的err无需返回
+		logger.Warning(err)
 		return nil, err
 	}
-	if isExist {
-		return job, nil
-	}
-	if err := m.jobManager.addJob(job); err != nil {
-		return nil, err
-	}
-	return job, err
+	return job, nil
 }
 
 func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {

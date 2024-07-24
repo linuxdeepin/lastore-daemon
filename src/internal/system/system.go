@@ -49,6 +49,7 @@ const (
 	UnknownUpgradeJobType         = "unknown_upgrade"
 	OfflineUpgradeJobType         = "offline_update"
 	OtherUpgradeJobType           = "other_system_update"
+	AppendUpgradeJobTye           = "append_upgrade"
 )
 
 const (
