@@ -10,6 +10,3 @@ StandardOutput=null
 StandardError=null
 StateDirectory=lastore
 CacheDirectory=lastore
-
-[Install]
-Alias=dbus-com.deepin.lastore.service
