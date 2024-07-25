@@ -126,6 +126,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"option"},
 		},
 		{
+			Name:   "PowerOff",
+			Fn:     v.PowerOff,
+			InArgs: []string{"reboot"},
+		},
+		{
 			Name:    "QueryAllSizeWithSource",
 			Fn:      v.QueryAllSizeWithSource,
 			InArgs:  []string{"mode"},
