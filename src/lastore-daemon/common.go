@@ -292,7 +292,9 @@ func getExecutablePathAndCmdline(service *dbusutil.Service, sender dbus.Sender) 
 	}
 
 	proc := procfs.Process(pid)
-
+	if !checkSenderNsMntValid(pid) {
+		return "", "", errors.New("due to the difference between the current process's ns mnt and the init process's ns mnt, the exe field is not reliable")
+	}
 	execPath, err := proc.Exe()
 	if err != nil {
 		// 当调用者在使用过程中发生了更新,则在获取该进程的exe时,会出现lstat xxx (deleted)此类的error,如果发生的是覆盖,则该路径依旧存在,因此增加以下判断
@@ -430,4 +432,28 @@ func checkSupportDpkgScriptIgnore() bool {
 		return false
 	}
 	return true
+}
+
+var _initProcNsMnt string
+var _once sync.Once
+
+// 通过判断/proc/pid/ns/mnt 和 /proc/1/ns/mnt是否相同，如果不相同，则进程exe字段不可信
+func checkSenderNsMntValid(pid uint32) bool {
+	_once.Do(func() {
+		out, err := os.Readlink("/proc/1/ns/mnt")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		_initProcNsMnt = strings.TrimSpace(out)
+	})
+	c, err := os.Readlink(fmt.Sprintf("/proc/%v/ns/mnt", pid))
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	defer func() {
+		fmt.Printf("pid 1 mnt ns is %v,pid %v mnt ns is %v\n", _initProcNsMnt, pid, strings.TrimSpace(c))
+	}()
+	return strings.TrimSpace(c) == _initProcNsMnt
 }
