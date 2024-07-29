@@ -564,6 +564,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}()
 			logger.Warning(e)
 		}
+		m.statusManager.updateSourceOnce = true
 		m.statusManager.UpdateModeAllStatusBySize(m.coreList)
 		m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 	} else {

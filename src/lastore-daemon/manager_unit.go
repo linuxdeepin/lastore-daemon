@@ -195,6 +195,9 @@ func (m *Manager) loadUpdateSourceOnce() {
 		m.PropsMu.Lock()
 		m.updateSourceOnce = updateSourceOnce
 		m.PropsMu.Unlock()
+		if m.statusManager != nil {
+			m.statusManager.updateSourceOnce = updateSourceOnce
+		}
 	} else {
 		logger.Warning(err)
 	}

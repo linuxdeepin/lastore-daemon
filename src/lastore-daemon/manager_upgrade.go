@@ -312,16 +312,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		}
 
 		m.handleSysPowerChanged()
-		uuid, err = m.prepareAptCheck(mode)
-		if err != nil {
-			logger.Warning(err)
-			m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
-			if unref != nil {
-				unref()
-			}
-			return err
-		}
-		logger.Info(uuid)
 
 		// 设置hook
 		// TODO 目前最多两个job关联,先这样写,后续规划抽象每个更新类型做处理.
@@ -334,6 +324,17 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		}
 		startJob.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
+				// 防止还在检查更新的时候，就生成了meta文件，此时meta文件可能不准
+				uuid, err = m.prepareAptCheck(mode)
+				if err != nil {
+					logger.Warning(err)
+					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode, err.Error()))
+					if unref != nil {
+						unref()
+					}
+					return err
+				}
+				logger.Info(uuid)
 				systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
 					logger.Info(systemErr)

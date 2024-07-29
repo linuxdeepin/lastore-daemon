@@ -33,6 +33,8 @@ type UpdateModeStatusManager struct {
 	handleUnKnownStatusChangedCallback  func(interface{})
 	checkModeChangedCallback            func(interface{})
 	updateModeChangedCallback           func(interface{})
+
+	updateSourceOnce bool // 是否完成过检查更新
 }
 
 type daemonStatus struct {
@@ -535,7 +537,12 @@ func (m *UpdateModeStatusManager) updateCanUpgradeStatus(can bool) {
 	}
 }
 
+// UpdateCheckCanUpgradeByEachStatus 必须在检查更新完成之后，才可以更新
 func (m *UpdateModeStatusManager) UpdateCheckCanUpgradeByEachStatus() {
+	if !m.updateSourceOnce {
+		logger.Warning("not update source, don't need to update can-upgrade")
+		return
+	}
 	m.statusMapMu.Lock()
 	defer m.statusMapMu.Unlock()
 	checkCanUpgrade := false
