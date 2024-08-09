@@ -25,18 +25,18 @@ type APTSystem struct {
 	Indicator system.Indicator
 }
 
-func NewSystem(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
-	apt := New(systemSourceList, nonUnknownList, otherList)
+func NewSystem(nonUnknownList []string, otherList []string) system.System {
+	apt := New(nonUnknownList, otherList)
 	return &apt
 }
 
-func New(systemSourceList []string, nonUnknownList []string, otherList []string) APTSystem {
+func New(nonUnknownList []string, otherList []string) APTSystem {
 	p := APTSystem{
 		CmdSet: make(map[string]*system.Command),
 	}
 	//WaitDpkgLockRelease()
 	//_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run() // TODO
-	p.initSource(systemSourceList, nonUnknownList, otherList)
+	p.initSource(nonUnknownList, otherList)
 	return p
 }
 
@@ -380,14 +380,8 @@ func (p *APTSystem) CheckSystem(jobId string, checkType string, environ map[stri
 	return nil
 }
 
-func (p *APTSystem) initSource(systemSourceList []string, nonUnknownList []string, otherList []string) {
-	// apt初始化时执行一次，避免其他apt操作过程中删改软链接导致数据异常
+func (p *APTSystem) initSource(nonUnknownList []string, otherList []string) {
 	err := system.UpdateUnknownSourceDir(nonUnknownList)
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	err = system.UpdateSystemSourceDir(systemSourceList)
 	if err != nil {
 		logger.Warning(err)
 	}

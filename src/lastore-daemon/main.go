@@ -74,7 +74,7 @@ func main() {
 	}
 
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	aptImpl := dut.NewSystem(config.SystemSourceList, config.NonUnknownList, config.OtherSourceList)
+	aptImpl := dut.NewSystem(config.NonUnknownList, config.OtherSourceList)
 	system.SetSystemUpdate(config.PlatformUpdate) // 设置是否通过平台更新
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
@@ -110,6 +110,15 @@ func main() {
 	}
 	err = serverObject.SetReadCallback(updater, "OfflineInfo", func(read *dbusutil.PropertyRead) *dbus.Error {
 		return dbusutil.ToError(updater.SetOfflineInfo(manager.offline.GetCheckInfo()))
+	})
+	// 每次读取SystemSourceConfig和SecuritySourceConfig都实时获取一次配置
+	err = serverObject.SetReadCallback(manager, "SystemSourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
+		manager.reloadOemConfig(false)
+		return nil
+	})
+	err = serverObject.SetReadCallback(manager, "SecuritySourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
+		manager.reloadOemConfig(false)
+		return nil
 	})
 	manager.refreshUpdateInfos(false)
 	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况

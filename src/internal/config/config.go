@@ -64,9 +64,10 @@ type Config struct {
 	useDSettings       bool
 	UpgradeStatus      system.UpgradeStatusAndReason
 	IdleDownloadConfig string
-	SystemSourceList   []string
-	NonUnknownList     []string
-	OtherSourceList    []string // TODO
+	SystemSourceList   []string // 系统更新list文件路径
+	SecuritySourceList []string // 安全更新list文件路径
+	NonUnknownList     []string // 非未知来源更新list文件
+	OtherSourceList    []string // 其他类型更新list文件路径
 
 	DownloadSpeedLimitConfig string
 	lastoreDaemonStatus      LastoreDaemonStatus
@@ -80,6 +81,13 @@ type Config struct {
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
+
+	SystemCustomSource      []string      // 系统更新自定义仓库内容
+	SecurityCustomSource    []string      // 安全更新自定义仓库内容
+	SystemOemSourceConfig   OemRepoConfig // 系统更新OEM仓库配置 来源/etc/deepin/lastore-daemon/oem-repo.conf.d
+	SecurityOemSourceConfig OemRepoConfig // 安全更新OEM仓库配置 来源/etc/deepin/lastore-daemon/oem-repo.conf.d
+	SystemRepoType          RepoType      // 系统更新仓库类型
+	SecurityRepoType        RepoType      // 安全更新仓库类型
 
 	filePath string
 	statusMu sync.RWMutex
@@ -159,6 +167,10 @@ const (
 	dSettingsKeyCheckPolicyOnCalendar                = "check-policy-on-calendar"
 	dSettingsKeyStartCheckRange                      = "start-check-range"
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
+	dSettingsKeySystemCustomSource                   = "system-custom-source"
+	dSettingsKeySecurityCustomSource                 = "security-custom-source"
+	dSettingsKeySystemRepoType                       = "system-repo-type"
+	dSettingsKeySecurityRepoType                     = "security-repo-type"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -499,6 +511,48 @@ func getConfigFromDSettings() *Config {
 		c.IncludeDiskInfo = v.Value().(bool)
 	}
 
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemCustomSource)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.SystemCustomSource = append(c.SystemCustomSource, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityCustomSource)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.SecurityCustomSource = append(c.SecurityCustomSource, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemRepoType)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.SystemRepoType = RepoType(v.Value().(string))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityRepoType)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.SecurityRepoType = RepoType(v.Value().(string))
+	}
+
+	err = c.recoveryAndApplyOemFlag(system.SystemUpdate)
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	err = c.recoveryAndApplyOemFlag(system.SecurityUpdate)
+	if err != nil {
+		logger.Warning(err)
+	}
+
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
 	content, err := ioutil.ReadFile(classifiedCachePath)
 	if err != nil {
@@ -518,6 +572,7 @@ func getConfigFromDSettings() *Config {
 		c.OnlineCache = string(content)
 	}
 	c.OtherSourceList = append(c.OtherSourceList, "/etc/apt/sources.list.d/driver.list")
+	c.SecuritySourceList = append(c.SecuritySourceList, system.SecuritySourceFile)
 	return c
 }
 
@@ -729,6 +784,26 @@ func (c *Config) GetLastoreDaemonStatusByBit(key LastoreDaemonStatus) LastoreDae
 func (c *Config) SetUpdateStatus(status string) error {
 	c.UpdateStatus = status
 	return c.save(dSettingsKeyUpdateStatus, status)
+}
+
+func (c *Config) SetSystemCustomSource(sources []string) error {
+	c.SystemCustomSource = sources
+	return c.save(dSettingsKeySystemCustomSource, sources)
+}
+
+func (c *Config) SetSecurityCustomSource(sources []string) error {
+	c.SecurityCustomSource = sources
+	return c.save(dSettingsKeySecurityCustomSource, sources)
+}
+
+func (c *Config) SetSystemRepoType(typ RepoType) error {
+	c.SystemRepoType = typ
+	return c.save(dSettingsKeySystemRepoType, typ)
+}
+
+func (c *Config) SetSecurityRepoType(typ RepoType) error {
+	c.SecurityRepoType = typ
+	return c.save(dSettingsKeySecurityRepoType, typ)
 }
 
 const (

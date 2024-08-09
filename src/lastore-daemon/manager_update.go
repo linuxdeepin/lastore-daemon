@@ -69,6 +69,7 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 		return nil, err
 	}
 	prepareUpdateSource()
+	m.reloadOemConfig(true)
 	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job

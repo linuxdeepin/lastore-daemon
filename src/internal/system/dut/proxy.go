@@ -16,8 +16,8 @@ type DutSystem struct {
 	apt.APTSystem
 }
 
-func NewSystem(systemSourceList []string, nonUnknownList []string, otherList []string) system.System {
-	aptImpl := apt.New(systemSourceList, nonUnknownList, otherList)
+func NewSystem(nonUnknownList []string, otherList []string) system.System {
+	aptImpl := apt.New(nonUnknownList, otherList)
 	if !utils.IsFileExist(system.PlatFormSourceFile) {
 		file, err := os.Create(system.PlatFormSourceFile)
 		if err != nil {

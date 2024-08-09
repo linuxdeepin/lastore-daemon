@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/linuxdeepin/dde-api/polkit"
+	"internal/config"
 	"internal/system"
 	"internal/utils"
 	"io/ioutil"
@@ -16,6 +18,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/godbus/dbus"
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
@@ -638,6 +641,82 @@ func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 		logger.Warning(err)
 		logger.Warning(errBuffer.String())
 		return dbusutil.ToError(err)
+	}
+	return nil
+}
+
+const polkitActionChangeOwnData = "com.deepin.daemon.accounts.change-own-user-data"
+
+// SetUpdateSources 设置系统、安全更新的仓库
+func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateType, repoType config.RepoType, repoConfig []string, isReset bool) *dbus.Error {
+	// 管理员鉴权
+	err := polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	// 修改仓库后，重置可安装状态
+	err = m.config.UpdateLastoreDaemonStatus(config.CanUpgrade, false)
+	if err != nil {
+		logger.Warning(err)
+	}
+	// 判断设置的源类型
+	if !repoType.IsValid() {
+		return dbusutil.ToError(fmt.Errorf("invalid repo type: %v", repoType))
+	}
+	// 判断是系统或安全仓库，分别设置配置
+	switch updateType {
+	case system.SystemUpdate:
+		err := m.config.SetSystemRepoType(repoType)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		if repoType == config.CustomRepo {
+			if isReset {
+				err = m.config.SetSystemCustomSource(repoConfig)
+			} else {
+				err = m.config.SetSystemCustomSource(append(m.config.SystemCustomSource, repoConfig...))
+			}
+			if err != nil {
+				logger.Warning(err)
+				return dbusutil.ToError(err)
+			}
+		}
+	case system.SecurityUpdate:
+		err := m.config.SetSecurityRepoType(repoType)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		m.config.SecurityRepoType = repoType
+		if repoType == config.CustomRepo {
+			if isReset {
+				err = m.config.SetSecurityCustomSource(repoConfig)
+			} else {
+				err = m.config.SetSecurityCustomSource(append(m.config.SecurityCustomSource, repoConfig...))
+			}
+			if err != nil {
+				logger.Warning(err)
+				return dbusutil.ToError(err)
+			}
+		}
+	default:
+		return dbusutil.ToError(fmt.Errorf("not supported update type: %v to set source", updateType))
+	}
+	m.reloadOemConfig(false)
+	// 使用apt-get check 检查仓库时候合规
+	tmpList := fmt.Sprintf("/tmp/custom_repo_%v", time.Now().Unix())
+	err = ioutil.WriteFile(tmpList, []byte(strings.Join(repoConfig, "\n")), 0600)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		err = exec.Command("/usr/bin/apt-get", "check", "-o", "Debug::NoLocking=1",
+			"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", tmpList), "-o", "Dir::Etc::SourceParts=/dev/null").Run()
+		if err != nil {
+			logger.Warning("apt-get check error", err)
+			return dbusutil.ToError(errors.New("repo format error"))
+		}
 	}
 	return nil
 }

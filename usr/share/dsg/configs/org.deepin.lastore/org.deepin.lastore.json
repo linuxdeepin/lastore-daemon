@@ -410,6 +410,58 @@
       "description[zh_CN]": "机器ID是否包含硬盘信息",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "system-custom-source": {
+      "value": [],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "SystemCustomSource",
+      "name[zh_CN]": "系统更新自定义仓库",
+      "description": "system custom source",
+      "description[zh_CN]": "系统更新自定义仓库",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "security-custom-source": {
+      "value": [],
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "SecurityCustomSource",
+      "name[zh_CN]": "安全更新自定义仓库",
+      "description": "security custom source",
+      "description[zh_CN]": "安全更新自定义仓库",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "system-repo-type": {
+      "value": "UOS_DEFAULT",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "SystemRepoType",
+      "name[zh_CN]": "系统更新仓库类型",
+      "description": "system repo type",
+      "description[zh_CN]": "系统更新仓库类型",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "security-repo-type": {
+      "value": "UOS_DEFAULT",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "SecurityRepoType",
+      "name[zh_CN]": "安全更新仓库类型",
+      "description": "security repo type",
+      "description[zh_CN]": "安全更新仓库类型",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }

@@ -65,6 +65,9 @@ type Manager struct {
 
 	HardwareId string
 
+	SystemSourceConfig   UpdateSourceConfig
+	SecuritySourceConfig UpdateSourceConfig
+
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
@@ -102,20 +105,23 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	}
 
 	m := &Manager{
-		service:             service,
-		config:              c,
-		updateApi:           updateApi,
-		SystemArchitectures: archs,
-		inhibitFd:           -1,
-		AutoClean:           c.AutoClean,
-		loginManager:        login1.NewManager(service.Conn()),
-		sysDBusDaemon:       ofdbus.NewDBus(service.Conn()),
-		signalLoop:          dbusutil.NewSignalLoop(service.Conn(), 10),
-		apps:                apps.NewApps(service.Conn()),
-		systemd:             systemd1.NewManager(service.Conn()),
-		sysPower:            power.NewPower(service.Conn()),
-		abObj:               abrecovery.NewABRecovery(service.Conn()),
+		service:              service,
+		config:               c,
+		updateApi:            updateApi,
+		SystemArchitectures:  archs,
+		inhibitFd:            -1,
+		AutoClean:            c.AutoClean,
+		loginManager:         login1.NewManager(service.Conn()),
+		sysDBusDaemon:        ofdbus.NewDBus(service.Conn()),
+		signalLoop:           dbusutil.NewSignalLoop(service.Conn(), 10),
+		apps:                 apps.NewApps(service.Conn()),
+		systemd:              systemd1.NewManager(service.Conn()),
+		sysPower:             power.NewPower(service.Conn()),
+		abObj:                abrecovery.NewABRecovery(service.Conn()),
+		SecuritySourceConfig: make(UpdateSourceConfig),
+		SystemSourceConfig:   make(UpdateSourceConfig),
 	}
+	m.reloadOemConfig(true)
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
@@ -870,6 +876,20 @@ func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]st
 		}
 		wg.Wait()
 	}
+}
+
+// 只有初始化和检查更新的时候，才能更新系统和安全仓库的Dir，目的是保证检查、下载、安装过程中的一致性，不受配置修改的影响
+func (m *Manager) reloadOemConfig(reloadSourceDir bool) {
+	// 更新仓库Dir
+	if reloadSourceDir {
+		m.config.ReloadSourcesDir()
+	}
+
+	// 更新 dbus 属性
+	InitConfig(m.SystemSourceConfig, m.config.SystemOemSourceConfig, m.config.SystemCustomSource)
+	InitConfig(m.SecuritySourceConfig, m.config.SecurityOemSourceConfig, m.config.SecurityCustomSource)
+	SetUsingRepoType(m.SystemSourceConfig, m.config.SystemRepoType)
+	SetUsingRepoType(m.SecuritySourceConfig, m.config.SecurityRepoType)
 }
 
 type platformCacheContent struct {

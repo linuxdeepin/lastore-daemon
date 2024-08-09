@@ -108,7 +108,8 @@ const (
 	HweSourceFile      = "/etc/apt/sources.list.d/" + HweSourceList
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList
 
-	SoftLinkSystemSourceDir = "/var/lib/lastore/SystemSource.d"           // 系统更新仓库
+	SoftLinkSystemSourceDir = "/var/lib/lastore/SystemSource.d" // 系统更新仓库
+	SecuritySourceDir       = "/var/lib/lastore/SecuritySource.d"
 	PlatFormSourceFile      = "/var/lib/lastore/platform.list"            // 从更新平台获取的仓库,为系统更新仓库,在message_report.go 中的 获取升级版本信息genUpdatePolicyByToken后即可 更新
 	UnknownSourceDir        = "/var/lib/lastore/unknownSource.d"          // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 	OtherSystemSourceDir    = "/var/lib/lastore/otherSystemSource.d"      // 其他需要检查的系统仓库
@@ -116,7 +117,7 @@ const (
 	AppendSourceDir         = "/etc/deepin/lastore-daemon/sources.list.d" // 追加仓库的路径
 )
 
-var SystemUpdateSource string = SoftLinkSystemSourceDir
+var SystemUpdateSource = SoftLinkSystemSourceDir
 
 func SetSystemUpdate(platform bool) {
 	if platform {
@@ -131,7 +132,7 @@ func GetCategorySourceMap() map[UpdateType]string {
 	return map[UpdateType]string{
 		SystemUpdate:      SystemUpdateSource,
 		AppStoreUpdate:    AppStoreSourceFile,
-		SecurityUpdate:    SecuritySourceFile,
+		SecurityUpdate:    SecuritySourceDir,
 		UnknownUpdate:     UnknownSourceDir,
 		OtherSystemUpdate: OtherSystemSourceDir,
 		OfflineUpdate:     OfflineSourceFile,
@@ -144,8 +145,8 @@ const (
 	CustomSourceDir    = "/var/lib/lastore/sources.list.d" // 历史版本遗留,已废弃
 )
 
-// UpdateSystemSourceDir systemSourceList需要list文件的绝对路径；更新系统仓库文件夹,如果从更新平台获取系统仓库,那么不需要调用这里
-func UpdateSystemSourceDir(systemSourceList []string) error {
+// UpdateSystemDefaultSourceDir systemSourceList需要list文件的绝对路径；更新系统仓库文件夹,如果从更新平台获取系统仓库,那么不需要调用这里
+func UpdateSystemDefaultSourceDir(sourceList []string) error {
 	err := os.RemoveAll(SoftLinkSystemSourceDir)
 	if err != nil {
 		logger.Warning(err)
@@ -154,12 +155,13 @@ func UpdateSystemSourceDir(systemSourceList []string) error {
 	err = os.MkdirAll(SoftLinkSystemSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
+		return err
 	}
-	if len(systemSourceList) == 0 {
-		systemSourceList = []string{UnstableSourceFile, OriginSourceFile, HweSourceFile}
+	if len(sourceList) == 0 {
+		sourceList = []string{UnstableSourceFile, OriginSourceFile, HweSourceFile}
 	}
 	// 创建对应的软链接
-	for _, filePath := range systemSourceList {
+	for _, filePath := range sourceList {
 		linkPath := filepath.Join(SoftLinkSystemSourceDir, filepath.Base(filePath))
 		err = os.Symlink(filePath, linkPath)
 		if err != nil {
@@ -167,6 +169,54 @@ func UpdateSystemSourceDir(systemSourceList []string) error {
 		}
 	}
 	return nil
+}
+
+func UpdateSecurityDefaultSourceDir(sourceList []string) error {
+	err := os.RemoveAll(SecuritySourceDir)
+	if err != nil {
+		logger.Warning(err)
+	}
+	// #nosec G301
+	err = os.MkdirAll(SecuritySourceDir, 0755)
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	if len(sourceList) == 0 {
+		sourceList = []string{SecuritySourceFile}
+	}
+	// 创建对应的软链接
+	for _, filePath := range sourceList {
+		linkPath := filepath.Join(SecuritySourceDir, filepath.Base(filePath))
+		err = os.Symlink(filePath, linkPath)
+		if err != nil {
+			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
+		}
+	}
+	return nil
+}
+
+func UpdateSourceDirUseUrl(updateType UpdateType, repoUrl []string, fileName string, annotation string) error {
+	var sourceDir string
+	switch updateType {
+	case SystemUpdate:
+		sourceDir = SoftLinkSystemSourceDir
+	case SecurityUpdate:
+		sourceDir = SecuritySourceDir
+	}
+	err := os.RemoveAll(sourceDir)
+	if err != nil {
+		logger.Warning(err)
+	}
+	// #nosec G301
+	err = os.MkdirAll(sourceDir, 0755)
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	var content string
+	content = fmt.Sprintf("## %v \n%v", annotation, strings.Join(repoUrl, "\n"))
+	return ioutil.WriteFile(filepath.Join(sourceDir, fileName), []byte(content), 0644)
 }
 
 // UpdateUnknownSourceDir 更新未知来源仓库文件夹
@@ -189,6 +239,7 @@ func UpdateUnknownSourceDir(nonUnknownList strv.Strv) error {
 	err = os.MkdirAll(UnknownSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
+		return err
 	}
 
 	var unknownSourceFilePaths []string
@@ -241,6 +292,7 @@ func UpdateOtherSystemSourceDir(otherSourceList []string) error {
 	err = os.MkdirAll(OtherSystemSourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
+		return err
 	}
 	// 创建对应的软链接
 	for _, filePath := range otherSourceList {

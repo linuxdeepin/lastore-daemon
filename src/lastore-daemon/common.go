@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"internal/config"
 	"internal/system"
 	"io/ioutil"
 	"os"
@@ -456,4 +457,39 @@ func checkSenderNsMntValid(pid uint32) bool {
 		fmt.Printf("pid 1 mnt ns is %v,pid %v mnt ns is %v\n", _initProcNsMnt, pid, strings.TrimSpace(c))
 	}()
 	return strings.TrimSpace(c) == _initProcNsMnt
+}
+
+type UpdateSourceConfig map[config.RepoType]*RepoInfo
+type RepoInfo struct {
+	/*
+		UOS_DEFAULT 对应当前dconfig配置；RepoConfig 只读；
+		OEM_DEFAULT 对应增加的OEM配置(为配置文件)，使用conf.d机制获取，取最高优先级配置；RepoConfig 只读；
+		CUSTOM 默认为空，对应外部调用工具修改的配置，存储在dconfig中,生成的source.list文件存放在/var/lib/lastore/Custom.list.d下；RepoConfig 可读写
+	*/
+	RepoShowNameZh string
+	RepoShowNameEn string
+	IsUsing        bool
+	RepoConfig     []string // "deb http://ftp.cn.debian.org/debian sid main"
+}
+
+func InitConfig(sourceConfig UpdateSourceConfig, oemRepoConfig config.OemRepoConfig, customRepo []string) {
+	sourceConfig[config.OSDefaultRepo] = &RepoInfo{}
+	sourceConfig[config.OemDefaultRepo] = &RepoInfo{
+		RepoShowNameZh: oemRepoConfig.RepoShowNameZh,
+		RepoShowNameEn: oemRepoConfig.RepoShowNameEn,
+		RepoConfig:     oemRepoConfig.RepoUrl,
+	}
+	sourceConfig[config.CustomRepo] = &RepoInfo{
+		RepoConfig: customRepo,
+	}
+}
+
+func SetUsingRepoType(sourceConfig UpdateSourceConfig, repoType config.RepoType) {
+	for k, v := range sourceConfig {
+		if k == repoType {
+			v.IsUsing = true
+		} else {
+			v.IsUsing = false
+		}
+	}
 }
