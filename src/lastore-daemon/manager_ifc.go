@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linuxdeepin/dde-api/polkit"
 	"internal/config"
 	"internal/system"
 	"internal/utils"
@@ -21,6 +20,7 @@ import (
 	"time"
 
 	"github.com/godbus/dbus"
+	"github.com/linuxdeepin/dde-api/polkit"
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -664,6 +664,25 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 	if !repoType.IsValid() {
 		return dbusutil.ToError(fmt.Errorf("invalid repo type: %v", repoType))
 	}
+	if repoType == config.CustomRepo {
+		if len(repoConfig) == 0 {
+			logger.Warning("custom repo config is invalid")
+			return dbusutil.ToError(errors.New("custom repo config is invalid"))
+		}
+		// 使用apt-get check 检查仓库时候合规
+		tmpList := fmt.Sprintf("/tmp/custom_repo_%v", time.Now().Unix())
+		err = ioutil.WriteFile(tmpList, []byte(strings.Join(repoConfig, "\n")), 0600)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			o, err := exec.Command("/usr/bin/apt-get", "check", "-o", "Debug::NoLocking=1",
+				"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", tmpList), "-o", "Dir::Etc::SourceParts=/dev/null").CombinedOutput()
+			if err != nil {
+				logger.Warning("apt-get check error", string(o))
+				return dbusutil.ToError(fmt.Errorf("repo format error:%v", string(o)))
+			}
+		}
+	}
 	// 判断是系统或安全仓库，分别设置配置
 	switch updateType {
 	case system.SystemUpdate:
@@ -705,18 +724,5 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 		return dbusutil.ToError(fmt.Errorf("not supported update type: %v to set source", updateType))
 	}
 	m.reloadOemConfig(false)
-	// 使用apt-get check 检查仓库时候合规
-	tmpList := fmt.Sprintf("/tmp/custom_repo_%v", time.Now().Unix())
-	err = ioutil.WriteFile(tmpList, []byte(strings.Join(repoConfig, "\n")), 0600)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		err = exec.Command("/usr/bin/apt-get", "check", "-o", "Debug::NoLocking=1",
-			"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", tmpList), "-o", "Dir::Etc::SourceParts=/dev/null").Run()
-		if err != nil {
-			logger.Warning("apt-get check error", err)
-			return dbusutil.ToError(errors.New("repo format error"))
-		}
-	}
 	return nil
 }
