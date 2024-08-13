@@ -168,9 +168,32 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				return "", dbusutil.ToError(abErr)
 			}
 			m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
+			handleBackupFailed := func(errMsg string) {
+				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
+				logger.Warning("ab backup failed:", errMsg)
+				// 备份失败后,需要清理原来的job,因为是监听信号,所以不能通过上面的defer处理.
+				inhibit(false)
+				err = m.CleanJob(upgradeJob.Id)
+				if err != nil {
+					logger.Warning(err)
+				}
+				m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
+				msg := gettext.Tr("Backup failed!")
+				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
+				hints := map[string]dbus.Variant{
+					"x-deepin-action-backup": dbus.MakeVariant(
+						fmt.Sprintf("dbus-send,--system,--print-reply,"+
+							"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
+					"x-deepin-action-continue": dbus.MakeVariant(
+						fmt.Sprintf("dbus-send,--system,--print-reply,"+
+							"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			}
+			var ownerChangedHandler dbusutil.SignalHandlerId
 			abHandler, err = m.abObj.ConnectJobEnd(func(kind string, success bool, errMsg string) {
 				if kind == "backup" {
 					m.abObj.RemoveHandler(abHandler)
+					m.sysDBusDaemon.RemoveHandler(ownerChangedHandler)
 					if success {
 						m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
 						// 开始更新
@@ -179,31 +202,21 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 							logger.Warning(startJobErr)
 						}
 					} else {
-						m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
-						logger.Warning("ab backup failed:", errMsg)
-						// 备份失败后,需要清理原来的job,因为是监听信号,所以不能通过上面的defer处理.
-						inhibit(false)
-						err = m.CleanJob(upgradeJob.Id)
-						if err != nil {
-							logger.Warning(err)
-						}
-						m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
-						msg := gettext.Tr("Backup failed!")
-						action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
-						hints := map[string]dbus.Variant{
-							"x-deepin-action-backup": dbus.MakeVariant(
-								fmt.Sprintf("dbus-send,--system,--print-reply,"+
-									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
-							"x-deepin-action-continue": dbus.MakeVariant(
-								fmt.Sprintf("dbus-send,--system,--print-reply,"+
-									"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						handleBackupFailed(errMsg)
 					}
 				}
 			})
 			if err != nil {
 				logger.Warning(err)
 			}
+			ownerChangedHandler, err = m.sysDBusDaemon.ConnectNameOwnerChanged(func(name string, oldOwner string, newOwner string) {
+				if strings.HasPrefix(name, "com.deepin.ABRecovery") && oldOwner != "" && newOwner == "" {
+					// ab异常退出
+					m.abObj.RemoveHandler(abHandler)
+					m.sysDBusDaemon.RemoveHandler(ownerChangedHandler)
+					handleBackupFailed("The backup process exits abnormally")
+				}
+			})
 		} else {
 			// 备份过可以直接更新
 			startJobErr = startUpgrade()
