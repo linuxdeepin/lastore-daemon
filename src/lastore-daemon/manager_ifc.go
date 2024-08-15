@@ -645,7 +645,7 @@ func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 	return nil
 }
 
-const polkitActionChangeOwnData = "com.deepin.daemon.accounts.change-own-user-data"
+const polkitActionChangeOwnData = "com.deepin.daemon.accounts.user-administration"
 
 // SetUpdateSources 设置系统、安全更新的仓库
 func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateType, repoType config.RepoType, repoConfig []string, isReset bool) *dbus.Error {
