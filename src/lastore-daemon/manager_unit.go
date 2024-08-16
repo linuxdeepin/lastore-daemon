@@ -96,14 +96,15 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
 	}
 	if m.updater.getIdleDownloadEnabled() {
+		begin, end := m.getNextIdleUnitDelay()
 		unitMap[lastoreAutoDownload] = []string{
-			fmt.Sprintf("--on-active=%d", m.getNextAutoDownloadDelay()/time.Second),
+			fmt.Sprintf("--on-active=%d", begin/time.Second),
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoDownload), // 根据用户设置的自动下载的时间段，设置自动下载开始的时间
 		}
 		unitMap[lastoreAbortAutoDownload] = []string{
-			fmt.Sprintf("--on-active=%d", m.getAbortNextAutoDownloadDelay()/time.Second),
+			fmt.Sprintf("--on-active=%d", end/time.Second),
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AbortAutoDownload), // 根据用户设置的自动下载的时间段，终止自动下载
@@ -204,6 +205,45 @@ func (m *Manager) loadUpdateSourceOnce() {
 
 }
 
+// 保存ResetIdleDownload状态
+func (m *Manager) saveResetIdleDownload() {
+	m.lastoreUnitCacheMu.Lock()
+	defer m.lastoreUnitCacheMu.Unlock()
+
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	kf.SetBool("RecordData", "ResetIdleDownload", true)
+	err = kf.SaveToFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+	}
+}
+
+// 读取ResetIdleDownload状态
+func (m *Manager) loadResetIdleDownload() {
+	m.lastoreUnitCacheMu.Lock()
+	defer m.lastoreUnitCacheMu.Unlock()
+
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile(lastoreUnitCache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	resetIdleDownload, err := kf.GetBool("RecordData", "ResetIdleDownload")
+	if err == nil {
+		m.PropsMu.Lock()
+		m.resetIdleDownload = resetIdleDownload
+		m.PropsMu.Unlock()
+	} else {
+		logger.Warning(err)
+	}
+}
+
 // 下载中断或者修改下载时间段后,需要更新timer   用户手动中断下载时，需要再第二天的设置实际重新下载   开机时间在自动下载时间段内时，
 func (m *Manager) updateAutoDownloadTimer() error {
 	err := m.updateTimerUnit(lastoreAbortAutoDownload)
@@ -274,42 +314,45 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 	return nil
 }
 
-// getNextAutoDownloadDelay 用配置时间减去当前时间，得到延迟下载任务开始时间.
-func (m *Manager) getNextAutoDownloadDelay() time.Duration {
+func (m *Manager) getNextIdleUnitDelay() (time.Duration, time.Duration) {
+	m.PropsMu.RLock()
+	defer m.PropsMu.RUnlock()
 	m.updater.PropsMu.RLock()
-	defer m.updater.PropsMu.RUnlock()
 	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
 	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
+	m.updater.PropsMu.RUnlock()
 	defer func() {
 		logger.Debug("auto download begin time duration:", beginDur)
-	}()
-	// 如果下载或者自动下载已经开始,下一次的开始时间应该为第二天时间
-	m.PropsMu.Lock()
-	defer m.PropsMu.Unlock()
-	if m.isDownloading {
-		return beginDur
-	}
-	// 如果用户开机时间在自动下载时间段内，则返回默认最小时间(立即开始)
-	if beginDur > endDur {
-		beginDur = _minDelayTime
-	}
-	return beginDur
-}
-
-// getAbortNextAutoDownloadDelay 用配置时间减去当前时间，得到终止延迟下载任务的时间.
-func (m *Manager) getAbortNextAutoDownloadDelay() time.Duration {
-	m.updater.PropsMu.RLock()
-	defer m.updater.PropsMu.RUnlock()
-	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
-	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
-	defer func() {
 		logger.Debug("auto download end time duration:", endDur)
 	}()
-	// 如果用户开机时间在自动下载时间段内,且立即开始的时间(_minDelayTime)大于结束时间,则结束时间为两倍最小时间
-	if beginDur > endDur && endDur <= _minDelayTime {
-		endDur = _minDelayTime * 2
+	// 修改idle配置或初始化时
+	if m.resetIdleDownload {
+		if beginDur <= 0 && endDur > 0 {
+			// 当前时间处于idle时间段内,即刻开始
+			beginDur = _minDelayTime
+		}
+		if beginDur <= 0 && endDur <= 0 {
+			beginDur += 24 * time.Hour
+			endDur += 24 * time.Hour
+		}
+		if beginDur > 0 && endDur > 0 {
+			// idle时间段还没到
+		}
+		if beginDur > 0 && endDur <= 0 {
+			// 不可能触发这种场景
+			panic("EndTime < BeginTime")
+		}
+	} else { // 响应事件时
+		if beginDur < 0 {
+			// 开始间隔小于0证明是下载开始事件,下一次下载开始时间在24小时之后
+			beginDur += 24 * time.Hour
+		}
+		if endDur < 0 {
+			// 结束间隔小于0证明是下载结束事件,下一次下载结束时间在24小时之后
+			endDur += 24 * time.Hour
+		}
 	}
-	return endDur
+	return beginDur, endDur
 }
 
 func (m *Manager) handleAutoDownload() {
@@ -373,6 +416,7 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 		if m.updater.getIdleDownloadEnabled() { // 如果自动下载关闭,则空闲下载同样会关闭
 			m.handleAutoDownload()
 			go func() {
+				m.resetIdleDownload = false
 				err := m.updateAutoDownloadTimer()
 				if err != nil {
 					logger.Warning(err)
@@ -383,6 +427,7 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 		if m.updater.getIdleDownloadEnabled() {
 			m.handleAbortAutoDownload()
 			go func() {
+				m.resetIdleDownload = false
 				err := m.updateAutoDownloadTimer()
 				if err != nil {
 					logger.Warning(err)

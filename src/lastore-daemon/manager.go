@@ -90,6 +90,8 @@ type Manager struct {
 
 	checkDpkgCapabilityOnce sync.Once
 	supportDpkgScriptIgnore bool
+
+	resetIdleDownload bool
 }
 
 /*
@@ -120,6 +122,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		abObj:                abrecovery.NewABRecovery(service.Conn()),
 		SecuritySourceConfig: make(UpdateSourceConfig),
 		SystemSourceConfig:   make(UpdateSourceConfig),
+		resetIdleDownload:    true,
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()

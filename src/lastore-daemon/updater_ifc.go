@@ -182,6 +182,7 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 			}
 			changed := u.setPropIdleDownloadConfig(string(config))
 			if changed {
+				u.manager.resetIdleDownload = true
 				err = u.config.SetIdleDownloadConfig(string(config))
 				if err != nil {
 					logger.Warning(err)

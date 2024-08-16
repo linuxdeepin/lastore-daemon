@@ -129,7 +129,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		}
 		j.realRunningHookFn = func() {
 			m.PropsMu.Lock()
-			m.isDownloading = true
 			m.PropsMu.Unlock()
 			m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
 			sendDownloadingOnce.Do(func() {
@@ -150,7 +149,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			},
 			string(system.FailedStatus): func() error {
 				m.PropsMu.Lock()
-				m.isDownloading = false
 				packages := m.UpgradableApps
 				m.PropsMu.Unlock()
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
@@ -227,9 +225,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.EndStatus): func() error {
 				if j.next == nil {
 					logger.Info("running in last end hook")
-					m.PropsMu.Lock()
-					m.isDownloading = false
-					m.PropsMu.Unlock()
 					// 如果出现单项失败,其他的状态需要修改,IsDownloading->notDownload
 					// 如果已经有单项下载完成,然后取消下载,DownloadPause->notDownload
 					m.statusManager.SetUpdateStatus(mode, system.NotDownload)

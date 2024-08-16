@@ -184,11 +184,13 @@ func (m *Manager) inhibitAutoQuitCountAdd() {
 
 func (m *Manager) loadLastoreCache() {
 	m.loadUpdateSourceOnce()
+	m.loadResetIdleDownload()
 	// m.loadCacheJob()
 }
 
 func (m *Manager) saveLastoreCache() {
 	m.saveUpdateSourceOnce()
+	m.saveResetIdleDownload()
 	m.userAgents.saveRecordContent(userAgentRecordPath)
 }
 

@@ -244,14 +244,7 @@ func getCustomTimeDuration(presetTime string) time.Duration {
 		logger.Warning(err)
 		return _minDelayTime
 	}
-	dur := presetTimer.Sub(nowTimer)
-	if dur <= 0 {
-		dur += 24 * time.Hour
-	}
-	if dur < _minDelayTime {
-		dur = _minDelayTime
-	}
-	return dur
+	return presetTimer.Sub(nowTimer)
 }
 
 const (
