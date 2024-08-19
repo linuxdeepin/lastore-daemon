@@ -462,6 +462,19 @@
       "description[zh_CN]": "安全更新仓库类型",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "support-set-repo": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "SupportSetRepo",
+      "name[zh_CN]": "支持设置仓库",
+      "description": "support set repo",
+      "description[zh_CN]": "支持设置仓库",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }
