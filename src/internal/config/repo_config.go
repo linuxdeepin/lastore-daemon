@@ -113,27 +113,21 @@ func (c *Config) recoveryAndApplyOemFlag(typ system.UpdateType) error {
 	var flagFilePath string
 	var backupListPath string
 	var recoveryListPath string
-	var applyFunc func()
+	var applyFunc func() error
 	switch typ {
 	case system.SystemUpdate:
 		flagFilePath = filepath.Join(OemRepoDirPath, UseOemSystemRepoFlagFile)
 		backupListPath = BackupOemSystemSourceListFilePath
 		recoveryListPath = system.OriginSourceFile
-		applyFunc = func() {
-			err := c.SetSystemRepoType(OemDefaultRepo)
-			if err != nil {
-				logger.Warning(err)
-			}
+		applyFunc = func() error {
+			return c.SetSystemRepoType(OemDefaultRepo)
 		}
 	case system.SecurityUpdate:
 		flagFilePath = filepath.Join(OemRepoDirPath, UseOemSecurityRepoFlagFile)
 		backupListPath = BackupOemSecuritySourceListFilePath
 		recoveryListPath = system.SecuritySourceFile
-		applyFunc = func() {
-			err := c.SetSecurityRepoType(OemDefaultRepo)
-			if err != nil {
-				logger.Warning(err)
-			}
+		applyFunc = func() error {
+			return c.SetSecurityRepoType(OemDefaultRepo)
 		}
 	default:
 		return fmt.Errorf("invalid oem update type: %v", typ)
@@ -142,7 +136,6 @@ func (c *Config) recoveryAndApplyOemFlag(typ system.UpdateType) error {
 		logger.Infof("flag: %v not exist, don't need to apply oem setting", flagFilePath)
 		return nil
 	}
-	applyFunc()
 
 	if !utils2.IsFileExist(backupListPath) {
 		logger.Infof("backup file :%v not exist, don't need to recovery source list", backupListPath)
@@ -151,6 +144,11 @@ func (c *Config) recoveryAndApplyOemFlag(typ system.UpdateType) error {
 		if err != nil {
 			logger.Warning(err)
 		}
+	}
+	err := applyFunc()
+	if err != nil {
+		logger.Warning(err)
+		return err
 	}
 	return os.RemoveAll(flagFilePath)
 }
