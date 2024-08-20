@@ -131,6 +131,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"option"},
 		},
 		{
+			Name:   "PowerOff",
+			Fn:     v.PowerOff,
+			InArgs: []string{"reboot"},
+		},
+		{
 			Name:    "QueryAllSizeWithSource",
 			Fn:      v.QueryAllSizeWithSource,
 			InArgs:  []string{"mode"},
@@ -233,6 +238,11 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "SetIdleDownloadConfig",
 			Fn:     v.SetIdleDownloadConfig,
 			InArgs: []string{"idleConfig"},
+		},
+		{
+			Name:   "SetInstallUpdateTime",
+			Fn:     v.SetInstallUpdateTime,
+			InArgs: []string{"time"},
 		},
 		{
 			Name:   "SetMirrorSource",

@@ -94,7 +94,11 @@ func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNe
 		}
 		item.lang = uidInfo.Lang
 	}
-	gettext.SetLocale(gettext.LcAll, m.getActiveLastoreAgentLang())
+	lang := m.getActiveLastoreAgentLang()
+	if len(lang) != 0 {
+		logger.Info("SetLocale", lang)
+		gettext.SetLocale(gettext.LcAll, lang)
+	}
 }
 
 func (m *userAgentMap) addAgent(uid string, agent lastoreAgent.Agent) {
@@ -199,7 +203,11 @@ func (m *userAgentMap) addSession(uid string, session login1.Session) bool {
 	item, ok := m.uidItemMap[uid]
 	if !ok {
 		logger.Infof("not uid:%v item", uid)
-		return false
+		m.uidItemMap[uid] = &sessionAgentMapItem{
+			sessions: make(map[dbus.ObjectPath]login1.Session),
+			agents:   make(map[dbus.ObjectPath]lastoreAgent.Agent),
+		}
+		item, ok = m.uidItemMap[uid]
 	}
 
 	_, ok = item.sessions[session.Path_()]

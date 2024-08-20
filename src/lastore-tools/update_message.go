@@ -55,7 +55,9 @@ func maskLogfile(file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer inputFile.Close()
+	defer func() {
+		_ = inputFile.Close()
+	}()
 
 	outputFilePath := "/tmp/" + filepath.Base(file)
 	// 创建新文件
@@ -63,8 +65,9 @@ func maskLogfile(file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer outputFile.Close()
-
+	defer func() {
+		_ = outputFile.Close()
+	}()
 	switch file {
 	case aptHistoryLog:
 		// 使用scanner的话，一行太长会报错
@@ -78,7 +81,10 @@ func maskLogfile(file string) (string, error) {
 
 			// 写入新文件
 			if err != nil {
-				io.WriteString(outputFile, line)
+				_, err = io.WriteString(outputFile, line)
+				if err != nil {
+					logger.Warning(err)
+				}
 				break
 			} else {
 				_, err = io.WriteString(outputFile, line)
@@ -191,7 +197,7 @@ func UpdateMonitor() error {
 		return err
 	}
 	needReport := make(chan bool)
-	for _, path := range monitorPath {
+	for _, mPath := range monitorPath {
 		go func(path string) {
 			// 两个path只会执行一个,但是得同时监听两个
 			err := monitorJobStatusChange(path)
@@ -201,7 +207,7 @@ func UpdateMonitor() error {
 			} else {
 				needReport <- false
 			}
-		}(path)
+		}(mPath)
 	}
 	res := <-needReport
 	if res {

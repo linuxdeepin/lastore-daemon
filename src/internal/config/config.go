@@ -33,6 +33,20 @@ const (
 	ForceUpdate   LastoreDaemonStatus = 1 << 2 // 关机强制更新
 )
 
+type DisabledStatus uint32
+
+const (
+	DisabledUnknown         DisabledStatus = 1 << 0 // 禁用重启后的检查项，1063前的版本不兼容需要禁用 // 该配置项不作为配置生效
+	DisabledVersion         DisabledStatus = 1 << 1 // 禁用version请求
+	DisabledUpdateLog       DisabledStatus = 1 << 2 // 禁用systemupdatelogs请求
+	DisabledTargetPkgLists  DisabledStatus = 1 << 3
+	DisabledCurrentPkgLists DisabledStatus = 1 << 4
+	DisabledPkgCVEs         DisabledStatus = 1 << 5
+	DisabledProcess         DisabledStatus = 1 << 6
+	DisabledResult          DisabledStatus = 1 << 7
+	DisabledRebootCheck     DisabledStatus = 1 << 8 // 禁用重启后的检查项，1063前的版本不兼容需要禁用
+)
+
 type Config struct {
 	Version               string
 	AutoCheckUpdates      bool
@@ -74,13 +88,20 @@ type Config struct {
 	UpdateStatus             string
 	PlatformUpdate           bool
 
-	PlatformUrl     string // 更新接口地址
-	CheckPolicyCron string // 策略检查间隔
-	StartCheckRange []int  // 开机检查更新区间
-	IncludeDiskInfo bool   // machineID是否包含硬盘信息
+	PlatformUrl        string // 更新接口地址
+	CheckPolicyCron    string // 策略检查间隔
+	StartCheckRange    []int  // 开机检查更新区间
+	IncludeDiskInfo    bool   // machineID是否包含硬盘信息
+	PostUpgradeCron    string // 更新上报间隔
+	UpdateTime         string // 定时更新
+	PlatformDisabled   DisabledStatus
+	EnableVersionCheck bool
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
+
+	EnableCoreList    bool
+	ClientPackageName string
 
 	SystemCustomSource      []string      // 系统更新自定义仓库内容
 	SecurityCustomSource    []string      // 安全更新自定义仓库内容
@@ -167,6 +188,12 @@ const (
 	dSettingsKeyCheckPolicyOnCalendar                = "check-policy-on-calendar"
 	dSettingsKeyStartCheckRange                      = "start-check-range"
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
+	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
+	dSettingsKeyUpdateTime                           = "update-time"
+	dSettingsKeyPlatformDisabled                     = "platform-disabled"
+	dSettingsKeyEnableVersionCheck                   = "enable-version-check"
+	dSettingsKeyEnableCoreList                       = "enable-core-list"
+	dSettingsKeyClientPackageName                    = "client-package-name"
 	dSettingsKeySystemCustomSource                   = "system-custom-source"
 	dSettingsKeySecurityCustomSource                 = "security-custom-source"
 	dSettingsKeySystemRepoType                       = "system-repo-type"
@@ -483,6 +510,13 @@ func getConfigFromDSettings() *Config {
 		c.CheckPolicyCron = v.Value().(string)
 	}
 
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPostUpgradeOnCalendar)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.PostUpgradeCron = v.Value().(string)
+	}
+
 	var checkRange []float64
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
 	if err != nil {
@@ -509,6 +543,40 @@ func getConfigFromDSettings() *Config {
 		c.IncludeDiskInfo = true
 	} else {
 		c.IncludeDiskInfo = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateTime)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.UpdateTime = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformDisabled)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.PlatformDisabled = DisabledStatus(v.Value().(float64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableVersionCheck)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.EnableVersionCheck = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableCoreList)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.EnableCoreList = v.Value().(bool)
+	}
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyClientPackageName)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.ClientPackageName = v.Value().(string)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemCustomSource)
@@ -786,6 +854,11 @@ func (c *Config) SetUpdateStatus(status string) error {
 	return c.save(dSettingsKeyUpdateStatus, status)
 }
 
+func (c *Config) SetInstallUpdateTime(delayed string) error {
+	c.UpdateTime = delayed
+	return c.save(dSettingsKeyUpdateTime, c.UpdateTime)
+}
+
 func (c *Config) SetSystemCustomSource(sources []string) error {
 	c.SystemCustomSource = sources
 	return c.save(dSettingsKeySystemCustomSource, sources)
@@ -824,6 +897,10 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 func (c *Config) SetOnlineCache(cache string) error {
 	c.OnlineCache = cache
 	return ioutil.WriteFile(onlineCachePath, []byte(cache), 0644)
+}
+
+func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {
+	return c.PlatformDisabled&status == status
 }
 
 func (c *Config) save(key string, v interface{}) error {

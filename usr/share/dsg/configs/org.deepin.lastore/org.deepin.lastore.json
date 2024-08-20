@@ -382,6 +382,19 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "post-upgrade-on-calendar": {
+      "value": "*:0/30",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "PostUpgradeOnCalendar",
+      "description": "post upgrade on calendar",
+      "name[zh_CN]": "更新上报间隔",
+      "description[zh_CN]": "更新上报间隔 systemd定时器里的OnCalendar参数",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "start-check-range": {
       "value": [
         1800,
@@ -409,6 +422,68 @@
       "name[zh_CN]": "包含硬盘信息",
       "description[zh_CN]": "机器ID是否包含硬盘信息",
       "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "update-time": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpdateTime",
+      "description": "Update Time",
+      "name[zh_CN]": "定时更新",
+      "description[zh_CN]": "定时更新",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "platform-disabled":{
+      "value": 1,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "PlatformDisabledReport",
+      "description": "Disabled report of using the platform to update",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "enable-version-check": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "EnableVersionCheck",
+      "description": "enable version check to handle action",
+      "description[zh_CN]": "是否开启关于版本号的判断",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "enable-core-list": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "EnableCoreList",
+      "description": "enable core list",
+      "name[zh_CN]": "更新内容是否关联核心包清单",
+      "description[zh_CN]": "更新内容是否关联核心包清单",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "client-package-name": {
+      "value": "lastore-daemon",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "ClientPackageName",
+      "description": "client package name",
+      "name[zh_CN]": "更新客户端包名",
+      "description[zh_CN]": "更新客户端包名",
+      "permissions": "readonly",
       "visibility": "private"
     },
     "system-custom-source": {

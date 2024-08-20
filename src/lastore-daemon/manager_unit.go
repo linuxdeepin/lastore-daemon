@@ -13,6 +13,7 @@ import (
 	"internal/updateplatform"
 	"math/rand"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/godbus/dbus"
@@ -34,12 +35,14 @@ func isFirstBoot() bool {
 type systemdEventType string
 
 const (
-	AutoCheck          systemdEventType = "AutoCheck"
-	AutoClean          systemdEventType = "AutoClean"
-	UpdateInfosChanged systemdEventType = "UpdateInfosChanged"
-	OsVersionChanged   systemdEventType = "OsVersionChanged"
-	AutoDownload       systemdEventType = "AutoDownload"
-	AbortAutoDownload  systemdEventType = "AbortAutoDownload"
+	AutoCheck              systemdEventType = "AutoCheck"
+	AutoClean              systemdEventType = "AutoClean"
+	UpdateInfosChanged     systemdEventType = "UpdateInfosChanged"
+	OsVersionChanged       systemdEventType = "OsVersionChanged"
+	AutoDownload           systemdEventType = "AutoDownload"
+	AbortAutoDownload      systemdEventType = "AbortAutoDownload"
+	UpdateTimer            systemdEventType = "UpdateTimer"
+	RetryPostUpgradeResult systemdEventType = "RetryPostUpgradeResult"
 )
 
 type UnitName string
@@ -54,6 +57,8 @@ const (
 	lastoreAbortAutoDownload UnitName = "lastoreAbortAutoDownload"
 	lastoreRegularlyUpdate   UnitName = "lastoreRegularlyUpdate" // 到触发时间后开始检查更新->下载更新->安装更新
 	lastoreCronCheck         UnitName = "lastoreCronCheck"
+	lastorePostUpgrade       UnitName = "lastorePostUpgrade"
+	lastoreRetryPostMsg      UnitName = "lastoreRetryPostMsg"
 )
 
 type lastoreUnitMap map[UnitName][]string
@@ -71,7 +76,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		}
 		unitMap[lastoreAutoCheck] = []string{
 			// 随机数范围1800-21600，时间为0.5~6小时
-			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0]),
+			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0]),
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
@@ -110,23 +115,32 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AbortAutoDownload), // 根据用户设置的自动下载的时间段，终止自动下载
 		}
 	}
-	if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
+	// PostUpgradeCron 可以配置为*:0/30,每小时的0分和30分触发一次
+	if len(strings.TrimSpace(m.config.PostUpgradeCron)) > 0 {
+		unitMap[lastoreRetryPostMsg] = []string{
+			fmt.Sprintf("--unit=%s", lastoreRetryPostMsg),
+			fmt.Sprintf(`--on-calendar=%v`, m.config.PostUpgradeCron),
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, RetryPostUpgradeResult), // 定时上报更新结果
+		}
+	}
+	updateTime, err := time.Parse(time.RFC3339, m.config.UpdateTime)
+	if err == nil {
+		nowTime := time.Now()
+		updateTime = time.Date(nowTime.Year(), nowTime.Month(), nowTime.Day(), updateTime.Hour(), updateTime.Minute(), 0, 0, nowTime.Location())
+		if updateTime.Before(nowTime) {
+			updateTime = updateTime.Add(time.Duration(24) * time.Hour)
+		}
+		// 提前60s触发
 		unitMap[lastoreRegularlyUpdate] = []string{
-			// 提前60s触发，服务器会更新定时时间
-			fmt.Sprintf("--on-active=%d", int(m.updatePlatform.UpdateTime.Sub(time.Now())/time.Second-60)),
+			fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60)),
 			"/bin/bash",
 			"-c",
 			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck),
 		}
 	}
-	if len(m.config.CheckPolicyCron) != 0 { // 需要按照间隔让lastore-tools刷新policy数据
-		unitMap[lastoreCronCheck] = []string{
-			fmt.Sprintf(`--on-calendar=%v`, m.config.CheckPolicyCron),
-			"/bin/bash",
-			"-c",
-			"/usr/bin/lastore-tools checkpolicy",
-		}
-	}
+
 	return unitMap
 }
 
@@ -202,7 +216,6 @@ func (m *Manager) loadUpdateSourceOnce() {
 	} else {
 		logger.Warning(err)
 	}
-
 }
 
 // 保存ResetIdleDownload状态
@@ -355,6 +368,29 @@ func (m *Manager) getNextIdleUnitDelay() (time.Duration, time.Duration) {
 	return beginDur, endDur
 }
 
+func (m *Manager) startCheckPolicyTask() {
+	if len(m.config.CheckPolicyCron) == 0 {
+		logger.Info("config: not CheckPolicyCron")
+		return
+	}
+	args := []string{
+		fmt.Sprintf("--unit=%s", lastoreCronCheck),
+		fmt.Sprintf(`--on-calendar=%v`, m.config.CheckPolicyCron),
+		"/bin/bash",
+		"-c",
+		"lastore-tools checkpolicy", // 定时检查policy变化
+	}
+	cmd := exec.Command(run, args...)
+	logger.Info(cmd.String())
+	var errBuffer bytes.Buffer
+	cmd.Stderr = &errBuffer
+	err := cmd.Run()
+	if err != nil {
+		logger.Warning(err)
+		logger.Warning(errBuffer.String())
+	}
+}
+
 func (m *Manager) handleAutoDownload() {
 	_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 	if err != nil {
@@ -399,6 +435,7 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 			if err != nil {
 				logger.Warning(err)
 			}
+			m.startCheckPolicyTask() // 在第一次自动检查更新后再加任务
 		}()
 	case AutoClean:
 		go func() {
@@ -434,6 +471,18 @@ func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error 
 				}
 			}()
 		}
+	case UpdateTimer:
+		go func() {
+			// 触发检查更新，检查更新时会处理定时更新
+			_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]), m.updater.UpdateNotify)
+			if err != nil {
+				logger.Warning(err)
+			}
+		}()
+	case RetryPostUpgradeResult:
+		go func() {
+			m.updatePlatform.RetryPostHistory()
+		}()
 	default:
 		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
 	}

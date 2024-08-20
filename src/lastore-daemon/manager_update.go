@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/godbus/dbus"
+	"github.com/linuxdeepin/go-lib/gettext"
 	"internal/system"
 	"internal/system/apt"
 	"internal/updateplatform"
@@ -13,13 +15,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	debVersion "pault.ag/go/debian/version"
 	"strings"
 	"sync"
-
-	"github.com/godbus/dbus"
-	"github.com/linuxdeepin/go-lib/gettext"
-	utils2 "github.com/linuxdeepin/go-lib/utils"
-	debVersion "pault.ag/go/debian/version"
 )
 
 func prepareUpdateSource() {
@@ -242,106 +240,6 @@ func (m *Manager) updateSource(sender dbus.Sender, needNotify bool) (*Job, error
 	return job, nil
 }
 
-const (
-	coreListPath    = "/usr/share/core-list/corelist"
-	coreListVarPath = "/var/lib/lastore/corelist"
-	coreListPkgName = "deepin-package-list"
-)
-
-// 下载并解压coreList
-func downloadAndDecompressCoreList() (string, error) {
-	downloadPackages := []string{coreListPkgName}
-	systemSource := system.GetCategorySourceMap()[system.SystemUpdate]
-	var options map[string]string
-	if info, err := os.Stat(systemSource); err == nil {
-		if info.IsDir() {
-			options = map[string]string{
-				"Dir::Etc::SourceList":  "/dev/null",
-				"Dir::Etc::SourceParts": systemSource,
-			}
-		} else {
-			options = map[string]string{
-				"Dir::Etc::SourceList":  systemSource,
-				"Dir::Etc::SourceParts": "/dev/null",
-			}
-		}
-	}
-	downloadPkg, err := apt.DownloadPackages(downloadPackages, nil, options)
-	if err != nil {
-		// 下载失败则直接去本地目录查找
-		logger.Warningf("download %v failed:%v", downloadPackages, err)
-		return coreListPath, nil
-	}
-	// 去下载路径查找
-	files, err := ioutil.ReadDir(downloadPkg)
-	if err != nil {
-		return "", err
-	}
-	var debFile string
-	for _, file := range files {
-		if strings.HasPrefix(file.Name(), coreListPkgName) && strings.HasSuffix(file.Name(), ".deb") {
-			debFile = filepath.Join(downloadPkg, file.Name())
-			break
-		}
-	}
-	if debFile != "" {
-		tmpDir, err := ioutil.TempDir("/tmp", coreListPkgName+".XXXXXX")
-		if err != nil {
-			return "", err
-		}
-		cmd := exec.Command("dpkg-deb", "-x", debFile, tmpDir)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		err = cmd.Run()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(tmpDir, coreListPath), nil
-	} else {
-		return "", fmt.Errorf("coreList deb not found")
-	}
-}
-
-type Package struct {
-	PkgName string `json:"PkgName"`
-	Version string `json:"Version"`
-}
-
-type PackageList struct {
-	PkgList []Package `json:"PkgList"`
-	Version string    `json:"Version"`
-}
-
-func parseCoreList() ([]string, error) {
-	// 1. download coreList to /var/cache/lastore/archives/
-	// 2. 使用dpkg-deb解压deb得到coreList文件
-	coreFilePath, err := downloadAndDecompressCoreList()
-	if err != nil {
-		return nil, err
-	}
-	// 将coreList 备份到/var/lib/lastore/中
-	err = utils2.CopyFile(coreFilePath, coreListVarPath)
-	if err != nil {
-		logger.Warning("backup coreList failed:", err)
-	}
-	// 3. 解析文件获取coreList必装列表
-	data, err := ioutil.ReadFile(coreFilePath)
-	if err != nil {
-		return nil, err
-	}
-	var pkgList PackageList
-	err = json.Unmarshal(data, &pkgList)
-	if err != nil {
-		return nil, err
-	}
-	var pkgs []string
-	for _, pkg := range pkgList.PkgList {
-		pkgs = append(pkgs, pkg.PkgName)
-	}
-	return pkgs, nil
-}
-
 // 暂时废弃获取可更新列表的详细信息
 var getUpgradablePackageListMap = map[system.UpdateType]func([]string) (map[string]system.PackageInfo, map[string]system.PackageInfo, error){
 	system.SystemUpdate:   getSystemUpgradablePackagesMap,
@@ -545,18 +443,24 @@ func listDistUpgradePackages(updateType system.UpdateType) ([]string, error) {
 	return apt.ListDistUpgradePackages(sourcePath, nil)
 }
 
+func (m *Manager) getCoreList(online bool) []string {
+	if !m.config.EnableCoreList {
+		return nil
+	}
+	if online {
+		return getCoreListOnline()
+	}
+	return getCoreListFromCache()
+}
+
+const TimeOnly = "15:04:05"
+
 func (m *Manager) refreshUpdateInfos(sync bool) {
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
 		// 检查更新后，先下载解析coreList，获取必装清单
-		coreList, err := parseCoreList()
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			m.coreList = coreList
-			logger.Debug("generateUpdateInfo get coreList:", coreList)
-		}
-
+		m.coreList = m.getCoreList(true)
+		logger.Debug("generateUpdateInfo get coreList:", m.coreList)
 		for _, e := range m.generateUpdateInfo() {
 			go func() {
 				m.inhibitAutoQuitCountAdd()
@@ -569,23 +473,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		m.statusManager.UpdateModeAllStatusBySize(m.coreList)
 		m.statusManager.UpdateCheckCanUpgradeByEachStatus()
 	} else {
-		// 初始化时获取coreList数据
-		data, err := ioutil.ReadFile(coreListVarPath)
-		if err != nil {
-			logger.Warning(err)
-			return
-		}
-		var pkgList PackageList
-		err = json.Unmarshal(data, &pkgList)
-		if err != nil {
-			logger.Warning(err)
-			return
-		}
-		var pkgs []string
-		for _, pkg := range pkgList.PkgList {
-			pkgs = append(pkgs, pkg.PkgName)
-		}
-		m.coreList = pkgs
+		m.coreList = m.getCoreList(false)
 		go func() {
 			// 刷新一下包信息
 			if isFirstBoot() {
@@ -614,6 +502,14 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}
 			m.inhibitAutoQuitCountSub()
 		}()
+		if !m.updatePlatform.UpdateNowForce && !m.updatePlatform.UpdateTime.IsZero() {
+			timeStr := m.updatePlatform.UpdateTime.Format(TimeOnly)
+			if timeStr != m.updateTime {
+				m.updateTime = timeStr
+				msg := fmt.Sprintf(gettext.Tr("The computer will be updated at %s"), m.updateTime)
+				go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			}
+		}
 		if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
 			_ = m.updateTimerUnit(lastoreRegularlyUpdate)
 		}

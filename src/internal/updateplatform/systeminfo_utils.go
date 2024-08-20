@@ -63,6 +63,7 @@ type SystemInfo struct {
 	Baseline        string
 	SystemType      string
 	MachineType     string
+	Mac             string
 }
 
 const (
@@ -89,7 +90,7 @@ func getSystemInfo(includeDiskInfo bool) SystemInfo {
 			".")
 	}
 
-	systemInfo.HardwareId, err = GetHardwareId(includeDiskInfo)
+	systemInfo.HardwareId = GetHardwareId(includeDiskInfo)
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
 	}
@@ -133,6 +134,10 @@ func getSystemInfo(includeDiskInfo bool) SystemInfo {
 	systemInfo.Baseline = getCurrentBaseline()
 	systemInfo.SystemType = getCurrentSystemType()
 	systemInfo.MachineType = getMachineType()
+	systemInfo.Mac, err = getDefaultMac()
+	if err != nil {
+		logger.Warning("failed to get Mac:", err)
+	}
 	return systemInfo
 }
 
@@ -184,13 +189,14 @@ func GetOSVersionInfo(filePath string) (map[string]string, error) {
 	return osVersionInfoMap, nil
 }
 
-func GetHardwareId(includeDiskInfo bool) (string, error) {
+func GetHardwareId(includeDiskInfo bool) string {
 	hhardware.IncludeDiskInfo = includeDiskInfo
 	machineID, err := hhardware.GenMachineID()
 	if err != nil {
-		return "", err
+		logger.Warningf("failed to get hardware id: %v ", err.Error())
+		return ""
 	}
-	return machineID, nil
+	return machineID
 }
 
 func getProcessorModelName() (string, error) {
@@ -478,6 +484,7 @@ func UpdateTokenConfigFile(includeDiskInfo bool) string {
 	tokenSlice = append(tokenSlice, "baseline="+systemInfo.Baseline)
 	tokenSlice = append(tokenSlice, "st="+systemInfo.SystemType)
 	tokenSlice = append(tokenSlice, "mt="+systemInfo.MachineType)
+	tokenSlice = append(tokenSlice, "mac="+systemInfo.Mac)
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
@@ -486,4 +493,39 @@ func UpdateTokenConfigFile(includeDiskInfo bool) string {
 		logger.Warning(err)
 	}
 	return token
+}
+
+func getDefaultMac() (string, error) {
+	res, err := exec.Command("route").Output()
+	if err != nil {
+		return "", err
+	}
+	lines := strings.Split(string(res), "\n")
+	var dev string
+	for _, line := range lines {
+		if strings.Contains(line, "default") {
+			devs := strings.Split(line, " ")
+			dev = devs[len(devs)-1]
+			break
+		}
+	}
+	if len(dev) == 0 {
+		return "", nil
+	}
+
+	mac, err := ioutil.ReadFile("/sys/class/net/" + dev + "/address")
+	if err != nil {
+		return "", err
+	}
+	return string(mac), nil
+}
+
+func getClientPackageInfo(client string) string {
+	o, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Version}", "--", client).Output()
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+
+	return fmt.Sprintf("client=%v&version=%v", client, string(o))
 }

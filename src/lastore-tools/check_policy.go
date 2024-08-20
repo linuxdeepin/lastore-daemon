@@ -76,40 +76,42 @@ func MainCheckPolicy(c *cli.Context) error {
 	}
 	logger.Debug("Check old time:", oldTime)
 	response, err := genVersionResponse(config)
-	if err == nil {
-		defer func() {
-			_ = response.Body.Close()
-		}()
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			logger.Warning(err)
-			return nil
-		}
-		logger.Info(response.Body)
-		if response.StatusCode == 200 {
-			sum := md5.Sum(body)
-			newSum := hex.EncodeToString(sum[:])
-			if oldSum != newSum {
-				writeFile, err := os.OpenFile(cacheFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-				if err == nil {
-					defer writeFile.Close()
-					writeFile.WriteString(newSum)
-					writeFile.WriteString("\n")
-					writeFile.WriteString(nowTime.Format(time.RFC3339))
-					writeFile.WriteString("\n")
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	defer func() {
+		_ = response.Body.Close()
+	}()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	logger.Debug(string(body))
+	if response.StatusCode == 200 {
+		sum := md5.Sum(body)
+		newSum := hex.EncodeToString(sum[:])
+		logger.Debug("new md5 sum: ", newSum)
+		if oldSum != newSum {
+			writeFile, err := os.OpenFile(cacheFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+			if err == nil {
+				defer writeFile.Close()
+				_, _ = writeFile.WriteString(newSum)
+				_, _ = writeFile.WriteString("\n")
+				_, _ = writeFile.WriteString(nowTime.Format(time.RFC3339))
+				_, _ = writeFile.WriteString("\n")
+			}
+			sysBus, err := dbus.SystemBus()
+			if err == nil {
+				err = sysBus.Object("com.deepin.lastore", "/com/deepin/lastore").Call(
+					"com.deepin.lastore.Manager.UpdateSource", 0).Err
+				if err != nil {
+					logger.Warning(err)
 				}
-				// oldSum为空时，只保存缓存(此时为刚启动，lastore-daemon会检查一次更新)，不为空时才拉起lastore-daemon
-				if len(oldSum) != 0 {
-					sysBus, err := dbus.SystemBus()
-					if err == nil {
-						_ = sysBus.Object("com.deepin.lastore", dbus.ObjectPath("/com/deepin/lastore")).Call(
-							"com.deepin.lastore.Manager.UpdateSource", 0).Err
-					}
-				}
+
 			}
 		}
-	} else {
-		logger.Warning(err)
 	}
 	return nil
 }

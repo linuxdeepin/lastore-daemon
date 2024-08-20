@@ -207,6 +207,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 			job = commonJob
 		} else {
 			job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
+			job.updateTyp = mode
 			job._InitProgressRange(0, 0.99)
 		}
 

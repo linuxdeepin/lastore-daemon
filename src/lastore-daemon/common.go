@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"internal/config"
 	"internal/system"
+	"internal/system/apt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -426,6 +428,129 @@ func checkSupportDpkgScriptIgnore() bool {
 		return false
 	}
 	return true
+}
+
+const (
+	coreListPath    = "/usr/share/core-list/corelist"
+	coreListVarPath = "/var/lib/lastore/corelist"
+	coreListPkgName = "deepin-package-list"
+)
+
+// 下载并解压coreList
+func downloadAndDecompressCoreList() (string, error) {
+	downloadPackages := []string{coreListPkgName}
+	systemSource := system.GetCategorySourceMap()[system.SystemUpdate]
+	var options map[string]string
+	if info, err := os.Stat(systemSource); err == nil {
+		if info.IsDir() {
+			options = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": systemSource,
+			}
+		} else {
+			options = map[string]string{
+				"Dir::Etc::SourceList":  systemSource,
+				"Dir::Etc::SourceParts": "/dev/null",
+			}
+		}
+	}
+	downloadPkg, err := apt.DownloadPackages(downloadPackages, nil, options)
+	if err != nil {
+		// 下载失败则直接去本地目录查找
+		logger.Warningf("download %v failed:%v", downloadPackages, err)
+		return coreListPath, nil
+	}
+	// 去下载路径查找
+	files, err := ioutil.ReadDir(downloadPkg)
+	if err != nil {
+		return "", err
+	}
+	var debFile string
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), coreListPkgName) && strings.HasSuffix(file.Name(), ".deb") {
+			debFile = filepath.Join(downloadPkg, file.Name())
+			break
+		}
+	}
+	if debFile != "" {
+		tmpDir, err := ioutil.TempDir("/tmp", coreListPkgName+".XXXXXX")
+		if err != nil {
+			return "", err
+		}
+		cmd := exec.Command("dpkg-deb", "-x", debFile, tmpDir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err = cmd.Run()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(tmpDir, coreListPath), nil
+	} else {
+		return "", fmt.Errorf("coreList deb not found")
+	}
+}
+
+func getCoreListFromCache() []string {
+	// 初始化时获取coreList数据
+	data, err := ioutil.ReadFile(coreListVarPath)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	var pkgList PackageList
+	err = json.Unmarshal(data, &pkgList)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	var pkgs []string
+	for _, pkg := range pkgList.PkgList {
+		pkgs = append(pkgs, pkg.PkgName)
+	}
+	return pkgs
+}
+
+type Package struct {
+	PkgName string `json:"PkgName"`
+	Version string `json:"Version"`
+}
+
+type PackageList struct {
+	PkgList []Package `json:"PkgList"`
+	Version string    `json:"Version"`
+}
+
+func getCoreListOnline() []string {
+	// 1. download coreList to /var/cache/lastore/archives/
+	// 2. 使用dpkg-deb解压deb得到coreList文件
+	coreFilePath, err := downloadAndDecompressCoreList()
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	// 将coreList 备份到/var/lib/lastore/中
+	err = utils2.CopyFile(coreFilePath, coreListVarPath)
+	if err != nil {
+		logger.Warning("backup coreList failed:", err)
+	}
+	// 3. 解析文件获取coreList必装列表
+	data, err := ioutil.ReadFile(coreFilePath)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	var pkgList PackageList
+	err = json.Unmarshal(data, &pkgList)
+	if err != nil {
+		logger.Warning(err)
+		return nil
+	}
+	var pkgs []string
+	for _, pkg := range pkgList.PkgList {
+		pkgs = append(pkgs, pkg.PkgName)
+	}
+	return pkgs
 }
 
 var _initProcNsMnt string

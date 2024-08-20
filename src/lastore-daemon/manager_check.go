@@ -85,6 +85,8 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 		job.option["--stage2"] = ""
 	}
 
+	uuid := getRebootCheckJobUUID()
+
 	// 设置假的进度条，每200ms增长0.1的进度
 	var fakeProgress chan bool = make(chan bool, 1)
 	setFakeProgress := func(maxValue float64) {
@@ -109,11 +111,12 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			return nil
 		},
 		string(system.FailedStatus): func() error {
+			m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.UpgradeFailed, job.Description)
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
 				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
-				m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeFailed, job.Description, checkMode)
+				m.updatePlatform.PostSystemUpgradeMessage(uuid)
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)
@@ -131,38 +134,20 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			inhibit(false)
 			switch checkOrder {
 			case firstCheck:
-				// TODO 去掉第一次检查，此时如果重启，那么再次启动时不会再进行该检查
+				// ps: 去掉第一次检查，此时如果重启，那么再次启动时不会再进行该检查
 				err = m.delRebootCheckOption(checkOrder)
 				if err != nil {
 					logger.Warning(err)
 				}
-				// 第一次检查成功后，修改状态，防止dde-session-daemon启动后发出错误通知。第二次检查无论成功或失败，都会通知给用户，如果无法进入桌面，用户手动重启回滚，那么也无需在回滚界面提示用户。
-				err = m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeReady, ReasonCode: system.NoError})
-				if err != nil {
-					logger.Warning(err)
-				}
 			case secondCheck:
-				// TODO 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置，lastore 状态修改为ready
+				// ps: 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置
 				err = m.delRebootCheckOption(secondCheck)
 				if err != nil {
 					logger.Warning(err)
 				}
-				err = m.grub.changeGrubDefaultEntry(normalBootEntry)
-				if err != nil {
-					logger.Warning(err)
-				}
-				go func() {
-					m.inhibitAutoQuitCountAdd()
-					defer m.inhibitAutoQuitCountSub()
-					// m.updatePlatform.postStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder, job.Description))
-					m.updatePlatform.PostSystemUpgradeMessage(updateplatform.UpgradeSucceed, job.Description, checkMode)
-					m.reportLog(upgradeStatusReport, true, "")
-				}()
-				// 只要系统更新，需要更新baseline文件
-				if checkMode&system.SystemUpdate != 0 {
-					m.updatePlatform.UpdateBaseline()
-					m.updatePlatform.RecoverVersionLink()
-				}
+				m.handleAfterUpgradeSuccess(checkMode, job.Description, uuid)
+			default:
+				logger.Warning("invaild check status:", checkOrder)
 			}
 			return nil
 		},
@@ -183,6 +168,7 @@ type fullUpgradeOption struct {
 	IsPowerOff        bool
 	PreGreeterCheck   bool
 	AfterGreeterCheck bool
+	UUID              string
 }
 
 const (
@@ -190,13 +176,14 @@ const (
 	optionFilePathTemp = "/tmp/deepin_update_option.json"
 )
 
-func (m *Manager) setRebootCheckOption(mode system.UpdateType) error {
+func (m *Manager) setRebootCheckOption(mode system.UpdateType, uuid string) error {
 	option := &fullUpgradeOption{
 		DoUpgrade:         false,
 		DoUpgradeMode:     mode,
 		IsPowerOff:        false,
 		PreGreeterCheck:   true,
 		AfterGreeterCheck: true,
+		UUID:              uuid,
 	}
 	content, err := json.Marshal(option)
 	if err != nil {
@@ -207,6 +194,21 @@ func (m *Manager) setRebootCheckOption(mode system.UpdateType) error {
 		logger.Warning(err)
 	}
 	return ioutil.WriteFile(optionFilePath, content, 0644)
+}
+
+func getRebootCheckJobUUID() string {
+	content, err := ioutil.ReadFile(optionFilePath)
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+	var option fullUpgradeOption
+	err = json.Unmarshal(content, &option)
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+	return option.UUID
 }
 
 func (m *Manager) delRebootCheckOption(order checkType) error {

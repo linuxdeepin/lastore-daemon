@@ -73,6 +73,10 @@ type UpdatePlatformManager struct {
 	Tp             UpdateTp  // 更新策略类型:1.非强制更新，2.强制更新/立即更新，3.强制更新/关机或重启时更新，4.强制更新/指定时间更新
 	UpdateTime     time.Time // 更新时间(指定时间更新时的时间)
 	UpdateNowForce bool      // 立即更新
+	mu             sync.Mutex
+
+	jobPostMsgMap   map[string]*UpgradePostMsg
+	jobPostMsgMapMu sync.Mutex
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -81,6 +85,10 @@ const (
 	cacheBaseline = "/var/lib/lastore/os-baseline.b"
 	realBaseline  = "/etc/os-baseline"
 	realVersion   = "/etc/os-version"
+
+	KeyNow      string = "now"      // 立即更新
+	KeyShutdown string = "shutdown" // 关机更新
+	KeyLayout   string = "15:04"
 )
 
 func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManager {
@@ -122,6 +130,7 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		arch:                              arch,
 		Tp:                                UnknownUpdate,
 		UpdateNowForce:                    false,
+		jobPostMsgMap:                     getLocalJobPostMsg(),
 	}
 }
 
@@ -226,6 +235,7 @@ func getGeneralValueFromKeyFile(path, key string) string {
 // UpdateBaseline 更新安装并检查成功后，同步baseline文件
 func (m *UpdatePlatformManager) UpdateBaseline() {
 	copyFile(cacheBaseline, realBaseline)
+	m.preBaseline = getCurrentBaseline()
 }
 
 // 进行安装更新前，需要复制文件替换软连接
@@ -426,6 +436,7 @@ func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetVersion.string(), err.Error())
 	}
 	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Packages", base64.RawStdEncoding.EncodeToString([]byte(getClientPackageInfo(m.config.ClientPackageName))))
 	return client.Do(request)
 }
 
@@ -536,10 +547,7 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", PostProcess.string(), err.Error())
 	}
-	hardwareId, err := GetHardwareId(m.config.IncludeDiskInfo)
-	if err != nil {
-		return nil, fmt.Errorf("%v failed to get hardware id: %v ", PostProcess.string(), err.Error())
-	}
+	hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
 
 	request.Header.Set("X-MachineID", hardwareId)
 	request.Header.Set("X-CurrentBaseline", m.preBaseline)
@@ -556,9 +564,7 @@ func getResponseData(response *http.Response, reqType requestType) (json.RawMess
 		if err != nil {
 			return nil, fmt.Errorf("%v failed to read response body: %v ", response.Request.RequestURI, err.Error())
 		}
-		if reqType == GetVersion {
-			logger.Infof("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
-		}
+		logger.Infof("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 		msg := &tokenMessage{}
 		err = json.Unmarshal(respData, msg)
 		if err != nil {
@@ -647,7 +653,7 @@ func IsForceUpdate(tp UpdateTp) bool {
 }
 
 // GenUpdatePolicyByToken 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) error {
+func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) error {
 	response, err := m.genVersionResponse()
 	if err != nil {
 		return fmt.Errorf("failed get version data %v", err)
@@ -670,13 +676,6 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) err
 	if m.Tp == UpdateRegularly {
 		m.UpdateTime, _ = time.Parse(time.RFC3339, msg.Policy.Data.UpdateTime)
 	}
-	// 距更新时间3min内则立即更新，超过时间服务器会更新定时时间
-	nowTime := time.Now()
-	dot := time.Duration(3) * time.Minute
-	bTime := nowTime.Add(dot)
-	if m.Tp == UpdateNow || (m.Tp == UpdateRegularly && m.UpdateTime.Before(bTime) && m.UpdateTime.After(nowTime)) {
-		m.UpdateNowForce = true
-	}
 
 	m.UpdateBaselineCache()
 	// 生成仓库和InRelease
@@ -686,7 +685,57 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) err
 	}
 
 	return nil
+}
 
+func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) error {
+	var err error
+	if (m.config.PlatformDisabled & DisabledVersion) == 0 {
+		err = m.genUpdatePolicyByToken(updateInRelease)
+	}
+	// 根据配置更新Tp
+	switch m.Tp {
+	case UpdateNow:
+	case UpdateShutdown:
+	case UpdateRegularly:
+	default:
+		logger.Debug("Config update time:", m.config.UpdateTime)
+		switch m.config.UpdateTime {
+		case KeyNow:
+			m.Tp = UpdateNow
+		case KeyShutdown:
+			m.Tp = UpdateShutdown
+		default:
+			updateTime, err := time.Parse(time.RFC3339, m.config.UpdateTime)
+			if err == nil {
+				m.Tp = UpdateRegularly
+				m.UpdateTime = updateTime
+			} else {
+				logger.Warning(err)
+			}
+		}
+	}
+	logger.Info("Policy tp:", m.Tp, "update time:", m.UpdateTime)
+	logger.Info("pre Baseline:", m.preBaseline, "target Baseline：", m.targetBaseline)
+	if len(m.targetBaseline) == 0 || m.preBaseline == m.targetBaseline {
+		m.Tp = NormalUpdate
+	}
+	m.UpdateNowForce = false
+	switch m.Tp {
+	case UpdateNow:
+		m.UpdateNowForce = true
+	case UpdateRegularly:
+		// 距更新时间3min内则立即更新
+		nowTime := time.Now()
+		dot := time.Duration(3) * time.Minute
+		bTime := nowTime.Add(dot)
+		updateTime := time.Date(nowTime.Year(), nowTime.Month(), nowTime.Day(), m.UpdateTime.Hour(), m.UpdateTime.Minute(), 0, 0, nowTime.Location())
+		if m.Tp == UpdateRegularly && updateTime.Before(bTime) && updateTime.After(nowTime) {
+			m.UpdateNowForce = true
+		}
+		m.config.SetInstallUpdateTime(m.UpdateTime.Format(time.RFC3339))
+	}
+	logger.Info("Force Update:", IsForceUpdate(m.Tp), "update Immediate:", m.UpdateNowForce, "updateTime:", m.UpdateTime)
+	return err
 }
 
 type packageLists struct {
@@ -1187,16 +1236,23 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	var wg sync.WaitGroup
 	var errList []string
+	var syncFuncList []func() error
 	m.TargetCorePkgs = make(map[string]system.PackageInfo)
 	m.BaselinePkgs = make(map[string]system.PackageInfo)
 	m.SelectPkgs = make(map[string]system.PackageInfo)
 	m.FreezePkgs = make(map[string]system.PackageInfo)
 	m.PurgePkgs = make(map[string]system.PackageInfo)
-	syncFuncList := []func() error{
-		m.updateLogMetaSync,                    // 日志
-		m.updateTargetPkgMetaSync,              // 目标版本信息
-		m.updateCurrentPreInstalledPkgMetaSync, // 基线版本信息
-		m.updateCVEMetaDataSync,                // cve信息
+	if (m.config.PlatformDisabled & DisabledUpdateLog) == 0 {
+		syncFuncList = append(syncFuncList, m.updateLogMetaSync) // 日志
+	}
+	if (m.config.PlatformDisabled & DisabledTargetPkgLists) == 0 {
+		syncFuncList = append(syncFuncList, m.updateTargetPkgMetaSync) // 目标版本信息
+	}
+	if (m.config.PlatformDisabled & DisabledCurrentPkgLists) == 0 {
+		syncFuncList = append(syncFuncList, m.updateCurrentPreInstalledPkgMetaSync) // 基线版本信息
+	}
+	if (m.config.PlatformDisabled & DisabledPkgCVEs) == 0 {
+		syncFuncList = append(syncFuncList, m.updateCVEMetaDataSync) // cve信息
 	}
 	for _, syncFunc := range syncFuncList {
 		wg.Add(1)
@@ -1219,6 +1275,9 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
 func (m *UpdatePlatformManager) PostStatusMessage(body string) {
 	logger.Debug("post status msg:", body)
+	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+		return
+	}
 	buf := bytes.NewBufferString(body)
 	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
 	response, err := m.genPostProcessResponse(buf, filePath)
@@ -1286,13 +1345,13 @@ func tarFiles(files []string, outFile string) error {
 
 // PostUpdateLogFiles 将更新日志上传
 func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
-	hardwareId, err := GetHardwareId(m.config.IncludeDiskInfo)
-	if err != nil {
-		logger.Warning(err)
+	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		return
 	}
+	hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
+
 	outFilename := fmt.Sprintf("/tmp/%s_%s_%s_%s.tar", "update", hardwareId, utils.GenUuid(), time.Now().Format("20231019102233444"))
-	err = tarFiles(files, outFilename)
+	err := tarFiles(files, outFilename)
 	if err != nil {
 		logger.Warningf("tar log files failed:%v", err)
 		return
@@ -1316,28 +1375,6 @@ func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
 	logger.Info(string(data))
 }
 
-// 更新平台上报
-
-type upgradePostContent struct {
-	SerialNumber    string   `json:"serialNumber"`
-	MachineID       string   `json:"machineId"`
-	UpgradeStatus   int      `json:"status"`
-	UpgradeErrorMsg string   `json:"msg"`
-	TimeStamp       int64    `json:"timestamp"`
-	SourceUrl       []string `json:"sourceUrl"`
-	Version         string   `json:"version"`
-
-	PreBuild        string `json:"preBuild"`
-	NextShowVersion string `json:"nextShowVersion"`
-	PreBaseline     string `json:"preBaseline"`
-	NextBaseline    string `json:"nextBaseline"`
-}
-
-const (
-	UpgradeSucceed = 0
-	UpgradeFailed  = 1
-)
-
 func (m *UpdatePlatformManager) needPostSystemUpgradeMessage(mode system.UpdateType) bool {
 	var editionName string
 	infoMap, err := GetOSVersionInfo(CacheVersion)
@@ -1349,46 +1386,72 @@ func (m *UpdatePlatformManager) needPostSystemUpgradeMessage(mode system.UpdateT
 	return strv.Strv(m.config.AllowPostSystemUpgradeMessageVersion).Contains(editionName) && ((mode & m.allowPostSystemUpgradeMessageType) != 0)
 }
 
-// PostSystemUpgradeMessage 发送系统更新成功或失败的状态
-func (m *UpdatePlatformManager) PostSystemUpgradeMessage(upgradeStatus int, Description string, updateType system.UpdateType) {
+// CreateJobPostMsgInfo 初始化创建上报信息
+func (m *UpdatePlatformManager) CreateJobPostMsgInfo(uuid string, updateType system.UpdateType) {
 	if !m.needPostSystemUpgradeMessage(updateType) {
 		return
 	}
-	// updateType &= m.allowPostSystemUpgradeMessageType
-	var upgradeErrorMsg string
-	if upgradeStatus == UpgradeFailed {
-		upgradeErrorMsg = Description
+	info := &UpgradePostMsg{
+		Uuid:             uuid,
+		UpgradeStartTime: time.Now().Unix(),
+		PostStatus:       NotReady,
 	}
-	hardwareId, err := GetHardwareId(m.config.IncludeDiskInfo)
-	if err != nil {
-		logger.Warning(err)
-	}
+	info.save()
+	m.jobPostMsgMapMu.Lock()
+	defer m.jobPostMsgMapMu.Unlock()
+	m.jobPostMsgMap[uuid] = info
+	return
+}
 
-	postContent := &upgradePostContent{
-		MachineID:       hardwareId,
-		UpgradeStatus:   upgradeStatus,
-		UpgradeErrorMsg: upgradeErrorMsg,
-		TimeStamp:       time.Now().Unix(),
-		PreBuild:        m.preBuild,
-		NextShowVersion: m.targetVersion,
-		PreBaseline:     m.preBaseline,
-		NextBaseline:    m.targetBaseline,
+// SaveJobPostMsgByUUID 需要在success或failed状态迁移前调用,保证数据存储
+func (m *UpdatePlatformManager) SaveJobPostMsgByUUID(uuid string, upgradeStatus UpgradeResult, Description string) {
+	m.jobPostMsgMapMu.Lock()
+	defer m.jobPostMsgMapMu.Unlock()
+	if msg, ok := m.jobPostMsgMap[uuid]; ok {
+		var upgradeErrorMsg string
+		if upgradeStatus == UpgradeFailed {
+			upgradeErrorMsg = Description
+		}
+		hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
+		msg.MachineID = hardwareId
+		msg.UpgradeStatus = upgradeStatus
+		msg.UpgradeErrorMsg = upgradeErrorMsg
+		msg.PreBuild = m.preBuild
+		msg.NextShowVersion = m.targetVersion
+		msg.PreBaseline = m.preBaseline
+		msg.NextBaseline = m.targetBaseline
+		msg.UpgradeEndTime = time.Now().Unix()
+		msg.updatePostStatus(WaitPost)
 	}
-	content, err := json.Marshal(postContent)
+}
+
+// PostSystemUpgradeMessage 发送系统更新成功或失败的状态
+func (m *UpdatePlatformManager) PostSystemUpgradeMessage(uuid string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.jobPostMsgMapMu.Lock()
+	defer m.jobPostMsgMapMu.Unlock()
+	msg, ok := m.jobPostMsgMap[uuid]
+	if !ok {
+		return
+	}
+	msg.updateTimeStamp()
+	content, err := json.Marshal(msg)
 	if err != nil {
 		logger.Warning(err)
 		return
 	}
-	client := &http.Client{
-		Timeout: 4 * time.Second,
-	}
-	logger.Debug(postContent)
+
+	logger.Debugf("upgrade post content is %v", string(content))
 	encryptMsg, err := EncryptMsg(content)
 	if err != nil {
 		logger.Warning(err)
 		return
 	}
 	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
+	client := &http.Client{
+		Timeout: 4 * time.Second,
+	}
 	requestUrl := m.requestUrl + "/api/v1/update/status"
 	request, err := http.NewRequest("POST", requestUrl, strings.NewReader(base64EncodeString))
 	if err != nil {
@@ -1402,9 +1465,22 @@ func (m *UpdatePlatformManager) PostSystemUpgradeMessage(upgradeStatus int, Desc
 		}()
 		body, _ := ioutil.ReadAll(response.Body)
 		logger.Debug("postSystemUpgradeMessage response is:", string(body))
+		msg.updatePostStatus(PostSuccess)
+		delete(m.jobPostMsgMap, uuid)
 	} else {
-		logger.Warning(err)
+		logger.Warning("post upgrade message failed:", err)
 	}
+}
+
+func (m *UpdatePlatformManager) RetryPostHistory() {
+	m.jobPostMsgMapMu.Lock()
+	defer m.jobPostMsgMapMu.Unlock()
+	for _, v := range m.jobPostMsgMap {
+		if v.PostStatus == WaitPost || v.PostStatus == PostFailure {
+			m.PostSystemUpgradeMessage(v.Uuid)
+		}
+	}
+	return
 }
 
 func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {

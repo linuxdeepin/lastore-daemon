@@ -429,6 +429,8 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 //		AfterGreeterCheck bool
 //	}
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
+	// 1070以下版本option为空
+	supportOption := len(strings.TrimSpace(option)) > 0
 	checkExecPath := func() (bool, error) {
 		// 只有dde-lock可以设置
 		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
@@ -463,6 +465,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		return dbusutil.ToError(err)
 	}
 	logger.Info("start PrepareFullScreenUpgrade")
+
 	if isOffline {
 		content, err := json.Marshal(&fullUpgradeOption{
 			DoUpgrade:         true,
@@ -479,14 +482,12 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 			_ = os.RemoveAll(optionFilePathTemp)
 		}
 		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
-	} else {
+	} else if supportOption {
 		opt := fullUpgradeOption{}
-		if len(option) > 0 {
-			err = json.Unmarshal([]byte(option), &opt)
-			if err != nil {
-				logger.Warning(err)
-				return dbusutil.ToError(err)
-			}
+		err = json.Unmarshal([]byte(option), &opt)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
 		}
 		// 在线更新时填充部分属性
 		opt.DoUpgrade = true
@@ -548,6 +549,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	logger.Info("RestartUnit lightdm")
 	return nil
 }
+
 func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
 	var sourcePathList []string
 	for _, t := range system.AllInstallUpdateType() {
