@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/godbus/dbus"
-	"github.com/linuxdeepin/dde-api/polkit"
 	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -660,16 +659,15 @@ func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 	return nil
 }
 
-const polkitActionChangeOwnData = "com.deepin.daemon.accounts.user-administration"
-
 // SetUpdateSources 设置系统、安全更新的仓库
 func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateType, repoType config.RepoType, repoConfig []string, isReset bool) *dbus.Error {
 	// 管理员鉴权
-	err := polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+	err := checkInvokePermission(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
+
 	// 修改仓库后，重置可安装状态
 	err = m.config.UpdateLastoreDaemonStatus(config.CanUpgrade, false)
 	if err != nil {

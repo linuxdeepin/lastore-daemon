@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"internal/config"
 	"internal/system"
 	"internal/system/apt"
@@ -24,6 +23,9 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/linuxdeepin/dde-api/polkit"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 
 	"github.com/godbus/dbus"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -422,7 +424,7 @@ func getHistoryChangelog(path string) (changeLogs string) {
 }
 
 func checkSupportDpkgScriptIgnore() bool {
-	output, err := exec.Command("/bin/sh", "-c", "dpkg --script-ignore-error --audit").Output()
+	output, err := exec.Command("dpkg", "--script-ignore-error", "--audit").Output()
 	if err != nil {
 		logger.Warning("audit dpkg script ignore capability:", err, string(output))
 		return false
@@ -575,6 +577,33 @@ func checkSenderNsMntValid(pid uint32) bool {
 		fmt.Printf("pid 1 mnt ns is %v,pid %v mnt ns is %v\n", _initProcNsMnt, pid, strings.TrimSpace(c))
 	}()
 	return strings.TrimSpace(c) == _initProcNsMnt
+}
+
+const polkitActionChangeOwnData = "com.deepin.daemon.accounts.user-administration"
+
+func checkInvokePermission(service *dbusutil.Service, sender dbus.Sender) error {
+	uid, err := service.GetConnUID(string(sender))
+	if err != nil {
+		return fmt.Errorf("failed to get sender conn uid:%v", err)
+	}
+	if uid != 0 {
+		execPath, cmdLine, err := getExecutablePathAndCmdline(service, sender)
+		if err != nil {
+			logger.Warning(err)
+			return polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		}
+		caller := mapMethodCaller(execPath, cmdLine)
+		if methodCallerControlCenter == caller {
+			return nil
+		} else {
+			logger.Infof("not allow %v  call this method ,need check auth by polkit", caller)
+			return polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		}
+
+	} else {
+		logger.Info("caller's uid is 0,allow to call this method")
+		return nil
+	}
 }
 
 type UpdateSourceConfig map[config.RepoType]*RepoInfo

@@ -631,6 +631,13 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	// 调用者判断
+	err := checkInvokePermission(m.service, pw.Sender)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
 	writeMode := system.UpdateType(pw.Value.(uint64))
 	newMode := m.statusManager.SetUpdateMode(writeMode)
 	pw.Value = newMode
@@ -686,6 +693,13 @@ func (m *Manager) syncThirdPartyDconfig() {
 }
 
 func (m *Manager) checkUpdateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	// 调用者判断
+	err := checkInvokePermission(m.service, pw.Sender)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
 	writeType := system.UpdateType(pw.Value.(uint64))
 	newMode := m.statusManager.SetCheckMode(writeType)
 	pw.Value = newMode
