@@ -6,3 +6,7 @@ After=display-manager.service
 Type=notify
 NotifyAccess=main
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
+StandardOutput=null
+StandardError=null
+StateDirectory=lastore
+CacheDirectory=lastore
