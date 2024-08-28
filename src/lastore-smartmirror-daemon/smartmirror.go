@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -21,6 +22,8 @@ var (
 	qualityDataFilepath = "smartmirror_quality.json"
 	configDataFilepath  = "smartmirror_config.json"
 )
+
+var stateDirectory = os.Getenv("STATE_DIRECTORY")
 
 // SmartMirror handle core smart mirror data
 type SmartMirror struct {
@@ -44,7 +47,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 	s := &SmartMirror{
 		service:   service,
 		taskCount: 0,
-		config:    newConfig(path.Join(system.VarLibDir, configDataFilepath)),
+		config:    newConfig(path.Join(stateDirectory, configDataFilepath)),
 		mirrorQuality: MirrorQuality{
 			QualityMap:   make(QualityMap),
 			adjustDelays: make(map[string]int),
@@ -54,12 +57,12 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 	s.Enable = s.config.Enable
 
-	err := system.DecodeJson(path.Join(system.VarLibDir, qualityDataFilepath), &s.mirrorQuality.QualityMap)
+	err := system.DecodeJson(path.Join(stateDirectory, qualityDataFilepath), &s.mirrorQuality.QualityMap)
 	if nil != err {
 		logger.Info("load quality.json failed", err)
 	}
 
-	err = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &s.sources)
+	err = system.DecodeJson(path.Join(stateDirectory, "mirrors.json"), &s.sources)
 	if nil != err {
 		logger.Error(err)
 	}
@@ -75,7 +78,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 				s.mirrorQuality.updateQuality(r)
 				s.taskCount--
 			}
-			_ = utils.WriteData(path.Join(system.VarLibDir, qualityDataFilepath), s.mirrorQuality.QualityMap)
+			_ = utils.WriteData(path.Join(stateDirectory, qualityDataFilepath), s.mirrorQuality.QualityMap)
 		}
 	}()
 	return s

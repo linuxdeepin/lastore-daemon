@@ -1,5 +1,4 @@
 [D-BUS Service]
 Name=org.deepin.dde.Lastore1
-Exec=/usr/libexec/lastore-daemon/lastore-daemon
-User=root
+Exec=/bin/false
 SystemdService=lastore-daemon.service
