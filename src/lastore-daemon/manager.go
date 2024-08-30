@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"internal/config"
+	"internal/system"
 	"internal/updateplatform"
 	"os/exec"
 	"strconv"
@@ -17,9 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"internal/system"
-
 	"github.com/godbus/dbus"
+	"github.com/linuxdeepin/dde-api/polkit"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/com.deepin.abrecovery"
 	accounts "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.accounts"
 	apps "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.apps"
@@ -300,6 +300,77 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 
 	pkgs = append(pkgs, localePkgs...)
 	return m.installPkg(jobName, strings.Join(pkgs, " "), environ)
+}
+
+func (m *Manager) installPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string,
+	repoListPath string, cachePath string, packageName []string) (*Job, error) {
+	if !utils.IsDir(repoListPath) {
+		return nil, fmt.Errorf("illegal repoListPath: %v", repoListPath)
+	}
+	if !utils.IsDir(cachePath) {
+		return nil, fmt.Errorf("illegal cachePath: %v", cachePath)
+	}
+
+	var job *Job
+	var isExist bool
+	var err error
+
+	environ, err := makeEnvironWithSender(m, sender)
+	if err != nil {
+		return nil, fmt.Errorf("make environ failed: %v", err)
+	}
+
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		return nil, fmt.Errorf("get conn uid failed: %v", err)
+	}
+
+	if uid != 0 {
+		err := polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		if err != nil {
+			return nil, fmt.Errorf("check authorization failed: %v", err)
+		}
+	}
+
+	var canNotInstallError = errors.New("unable to install packages now")
+	_, isLock := system.CheckLock("/var/lib/dpkg/lock")
+	if isLock {
+		return nil, canNotInstallError
+	}
+	_, isLock = system.CheckLock("/var/lib/dpkg/lock-frontend")
+	if isLock {
+		return nil, canNotInstallError
+	}
+
+	m.do.Lock()
+	defer m.do.Unlock()
+	isExist, job, err = m.jobManager.CreateJob(jobName, system.OnlyInstallJobType, packageName, environ, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create job failed: %v, jobname: %v", err, jobName)
+	}
+	if isExist {
+		return job, nil
+	}
+
+	if utils.IsDir(sourceListPath) {
+		job.option = map[string]string{
+			"Dir::Etc::SourceList":  "/dev/null",
+			"Dir::Etc::SourceParts": sourceListPath,
+		}
+	} else {
+		job.option = map[string]string{
+			"Dir::Etc::SourceList":  sourceListPath,
+			"Dir::Etc::SourceParts": "/dev/null",
+		}
+	}
+	job.option["Dir::State::lists"] = repoListPath
+	job.option["Dir::Cache::archives"] = cachePath
+
+	if err = m.jobManager.addJob(job); err != nil {
+		return nil, fmt.Errorf("add job failed: %v", err)
+	}
+
+	return job, nil
 }
 
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {

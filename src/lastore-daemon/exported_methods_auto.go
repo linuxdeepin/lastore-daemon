@@ -75,6 +75,12 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
+			Name:    "InstallPackageFromRepo",
+			Fn:      v.InstallPackageFromRepo,
+			InArgs:  []string{"jobName", "sourceListPath", "repoListPath", "cachePath", "packageName"},
+			OutArgs: []string{"jobPath"},
+		},
+		{
 			Name:    "PackageDesktopPath",
 			Fn:      v.PackageDesktopPath,
 			InArgs:  []string{"pkgId"},

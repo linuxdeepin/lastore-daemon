@@ -7,11 +7,13 @@ package system
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 	"unicode"
 
 	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
@@ -302,4 +304,35 @@ func IsActiveCodeExist() bool {
 		return false
 	}
 	return strings.TrimSpace(code) != ""
+}
+
+func CheckLock(p string) (string, bool) {
+	// #nosec G304
+	file, err := os.Open(p)
+	if err != nil {
+		logger.Warningf("error opening %q: %v", p, err)
+		return "", false
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	flockT := syscall.Flock_t{
+		Type:   syscall.F_WRLCK,
+		Whence: io.SeekStart,
+		Start:  0,
+		Len:    0,
+		Pid:    0,
+	}
+	err = syscall.FcntlFlock(file.Fd(), syscall.F_GETLK, &flockT)
+	if err != nil {
+		logger.Warningf("unable to check file %q lock status: %s", p, err)
+		return p, true
+	}
+
+	if flockT.Type == syscall.F_WRLCK {
+		return p, true
+	}
+
+	return "", false
 }

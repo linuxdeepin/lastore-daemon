@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -103,7 +102,7 @@ func (p *APTSystem) AttachIndicator(f system.Indicator) {
 
 func WaitDpkgLockRelease() {
 	for {
-		msg, wait := checkLock("/var/lib/dpkg/lock")
+		msg, wait := system.CheckLock("/var/lib/dpkg/lock")
 		if wait {
 			logger.Warningf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 				msg, time.Now())
@@ -111,7 +110,7 @@ func WaitDpkgLockRelease() {
 			continue
 		}
 
-		msg, wait = checkLock("/var/lib/dpkg/lock-frontend")
+		msg, wait = system.CheckLock("/var/lib/dpkg/lock-frontend")
 		if wait {
 			logger.Warningf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 				msg, time.Now())
@@ -121,37 +120,6 @@ func WaitDpkgLockRelease() {
 
 		return
 	}
-}
-
-func checkLock(p string) (string, bool) {
-	// #nosec G304
-	file, err := os.Open(p)
-	if err != nil {
-		logger.Warningf("error opening %q: %v", p, err)
-		return "", false
-	}
-	defer func() {
-		_ = file.Close()
-	}()
-
-	flockT := syscall.Flock_t{
-		Type:   syscall.F_WRLCK,
-		Whence: io.SeekStart,
-		Start:  0,
-		Len:    0,
-		Pid:    0,
-	}
-	err = syscall.FcntlFlock(file.Fd(), syscall.F_GETLK, &flockT)
-	if err != nil {
-		logger.Warningf("unable to check file %q lock status: %s", p, err)
-		return p, true
-	}
-
-	if flockT.Type == syscall.F_WRLCK {
-		return p, true
-	}
-
-	return "", false
 }
 
 func parsePkgSystemError(out, err []byte) error {

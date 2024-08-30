@@ -124,6 +124,19 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	return jobObj.getPath(), nil
 }
 
+func (m *Manager) InstallPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string, repoListPath string, cachePath string, packageName []string) (jobPath dbus.ObjectPath,
+	busErr *dbus.Error) {
+	logger.Infof("enter InstallPackageFromRepo,jobName:%v, sourceListPath:%v, repoListPath:%v, cachePath:%v", jobName, sourceListPath, repoListPath, cachePath)
+
+	jobObj, err := m.installPackageFromRepo(sender, jobName, sourceListPath, repoListPath, cachePath, packageName)
+	if err != nil {
+		logger.Error(err)
+		return "/", dbusutil.ToError(err)
+	}
+
+	return jobObj.getPath(), nil
+}
+
 // PackageDesktopPath TODO: Remove this API
 func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
