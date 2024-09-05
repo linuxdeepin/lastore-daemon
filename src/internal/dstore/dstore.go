@@ -39,7 +39,10 @@ func NewStore() *Store {
 }
 
 func (s *Store) GetMetadataServer() string {
-	metadataServer := s.sysCfg.Section("General").Key("Server").String()
+	var metadataServer string
+	if s.sysCfg != nil {
+		metadataServer = s.sysCfg.Section("General").Key("Server").String()
+	}
 	if metadataServer == "" {
 		metadataServer = "https://store.chinauos.com"
 	}
