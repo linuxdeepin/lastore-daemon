@@ -360,7 +360,7 @@ func (m *Manager) getNextIdleUnitDelay() (time.Duration, time.Duration) {
 			// 开始间隔小于0证明是下载开始事件,下一次下载开始时间在24小时之后
 			beginDur += 24 * time.Hour
 		}
-		if endDur < 0 {
+		if endDur <= 0 {
 			// 结束间隔小于0证明是下载结束事件,下一次下载结束时间在24小时之后
 			endDur += 24 * time.Hour
 		}
