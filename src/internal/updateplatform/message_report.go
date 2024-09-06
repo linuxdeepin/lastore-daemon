@@ -1409,7 +1409,7 @@ func (m *UpdatePlatformManager) SaveJobPostMsgByUUID(uuid string, upgradeStatus 
 	defer m.jobPostMsgMapMu.Unlock()
 	if msg, ok := m.jobPostMsgMap[uuid]; ok {
 		var upgradeErrorMsg string
-		if upgradeStatus == UpgradeFailed {
+		if upgradeStatus == UpgradeFailed || upgradeStatus == CheckFailed {
 			upgradeErrorMsg = Description
 		}
 		hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
