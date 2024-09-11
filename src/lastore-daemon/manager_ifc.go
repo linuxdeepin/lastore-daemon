@@ -21,7 +21,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
-	agent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
+	agent "github.com/linuxdeepin/go-dbus-factory/session/org.deepin.dde.lastore1.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"

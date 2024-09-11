@@ -18,9 +18,9 @@ import (
 )
 
 func TestReleaseFDs(t *testing.T) {
-	m, _ := proxy.NewManager("com.deepin.lastore", "/com/deepin/lastore")
+	m, _ := proxy.NewManager("org.deepin.dde.Lastore1", "/org/deepin/dde/Lastore1")
 	jobp, _ := m.InstallPackages([]string{"deepin-movie"})
-	job, _ := proxy.NewJob("com.deepin.lastore", jobp)
+	job, _ := proxy.NewJob("org.deepin.dde.Lastore1", jobp)
 	m.StartJob(job.Id.Get())
 }
 
@@ -32,14 +32,14 @@ func TestSetup(t *testing.T) {
 	var done = make(chan bool)
 	ps := []string{"deepin-movie"}
 	Convey("Test dbus service features, please setup lastore-dameon before test this", t, func() {
-		m, err = proxy.NewManager("com.deepin.lastore", "/com/deepin/lastore")
+		m, err = proxy.NewManager("org.deepin.dde.Lastore1", "/org/deepin/dde/Lastore1")
 		So(err, ShouldBeNil)
 
 		Convey(fmt.Sprintf("Try removing the package of %v", ps), func() {
 			Convey("Call Manager.RemovePackages ", func() {
 				jobp, err := m.RemovePackages(ps)
 				So(err, ShouldBeNil)
-				job, err = proxy.NewJob("com.deepin.lastore", jobp)
+				job, err = proxy.NewJob("org.deepin.dde.Lastore1", jobp)
 				So(err, ShouldBeNil)
 
 				Convey("Get the Job object from "+string(job.Path)+" and start it", func() {
@@ -78,7 +78,7 @@ func TestSetup(t *testing.T) {
 			Convey("Call Manager.InstallPackages ", func() {
 				jobp, err := m.InstallPackages(ps)
 				So(err, ShouldBeNil)
-				job, err = proxy.NewJob("com.deepin.lastore", jobp)
+				job, err = proxy.NewJob("org.deepin.dde.Lastore1", jobp)
 				So(err, ShouldBeNil)
 
 				Convey("Get the Job object from "+string(job.Path)+" and start it", func() {

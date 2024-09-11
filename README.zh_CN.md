@@ -62,7 +62,7 @@ lastore-daemon 需要以 root 用户身份运行。 它将由 systemd 自动启�
 任何已安装的软件包。
 
 ```
-dbus-send --print-reply --system --dest=com.deepin.lastore /com/deepin/lastore com.deepin.lastore.Manager.PackageDesktopPath string:"gedit"
+dbus-send --print-reply --system --dest=org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager.PackageDesktopPath string:"gedit"
 ```
 
 ### lastore-tools

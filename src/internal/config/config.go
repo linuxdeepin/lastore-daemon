@@ -151,8 +151,8 @@ func NewConfig(configPath string) *Config {
 }
 
 const (
-	dSettingsAppID                                   = "org.deepin.lastore"
-	dSettingsLastoreName                             = "org.deepin.lastore"
+	dSettingsAppID                                   = "org.deepin.dde.lastore"
+	dSettingsLastoreName                             = "org.deepin.dde.lastore"
 	dSettingsKeyUseDSettings                         = "use-dsettings"
 	dSettingsKeyVersion                              = "version"
 	dSettingsKeyAutoCheckUpdates                     = "auto-check-updates"

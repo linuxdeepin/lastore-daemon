@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
-	lastoreAgent "github.com/linuxdeepin/go-dbus-factory/com.deepin.lastore.agent"
+	lastoreAgent "github.com/linuxdeepin/go-dbus-factory/session/org.deepin.dde.lastore1.agent"
 	dbus2 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.dbus"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -264,7 +264,7 @@ func (m *userAgentMap) getActiveLastoreAgentLang() string {
 	return item.lang
 }
 
-const lastoreAgentPath = "/com/deepin/lastore/agent"
+const lastoreAgentPath = "/org/deepin/dde/Lastore1/Agent"
 
 func (m *userAgentMap) getActiveLastoreAgent() lastoreAgent.Agent {
 	return m.getActiveAgent(lastoreAgentPath)

@@ -4,7 +4,7 @@
 <policyconfig>
         <vendor />
         <vendor_url />
-        <action id="com.deepin.lastore.doAction">
+        <action id="org.deepin.dde.lastore.doAction">
                 <description>Check Authentication</description>
                 <message>Authentication is required to perform this action</message>
                 <defaults>

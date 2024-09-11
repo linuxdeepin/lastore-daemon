@@ -585,7 +585,7 @@ func checkSenderNsMntValid(pid uint32) bool {
 	return strings.TrimSpace(c) == _initProcNsMnt
 }
 
-const polkitActionChangeOwnData = "com.deepin.daemon.accounts.user-administration"
+const polkitActionChangeOwnData = "org.deepin.dde.accounts.user-administration"
 
 func checkInvokePermission(service *dbusutil.Service, sender dbus.Sender) error {
 	uid, err := service.GetConnUID(string(sender))

@@ -7,25 +7,25 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#define BUS_SYSLASTORE_NAME "com.deepin.lastore"
-#define BUS_SYSLASTORE_PATH "/com/deepin/lastore"
-#define BUS_SYSLASTORE_IF_NAME "com.deepin.lastore.Manager"
+#define BUS_SYSLASTORE_NAME "org.deepin.dde.Lastore1"
+#define BUS_SYSLASTORE_PATH "/org/deepin/dde/Lastore1"
+#define BUS_SYSLASTORE_IF_NAME "org.deepin.dde.Lastore1.Manager"
 
 #define BUS_FREEDESKTOP_BUS_NAME "org.freedesktop.DBus"
 #define BUS_FREEDESKTOP_BUS_PATH "/org/freedesktop/DBus"
 #define BUS_FREEDESKTOP_BUS_IF_NAME "org.freedesktop.DBus"
 
-#define BUS_DAEMON_EVENTLOG_NAME "com.deepin.daemon.EventLog"
-#define BUS_DAEMON_EVENTLOG_PATH "/com/deepin/daemon/EventLog"
-#define BUS_DAEMON_EVENTLOG_IF_NAME "com.deepin.daemon.EventLog"
+#define BUS_DAEMON_EVENTLOG_NAME "org.deepin.dde.daemon.EventLog"
+#define BUS_DAEMON_EVENTLOG_PATH "/org/deepin/dde/daemon/EventLog"
+#define BUS_DAEMON_EVENTLOG_IF_NAME "org.deepin.dde.daemon.EventLog"
 
 #define BUS_OSD_NOTIFICATION_NAME "org.freedesktop.Notifications"
 #define BUS_OSD_NOTIFICATION_PATH "/org/freedesktop/Notifications"
 #define BUS_OSD_NOTIFICATION_IF_NAME "org.freedesktop.Notifications"
 
-#define BUS_DAEMON_NETWORK_NAME "com.deepin.daemon.Network"
-#define BUS_DAEMON_NETWORK_PATH "/com/deepin/daemon/Network"
-#define BUS_DAEMON_NETWORK_IF_NAME "com.deepin.daemon.Network"
+#define BUS_DAEMON_NETWORK_NAME "org.deepin.dde.daemon.Network"
+#define BUS_DAEMON_NETWORK_PATH "/org/deepin/dde/daemon/Network"
+#define BUS_DAEMON_NETWORK_IF_NAME "org.deepin.dde.daemon.Network"
 
 #define BUS_DAEMON_WM_NAME "com.deepin.daemon.KWayland"
 #define BUS_DAEMON_WM_PATH "/com/deepin/daemon/KWayland/WindowManager"
@@ -33,9 +33,9 @@
 #define BUS_DAEMON_WM_WININFO_PATH "/com/deepin/daemon/KWayland/PlasmaWindow"
 #define BUS_DAEMON_WM_WININFO_IF_NAME "com.deepin.daemon.KWayland.PlasmaWindow"
 
-#define BUS_CONTROL_CENTER_NAME "com.deepin.dde.ControlCenter"
-#define BUS_CONTROL_CENTER_PATH "/com/deepin/dde/ControlCenter"
-#define BUS_CONTROL_CENTER_IF_NAME "com.deepin.dde.ControlCenter"
+#define BUS_CONTROL_CENTER_NAME "org.deepin.dde.ControlCenter1"
+#define BUS_CONTROL_CENTER_PATH "/org/deepin/dde/ControlCenter1"
+#define BUS_CONTROL_CENTER_IF_NAME "org.deepin.dde.ControlCenter1"
 
 #define _cleanup_(f) __attribute__((cleanup(f)))
 
@@ -72,7 +72,7 @@ enum BUS_METHOD
 
 extern sd_bus_method bus_methods[BUS_METHOD_MAX];
 
-// 对应com.deepin.daemon.Network.GetProxy方法的key值
+// 对应org.deepin.dde.daemon.Network.GetProxy方法的key值
 #define PROXY_TYPE_HTTP "http"
 #define PROXY_TYPE_HTTPS "https"
 #define PROXY_TYPE_FTP "ftp"

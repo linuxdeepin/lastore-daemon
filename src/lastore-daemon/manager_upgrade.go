@@ -141,7 +141,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 			msg := gettext.Tr("Backup failed!")
 			action := []string{"continue", gettext.Tr("Proceed to Update")}
 			hints := map[string]dbus.Variant{"x-deepin-action-continue": dbus.MakeVariant(
-				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
 			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 			m.inhibitAutoQuitCountSub()
@@ -165,9 +165,9 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
 				hints := map[string]dbus.Variant{
 					"x-deepin-action-backup": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
+						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
 					"x-deepin-action-continue": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 				m.inhibitAutoQuitCountSub()
@@ -190,10 +190,10 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				hints := map[string]dbus.Variant{
 					"x-deepin-action-backup": dbus.MakeVariant(
 						fmt.Sprintf("dbus-send,--system,--print-reply,"+
-							"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
+							"--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
 					"x-deepin-action-continue": dbus.MakeVariant(
 						fmt.Sprintf("dbus-send,--system,--print-reply,"+
-							"--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+							"--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 			}
 			var ownerChangedHandler dbusutil.SignalHandlerId
@@ -553,7 +553,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			// 已备份
 			msg := gettext.Tr("Updates failed: insufficient disk space. Please reboot to avoid the effect on your system.")
 			action := []string{"reboot", gettext.Tr("Reboot")}
-			hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
+			hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Restart")}
 			// 未备份
 			if !canBackup {
 				msg = gettext.Tr("Updates failed: insufficient disk space.")
@@ -566,7 +566,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			// 已备份
 			msg := gettext.Tr("Updates failed. Please reboot to avoid the effect on your system.")
 			action := []string{"reboot", gettext.Tr("Reboot")}
-			hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart")}
+			hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Restart")}
 			// 未备份
 			if !canBackup {
 				msg = gettext.Tr("Updates failed.")
@@ -668,7 +668,7 @@ func (m *Manager) afterUpgradeCmdSuccessHook() error {
 	msg := gettext.Tr("Restart the computer to use the system and applications properly.")
 	action := []string{"reboot", gettext.Tr("Reboot Now"), "cancel", gettext.Tr("Reboot Later")}
 	hints := map[string]dbus.Variant{
-		"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=com.deepin.dde.shutdownFront,/com/deepin/dde/shutdownFront,com.deepin.dde.shutdownFront.Restart"),
+		"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Restart"),
 		"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
 	go m.sendNotify(updateNotifyShow, 0, "system-updated", summary, msg, action, hints, system.NotifyExpireTimeoutNoHide)
 	return nil

@@ -105,8 +105,8 @@ func MainCheckPolicy(c *cli.Context) error {
 			}
 			sysBus, err := dbus.SystemBus()
 			if err == nil {
-				err = sysBus.Object("com.deepin.lastore", "/com/deepin/lastore").Call(
-					"com.deepin.lastore.Manager.UpdateSource", 0).Err
+				err = sysBus.Object("org.deepin.dde.Lastore1", "/org/deepin/dde/Lastore1").Call(
+					"org.deepin.dde.Lastore1.Manager.UpdateSource", 0).Err
 				if err != nil {
 					logger.Warning(err)
 				}

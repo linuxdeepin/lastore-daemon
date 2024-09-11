@@ -18,8 +18,8 @@ struct lastore_agent
 
 typedef struct lastore_agent lastore_agent;
 
-#define OBJECT_PATH "/com/deepin/lastore/agent"
-#define INTERFACE_NAME "com.deepin.lastore.Agent"
+#define OBJECT_PATH "/org/deepin/dde/Lastore1/Agent"
+#define INTERFACE_NAME "org.deepin.dde.Lastore1.Agent"
 
 lastore_agent *agent_init();
 void agent_loop(lastore_agent *agent);

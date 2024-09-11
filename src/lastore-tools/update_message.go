@@ -22,7 +22,7 @@ const (
 	JobStatusFailed  = "failed"
 	JobStatusEnd     = "end"
 
-	lastoreDBusDest = "com.deepin.lastore"
+	lastoreDBusDest = "org.deepin.dde.Lastore1"
 
 	aptHistoryLog = "/var/log/apt/history.log"
 	aptTermLog    = "/var/log/apt/term.log"
@@ -31,8 +31,8 @@ const (
 )
 
 var monitorPath = []string{
-	"/com/deepin/lastore/Jobsystem_upgrade",
-	"/com/deepin/lastore/Jobdist_upgrade",
+	"/org/deepin/dde/Lastore1/Jobsystem_upgrade",
+	"/org/deepin/dde/Lastore1/Jobdist_upgrade",
 }
 
 var logFiles = []string{
@@ -121,7 +121,7 @@ func collectLogs() {
 func getUpdateJosStatusProperty(conn *dbus.Conn, jobPath string) string {
 	var variant dbus.Variant
 	err := conn.Object(lastoreDBusDest, dbus.ObjectPath(jobPath)).Call(
-		"org.freedesktop.DBus.Properties.Get", 0, "com.deepin.lastore.Job", "Status").Store(&variant)
+		"org.freedesktop.DBus.Properties.Get", 0, "org.deepin.dde.Lastore1.Job", "Status").Store(&variant)
 	if err != nil {
 		logger.Warning(err, jobPath)
 		return ""
@@ -143,7 +143,7 @@ func monitorJobStatusChange(jobPath string) error {
 	}
 
 	rule := dbusutil.NewMatchRuleBuilder().ExtPropertiesChanged(jobPath,
-		"com.deepin.lastore.Job").Sender(lastoreDBusDest).Build()
+		"org.deepin.dde.Lastore1.Job").Sender(lastoreDBusDest).Build()
 	err = rule.AddTo(sysBus)
 	if err != nil {
 		return err
