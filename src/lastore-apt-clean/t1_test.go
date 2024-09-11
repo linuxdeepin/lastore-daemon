@@ -6,10 +6,11 @@ package main
 
 import (
 	"bytes"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -89,7 +90,7 @@ func BenchmarkShouldDelete(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	fileInfos, err := ioutil.ReadDir(dir)
+	fileInfos, err := os.ReadDir(dir)
 	if err != nil {
 		b.Fatal(err)
 	}

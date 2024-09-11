@@ -6,7 +6,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -62,7 +61,7 @@ func (tree *OSTree) HasBranch(branch string) bool {
 
 // NeedCheckout check whether the target content by target/.checkout_commit file
 func (tree *OSTree) NeedCheckout(branch string, target string) bool {
-	bs, err := ioutil.ReadFile(path.Join(target, ".checkout_commit"))
+	bs, err := os.ReadFile(path.Join(target, ".checkout_commit"))
 	if err != nil {
 		return true
 	}
@@ -92,7 +91,7 @@ func (tree *OSTree) Checkout(branch string, target string, force bool) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path.Join(target, ".checkout_commit"), ([]byte)(rev), 0644)
+	return os.WriteFile(path.Join(target, ".checkout_commit"), ([]byte)(rev), 0644)
 }
 
 func (tree *OSTree) Cat(branch string, fpath string) (string, error) {

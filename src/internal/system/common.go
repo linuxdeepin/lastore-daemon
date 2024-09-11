@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -144,7 +143,7 @@ func GetGrubNormalTitle(grubPath string) string {
 }
 
 func getGrubTitleByPrefix(grubPath string, start, end string) (entryTitle string) {
-	fileContent, err := ioutil.ReadFile(grubPath)
+	fileContent, err := os.ReadFile(grubPath)
 	if err != nil {
 		logger.Warning(err)
 		return ""

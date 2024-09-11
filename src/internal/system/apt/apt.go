@@ -7,7 +7,7 @@ package apt
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -267,7 +267,7 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 	args = append(args, packages...)
 	logger.Debug("downlaod package with args:", args)
 	cmd := exec.Command("apt-get", args...)
-	tmpPath, err := ioutil.TempDir("/tmp", "apt-download-")
+	tmpPath, err := os.MkdirTemp("/tmp", "apt-download-")
 	if err != nil {
 		return "", err
 	}

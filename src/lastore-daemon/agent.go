@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
@@ -331,7 +331,7 @@ func (m *userAgentMap) saveRecordContent(recordFilePath string) {
 }
 
 func decodeJson(fpath string, d interface{}) error {
-	content, err := ioutil.ReadFile(fpath)
+	content, err := os.ReadFile(fpath)
 	if err != nil {
 		return err
 	}

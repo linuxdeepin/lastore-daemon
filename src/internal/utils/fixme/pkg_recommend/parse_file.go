@@ -6,7 +6,7 @@ package pkg_recommend
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -145,7 +145,7 @@ func (info *jsonDependentInfo) getPackagesByLangInfo(locale, langCode, countryCo
 }
 
 func getDependentCategories(config string) (jsonDependentCategories, error) {
-	content, err := ioutil.ReadFile(config)
+	content, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
 	}

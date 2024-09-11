@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +28,7 @@ func prepareUpdateSource() {
 		"/var/cache/lastore/archives/partial",
 	}
 	for _, partialFilePath := range partialFilePaths {
-		infos, err := ioutil.ReadDir(partialFilePath)
+		infos, err := os.ReadDir(partialFilePath)
 		if err != nil {
 			continue
 		}

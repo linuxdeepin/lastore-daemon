@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -86,7 +85,7 @@ func main() {
 			archivesInfo = newArchivesInfo(dirInfo.archivesDir)
 		}
 
-		fileInfoList, err := ioutil.ReadDir(dirInfo.archivesDir)
+		fileInfoList, err := os.ReadDir(dirInfo.archivesDir)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -98,7 +97,11 @@ func main() {
 
 		// var testAgainDebInfoList []*debInfo
 
-		for _, fileInfo := range fileInfoList {
+		for _, entry := range fileInfoList {
+			fileInfo, err := entry.Info()
+			if err != nil {
+				logger.Fatal(err)
+			}
 			if fileInfo.IsDir() {
 				continue
 			}

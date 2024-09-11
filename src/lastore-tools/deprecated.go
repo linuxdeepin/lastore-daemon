@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -49,7 +48,7 @@ func BuildDesktopDirectories() []string {
 func GetDesktopFiles(dirs []string) []string {
 	var r []string
 	for _, dir := range dirs {
-		fs, err := ioutil.ReadDir(dir)
+		fs, err := os.ReadDir(dir)
 		if err != nil {
 			continue
 		}
@@ -194,14 +193,18 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 	var r = make(map[string]string)
 	var t = make(map[string]int64)
 
-	fs, err := ioutil.ReadDir("/var/lib/dpkg/info")
+	fs, err := os.ReadDir("/var/lib/dpkg/info")
 	if err != nil {
 		logger.Warningf("ParsePackageInfos :%v\n", err)
 		return r, t
 	}
 
-	for _, info := range fs {
-		name := info.Name()
+	for _, entry := range fs {
+		name := entry.Name()
+		info, err := entry.Info()
+		if err != nil {
+			logger.Warningf("GetInfoOf %s: %v\n", name, err)
+		}
 		if strings.HasSuffix(name, ".list") {
 			packageName := getPackageName(name)
 			desktopFiles := getDesktopFilePaths(path.Join("/var/lib/dpkg/info", name))
@@ -221,7 +224,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string {
 	var old = make(map[string]string)
 	// #nosec G304
-	if content, err := ioutil.ReadFile(fpath); err == nil {
+	if content, err := os.ReadFile(fpath); err == nil {
 		if err := json.Unmarshal(content, &old); err != nil {
 			logger.Warningf("mergeDesktopIndex:%q %v\n", fpath, err)
 		}

@@ -7,13 +7,13 @@ package mirrors
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 func GenerateMirrors(repository string, fpath string) error {
@@ -97,7 +97,7 @@ func LoadMirrorSources(url string) ([]system.MirrorSource, error) {
 		mirrorsUrl = url
 	} else {
 		// get mirrorsUrl from config file
-		data, err := ioutil.ReadFile(filepath.Join(system.VarLibDir, "config.json"))
+		data, err := os.ReadFile(filepath.Join(system.VarLibDir, "config.json"))
 		if err != nil {
 			if os.IsNotExist(err) {
 				mirrorsUrl = system.DefaultMirrorsUrl

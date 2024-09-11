@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -319,7 +318,7 @@ func (m *OfflineManager) AfterUpdateOffline(coreList []string) error {
 
 func (m *OfflineManager) CleanCache() error {
 	var err error
-	dirInfo, err := ioutil.ReadDir(mountFsDir)
+	dirInfo, err := os.ReadDir(mountFsDir)
 	if err == nil {
 		for _, info := range dirInfo {
 			mountPoint := filepath.Join(mountFsDir, info.Name())

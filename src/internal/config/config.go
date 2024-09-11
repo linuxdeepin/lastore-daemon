@@ -6,7 +6,7 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 
@@ -622,7 +622,7 @@ func getConfigFromDSettings() *Config {
 	}
 
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
-	content, err := ioutil.ReadFile(classifiedCachePath)
+	content, err := os.ReadFile(classifiedCachePath)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -633,7 +633,7 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 
-	content, err = ioutil.ReadFile(onlineCachePath)
+	content, err = os.ReadFile(onlineCachePath)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -891,12 +891,12 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 		return err
 	}
 	c.ClassifiedUpdatablePackages = pkgMap
-	return ioutil.WriteFile(classifiedCachePath, content, 0644)
+	return os.WriteFile(classifiedCachePath, content, 0644)
 }
 
 func (c *Config) SetOnlineCache(cache string) error {
 	c.OnlineCache = cache
-	return ioutil.WriteFile(onlineCachePath, []byte(cache), 0644)
+	return os.WriteFile(onlineCachePath, []byte(cache), 0644)
 }
 
 func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {

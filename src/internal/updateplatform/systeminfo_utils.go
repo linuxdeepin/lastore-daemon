@@ -14,19 +14,16 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"sync"
-
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/jouyouyun/hardware/utils"
 	utils2 "github.com/linuxdeepin/go-lib/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	hhardware "github.com/jouyouyun/hardware"
 )
@@ -282,7 +279,7 @@ func runLsCpu() (map[string]string, error) {
 }
 
 func parseInfoFile(file, delim string) (map[string]string, error) {
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +379,7 @@ func verifyOemFile(key, file string) bool {
 	publicKey := pubKeyInterface.(*rsa.PublicKey)
 	// sha256计算
 	hash := sha256.New()
-	encContent, err := ioutil.ReadFile(file)
+	encContent, err := os.ReadFile(file)
 	if err != nil {
 		logger.Warning(err)
 		return false
@@ -395,7 +392,7 @@ func verifyOemFile(key, file string) bool {
 	hashed := hash.Sum(nil)
 
 	// 读取签名文件
-	srBuf, err := ioutil.ReadFile(oemSignFile)
+	srBuf, err := os.ReadFile(oemSignFile)
 	if err != nil {
 		logger.Warning(err)
 		return false
@@ -415,7 +412,7 @@ func getHardwareVersion() (string, error) {
 const oemFilePath = "/etc/.oemid"
 
 func getOEMID() (string, error) {
-	content, err := ioutil.ReadFile(oemFilePath)
+	content, err := os.ReadFile(oemFilePath)
 	if err != nil {
 		return "", err
 	}
@@ -428,7 +425,7 @@ type ProjectInfo struct {
 }
 
 func getProjectID(fileName string) (string, error) {
-	content, err := ioutil.ReadFile(fileName)
+	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return "", err
 	}
@@ -489,7 +486,7 @@ func UpdateTokenConfigFile(includeDiskInfo bool) string {
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	err := os.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -514,7 +511,7 @@ func getDefaultMac() (string, error) {
 		return "", nil
 	}
 
-	mac, err := ioutil.ReadFile("/sys/class/net/" + dev + "/address")
+	mac, err := os.ReadFile("/sys/class/net/" + dev + "/address")
 	if err != nil {
 		return "", err
 	}

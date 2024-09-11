@@ -2,11 +2,11 @@ package updateplatform
 
 import (
 	"encoding/json"
-	"github.com/linuxdeepin/go-lib/log"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/linuxdeepin/go-lib/log"
 
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -61,7 +61,7 @@ func (u *UpgradePostMsg) save() {
 		logger.Warning(err)
 		return
 	}
-	err = ioutil.WriteFile(filepath.Join(postContentCacheDir, u.Uuid), content, 0600)
+	err = os.WriteFile(filepath.Join(postContentCacheDir, u.Uuid), content, 0600)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -69,7 +69,7 @@ func (u *UpgradePostMsg) save() {
 }
 
 func (u *UpgradePostMsg) init(path string) error {
-	contentByte, err := ioutil.ReadFile(path)
+	contentByte, err := os.ReadFile(path)
 	if err != nil {
 		logger.Warning(err)
 		return err
@@ -111,7 +111,7 @@ func (u *UpgradePostMsg) addFailedCount() {
 
 func getLocalJobPostMsg() (jobPostMsgMap map[string]*UpgradePostMsg) {
 	jobPostMsgMap = make(map[string]*UpgradePostMsg)
-	infos, err := ioutil.ReadDir(postContentCacheDir)
+	infos, err := os.ReadDir(postContentCacheDir)
 	if err != nil {
 		logger.Warning(err)
 		return

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -494,7 +493,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		if utils2.IsSymlink(optionFilePathTemp) {
 			_ = os.RemoveAll(optionFilePathTemp)
 		}
-		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
+		_ = os.WriteFile(optionFilePathTemp, content, 0644)
 	} else if supportOption {
 		opt := fullUpgradeOption{}
 		err = json.Unmarshal([]byte(option), &opt)
@@ -514,7 +513,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		if utils2.IsSymlink(optionFilePathTemp) {
 			_ = os.RemoveAll(optionFilePathTemp)
 		}
-		_ = ioutil.WriteFile(optionFilePathTemp, content, 0644)
+		_ = os.WriteFile(optionFilePathTemp, content, 0644)
 	}
 
 	for {
@@ -685,7 +684,7 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 		}
 		// 使用apt-get check 检查仓库时候合规
 		tmpList := fmt.Sprintf("/tmp/custom_repo_%v", time.Now().Unix())
-		err = ioutil.WriteFile(tmpList, []byte(strings.Join(repoConfig, "\n")), 0600)
+		err = os.WriteFile(tmpList, []byte(strings.Join(repoConfig, "\n")), 0600)
 		if err != nil {
 			logger.Warning(err)
 		} else {

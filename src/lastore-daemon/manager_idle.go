@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
@@ -57,7 +56,7 @@ type JobContent struct {
 // 读取上一次退出时失败和暂停的job,并导出
 func (m *Manager) loadCacheJob() {
 	var jobList []*JobContent
-	jobContent, err := ioutil.ReadFile(lastoreJobCacheJson)
+	jobContent, err := os.ReadFile(lastoreJobCacheJson)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -165,7 +164,7 @@ func (m *Manager) saveCacheJob() {
 		logger.Warning(err)
 		return
 	}
-	err = ioutil.WriteFile(lastoreJobCacheJson, b, 0600)
+	err = os.WriteFile(lastoreJobCacheJson, b, 0600)
 	if err != nil {
 		logger.Warning(err)
 	}

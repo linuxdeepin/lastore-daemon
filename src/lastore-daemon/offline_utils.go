@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,7 +50,7 @@ func verify(dir string) error {
 		return fmt.Errorf("failed to verify oup-format: %v %v", outBuf.String(), errBuf.String())
 	}
 	// format获取
-	version, err := ioutil.ReadFile(filepath.Join(dir, "oup-format"))
+	version, err := os.ReadFile(filepath.Join(dir, "oup-format"))
 	if err != nil {
 		return fmt.Errorf("failed to read oup-format: %v ", err)
 	}
@@ -84,7 +83,7 @@ func verify(dir string) error {
 	return nil
 }
 func getInfo(dir string) (OfflineRepoInfo, error) {
-	content, err := ioutil.ReadFile(filepath.Join(dir, "info.json"))
+	content, err := os.ReadFile(filepath.Join(dir, "info.json"))
 	if err != nil {
 		return OfflineRepoInfo{}, err
 	}
@@ -161,5 +160,5 @@ func updateOfflineSourceFile(localOupRepoPaths []string) error {
 	for _, dir := range localOupRepoPaths {
 		repos = append(repos, fmt.Sprintf("deb [trusted=yes] file://%v/ eagle main contrib non-free", dir))
 	}
-	return ioutil.WriteFile(system.GetCategorySourceMap()[system.OfflineUpdate], []byte(strings.Join(repos, "\n")), 0644)
+	return os.WriteFile(system.GetCategorySourceMap()[system.OfflineUpdate], []byte(strings.Join(repos, "\n")), 0644)
 }

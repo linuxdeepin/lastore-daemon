@@ -3,7 +3,6 @@ package system
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -216,7 +215,7 @@ func UpdateSourceDirUseUrl(updateType UpdateType, repoUrl []string, fileName str
 	}
 	var content string
 	content = fmt.Sprintf("## %v \n%v", annotation, strings.Join(repoUrl, "\n"))
-	return ioutil.WriteFile(filepath.Join(sourceDir, fileName), []byte(content), 0644)
+	return os.WriteFile(filepath.Join(sourceDir, fileName), []byte(content), 0644)
 }
 
 // UpdateUnknownSourceDir 更新未知来源仓库文件夹
@@ -243,7 +242,7 @@ func UpdateUnknownSourceDir(nonUnknownList strv.Strv) error {
 	}
 
 	var unknownSourceFilePaths []string
-	sourceDirFileInfos, err := ioutil.ReadDir(OriginSourceDir)
+	sourceDirFileInfos, err := os.ReadDir(OriginSourceDir)
 	if err != nil {
 		logger.Warning(err)
 		return err
@@ -337,7 +336,7 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			var beforeDoRealErr error
 			var sourceDir string
 			// #nosec G301
-			sourceDir, beforeDoRealErr = ioutil.TempDir("/tmp", "*Source.d")
+			sourceDir, beforeDoRealErr = os.MkdirTemp("/tmp", "*Source.d")
 			if beforeDoRealErr != nil {
 				logger.Warning(beforeDoRealErr)
 				return beforeDoRealErr
@@ -361,8 +360,8 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 					continue
 				}
 				if fileInfo.IsDir() {
-					var allSourceDirFileInfos []os.FileInfo
-					allSourceDirFileInfos, beforeDoRealErr = ioutil.ReadDir(path)
+					var allSourceDirFileInfos []os.DirEntry
+					allSourceDirFileInfos, beforeDoRealErr = os.ReadDir(path)
 					if beforeDoRealErr != nil {
 						continue
 					}

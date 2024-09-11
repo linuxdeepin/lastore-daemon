@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -160,12 +159,12 @@ func genPreBuild() string {
 }
 
 func copyFile(src, dst string) {
-	content, err := ioutil.ReadFile(src)
+	content, err := os.ReadFile(src)
 	if err != nil {
 		logger.Warning(err)
 		return
 	}
-	err = ioutil.WriteFile(dst, content, 0644)
+	err = os.WriteFile(dst, content, 0644)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -534,7 +533,7 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 	hash := sha256.New()
 	xTime := fmt.Sprintf("%d", time.Now().Unix())
 
-	xzFileContent, err := ioutil.ReadFile(filePath)
+	xzFileContent, err := os.ReadFile(filePath)
 	if err != nil {
 		logger.Warning("open xz file failed:", err)
 		return nil, err
@@ -560,7 +559,7 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 
 func getResponseData(response *http.Response, reqType requestType) (json.RawMessage, error) {
 	if http.StatusOK == response.StatusCode {
-		respData, err := ioutil.ReadAll(response.Body)
+		respData, err := io.ReadAll(response.Body)
 		if err != nil {
 			return nil, fmt.Errorf("%v failed to read response body: %v ", response.Request.RequestURI, err.Error())
 		}
@@ -912,7 +911,7 @@ var CVEs map[string]CEVInfo // 保存全局cves信息，方便查询
 const cveLocalInfo = "/var/lib/lastore/cve_local_info.json"
 
 func loadLocalCVEData() []byte {
-	data, err := ioutil.ReadFile(cveLocalInfo)
+	data, err := os.ReadFile(cveLocalInfo)
 	if err != nil {
 		logger.Warning(err)
 		return nil
@@ -926,7 +925,7 @@ func saveCEVData(meta CVEMeta) {
 		logger.Warning(err)
 		return
 	}
-	err = ioutil.WriteFile(cveLocalInfo, data, 0644)
+	err = os.WriteFile(cveLocalInfo, data, 0644)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -1090,7 +1089,7 @@ func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 		// }
 		repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, suffix))
 	}
-	err := ioutil.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
+	err := os.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
 	if err != nil {
 		logger.Warning("update source list file err")
 	}
@@ -1141,7 +1140,7 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 			var cachePrefix string
 			defer func() {
 				if *needRemoveCache {
-					infos, err := ioutil.ReadDir(system.OnlineListPath)
+					infos, err := os.ReadDir(system.OnlineListPath)
 					if err != nil {
 						logger.Warning(err)
 						_ = os.RemoveAll(system.OnlineListPath)
@@ -1193,7 +1192,7 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 				return
 			}
 
-			data, err := ioutil.ReadAll(resp.Body)
+			data, err := io.ReadAll(resp.Body)
 			if err != nil {
 				logger.Warning(err)
 				return
@@ -1203,7 +1202,7 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 			lastoreFile := "/tmp/" + file
 			aptFile := filepath.Join(system.OnlineListPath, file)
 
-			err = ioutil.WriteFile(lastoreFile, data, 0644)
+			err = os.WriteFile(lastoreFile, data, 0644)
 			if err != nil {
 				logger.Warning(err)
 				return
@@ -1463,7 +1462,7 @@ func (m *UpdatePlatformManager) PostSystemUpgradeMessage(uuid string) {
 		defer func() {
 			_ = response.Body.Close()
 		}()
-		body, _ := ioutil.ReadAll(response.Body)
+		body, _ := io.ReadAll(response.Body)
 		logger.Debug("postSystemUpgradeMessage response is:", string(body))
 		msg.updatePostStatus(PostSuccess)
 		delete(m.jobPostMsgMap, uuid)

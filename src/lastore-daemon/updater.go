@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"sync"
@@ -140,7 +140,7 @@ func startUpdateMetadataInfoService() {
 }
 
 func SetAPTSmartMirror(url string) error {
-	return ioutil.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
+	return os.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
 		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
 		0644) // #nosec G306
 }
@@ -245,9 +245,9 @@ const (
 
 func (u *Updater) restoreSystemSource() error {
 	// write backup file
-	current, err := ioutil.ReadFile(aptSource)
+	current, err := os.ReadFile(aptSource)
 	if err == nil {
-		err = ioutil.WriteFile(aptSource+".bak", current, 0644) // #nosec G306
+		err = os.WriteFile(aptSource+".bak", current, 0644) // #nosec G306
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -255,12 +255,12 @@ func (u *Updater) restoreSystemSource() error {
 		logger.Warning(err)
 	}
 
-	origin, err := ioutil.ReadFile(aptSourceOrigin)
+	origin, err := os.ReadFile(aptSourceOrigin)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(aptSource, origin, 0644) // #nosec G306
+	err = os.WriteFile(aptSource, origin, 0644) // #nosec G306
 	return err
 }
 

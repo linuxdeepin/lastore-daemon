@@ -7,7 +7,6 @@ package main
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -117,7 +116,7 @@ func postUpgrade(data string) error {
 					defer func() {
 						_ = response.Body.Close()
 					}()
-					body, _ := ioutil.ReadAll(response.Body)
+					body, _ := io.ReadAll(response.Body)
 					logger.Info(string(body))
 				} else {
 					logger.Warning(err)
@@ -134,7 +133,7 @@ func postUpgrade(data string) error {
 		}
 	} else {
 		errDatas = append([]string{dataVer}, errDatas...)
-		err := ioutil.WriteFile(postCacheFile, []byte(strings.Join(errDatas, "\n")), 0600)
+		err := os.WriteFile(postCacheFile, []byte(strings.Join(errDatas, "\n")), 0600)
 		if err != nil {
 			retErr = err
 		}

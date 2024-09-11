@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func GetOemRepoInfo(dir string) (*OemRepoConfig, *OemRepoConfig) {
 	securityOemRepoInfo := &OemRepoConfig{
 		UpdateType: system.SecurityUpdate,
 	}
-	infos, err := ioutil.ReadDir(dir)
+	infos, err := os.ReadDir(dir)
 	if err != nil {
 		logger.Warningf("failed to read %v,error is %v", dir, err)
 		return nil, nil
@@ -72,7 +71,7 @@ func GetOemRepoInfo(dir string) (*OemRepoConfig, *OemRepoConfig) {
 			logger.Infof("skip file %v", info.Name())
 			continue
 		}
-		content, err := ioutil.ReadFile(filepath.Join(dir, info.Name()))
+		content, err := os.ReadFile(filepath.Join(dir, info.Name()))
 		if err != nil {
 			logger.Warning(err)
 			continue

@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -84,7 +83,7 @@ func MainCheckPolicy(c *cli.Context) error {
 	defer func() {
 		_ = response.Body.Close()
 	}()
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		logger.Warning(err)
 		return nil

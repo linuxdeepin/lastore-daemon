@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -597,14 +597,14 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 		m.reportLog(upgradeStatusReport, false, job.Description)
 		var allErrMsg []string
 		for _, logPath := range job.errLogPath {
-			content, err := ioutil.ReadFile(logPath)
+			content, err := os.ReadFile(logPath)
 			if err != nil {
 				logger.Warning(err)
 			}
 			allErrMsg = append(allErrMsg, string(content))
 		}
 		if !errorContent.IsCheckError {
-			msg, err := ioutil.ReadFile("/var/log/apt/term.log")
+			msg, err := os.ReadFile("/var/log/apt/term.log")
 			if err != nil {
 				logger.Warning("failed to get upgrade failed lod:", err)
 			} else {
@@ -781,7 +781,7 @@ func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, e
 		} else {
 			loadCoreList := func() map[string]system.PackageInfo {
 				coreListMap := make(map[string]system.PackageInfo)
-				data, err := ioutil.ReadFile(coreListVarPath)
+				data, err := os.ReadFile(coreListVarPath)
 				if err != nil {
 					return nil
 				}
@@ -846,7 +846,7 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 	} else {
 		loadCoreList := func() map[string]system.PackageInfo {
 			coreListMap := make(map[string]system.PackageInfo)
-			data, err := ioutil.ReadFile(coreListVarPath)
+			data, err := os.ReadFile(coreListVarPath)
 			if err != nil {
 				return nil
 			}
@@ -946,7 +946,7 @@ func genRepoInfo(typ system.UpdateType, listPath string) []dut.RepoInfo {
 			FilePath:   file,
 			HashSha256: "",
 		}
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			logger.Warning(err)
 			continue
@@ -982,7 +982,7 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 	for k := range prefixMap {
 		prefixArray = append(prefixArray, k)
 	}
-	infos, err := ioutil.ReadDir(listPath)
+	infos, err := os.ReadDir(listPath)
 	if err != nil {
 		logger.Warning(err)
 		return nil

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"syscall"
 	"time"
@@ -194,11 +193,11 @@ func (m *Manager) setRebootCheckOption(mode system.UpdateType, uuid string) erro
 	if err != nil {
 		logger.Warning(err)
 	}
-	return ioutil.WriteFile(optionFilePath, content, 0644)
+	return os.WriteFile(optionFilePath, content, 0644)
 }
 
 func getRebootCheckJobUUID() string {
-	content, err := ioutil.ReadFile(optionFilePath)
+	content, err := os.ReadFile(optionFilePath)
 	if err != nil {
 		logger.Warning(err)
 		return ""
@@ -225,7 +224,7 @@ func (m *Manager) delRebootCheckOption(order checkType) error {
 		if err != nil {
 			return err
 		}
-		return ioutil.WriteFile(optionFilePath, content, 0644)
+		return os.WriteFile(optionFilePath, content, 0644)
 	case secondCheck, all:
 		err := os.RemoveAll(optionFilePathTemp)
 		if err != nil {

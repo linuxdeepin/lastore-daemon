@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -44,7 +43,7 @@ func getUpgradeUrls(path string) []string {
 		return nil
 	}
 	if info.IsDir() {
-		infos, err := ioutil.ReadDir(path)
+		infos, err := os.ReadDir(path)
 		if err != nil {
 			logger.Warning(err)
 			return nil
@@ -213,7 +212,7 @@ func updateSecurityConfigFile(create bool) error {
 			fmt.Sprintf(`Dir::Etc::SourceList "/etc/apt/sources.list.d/%v";`, system.SecurityList),
 		}
 		config := strings.Join(configContent, "\n")
-		err = ioutil.WriteFile(configPath, []byte(config), 0644)
+		err = os.WriteFile(configPath, []byte(config), 0644)
 		if err != nil {
 			return err
 		}
@@ -389,7 +388,7 @@ type recordInfo struct {
 // mode 只能为单一类型
 func recordUpgradeLog(uuid string, mode system.UpdateType, originChangelog interface{}, path string) {
 	var allContent []recordInfo
-	content, _ := ioutil.ReadFile(path)
+	content, _ := os.ReadFile(path)
 	if len(content) > 0 {
 		err := json.Unmarshal(content, &allContent)
 		if err != nil {
@@ -413,7 +412,7 @@ func recordUpgradeLog(uuid string, mode system.UpdateType, originChangelog inter
 		logger.Warning("failed to marshal all upgrade log:", err)
 		return
 	}
-	err = ioutil.WriteFile(path, res, 0644)
+	err = os.WriteFile(path, res, 0644)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -421,7 +420,7 @@ func recordUpgradeLog(uuid string, mode system.UpdateType, originChangelog inter
 }
 
 func getHistoryChangelog(path string) (changeLogs string) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -469,7 +468,7 @@ func downloadAndDecompressCoreList() (string, error) {
 		return coreListPath, nil
 	}
 	// 去下载路径查找
-	files, err := ioutil.ReadDir(downloadPkg)
+	files, err := os.ReadDir(downloadPkg)
 	if err != nil {
 		return "", err
 	}
@@ -481,7 +480,7 @@ func downloadAndDecompressCoreList() (string, error) {
 		}
 	}
 	if debFile != "" {
-		tmpDir, err := ioutil.TempDir("/tmp", coreListPkgName+".XXXXXX")
+		tmpDir, err := os.MkdirTemp("/tmp", coreListPkgName+".XXXXXX")
 		if err != nil {
 			return "", err
 		}
@@ -501,7 +500,7 @@ func downloadAndDecompressCoreList() (string, error) {
 
 func getCoreListFromCache() []string {
 	// 初始化时获取coreList数据
-	data, err := ioutil.ReadFile(coreListVarPath)
+	data, err := os.ReadFile(coreListVarPath)
 	if err != nil {
 		logger.Warning(err)
 		return nil
@@ -543,7 +542,7 @@ func getCoreListOnline() []string {
 		logger.Warning("backup coreList failed:", err)
 	}
 	// 3. 解析文件获取coreList必装列表
-	data, err := ioutil.ReadFile(coreFilePath)
+	data, err := os.ReadFile(coreFilePath)
 	if err != nil {
 		logger.Warning(err)
 		return nil

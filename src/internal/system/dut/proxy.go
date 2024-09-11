@@ -2,7 +2,6 @@ package dut
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -190,7 +189,7 @@ func GenDutMetaFile(metaPath, debPath string, pkgMap, coreMap, optionMap, baseMa
 	if err != nil {
 		return "", err
 	}
-	err = ioutil.WriteFile(metaPath, content, 0644)
+	err = os.WriteFile(metaPath, content, 0644)
 	if err != nil {
 		return "", err
 	}
