@@ -90,7 +90,7 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
-    "check-internal": {
+    "check-interval": {
       "value": 604800000000000,
       "serial": 0,
       "flags": [
@@ -101,7 +101,7 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
-    "clean-internal": {
+    "clean-interval": {
       "value": 604800000000000,
       "serial": 0,
       "flags": [
