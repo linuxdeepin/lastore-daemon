@@ -6,7 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -46,7 +45,7 @@ func main() {
 	flag.Parse()
 	service, err := dbusutil.NewSystemService()
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 
@@ -54,11 +53,11 @@ func main() {
 
 	hasOwner, err := service.NameHasOwner(dbusServiceName)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Error(err.Error())
 		return
 	}
 	if hasOwner {
-		fmt.Println("another lastore-daemon running")
+		logger.Error("another lastore-daemon running")
 		return
 	}
 
