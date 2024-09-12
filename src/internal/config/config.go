@@ -283,14 +283,14 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.CheckInterval = time.Duration(v.Value().(float64))
+		c.CheckInterval = time.Duration(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCleanInterval)
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.CleanInterval = time.Duration(v.Value().(float64))
+		c.CleanInterval = time.Duration(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateMode)
@@ -301,14 +301,14 @@ func getConfigFromDSettings() *Config {
 			c.UpdateMode &= ^system.OnlySecurityUpdate
 			c.UpdateMode |= system.SecurityUpdate
 		}
-		c.UpdateMode = system.UpdateType(v.Value().(float64))
+		c.UpdateMode = system.UpdateType(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCleanIntervalCacheOverLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.CleanIntervalCacheOverLimit = time.Duration(v.Value().(float64))
+		c.CleanIntervalCacheOverLimit = time.Duration(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAppstoreRegion)
@@ -385,7 +385,7 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.AutoInstallUpdateType = system.UpdateType(v.Value().(float64))
+		c.AutoInstallUpdateType = system.UpdateType(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAllowPostSystemUpgradeMessageVersion)
@@ -445,7 +445,7 @@ func getConfigFromDSettings() *Config {
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(float64))
+			c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(int64))
 		}
 	}
 	updateLastoreDaemonStatus()
@@ -473,7 +473,7 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.CheckUpdateMode = system.UpdateType(v.Value().(float64))
+		c.CheckUpdateMode = system.UpdateType(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateStatus)
@@ -517,13 +517,13 @@ func getConfigFromDSettings() *Config {
 		c.PostUpgradeCron = v.Value().(string)
 	}
 
-	var checkRange []float64
+	var checkRange []int64
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		for _, s := range v.Value().([]dbus.Variant) {
-			checkRange = append(checkRange, s.Value().(float64))
+			checkRange = append(checkRange, s.Value().(int64))
 		}
 	}
 
@@ -556,7 +556,7 @@ func getConfigFromDSettings() *Config {
 	if err != nil {
 		logger.Warning(err)
 	} else {
-		c.PlatformDisabled = DisabledStatus(v.Value().(float64))
+		c.PlatformDisabled = DisabledStatus(v.Value().(int64))
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableVersionCheck)
