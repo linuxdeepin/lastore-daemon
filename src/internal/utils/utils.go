@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -139,7 +138,7 @@ func WriteData(fpath string, data interface{}) error {
 		return err
 	}
 	_ = EnsureBaseDir(fpath)
-	return ioutil.WriteFile(fpath, content, 0644)
+	return os.WriteFile(fpath, content, 0644)
 }
 
 func ValidURL(url string) bool {

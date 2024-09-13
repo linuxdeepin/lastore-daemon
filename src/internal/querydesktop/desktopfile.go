@@ -5,7 +5,6 @@
 package querydesktop
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -48,7 +47,7 @@ func (fs DesktopFiles) BestOne() string {
 
 func (fs DesktopFiles) score(i int) int {
 	var score int
-	bs, err := ioutil.ReadFile(fs.Files[i])
+	bs, err := os.ReadFile(fs.Files[i])
 	if err != nil {
 		return -10
 	}
@@ -142,7 +141,7 @@ const (
 func QueryDesktopFile(pkg string) string {
 	if strings.HasPrefix(pkg, flatpakAppPkgPrefix) {
 		appId := pkg[len(flatpakAppPkgPrefix):]
-		files, _ := ioutil.ReadDir(flatpakAppsDir)
+		files, _ := os.ReadDir(flatpakAppsDir)
 		for _, fi := range files {
 			name := fi.Name()
 			if strings.HasSuffix(name, desktopExt) && !fi.IsDir() {

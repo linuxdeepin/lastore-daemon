@@ -9,6 +9,55 @@ case "$1" in
 	fi
 	;;
 esac
-
 #DEBHELPER#
-exit 0 
+export BIN_OUTPUT=`mktemp -d /tmp/lastore-daemon.XXXXXX`
+
+## 查找lastore-daemon的deb包，取最新版本(防止有旧版缓存)
+find_lastore_daemon_deb() {
+    local directory=$1
+
+    if [ -d "$directory" ]; then
+        local result=$(find "$directory" -name 'lastore-daemon_*.deb' | sort -r | head -n 1)
+        echo "$result"
+    fi
+}
+
+## 获取lastore-daemon的deb包
+DEB_NAME=$(find_lastore_daemon_deb "/var/cache/lastore/archives")
+if [ ! -n "$DEB_NAME" ]; then
+	DEB_NAME=$(find_lastore_daemon_deb "/var/cache/apt/archives")
+	if [ ! -n "$DEB_NAME" ]; then
+		echo "lastore-daemon not found"
+		exit 0
+	fi
+fi
+
+DATA_XZ=$BIN_OUTPUT/"data.tar.xz"
+BIN_PATH="$BIN_OUTPUT/usr/bin"
+BIN_NAME="$BIN_OUTPUT/usr/bin/lastore-tools"
+
+## 将deb包解压
+cd $BIN_OUTPUT
+ar -x $DEB_NAME
+if [ ! -f $DATA_XZ ]; then
+    echo "$DATA_XZ not exist"
+    exit 0
+fi
+
+tar -xf $DATA_XZ -C $BIN_OUTPUT
+
+# 检查路径是否存在
+if [ ! -d $BIN_PATH ]; then
+    echo "no path:$BIN_PATH"
+    exit 0
+fi
+
+# 检查文件是否存在
+if [ ! -f $BIN_NAME ]; then
+    echo "no file:$BIN_NAME"
+    exit 0
+fi
+
+$BIN_NAME update -j update-monitor &
+
+exit 0

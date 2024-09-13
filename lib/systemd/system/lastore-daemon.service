@@ -3,8 +3,8 @@ Description=Deepin Lastore Daemon
 After=display-manager.service
 
 [Service]
-Type=notify
-NotifyAccess=main
+Type=dbus
+BusName=org.deepin.dde.Lastore1
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
 StandardOutput=null
 StandardError=null

@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"sync"
@@ -41,8 +42,10 @@ type Job struct {
 
 	Cancelable bool
 
-	queueName string
-	retry     int
+	queueName         string
+	retry             int
+	subRetryHookFn    func(*Job) // hook执行规则是在retry--之前执行hook
+	realRunningHookFn func()
 
 	// adjust the progress range, used by some download job type
 	progressRangeBegin float64
@@ -50,10 +53,15 @@ type Job struct {
 
 	environ map[string]string
 
-	hooks   map[string]func()
-	hooksMu sync.Mutex
+	preChangeStatusHooks   map[string]func() error
+	preChangeStatusHooksMu sync.Mutex
 
-	autoCheck bool
+	afterChangedHooks   map[string]func() error
+	afterChangedHooksMu sync.Mutex
+
+	updateTyp system.UpdateType
+
+	errLogPath []string
 }
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
@@ -70,7 +78,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 
 		option:    make(map[string]string),
 		queueName: queueName,
-		retry:     3,
+		retry:     1,
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
@@ -83,7 +91,7 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 }
 
 func (j *Job) initDownloadSize() {
-	s, err := system.QueryPackageDownloadSize(j.Packages...)
+	s, _, err := system.QueryPackageDownloadSize(system.AllInstallUpdate, j.Packages...)
 	if err != nil {
 		logger.Warningf("initDownloadSize failed: %v", err)
 		return
@@ -123,6 +131,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	} else {
 		changed = true
 		j.setError(info.Error)
+		j.errLogPath = info.Error.ErrorLog
 	}
 
 	if info.Cancelable != j.Cancelable {
@@ -132,6 +141,10 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	}
 	logger.Debugf("updateInfo %v <- %v\n", j, info)
 
+	// TODO 下载时重复触发
+	if info.Status == system.RunningStatus && j.realRunningHookFn != nil {
+		j.realRunningHookFn()
+	}
 	cProgress := buildProgress(info.Progress, j.progressRangeBegin, j.progressRangeEnd)
 	if cProgress > j.Progress {
 		changed = true
@@ -156,11 +169,26 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 		err := TransitionJobState(j, info.Status)
 		if err != nil {
 			logger.Warningf("_UpdateInfo: %v\n", err)
+			// 当success的hook报错时，需要将error内容传递给job，running的hook错误在StartSystemJob中处理（其他四类状态应该不会有hook报错的情况）
+			if info.Status == system.SucceedStatus {
+				var jobErr *system.JobError
+				ok := errors.As(err, &jobErr)
+				if ok {
+					j.setError(jobErr)
+					j.errLogPath = jobErr.ErrorLog
+					_ = TransitionJobState(j, system.FailedStatus)
+					// 当需要迁移到success时，Cancelable为false，当hook报错时，需要将Cancelable设置为true
+					j.Cancelable = true
+					_ = j.emitPropChangedCancelable(info.Cancelable)
+					return true
+				}
+				// failed状态迁移放到 setError 后面,需要failed hook 上报错误信息
+				_ = TransitionJobState(j, system.FailedStatus)
+			}
 			return false
 		}
 		changed = true
 	}
-
 	return changed
 }
 
@@ -180,19 +208,8 @@ func buildProgress(p, begin, end float64) float64 {
 	return begin + p*(end-begin)
 }
 
-type Error interface {
-	GetType() string
-	GetDetail() string
-}
-
-func (j *Job) setError(e Error) {
-	errValue := struct {
-		ErrType   string
-		ErrDetail string
-	}{
-		e.GetType(), e.GetDetail(),
-	}
-	jsonBytes, err := json.Marshal(errValue)
+func (j *Job) setError(e *system.JobError) {
+	jsonBytes, err := json.Marshal(e)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -200,15 +217,105 @@ func (j *Job) setError(e Error) {
 	j.setPropDescription(string(jsonBytes))
 }
 
-func (j *Job) getHook(name string) func() {
-	j.hooksMu.Lock()
-	fn := j.hooks[name]
-	j.hooksMu.Unlock()
+func (j *Job) getPreHook(name string) func() error {
+	j.preChangeStatusHooksMu.Lock()
+	fn := j.preChangeStatusHooks[name]
+	j.preChangeStatusHooksMu.Unlock()
 	return fn
 }
 
-func (j *Job) setHooks(hooks map[string]func()) {
-	j.hooksMu.Lock()
-	j.hooks = hooks
-	j.hooksMu.Unlock()
+// 当success的hook报错时,需要在 updateInfo 处理error;running的hook错误在StartSystemJob中处理;其他四类状态应该不会有hook报错的情况.
+func (j *Job) setPreHooks(hooks map[string]func() error) {
+	j.preChangeStatusHooksMu.Lock()
+	if j.preChangeStatusHooks == nil {
+		j.preChangeStatusHooks = make(map[string]func() error)
+	}
+	if hooks != nil {
+		for k, v := range hooks {
+			j.preChangeStatusHooks[k] = v
+		}
+	}
+	j.preChangeStatusHooksMu.Unlock()
+}
+
+func (j *Job) wrapPreHooks(appendHooks map[string]func() error) {
+	j.preChangeStatusHooksMu.Lock()
+	defer j.preChangeStatusHooksMu.Unlock()
+	if j.preChangeStatusHooks == nil {
+		j.preChangeStatusHooks = appendHooks
+		return
+	}
+	for key, fn := range appendHooks {
+		appendFn := fn
+		f, ok := j.preChangeStatusHooks[key]
+		if ok {
+			j.preChangeStatusHooks[key] = func() error {
+				err := f()
+				if err != nil {
+					return err
+				}
+				return appendFn()
+			}
+		} else {
+			j.preChangeStatusHooks[key] = fn
+		}
+	}
+}
+
+func (j *Job) getAfterHook(name string) func() error {
+	j.afterChangedHooksMu.Lock()
+	fn := j.afterChangedHooks[name]
+	j.afterChangedHooksMu.Unlock()
+	return fn
+}
+
+// after hook中 success状态的hook不要返回error
+func (j *Job) setAfterHooks(hooks map[string]func() error) {
+	j.afterChangedHooksMu.Lock()
+	if j.afterChangedHooks == nil {
+		j.afterChangedHooks = make(map[string]func() error)
+	}
+	if hooks != nil {
+		for k, v := range hooks {
+			j.afterChangedHooks[k] = v
+		}
+	}
+	j.afterChangedHooksMu.Unlock()
+}
+
+func (j *Job) wrapAfterHooks(appendHooks map[string]func() error) {
+	j.afterChangedHooksMu.Lock()
+	defer j.afterChangedHooksMu.Unlock()
+	if j.afterChangedHooks == nil {
+		j.afterChangedHooks = appendHooks
+		return
+	}
+	for key, fn := range appendHooks {
+		appendFn := fn
+		f, ok := j.afterChangedHooks[key]
+		if ok {
+			j.afterChangedHooks[key] = func() error {
+				err := f()
+				if err != nil {
+					return err
+				}
+				return appendFn()
+			}
+		} else {
+			j.afterChangedHooks[key] = fn
+		}
+	}
+}
+
+func (j *Job) subRetryCount(toZero bool) {
+	j.PropsMu.Lock()
+	defer j.PropsMu.Unlock()
+	if toZero {
+		j.retry = 0
+		return
+	}
+	if j.subRetryHookFn != nil {
+		j.subRetryHookFn(j)
+	}
+	j.retry--
 }

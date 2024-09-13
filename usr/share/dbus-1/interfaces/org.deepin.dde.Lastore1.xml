@@ -17,7 +17,15 @@
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
-          <method name="PackageDesktopPath">
+	  <method name="InstallPackageFromRepo">
+	       <arg type="s" direction="in"></arg>
+	       <arg type="s" direction="in"></arg>
+	       <arg type="s" direction="in"></arg>
+	       <arg type="s" direction="in"></arg>
+	       <arg type="as" direction="in"></arg>
+	       <arg type="o" direction="out"></arg>
+	  </method>
+	  <method name="PackageDesktopPath">
                <arg type="s" direction="in"></arg>
                <arg type="s" direction="out"></arg>
           </method>

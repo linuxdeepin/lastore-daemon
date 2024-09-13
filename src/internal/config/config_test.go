@@ -2,11 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package main
+package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -23,12 +22,12 @@ func TestConfig(t *testing.T) {
 		err := os.RemoveAll(testDataPath)
 		require.NoError(t, err)
 	}()
-	tmpfile, err := ioutil.TempFile(testDataPath, "config.json")
+	tmpfile, err := os.CreateTemp(testDataPath, "config.json")
 	require.NoError(t, err)
 	defer tmpfile.Close()
 
 	data := []byte(`{"Version":"0.1","AutoCheckUpdates":true,"DisableUpdateMetadata":false,"AutoDownloadUpdates":false,"AutoClean":true,"MirrorSource":"default","UpdateNotify":true,"CheckInterval":604800000000000,"CleanInterval":604800000000000,"UpdateMode":3,"CleanIntervalCacheOverLimit":86400000000000,"AppstoreRegion":"","LastCheckTime":"2021-06-17T14:10:21.896021304+08:00","LastCleanTime":"2021-06-17T09:18:31.515019638+08:00","LastCheckCacheSizeTime":"2021-06-17T09:18:31.5151104+08:00","Repository":"desktop","MirrorsUrl":"http://packages.deepin.com/mirrors/community.json","AllowInstallRemovePkgExecPaths":null}`)
-	err = ioutil.WriteFile(tmpfile.Name(), data, 0777)
+	err = os.WriteFile(tmpfile.Name(), data, 0777)
 	require.NoError(t, err)
 
 	config := NewConfig(tmpfile.Name())

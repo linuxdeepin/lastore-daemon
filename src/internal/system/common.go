@@ -5,14 +5,19 @@
 package system
 
 import (
+	"bufio"
 	"encoding/json"
-	"fmt"
-	"github.com/linuxdeepin/go-lib/strv"
-	"io/ioutil"
+	"io"
 	"os"
-	"path/filepath"
+	"os/exec"
+	"regexp"
 	"strings"
+	"syscall"
+	"unicode"
 
+	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
+	license "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.license"
+	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/log"
 )
 
@@ -28,7 +33,7 @@ type MirrorSource struct {
 }
 
 var RepoInfos []RepositoryInfo
-var logger = log.NewLogger("lastore")
+var logger = log.NewLogger("lastore/system")
 
 type RepositoryInfo struct {
 	Name   string `json:"name"`
@@ -72,143 +77,261 @@ func NormalFileExists(fpath string) bool {
 	return true
 }
 
-type UpdateType uint64
+// UpgradeStatusAndReason 用于记录整体更新安装的流程状态和原因,dde-session-daemon和回滚界面会根据该配置进行提示
+type UpgradeStatusAndReason struct {
+	Status     UpgradeStatus
+	ReasonCode JobErrorType
+}
 
-// 用于设置UpdateMode属性,最大支持64位
+// UpgradeStatus 整体更新安装的流程状态
+type UpgradeStatus string
+
 const (
-	SystemUpdate       UpdateType = 1 << 0 // 系统更新
-	AppStoreUpdate     UpdateType = 1 << 1 // 应用更新(1050版本中应用更新不开启)
-	SecurityUpdate     UpdateType = 1 << 2 // 1050及以上版本,安全更新项废弃,改为仅安全更新
-	UnknownUpdate      UpdateType = 1 << 3 // 未知来源更新
-	OnlySecurityUpdate UpdateType = 1 << 4 // 仅开启安全更新（该选项开启时，其他更新关闭）
+	UpgradeReady   UpgradeStatus = "ready"
+	UpgradeRunning UpgradeStatus = "running"
+	UpgradeFailed  UpgradeStatus = "failed"
 )
 
-func (m UpdateType) JobType() string {
-	switch m {
-	case SystemUpdate:
-		return SystemUpgradeJobType
-	case AppStoreUpdate:
-		return AppStoreUpgradeJobType
-	case SecurityUpdate, OnlySecurityUpdate:
-		return SecurityUpgradeJobType
-	case UnknownUpdate:
-		return UnknownUpgradeJobType
-	default:
+type JobErrorType string
+
+func (j JobErrorType) String() string {
+	return string(j)
+}
+
+const (
+	NoError                      JobErrorType = "NoError"
+	ErrorUnknown                 JobErrorType = "ErrorUnknown"
+	ErrorProgram                 JobErrorType = "ErrorProgram"
+	ErrorFetchFailed             JobErrorType = "fetchFailed"
+	ErrorDpkgError               JobErrorType = "dpkgError"
+	ErrorPkgNotFound             JobErrorType = "pkgNotFound"
+	ErrorDpkgInterrupted         JobErrorType = "dpkgInterrupted"
+	ErrorDependenciesBroken      JobErrorType = "dependenciesBroken"
+	ErrorUnmetDependencies       JobErrorType = "unmetDependencies"
+	ErrorNoInstallationCandidate JobErrorType = "noInstallationCandidate"
+	ErrorInsufficientSpace       JobErrorType = "insufficientSpace"
+	ErrorUnauthenticatedPackages JobErrorType = "unauthenticatedPackages"
+	ErrorOperationNotPermitted   JobErrorType = "operationNotPermitted"
+	ErrorIndexDownloadFailed     JobErrorType = "IndexDownloadFailed"
+	ErrorIO                      JobErrorType = "ioError"
+	ErrorDamagePackage           JobErrorType = "damagePackage" // 包损坏,需要删除后重新下载或者安装
+	ErrorInvalidSourcesList      JobErrorType = "invalidSourceList"
+	ErrorPlatformUnreachable     JobErrorType = "platformUnreachable"
+	ErrorOfflineCheck            JobErrorType = "offlineCheckError"
+
+	ErrorMissCoreFile  JobErrorType = "missCoreFile"
+	ErrorScript        JobErrorType = "scriptError"
+	ErrorProgressCheck JobErrorType = "progressCheckError"
+
+	// running状态
+	ErrorNeedCheck JobErrorType = "needCheck"
+)
+
+const (
+	GrubTitleRollbackPrefix = "BEGIN /etc/grub.d/11_deepin_ab_recovery"
+	GrubTitleRollbackSuffix = "END /etc/grub.d/11_deepin_ab_recovery"
+	GrubTitleNormalPrefix   = "BEGIN /etc/grub.d/10_linux"
+	GrubTitleNormalSuffix   = "END /etc/grub.d/10_linux"
+)
+
+func GetGrubRollbackTitle(grubPath string) string {
+	return getGrubTitleByPrefix(grubPath, GrubTitleRollbackPrefix, GrubTitleRollbackSuffix)
+}
+
+func GetGrubNormalTitle(grubPath string) string {
+	return getGrubTitleByPrefix(grubPath, GrubTitleNormalPrefix, GrubTitleNormalSuffix)
+}
+
+func getGrubTitleByPrefix(grubPath string, start, end string) (entryTitle string) {
+	fileContent, err := os.ReadFile(grubPath)
+	if err != nil {
+		logger.Warning(err)
 		return ""
 	}
-}
-
-func AllUpdateType() []UpdateType {
-	return []UpdateType{
-		SystemUpdate,
-		//AppStoreUpdate,
-		OnlySecurityUpdate,
-		UnknownUpdate,
-	}
-}
-
-const (
-	LastoreSourcesPath = "/var/lib/lastore/sources.list"
-	CustomSourceDir    = "/var/lib/lastore/sources.list.d"
-	OriginSourceDir    = "/etc/apt/sources.list.d"
-	SystemSourceFile   = "/etc/apt/sources.list"
-	SystemSourceDir    = "/var/lib/lastore/SystemSource.d"
-	AppStoreList       = "appstore.list"
-	AppStoreSourceFile = "/etc/apt/sources.list.d/" + AppStoreList
-	UnstableSourceList = "deepin-unstable-source.list"
-	UnstableSourceFile = "/etc/apt/sources.list.d/" + UnstableSourceList
-	HweSourceList      = "hwe.list"
-	HweSourceFile      = "/etc/apt/sources.list.d/" + HweSourceList
-	DriverList         = "driver.list"
-	SecurityList       = "security.list"
-	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList // 安全更新源路径
-	UnknownSourceDir   = "/var/lib/lastore/unknownSource.d"        // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
-)
-
-func GetCategorySourceMap() map[UpdateType]string {
-	return map[UpdateType]string{
-		SystemUpdate: SystemSourceDir,
-		//AppStoreUpdate:     AppStoreSourceFile,
-		OnlySecurityUpdate: SecuritySourceFile,
-		UnknownUpdate:      UnknownSourceDir,
-	}
-}
-
-func UpdateUnknownSourceDir() error {
-	// 移除旧版本内容
-	err := os.RemoveAll(CustomSourceDir)
-	if err != nil {
-		logger.Warning(err)
-	}
-	err = os.RemoveAll(LastoreSourcesPath)
-	if err != nil {
-		logger.Warning(err)
-	}
-	// 移除旧数据
-	err = os.RemoveAll(UnknownSourceDir)
-	if err != nil {
-		logger.Warning(err)
-	}
-	// #nosec G301
-	err = os.MkdirAll(UnknownSourceDir, 0755)
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	var unknownSourceFilePaths []string
-	sourceDirFileInfos, err := ioutil.ReadDir(OriginSourceDir)
-	if err != nil {
-		logger.Warning(err)
-		return err
-	}
-	nonUnknownSourceFileList := strv.Strv{
-		AppStoreList,
-		SecurityList,
-		DriverList,
-		UnstableSourceList,
-		HweSourceList,
-	}
-	for _, fileInfo := range sourceDirFileInfos {
-		name := fileInfo.Name()
-		if strings.HasSuffix(name, ".list") {
-			if !nonUnknownSourceFileList.Contains(name) {
-				unknownSourceFilePaths = append(unknownSourceFilePaths, filepath.Join(OriginSourceDir, name))
+	sl := bufio.NewScanner(strings.NewReader(string(fileContent)))
+	sl.Split(bufio.ScanLines)
+	needNext := false
+	for sl.Scan() {
+		line := sl.Text()
+		line = strings.TrimSpace(line)
+		if !needNext {
+			needNext = strings.Contains(line, start)
+		} else {
+			if strings.Contains(line, end) {
+				logger.Warningf("%v not found %v entry", grubPath, start)
+				return ""
+			}
+			if strings.HasPrefix(line, "menuentry ") {
+				title, ok := parseTitle(line)
+				if ok {
+					entryTitle = title
+					break
+				} else {
+					logger.Warningf("parse entry title failed from: %q", line)
+					return ""
+				}
 			}
 		}
 	}
-
-	// 创建对应的软链接
-	for _, filePath := range unknownSourceFilePaths {
-		linkPath := filepath.Join(UnknownSourceDir, filepath.Base(filePath))
-		err = os.Symlink(filePath, linkPath)
-		if err != nil {
-			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
-		}
+	err = sl.Err()
+	if err != nil {
+		return ""
 	}
-	return nil
+	return entryTitle
 }
 
-func UpdateSystemSourceDir() error {
+// getGrubTitleByIndex index 的起始值是0
+func getGrubTitleByIndex(grub grub2.Grub2, index int) (entryTitle string) {
+	if grub == nil {
+		return ""
+	}
+	entryList, err := grub.GetSimpleEntryTitles(0)
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+	if len(entryList) < index+1 {
+		logger.Warningf(" index:%v out of range", index)
+		return ""
+	}
+	return entryList[index]
+}
 
-	err := os.RemoveAll(SystemSourceDir)
+var (
+	entryRegexpSingleQuote = regexp.MustCompile(`^ *(menuentry|submenu) +'(.*?)'.*$`)
+	entryRegexpDoubleQuote = regexp.MustCompile(`^ *(menuentry|submenu) +"(.*?)".*$`)
+)
+
+func parseTitle(line string) (string, bool) {
+	line = strings.TrimLeftFunc(line, unicode.IsSpace)
+	if entryRegexpSingleQuote.MatchString(line) {
+		return entryRegexpSingleQuote.FindStringSubmatch(line)[2], true
+	} else if entryRegexpDoubleQuote.MatchString(line) {
+		return entryRegexpDoubleQuote.FindStringSubmatch(line)[2], true
+	} else {
+		return "", false
+	}
+}
+
+func HandleDelayPackage(hold bool, packages []string) {
+	action := "unhold"
+	if hold {
+		action = "hold"
+	}
+	args := []string{
+		action,
+	}
+	args = append(args, packages...)
+	err := exec.Command("apt-mark", args...).Run()
 	if err != nil {
 		logger.Warning(err)
 	}
-	// #nosec G301
-	err = os.MkdirAll(SystemSourceDir, 0755)
+}
+
+type UpdateModeStatus string
+
+const (
+	NoUpdate       UpdateModeStatus = "noUpdate"    // 无更新
+	NotDownload    UpdateModeStatus = "notDownload" // 包含了有更新没下载
+	IsDownloading  UpdateModeStatus = "isDownloading"
+	DownloadPause  UpdateModeStatus = "downloadPause"
+	DownloadErr    UpdateModeStatus = "downloadFailed"
+	CanUpgrade     UpdateModeStatus = "downloaded"   // Downloaded
+	WaitRunUpgrade UpdateModeStatus = "upgradeReady" // 进行备份+更新时,当处于更新未开始状态
+	Upgrading      UpdateModeStatus = "upgrading"
+	UpgradeErr     UpdateModeStatus = "upgradeFailed"
+	Upgraded       UpdateModeStatus = "needReboot" // need reboot
+)
+
+type ABStatus string
+
+const (
+	NotBackup ABStatus = "notBackup"
+	// NotSupportBackup ABStatus = "notSupportBackup"
+	BackingUp    ABStatus = "backingUp"
+	BackupFailed ABStatus = "backupFailed"
+	HasBackedUp  ABStatus = "hasBackedUp"
+)
+
+type ABErrorType string
+
+const (
+	NoABError    ABErrorType = "noError"
+	CanNotBackup ABErrorType = "canNotBackup"
+	OtherError   ABErrorType = "otherError"
+)
+
+type UiActiveState int32
+
+const (
+	Unknown         UiActiveState = -1 // 未知
+	Unauthorized    UiActiveState = 0  // 未授权
+	Authorized      UiActiveState = 1  // 已授权
+	AuthorizedLapse UiActiveState = 2  // 授权失效
+	TrialAuthorized UiActiveState = 3  // 试用期已授权
+	TrialExpired    UiActiveState = 4  // 试用期已过期
+)
+
+func IsAuthorized() bool {
+	sysBus, err := dbusutil.NewSystemService()
 	if err != nil {
 		logger.Warning(err)
+		return false
+	}
+	licenseObj := license.NewLicense(sysBus.Conn())
+	state, err := licenseObj.AuthorizationState().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	if UiActiveState(state) == Authorized || UiActiveState(state) == TrialAuthorized {
+		return true
+	}
+	return false
+}
+
+func IsActiveCodeExist() bool {
+	sysBus, err := dbusutil.NewSystemService()
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	licenseObj := license.NewLicense(sysBus.Conn())
+	code, err := licenseObj.ActiveCode().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	return strings.TrimSpace(code) != ""
+}
+
+func CheckLock(p string) (string, bool) {
+	// #nosec G304
+	file, err := os.Open(p)
+	if err != nil {
+		logger.Warningf("error opening %q: %v", p, err)
+		return "", false
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	flockT := syscall.Flock_t{
+		Type:   syscall.F_WRLCK,
+		Whence: io.SeekStart,
+		Start:  0,
+		Len:    0,
+		Pid:    0,
+	}
+	err = syscall.FcntlFlock(file.Fd(), syscall.F_GETLK, &flockT)
+	if err != nil {
+		logger.Warningf("unable to check file %q lock status: %s", p, err)
+		return p, true
 	}
 
-	var systemSourceFilePaths = []string{UnstableSourceFile, SystemSourceFile, HweSourceFile}
-
-	// 创建对应的软链接
-	for _, filePath := range systemSourceFilePaths {
-		linkPath := filepath.Join(SystemSourceDir, filepath.Base(filePath))
-		err = os.Symlink(filePath, linkPath)
-		if err != nil {
-			return fmt.Errorf("create symlink for %q failed: %v", filePath, err)
-		}
+	if flockT.Type == syscall.F_WRLCK {
+		return p, true
 	}
-	return nil
+
+	return "", false
 }

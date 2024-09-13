@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -31,11 +30,11 @@ func BuildDesktopDirectories() []string {
 		"/usr/share/deepin/applications":      {},
 		"/usr/share/deepin/applications/kde4": {},
 	}
-	xdg_data_home := os.Getenv("$XDG_DATA_HOME")
-	if xdg_data_home == "" {
-		xdg_data_home = os.ExpandEnv("$HOME/.local/share")
+	xdgDataHome := os.Getenv("$XDG_DATA_HOME")
+	if xdgDataHome == "" {
+		xdgDataHome = os.ExpandEnv("$HOME/.local/share")
 	}
-	scanDirectories[path.Join(xdg_data_home, "applications")] = struct{}{}
+	scanDirectories[path.Join(xdgDataHome, "applications")] = struct{}{}
 	for _, dir := range strings.Split(os.Getenv("$XDG_DATA_DIR"), ":") {
 		scanDirectories[path.Join(dir, "applications")] = struct{}{}
 	}
@@ -49,14 +48,14 @@ func BuildDesktopDirectories() []string {
 func GetDesktopFiles(dirs []string) []string {
 	var r []string
 	for _, dir := range dirs {
-		fs, err := ioutil.ReadDir(dir)
+		fs, err := os.ReadDir(dir)
 		if err != nil {
 			continue
 		}
-		for _, finfo := range fs {
-			name := finfo.Name()
+		for _, info := range fs {
+			name := info.Name()
 			if strings.HasSuffix(name, ".desktop") {
-				r = append(r, path.Join(dir, finfo.Name()))
+				r = append(r, path.Join(dir, info.Name()))
 			}
 		}
 	}
@@ -194,14 +193,18 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 	var r = make(map[string]string)
 	var t = make(map[string]int64)
 
-	fs, err := ioutil.ReadDir("/var/lib/dpkg/info")
+	fs, err := os.ReadDir("/var/lib/dpkg/info")
 	if err != nil {
 		logger.Warningf("ParsePackageInfos :%v\n", err)
 		return r, t
 	}
 
-	for _, finfo := range fs {
-		name := finfo.Name()
+	for _, entry := range fs {
+		name := entry.Name()
+		info, err := entry.Info()
+		if err != nil {
+			logger.Warningf("GetInfoOf %s: %v\n", name, err)
+		}
 		if strings.HasSuffix(name, ".list") {
 			packageName := getPackageName(name)
 			desktopFiles := getDesktopFilePaths(path.Join("/var/lib/dpkg/info", name))
@@ -212,7 +215,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 				r[f] = packageName
 				r[path.Base(f)] = packageName
 			}
-			t[packageName] = finfo.ModTime().Unix()
+			t[packageName] = info.ModTime().Unix()
 		}
 	}
 	return r, t
@@ -221,7 +224,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 func mergeDesktopIndex(infos map[string]string, fpath string) map[string]string {
 	var old = make(map[string]string)
 	// #nosec G304
-	if content, err := ioutil.ReadFile(fpath); err == nil {
+	if content, err := os.ReadFile(fpath); err == nil {
 		if err := json.Unmarshal(content, &old); err != nil {
 			logger.Warningf("mergeDesktopIndex:%q %v\n", fpath, err)
 		}

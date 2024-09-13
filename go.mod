@@ -11,7 +11,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jouyouyun/hardware v0.1.8
 	github.com/linuxdeepin/dde-api v0.0.0-20230407015108-8b16b3779328
-	github.com/linuxdeepin/go-dbus-factory v0.0.0-20230407013947-6ff704a21ca7
+	github.com/linuxdeepin/go-dbus-factory v0.0.0-20240911053737-174dfad10167
 	github.com/linuxdeepin/go-lib v0.0.0-20230406092403-b4b4282fc513
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.6

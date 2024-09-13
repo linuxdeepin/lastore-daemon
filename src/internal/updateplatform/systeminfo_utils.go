@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package main
+package updateplatform
 
 import (
 	"bufio"
@@ -10,17 +10,20 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/jouyouyun/hardware/utils"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	hhardware "github.com/jouyouyun/hardware"
 )
@@ -38,6 +41,10 @@ const (
 	lscpuCmd          = "lscpu"
 )
 
+const (
+	customInfoPath = "/usr/share/deepin/custom-note/info.json"
+)
+
 type SystemInfo struct {
 	SystemName      string
 	ProductType     string
@@ -50,6 +57,11 @@ type SystemInfo struct {
 	SN              string
 	HardwareVersion string
 	OEMID           string
+	ProjectId       string
+	Baseline        string
+	SystemType      string
+	MachineType     string
+	Mac             string
 }
 
 const (
@@ -57,12 +69,12 @@ const (
 	OemCustomState    = "1"
 )
 
-func getSystemInfo() SystemInfo {
+func getSystemInfo(includeDiskInfo bool) SystemInfo {
 	systemInfo := SystemInfo{
 		Custom: OemNotCustomState,
 	}
 
-	osVersionInfoMap, err := getOSVersionInfo()
+	osVersionInfoMap, err := GetOSVersionInfo(CacheVersion)
 	if err != nil {
 		logger.Warning("failed to get os-version:", err)
 	} else {
@@ -76,7 +88,7 @@ func getSystemInfo() SystemInfo {
 			".")
 	}
 
-	systemInfo.HardwareId, err = getHardwareId()
+	systemInfo.HardwareId = GetHardwareId(includeDiskInfo)
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
 	}
@@ -88,7 +100,7 @@ func getSystemInfo() SystemInfo {
 		systemInfo.Processor = systemInfo.Processor[0:100] // 按照需求,长度超过100时,只取前100个字符
 	}
 
-	systemInfo.Arch, err = getArchInfo()
+	systemInfo.Arch, err = GetArchInfo()
 	if err != nil {
 		logger.Warning("failed to get Arch:", err)
 	}
@@ -96,23 +108,34 @@ func getSystemInfo() SystemInfo {
 	if err != nil {
 		logger.Warning("failed to get SN:", err)
 	}
-	isCustom, err := getCustomInfo()
+	isCustom, oemId, err := getCustomInfoAndOemId()
 	if err != nil {
+		logger.Warningf("failed to get oemId by /etc/oem-info :%v, start get oemId by /etc/.oemid", err)
 		systemInfo.Custom = OemNotCustomState
+		// 当从oem-info文件解析出错(通常为文件不存在的情况),需要从/etc/.oemid重新读取oemid
+		oemId, err = getOEMID()
+		if err != nil {
+			logger.Warning(err)
+		}
 	} else if isCustom {
 		systemInfo.Custom = OemCustomState
 	}
-
+	systemInfo.OEMID = oemId
 	systemInfo.HardwareVersion, err = getHardwareVersion()
 	if err != nil {
 		logger.Warning("failed to get HardwareVersion:", err)
 	}
-
-	systemInfo.OEMID, err = getOEMID()
+	systemInfo.ProjectId, err = getProjectID(customInfoPath)
 	if err != nil {
-		logger.Warning("failed to get OEMID:", err)
+		logger.Warning("failed to get project id:", err)
 	}
-
+	systemInfo.Baseline = getCurrentBaseline()
+	systemInfo.SystemType = getCurrentSystemType()
+	systemInfo.MachineType = getMachineType()
+	systemInfo.Mac, err = getDefaultMac()
+	if err != nil {
+		logger.Warning("failed to get Mac:", err)
+	}
 	return systemInfo
 }
 
@@ -138,9 +161,8 @@ func loadFile(filepath string) ([]string, error) {
 	return lines, nil
 }
 
-func getOSVersionInfo() (map[string]string, error) {
-	versionPath := path.Join(etcDir, osVersionFileName)
-	versionLines, err := loadFile(versionPath)
+func GetOSVersionInfo(filePath string) (map[string]string, error) {
+	versionLines, err := loadFile(filePath)
 	if err != nil {
 		logger.Warning("failed to load os-version file:", err)
 		return nil, err
@@ -165,13 +187,14 @@ func getOSVersionInfo() (map[string]string, error) {
 	return osVersionInfoMap, nil
 }
 
-func getHardwareId() (string, error) {
-	hhardware.IncludeDiskInfo = true
+func GetHardwareId(includeDiskInfo bool) string {
+	hhardware.IncludeDiskInfo = includeDiskInfo
 	machineID, err := hhardware.GenMachineID()
 	if err != nil {
-		return "", err
+		logger.Warningf("failed to get hardware id: %v ", err.Error())
+		return ""
 	}
-	return machineID, nil
+	return machineID
 }
 
 func getProcessorModelName() (string, error) {
@@ -256,7 +279,7 @@ func runLsCpu() (map[string]string, error) {
 }
 
 func parseInfoFile(file, delim string) (map[string]string, error) {
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -279,17 +302,18 @@ func parseInfoFile(file, delim string) (map[string]string, error) {
 	return ret, nil
 }
 
-func getArchInfo() (string, error) {
+func GetArchInfo() (string, error) {
 	arch, err := exec.Command("dpkg", "--print-architecture").Output()
 	if err != nil {
 		logger.Warningf("GetSystemArchitecture failed:%v\n", arch)
 		return "", err
 	}
-	return string(arch), nil
+	return strings.TrimSpace(string(arch)), nil
 }
 
 // 获取激活码
 func getSN() (string, error) {
+	logger.Debug("start get SN")
 	systemBus, err := dbus.SystemBus()
 	if err != nil {
 		return "", err
@@ -301,6 +325,7 @@ func getSN() (string, error) {
 		return "", err
 	}
 	v := ret.Value().(string)
+	logger.Debug("end get SN")
 	return v, nil
 }
 
@@ -320,37 +345,41 @@ const (
 	oemPubKey   = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwzVS35kJl3mhSJssD3S5\nEzjJbFoAD+VsMSy2nS7WQA2XH0aPAWjgCeU+1ScYdBOWz+zWsnK77fGm96HueAuT\nhQEJ9J+ISJUuYBYCc6ovc35gxnhCmP2Qof+/vw98+uKnf1aTDI1imNCWOd/shSbL\nOBn5xFXPsQld1HJqahOuQZOguNIWvrvT7RtmQb77iu576gVLc948HreXKOPD57uK\nJoA2KcoUt95hd94wYyphCuE4onjPcIlpJQfda6PP+HO2Xwze3ltIG6hJSSAEK4R9\n8GnaOTqvslWVI9QFLCIyQ63dbbnASYFTWpDXTlPJsss64vfWOuEjwIyzzQDJNOzN\nFQIDAQAB\n-----END PUBLIC KEY-----"
 )
 
-func getCustomInfo() (bool, error) {
-	if !verifyOemFile() {
-		logger.Warning("verify oem-info failure")
-		return false, nil
+func getCustomInfoAndOemId() (bool, string, error) {
+	if !utils2.IsFileExist(oemInfoFile) || !utils2.IsFileExist(oemSignFile) {
+		return false, "", errors.New("oemInfoFile or oemSignFile not exist")
 	}
 	var info oemInfo
 	err := system.DecodeJson(oemInfoFile, &info)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	return info.CustomInfo.CustomizedKernel, nil
+
+	if !verifyOemFile(oemPubKey, oemInfoFile) {
+		logger.Warning("verify oem-info failure")
+		return false, "", errors.New("verify oem-info failure")
+	}
+	return info.CustomInfo.CustomizedKernel, info.Basic.IsoId, nil
 }
 
 // 定制标识校验
-func verifyOemFile() bool {
-	//pem解码
-	block, _ := pem.Decode([]byte(oemPubKey))
+func verifyOemFile(key, file string) bool {
+	// pem解码
+	block, _ := pem.Decode([]byte(key))
 	if block == nil {
 		return false
 	}
-	//解析得到一个公钥interface
+	// 解析得到一个公钥interface
 	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		logger.Warning(err)
 		return false
 	}
-	//转为rsa公钥
+	// 转为rsa公钥
 	publicKey := pubKeyInterface.(*rsa.PublicKey)
-	//sha256计算
+	// sha256计算
 	hash := sha256.New()
-	encContent, err := ioutil.ReadFile(oemInfoFile)
+	encContent, err := os.ReadFile(file)
 	if err != nil {
 		logger.Warning(err)
 		return false
@@ -362,13 +391,13 @@ func verifyOemFile() bool {
 	}
 	hashed := hash.Sum(nil)
 
-	//读取签名文件
-	srBuf, err := ioutil.ReadFile(oemSignFile)
+	// 读取签名文件
+	srBuf, err := os.ReadFile(oemSignFile)
 	if err != nil {
 		logger.Warning(err)
 		return false
 	}
-	//签名认证
+	// 签名认证
 	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed, srBuf) == nil
 }
 
@@ -383,9 +412,118 @@ func getHardwareVersion() (string, error) {
 const oemFilePath = "/etc/.oemid"
 
 func getOEMID() (string, error) {
-	content, err := ioutil.ReadFile(oemFilePath)
+	content, err := os.ReadFile(oemFilePath)
 	if err != nil {
 		return "", err
 	}
+
 	return string(content), nil
+}
+
+type ProjectInfo struct {
+	Id string `json:"id"`
+}
+
+func getProjectID(fileName string) (string, error) {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
+	info := new(ProjectInfo)
+	err = json.Unmarshal(content, info)
+	if err != nil {
+		return "", err
+	}
+	return info.Id, nil
+}
+
+func getMachineType() string {
+	const dmiDirPrefix = "/sys/class/dmi/id"
+	var files = []string{
+		"product_family",
+		"product_name",
+		"product_sku",
+	}
+	var content []string
+	for _, key := range files {
+		value, err := utils.ReadFileContent(filepath.Join(dmiDirPrefix, key))
+		if err != nil {
+			continue
+		}
+		content = append(content, value)
+	}
+	return strings.Join(content, " ")
+}
+
+var _tokenUpdateMu sync.Mutex
+
+// UpdateTokenConfigFile 更新 99lastore-token.conf 文件的内容
+func UpdateTokenConfigFile(includeDiskInfo bool) string {
+	logger.Debug("start updateTokenConfigFile")
+	_tokenUpdateMu.Lock()
+	defer _tokenUpdateMu.Unlock()
+	logger.Debug("start getSystemInfo")
+	systemInfo := getSystemInfo(includeDiskInfo)
+	logger.Debug("end getSystemInfo")
+	tokenPath := "/etc/apt/apt.conf.d/99lastore-token.conf"
+	var tokenSlice []string
+	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
+	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
+	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
+	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
+	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
+	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
+	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
+	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
+	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
+	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
+	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
+	tokenSlice = append(tokenSlice, "pid="+systemInfo.ProjectId)
+	tokenSlice = append(tokenSlice, "baseline="+systemInfo.Baseline)
+	tokenSlice = append(tokenSlice, "st="+systemInfo.SystemType)
+	tokenSlice = append(tokenSlice, "mt="+systemInfo.MachineType)
+	tokenSlice = append(tokenSlice, "mac="+systemInfo.Mac)
+	token := strings.Join(tokenSlice, ";")
+	token = strings.Replace(token, "\n", "", -1)
+	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
+	err := os.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	if err != nil {
+		logger.Warning(err)
+	}
+	return token
+}
+
+func getDefaultMac() (string, error) {
+	res, err := exec.Command("route").Output()
+	if err != nil {
+		return "", err
+	}
+	lines := strings.Split(string(res), "\n")
+	var dev string
+	for _, line := range lines {
+		if strings.Contains(line, "default") {
+			devs := strings.Split(line, " ")
+			dev = devs[len(devs)-1]
+			break
+		}
+	}
+	if len(dev) == 0 {
+		return "", nil
+	}
+
+	mac, err := os.ReadFile("/sys/class/net/" + dev + "/address")
+	if err != nil {
+		return "", err
+	}
+	return string(mac), nil
+}
+
+func getClientPackageInfo(client string) string {
+	o, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${Version}", "--", client).Output()
+	if err != nil {
+		logger.Warning(err)
+		return ""
+	}
+
+	return fmt.Sprintf("client=%v&version=%v", client, string(o))
 }

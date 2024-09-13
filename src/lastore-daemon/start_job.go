@@ -23,37 +23,45 @@ func StartSystemJob(sys system.System, j *Job) error {
 	if err != nil {
 		return err
 	}
-
 	switch j.Type {
 	case system.DownloadJobType:
-		return sys.Download(j.Id, j.Packages)
+		return sys.DownloadPackages(j.Id, j.Packages, j.environ, j.option)
+
+	case system.PrepareDistUpgradeJobType:
+		return sys.DownloadSource(j.Id, j.Packages, j.environ, j.option)
 
 	case system.InstallJobType:
-		return sys.Install(j.Id, j.Packages, j.environ)
+		return sys.Install(j.Id, j.Packages, j.environ, j.option)
 
 	case system.DistUpgradeJobType:
-		var args []string
-		for key, value := range j.option { // upgradeJobInfo结构体中指定的更新参数
-			args = append(args, "-o")
-			args = append(args, fmt.Sprintf("%v=%v", key, value))
-		}
-		return sys.DistUpgrade(j.Id, j.environ, args)
+		return sys.DistUpgrade(j.Id, j.Packages, j.environ, j.option)
 
 	case system.RemoveJobType:
 		return sys.Remove(j.Id, j.Packages, j.environ)
 
-	case system.UpdateSourceJobType:
-		return sys.UpdateSource(j.Id)
+	case system.UpdateSourceJobType, system.OfflineUpdateJobType:
+		return sys.UpdateSource(j.Id, j.environ, j.option)
 
 	case system.UpdateJobType:
-		return sys.Install(j.Id, j.Packages, j.environ)
+		return sys.Install(j.Id, j.Packages, j.environ, j.option)
 
 	case system.CleanJobType:
 		return sys.Clean(j.Id)
 
 	case system.FixErrorJobType:
-		errType := j.Packages[0]
-		return sys.FixError(j.Id, errType, j.environ)
+		var errType string
+		if len(j.Packages) != 0 {
+			errType = j.Packages[0]
+		}
+		return sys.FixError(j.Id, errType, j.environ, j.option)
+
+	case system.CheckSystemJobType:
+		var pkg string
+		if len(j.Packages) != 0 {
+			pkg = j.Packages[0]
+		}
+		return sys.CheckSystem(j.Id, pkg, j.environ, j.option)
+
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)
 	}
@@ -62,6 +70,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 func ValidTransitionJobState(from system.Status, to system.Status) bool {
 	validation := map[system.Status][]system.Status{
 		system.ReadyStatus: {
+			system.FailedStatus,
 			system.RunningStatus,
 			system.PausedStatus,
 			system.EndStatus,
@@ -98,31 +107,49 @@ func ValidTransitionJobState(from system.Status, to system.Status) bool {
 
 // TransitionJobState 需要保证，调用此方法时，必然对 j.PropsMu 加写锁了。因为在调用 hookFn 时会先解锁 j.PropsMu 。
 func TransitionJobState(j *Job, to system.Status) error {
+	var inhibitSignalEmit = false
 	if !ValidTransitionJobState(j.Status, to) {
 		return fmt.Errorf("can't transition the status of Job(id=%s) %q to %q", j.Id, j.Status, to)
 	}
+	// 如果是连续下载的job,那么running->succeed或succeed->end不需要发信号
+	if j.next != nil && ((j.Status == system.SucceedStatus && to == system.EndStatus) || (j.Status == system.RunningStatus && to == system.SucceedStatus)) {
+		inhibitSignalEmit = true
+	}
 	logger.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
-
-	j.Status = to
-
-	if j.Status == system.FailedStatus && j.retry > 0 {
+	if to == system.FailedStatus && j.retry > 0 {
+		j.Status = to
 		return nil
 	}
-
-	hookFn := j.getHook(string(to))
+	hookFn := j.getPreHook(string(to))
 	if hookFn != nil {
 		j.PropsMu.Unlock()
-		hookFn()
+		err := hookFn()
 		j.PropsMu.Lock()
+		// 在切换running和success状态时触发一些检查，如果出错，需要终止并返回error
+		if (to == system.RunningStatus || to == system.SucceedStatus) && err != nil {
+			return err
+		}
 	}
+	j.Status = to
 	if NotUseDBus {
 		return nil
 	}
-	err := j.emitPropChangedStatus(to)
-	if err != nil {
-		logger.Warning(err)
+	if !inhibitSignalEmit {
+		err := j.emitPropChangedStatus(to)
+		if err != nil {
+			logger.Warning(err)
+		}
 	}
-
+	hookFn = j.getAfterHook(string(to))
+	if hookFn != nil {
+		j.PropsMu.Unlock()
+		err := hookFn()
+		j.PropsMu.Lock()
+		// 在切换running和success状态时触发一些检查，如果出错，需要终止并返回error,不过通常不会有success的after hook返回error
+		if (to == system.RunningStatus || to == system.SucceedStatus) && err != nil {
+			return err
+		}
+	}
 	if j.Status == system.SucceedStatus {
 		return TransitionJobState(j, system.EndStatus)
 	}

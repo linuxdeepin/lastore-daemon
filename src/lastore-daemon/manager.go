@@ -1,47 +1,41 @@
-// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2018 - 2023 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
 	"os/exec"
-	"os/signal"
-	"path"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
-	"unicode/utf8"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/linuxdeepin/dde-api/polkit"
+	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.abrecovery"
+	accounts "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.accounts1"
 	apps "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.apps1"
 	atomic1 "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.atomicupgrade1"
 	power "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.power1"
+	ofdbus "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.dbus"
+	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/keyfile"
-	"github.com/linuxdeepin/go-lib/procfs"
 	"github.com/linuxdeepin/go-lib/strv"
-	dutils "github.com/linuxdeepin/go-lib/utils"
+	"github.com/linuxdeepin/go-lib/utils"
 )
 
 const (
@@ -52,50 +46,16 @@ const (
 	UserExperUninstallApp = "uninstallapp"
 
 	uosReleaseNotePkgName = "uos-release-note"
-
-	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
-	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
-	printerPath           = "/usr/bin/dde-printer"
-	printerHelperPath     = "/usr/bin/dde-printer-helper"
-	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
-	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
-	controlCenterPath     = "/usr/bin/dde-control-center"
-	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
-	amDaemonPath          = "/usr/bin/dde-application-manager"
-	launcherPath          = "/usr/bin/dde-launcher"
-	amDaemonCompatPath    = "/usr/libexec/dde-application-wizard-daemon-compat"
-)
-
-var (
-	allowInstallPackageExecPaths = strv.Strv{
-		appStoreDaemonPath,
-		oldAppStoreDaemonPath,
-		printerPath,
-		printerHelperPath,
-		langSelectorPath,
-		controlCenterPath,
-	}
-	allowRemovePackageExecPaths = strv.Strv{
-		appStoreDaemonPath,
-		oldAppStoreDaemonPath,
-		sessionDaemonPath,
-		langSelectorPath,
-		controlCenterPath,
-		amDaemonPath,
-		launcherPath,
-		amDaemonCompatPath,
-	}
 )
 
 const MaxCacheSize = 500.0 //size MB
 
 type Manager struct {
-	service *dbusutil.Service
-	do      sync.Mutex
-	b       system.System
-	config  *Config
-
-	PropsMu sync.RWMutex
+	service   *dbusutil.Service
+	do        sync.Mutex
+	updateApi system.System
+	config    *config.Config
+	PropsMu   sync.RWMutex
 	// dbusutil-gen: equal=nil
 	JobList    []dbus.ObjectPath
 	jobList    []*Job
@@ -122,17 +82,40 @@ type Manager struct {
 	shouldHandleBackupJobEnd bool
 	autoInstallType          system.UpdateType // 保存需要自动安装的类别
 
-	UpdateMode system.UpdateType `prop:"access:rw"`
+	UpdateMode      system.UpdateType `prop:"access:rw"` // 更新设置的内容
+	CheckUpdateMode system.UpdateType `prop:"access:rw"` // 检查更新选中的内容
+	UpdateStatus    string            // 每一个更新项的状态 json字符串
+
 	HardwareId string
 
-	isUpdateSucceed bool
-	canRestore      bool
+	SystemSourceConfig   UpdateSourceConfig
+	SecuritySourceConfig UpdateSourceConfig
 
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
 
-	preUpgradeOSVersion string
+	loginManager  login1.Manager
+	sysDBusDaemon ofdbus.DBus
+	systemd       systemd1.Manager
+	abObj         abrecovery.ABRecovery
+
+	grub           *grubManager
+	userAgents     *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
+	statusManager  *UpdateModeStatusManager
+	updatePlatform *updateplatform.UpdatePlatformManager
+	isDownloading  bool
+
+	offline            *OfflineManager
+	rebootTimeoutTimer *time.Timer
+
+	coreList   []string
+	updateTime string // 定时时间，记录定时更新通知，防止重复发通知
+
+	checkDpkgCapabilityOnce sync.Once
+	supportDpkgScriptIgnore bool
+
+	resetIdleDownload bool
 }
 
 /*
@@ -140,7 +123,7 @@ NOTE: Most of export function of Manager will hold the lock,
 so don't invoke they in inner functions
 */
 
-func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager {
+func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Config) *Manager {
 	archs, err := system.SystemArchitectures()
 	if err != nil {
 		logger.Errorf("Can't detect system supported architectures %v\n", err)
@@ -148,121 +131,132 @@ func NewManager(service *dbusutil.Service, b system.System, c *Config) *Manager 
 	}
 
 	m := &Manager{
-		service:             service,
-		config:              c,
-		b:                   b,
-		SystemArchitectures: archs,
-		inhibitFd:           -1,
-		AutoClean:           c.AutoClean,
-		UpdateMode:          c.UpdateMode,
+		service:              service,
+		config:               c,
+		updateApi:            updateApi,
+		SystemArchitectures:  archs,
+		inhibitFd:            -1,
+		AutoClean:            c.AutoClean,
+		loginManager:         login1.NewManager(service.Conn()),
+		sysDBusDaemon:        ofdbus.NewDBus(service.Conn()),
+		signalLoop:           dbusutil.NewSignalLoop(service.Conn(), 10),
+		apps:                 apps.NewApps(service.Conn()),
+		systemd:              systemd1.NewManager(service.Conn()),
+		sysPower:             power.NewPower(service.Conn()),
+		abObj:                abrecovery.NewABRecovery(service.Conn()),
+		SecuritySourceConfig: make(UpdateSourceConfig),
+		SystemSourceConfig:   make(UpdateSourceConfig),
+		resetIdleDownload:    true,
 	}
-	osVersionInfoMap, err := getOSVersionInfo()
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		m.preUpgradeOSVersion = strings.Join(
-			[]string{osVersionInfoMap["MajorVersion"], osVersionInfoMap["MinorVersion"], osVersionInfoMap["OsBuild"]},
-			".")
-	}
-	sysBus := service.Conn()
-	m.apps = apps.NewApps(sysBus)
-	m.initAutoInstall(sysBus)
-	m.jobManager = NewJobManager(service, b, m.updateJobList)
+	m.reloadOemConfig(true)
+	m.signalLoop.Start()
+	m.grub = newGrubManager(service.Conn(), m.signalLoop)
+	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
+	m.offline = NewOfflineManager()
 	go m.handleOSSignal()
 	m.updateJobList()
-	m.modifyUpdateMode()
-	hardwareId, err := getHardwareId()
-	if err != nil {
-		logger.Warning("failed to get HardwareId")
-	} else {
-		m.HardwareId = hardwareId
+	m.initStatusManager()
+	m.HardwareId = updateplatform.GetHardwareId(m.config.IncludeDiskInfo)
+
+	m.initDbusSignalListen()
+	m.initDSettingsChangedHandle()
+	m.syncThirdPartyDconfig()
+	// running 状态下证明需要进行重启后check
+	if c.UpgradeStatus.Status == system.UpgradeRunning {
+		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
+			// 启动后600s如果没有触发检查，那么上报更新失败
+			m.updatePlatform.PostStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds"))
+			err = m.delRebootCheckOption(all)
+			if err != nil {
+				logger.Warning(err)
+			}
+		})
 	}
 	return m
 }
 
-var pkgNameRegexp = regexp.MustCompile(`^[a-z0-9]`)
-
-func NormalizePackageNames(s string) ([]string, error) {
-	pkgNames := strings.Fields(s)
-	for _, pkgName := range pkgNames {
-		if !pkgNameRegexp.MatchString(pkgName) {
-			return nil, fmt.Errorf("invalid package name %q", pkgName)
-		}
-	}
-
-	if s == "" || len(pkgNames) == 0 {
-		return nil, fmt.Errorf("Empty value")
-	}
-	return pkgNames, nil
-}
-
-func makeEnvironWithSender(service *dbusutil.Service, sender dbus.Sender) (map[string]string, error) {
-	environ := make(map[string]string)
-
-	pid, err := service.GetConnPID(string(sender))
+func (m *Manager) initDbusSignalListen() {
+	m.loginManager.InitSignalExt(m.signalLoop, true)
+	m.abObj.InitSignalExt(m.signalLoop, true)
+	_, err := m.loginManager.ConnectSessionNew(m.handleSessionNew)
 	if err != nil {
-		return nil, err
+		logger.Warning(err)
 	}
-
-	p := procfs.Process(pid)
-	envVars, err := p.Environ()
+	_, err = m.loginManager.ConnectSessionRemoved(m.handleSessionRemoved)
 	if err != nil {
-		logger.Warningf("failed to get process %d environ: %v", p, err)
-	} else {
-		environ["DISPLAY"] = envVars.Get("DISPLAY")
-		environ["XAUTHORITY"] = envVars.Get("XAUTHORITY")
-		environ["DEEPIN_LASTORE_LANG"] = getLang(envVars)
+		logger.Warning(err)
 	}
-	return environ, nil
-}
-
-func getUsedLang(environ map[string]string) string {
-	return environ["DEEPIN_LASTORE_LANG"]
-}
-
-func getLang(envVars procfs.EnvVars) string {
-	for _, name := range []string{"LC_ALL", "LC_MESSAGE", "LANG"} {
-		value := envVars.Get(name)
-		if value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-// execPath和cmdLine可以有一个为空,其中一个存在即可作为判断调用者的依据
-func (m *Manager) getExecutablePathAndCmdline(sender dbus.Sender) (string, string, error) {
-	pid, err := m.service.GetConnPID(string(sender))
+	_, err = m.loginManager.ConnectUserRemoved(m.handleUserRemoved)
 	if err != nil {
-		return "", "", err
+		logger.Warning(err)
 	}
-
-	proc := procfs.Process(pid)
-
-	execPath, err := proc.Exe()
-	if err != nil {
-		// 当调用者在使用过程中发生了更新,则在获取该进程的exe时,会出现lstat xxx (deleted)此类的error,如果发生的是覆盖,则该路径依旧存在,因此增加以下判断
-		pErr, ok := err.(*os.PathError)
-		if ok {
-			if os.IsNotExist(pErr.Err) {
-				errExecPath := strings.Replace(pErr.Path, "(deleted)", "", -1)
-				oldExecPath := strings.TrimSpace(errExecPath)
-				if system.NormalFileExists(oldExecPath) {
-					execPath = oldExecPath
-					err = nil
-				}
+	m.sysDBusDaemon.InitSignalExt(m.signalLoop, true)
+	_, err = m.sysDBusDaemon.ConnectNameOwnerChanged(func(name string, oldOwner string, newOwner string) {
+		if strings.HasPrefix(name, ":") && oldOwner != "" && newOwner == "" {
+			// 当lastore-daemon启动时还没初始化完成，刚好收到NameOwnerChanged，导致崩溃
+			if m.userAgents != nil {
+				m.userAgents.handleNameLost(name)
 			}
 		}
+	})
+	if err != nil {
+		logger.Warning(err)
 	}
+	m.sysPower.InitSignalExt(m.signalLoop, true)
+}
 
-	cmdLine, err1 := proc.Cmdline()
-	if err != nil && err1 != nil {
-		return "", "", errors.New(strings.Join([]string{
-			err.Error(),
-			err1.Error(),
-		}, ";"))
+func (m *Manager) initDSettingsChangedHandle() {
+	m.config.ConnectConfigChanged(config.DSettingsKeyLastoreDaemonStatus, func(bit config.LastoreDaemonStatus, value interface{}) {
+		if bit == config.DisableUpdate {
+			_ = m.updateTimerUnit(lastoreOnline)
+			_ = m.updateTimerUnit(lastoreAutoCheck)
+		}
+	})
+}
+
+func (m *Manager) initStatusManager() {
+	startTime := time.Now()
+	m.statusManager = NewStatusManager(m.config, func(newStatus string) {
+		m.PropsMu.Lock()
+		m.setPropUpdateStatus(newStatus)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.RegisterChangedHandler(handlerKeyUpdateMode, func(value interface{}) {
+		v := value.(system.UpdateType)
+		m.PropsMu.Lock()
+		m.setPropUpdateMode(v)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.RegisterChangedHandler(handlerKeyCheckMode, func(value interface{}) {
+		v := value.(system.UpdateType)
+		m.PropsMu.Lock()
+		m.setPropCheckUpdateMode(v)
+		m.PropsMu.Unlock()
+	})
+	m.statusManager.InitModifyData()
+	logger.Info("initStatusManager cost:", time.Since(startTime))
+}
+
+func (m *Manager) initAgent() {
+	m.userAgents = newUserAgentMap()
+	m.userAgents.recoverLastoreAgents(m.service, m.handleSessionNew)
+	sessions, err := m.loginManager.ListSessions(0)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		for _, session := range sessions {
+			m.handleSessionNew("", session.Path)
+		}
 	}
-	return execPath, strings.Join(cmdLine, " "), nil
+}
+
+func (m *Manager) initPlatformManager() {
+	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config, false)
+	m.loadPlatformCache()
+	if isFirstBoot() {
+		// 不能阻塞初始化流程,防止dbus服务激活超时
+		go m.updatePlatform.RetryPostHistory() // 此处调用还没有export以及dispatch job,因此可以判断是否需要check.
+	}
 }
 
 func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -271,37 +265,34 @@ func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages str
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
+	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
 	if err != nil {
 		logger.Warning(err)
 		return nil, dbusutil.ToError(err)
 	}
 	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ)
-	m.do.Unlock()
-
+	defer m.do.Unlock()
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.UpdateJobType, pkgs, environ, nil)
 	if err != nil {
 		logger.Warningf("UpdatePackage %q error: %v\n", packages, err)
+		return nil, err
 	}
+	if isExist {
+		return job, nil
+	}
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
+	}
+
 	job.caller = caller
 	return job, err
-}
-
-func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
-	busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.updatePackage(sender, jobName, packages)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
 }
 
 func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -311,7 +302,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	}
 
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
@@ -331,139 +322,140 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	return m.installPkg(jobName, strings.Join(pkgs, " "), environ)
 }
 
-func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
-	busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
+func (m *Manager) installPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string,
+	repoListPath string, cachePath string, packageName []string) (*Job, error) {
+	if !utils.IsDir(repoListPath) {
+		return nil, fmt.Errorf("illegal repoListPath: %v", repoListPath)
+	}
+	if !utils.IsDir(cachePath) {
+		return nil, fmt.Errorf("illegal cachePath: %v", cachePath)
+	}
+
+	var job *Job
+	var isExist bool
+	var err error
+
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
+		return nil, fmt.Errorf("make environ failed: %v", err)
 	}
 
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-	if !allowInstallPackageExecPaths.Contains(execPath) &&
-		uid != 0 {
-		err = fmt.Errorf("%q is not allowed to install packages", execPath)
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
+		return nil, fmt.Errorf("get conn uid failed: %v", err)
 	}
 
-	jobObj, err := m.installPackage(sender, jobName, packages)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
+	if uid != 0 {
+		err := polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		if err != nil {
+			return nil, fmt.Errorf("check authorization failed: %v", err)
+		}
 	}
-	jobObj.next.caller = mapMethodCaller(execPath, cmdLine)
-	return jobObj.getPath(), nil
-}
 
-func sendInstallMsgToUserExperModule(msg, path, name, id string) {
-	bus, err := dbus.SystemBus()
-	if err != nil {
-		logger.Warning(err)
-		return
+	var canNotInstallError = errors.New("unable to install packages now")
+	_, isLock := system.CheckLock("/var/lib/dpkg/lock")
+	if isLock {
+		return nil, canNotInstallError
 	}
-	userexp := bus.Object(UserExperServiceName, UserExperPath)
-	ctx, cancelFn := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancelFn()
-	// 设置两秒的超时，如果两秒内函数没处理完，则返回err，并且不会阻塞
-	err = userexp.CallWithContext(ctx, UserExperServiceName+".SendAppInstallData", 0, msg, path, name, id).Err
+	_, isLock = system.CheckLock("/var/lib/dpkg/lock-frontend")
+	if isLock {
+		return nil, canNotInstallError
+	}
+
+	m.do.Lock()
+	defer m.do.Unlock()
+	isExist, job, err = m.jobManager.CreateJob(jobName, system.OnlyInstallJobType, packageName, environ, nil)
 	if err != nil {
-		logger.Warningf("failed to call %s.SendAppInstallData, %v", UserExperServiceName, err)
+		return nil, fmt.Errorf("create job failed: %v, jobname: %v", err, jobName)
+	}
+	if isExist {
+		return job, nil
+	}
+
+	if utils.IsDir(sourceListPath) {
+		job.option = map[string]string{
+			"Dir::Etc::SourceList":  "/dev/null",
+			"Dir::Etc::SourceParts": sourceListPath,
+		}
 	} else {
-		logger.Debugf("send %s message to ue module", msg)
+		job.option = map[string]string{
+			"Dir::Etc::SourceList":  sourceListPath,
+			"Dir::Etc::SourceParts": "/dev/null",
+		}
 	}
+	job.option["Dir::State::lists"] = repoListPath
+	job.option["Dir::Cache::archives"] = cachePath
+
+	if err = m.jobManager.addJob(job); err != nil {
+		return nil, fmt.Errorf("add job failed: %v", err)
+	}
+
+	return job, nil
 }
 
 func (m *Manager) installPkg(jobName, packages string, environ map[string]string) (*Job, error) {
 	pList := strings.Fields(packages)
+	var job *Job
+	var isExist bool
+	var err error
+	err = system.CustomSourceWrapper(system.AllCheckUpdate, func(path string, unref func()) error {
+		m.do.Lock()
+		defer m.do.Unlock()
+		isExist, job, err = m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ, nil)
+		if err != nil {
+			logger.Warningf("installPackage %q error: %v\n", packages, err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		if isExist {
+			if unref != nil {
+				unref()
+			}
+			logger.Info(JobExistError)
+			return JobExistError
+		}
+		// 设置apt命令参数
 
-	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.InstallJobType, pList, environ)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("installPackage %q error: %v\n", packages, err)
-	}
-
-	if job != nil && !isCommunity() {
-		job.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				for _, pkg := range job.Packages {
-					logger.Debugf("install app %s success, notify ue module", pkg)
-					sendInstallMsgToUserExperModule(UserExperInstallApp, "", jobName, pkg)
-				}
-			},
-		})
-	}
-
-	return job, err
-}
-
-// dont collect experience message if edition is community
-func isCommunity() bool {
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile("/etc/os-version")
-	// 为避免收集数据的风险，读不到此文件，或者Edition文件不存在也不收集数据
-	if err != nil {
-		return true
-	}
-	edition, err := kf.GetString("Version", "EditionName")
-	if err != nil {
-		return true
-	}
-	if edition == "Community" {
-		return true
-	}
-	return false
-}
-
-func (m *Manager) needPostSystemUpgradeMessage() bool {
-	return strv.Strv(m.config.AllowPostSystemUpgradeMessageVersion).Contains(getEditionName())
-}
-
-func getEditionName() string {
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile("/etc/os-version")
-	// 为避免收集数据的风险，读不到此文件，或者Edition文件不存在也不收集数据
-	if err != nil {
-		return ""
-	}
-	edition, err := kf.GetString("Version", "EditionName")
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(edition)
-}
-
-func listPackageDesktopFiles(pkg string) []string {
-	var result []string
-	filenames := system.ListPackageFile(pkg)
-	for _, filename := range filenames {
-		if strings.HasPrefix(filename, "/usr/") {
-			// len /usr/ is 5
-			if strings.HasSuffix(filename, ".desktop") &&
-				(strings.HasPrefix(filename[5:], "share/applications") ||
-					strings.HasPrefix(filename[5:], "local/share/applications")) {
-
-				fileInfo, err := os.Stat(filename)
-				if err != nil {
-					continue
-				}
-				if fileInfo.IsDir() {
-					continue
-				}
-				if !utf8.ValidString(filename) {
-					continue
-				}
-				result = append(result, filename)
+		if utils.IsDir(path) {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  "/dev/null",
+				"Dir::Etc::SourceParts": path,
+			}
+		} else {
+			job.option = map[string]string{
+				"Dir::Etc::SourceList":  path,
+				"Dir::Etc::SourceParts": "/dev/null",
 			}
 		}
+		if job.next != nil {
+			job.next.option = job.option
+			job.next.setPreHooks(map[string]func() error{
+				string(system.EndStatus): func() error {
+					// wrapper的资源释放
+					if unref != nil {
+						unref()
+					}
+					return nil
+				},
+			})
+		}
+
+		if err = m.jobManager.addJob(job); err != nil {
+			logger.Warning(err)
+			if unref != nil {
+				unref()
+			}
+			return err
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, JobExistError) { // exist的err无需返回
+		logger.Warning(err)
+		return nil, err
 	}
-	return result
+	return job, nil
 }
 
 func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -483,307 +475,72 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 		}
 	}
 
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
-	}
-
-	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ)
-	m.do.Unlock()
-
-	if job != nil && !isCommunity() {
-		job.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				for _, pkg := range job.Packages {
-					logger.Debugf("uninstall app %s success, notify ue module", pkg)
-					sendInstallMsgToUserExperModule(UserExperUninstallApp, "", jobName, pkg)
-				}
-			},
-		})
-	}
-
-	if err != nil {
-		logger.Warningf("removePackage %q error: %v\n", packages, err)
-	}
-	return job, err
-}
-
-func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
-	busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	if !allowRemovePackageExecPaths.Contains(execPath) &&
-		uid != 0 {
-		err = fmt.Errorf("%q is not allowed to remove packages", execPath)
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	jobObj, err := m.removePackage(sender, jobName, packages)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	jobObj.caller = mapMethodCaller(execPath, cmdLine)
-	return jobObj.getPath(), nil
-}
-
-func (m *Manager) ensureUpdateSourceOnce() {
-	m.PropsMu.Lock()
-	updateOnce := m.updateSourceOnce
-	m.PropsMu.Unlock()
-
-	if updateOnce {
-		return
-	}
-
-	_, err := m.updateSource(false, false)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	err = m.config.UpdateLastCheckTime()
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	m.updateAutoCheckSystemUnit()
-}
-
-func (m *Manager) handleUpdateInfosChanged(autoCheck bool) {
-	logger.Info("handleUpdateInfosChanged")
-	infosMap, err := m.SystemUpgradeInfo()
-	if err != nil {
-		if os.IsNotExist(err) {
-			logger.Info(err) // 移除文件时,同样会进入该逻辑,因此在update_infos.json文件不存在时,将日志等级改为info
-		} else {
-			logger.Error("failed to get upgrade info:", err)
-		}
-		return
-	}
-
-	m.updateUpdatableProp(infosMap)
-
-	m.PropsMu.Lock()
-	isUpdateSucceed := m.isUpdateSucceed
-	m.PropsMu.Unlock()
-	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && isUpdateSucceed {
-		logger.Info("auto download updates")
-		go func() {
-			m.inhibitAutoQuitCountAdd()
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.UpdateMode, false, autoCheck) // 自动下载使用控制中心的配置
-			if err != nil {
-				logger.Error("failed to prepare dist-upgrade:", err)
-			}
-			m.inhibitAutoQuitCountSub()
-		}()
-	}
-}
-
-// 根据解析update_infos.json数据的结果,将数据分别设置到Manager的UpgradableApps和Updater的UpdatablePackages,ClassifiedUpdatablePackages,UpdatableApps
-func (m *Manager) updateUpdatableProp(infosMap system.SourceUpgradeInfoMap) {
-	m.updater.setClassifiedUpdatablePackages(infosMap)
-	filterInfos := m.getFilterInfosMap(infosMap)
-	updatableApps := UpdatableNames(filterInfos)
-	m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
-	m.updater.setUpdatablePackages(updatableApps)
-	m.updater.updateUpdatableApps()
-}
-
-// ClassifiedUpdatablePackages属性保存所有数据,UpdatablePackages属性保存过滤后的数据
-func (m *Manager) getFilterInfosMap(infosMap system.SourceUpgradeInfoMap) system.SourceUpgradeInfoMap {
-	r := make(system.SourceUpgradeInfoMap)
-	m.PropsMu.RLock()
-	updateType := m.UpdateMode
-	m.PropsMu.RUnlock()
-	for _, t := range system.AllUpdateType() {
-		category := updateType & t
-		if category != 0 {
-			info, ok := infosMap[t.JobType()]
-			if ok {
-				r[t.JobType()] = info
-			}
-		}
-	}
-	return r
-}
-
-func (m *Manager) updateSource(needNotify bool, autoCheck bool) (*Job, error) {
-	m.do.Lock()
-	var jobName string
-	if needNotify {
-		jobName = "+notify"
-	}
-	prepareUpdateSource()
-	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
-	job, err := m.jobManager.CreateJob(jobName, system.UpdateSourceJobType, nil, nil)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("UpdateSource error: %v\n", err)
-	}
-	if job != nil {
-		m.PropsMu.Lock()
-		m.updateSourceOnce = true
-		m.isUpdateSucceed = false
-		m.PropsMu.Unlock()
-		job.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				m.PropsMu.Lock()
-				m.isUpdateSucceed = true
-				m.PropsMu.Unlock()
-				go m.installUOSReleaseNote()
-			},
-			string(system.EndStatus): func() {
-				m.handleUpdateInfosChanged(autoCheck)
-			},
-		})
-	}
-	return job, err
-}
-
-func (m *Manager) UpdateSource() (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.updateSource(false, false)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	_ = m.config.UpdateLastCheckTime()
-	m.updateAutoCheckSystemUnit()
-	return jobObj.getPath(), nil
-}
-
-func (m *Manager) cancelAllUpdateJob() error {
-	var updateJobIds []string
-	for _, job := range m.jobManager.List() {
-		if job.Type == system.UpdateJobType && job.Status != system.RunningStatus {
-			updateJobIds = append(updateJobIds, job.Id)
-		}
-	}
-
-	for _, jobId := range updateJobIds {
-		err := m.jobManager.CleanJob(jobId)
-		if err != nil {
-			logger.Warningf("CleanJob %q error: %v\n", jobId, err)
-		}
-	}
-	return nil
-}
-
-func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.distUpgrade(sender)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
-}
-
-func (m *Manager) distUpgrade(sender dbus.Sender) (*Job, error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine)
-	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
-	if err != nil {
-		return nil, err
-	}
-
-	m.updateJobList()
-
-	m.PropsMu.RLock()
-	upgradableApps := m.UpgradableApps
-	m.PropsMu.RUnlock()
-	if len(upgradableApps) == 0 {
-		return nil, system.NotFoundError("empty UpgradableApps")
 	}
 
 	m.do.Lock()
 	defer m.do.Unlock()
-
-	job, err := m.jobManager.CreateJob("", system.DistUpgradeJobType, upgradableApps, environ)
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.RemoveJobType, pkgs, environ, nil)
 	if err != nil {
-		logger.Warningf("DistUpgrade error: %v\n", err)
+		logger.Warningf("removePackage %q error: %v\n", packages, err)
 		return nil, err
 	}
-	job.caller = caller
-	cancelErr := m.cancelAllUpdateJob()
-	if cancelErr != nil {
-		logger.Warning(cancelErr)
+	if isExist {
+		return job, nil
 	}
-
-	return job, err
-}
-
-func (m *Manager) PrepareDistUpgrade() (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.prepareDistUpgrade()
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
-}
-
-func (m *Manager) prepareDistUpgrade() (*Job, error) {
-	m.ensureUpdateSourceOnce()
-	m.updateJobList()
-
-	m.PropsMu.RLock()
-	upgradableApps := m.UpgradableApps
-	m.PropsMu.RUnlock()
-
-	if len(upgradableApps) == 0 {
-		return nil, system.NotFoundError("empty UpgradableApps")
-	}
-	if s, err := system.QueryPackageDownloadSize(upgradableApps...); err == nil && s == 0 {
-		return nil, system.NotFoundError("no need download")
-	}
-
-	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.PrepareDistUpgradeJobType, upgradableApps, nil)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
+	job.setPreHooks(map[string]func() error{
+		string(system.SucceedStatus): func() error {
+			msg := gettext.Tr("Removed successfully")
+			go m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			return nil
+		},
+		string(system.FailedStatus): func() error {
+			msg := gettext.Tr("Failed to remove the app")
+			action := []string{
+				"retry",
+				gettext.Tr("Retry"),
+				"cancel",
+				gettext.Tr("Cancel"),
+			}
+			hints := map[string]dbus.Variant{
+				"x-deepin-action-retry":  dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.StartJob,string:%s", job.Id)),
+				"x-deepin-action-cancel": dbus.MakeVariant(fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.CleanJob,string:%s", job.Id))}
+			go m.sendNotify(system.GetAppStoreAppName(), 0, "deepin-appstore", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			return nil
+		},
+	})
+	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
-	return job, err
-}
-
-func (m *Manager) ClassifiedUpgrade(sender dbus.Sender, updateType system.UpdateType) ([]dbus.ObjectPath, *dbus.Error) {
-	m.service.DelayAutoQuit()
-	return m.classifiedUpgrade(sender, updateType, true, false)
+	return job, nil
 }
 
 // 根据更新类型,创建对应的下载或下载+安装的job
-func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool, autoCheck bool) ([]dbus.ObjectPath, *dbus.Error) {
+func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool) ([]dbus.ObjectPath, *dbus.Error) {
 	var jobPaths []dbus.ObjectPath
 	var err error
 	var errList []string
 	// 保证任务创建顺序
-	for _, t := range system.AllUpdateType() {
+	for _, t := range system.AllInstallUpdateType() {
 		category := updateType & t
 		if category != 0 {
 			var upgradeJob, prepareJob *Job
 			if isUpgrade {
-				upgradeJob, err = m.createClassifiedUpgradeJob(sender, category)
+				prepareJob, err = m.prepareDistUpgrade(sender, category, true)
 				if err != nil {
+					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
+						errList = append(errList, err.Error())
+						logger.Warning(err)
+						continue
+					} else {
+						logger.Info(err)
+						// 可能无需下载,因此继续后面安装job的创建
+					}
+				}
+				upgradeJob, err = m.distUpgrade(sender, category, true, false, false)
+				if err != nil && !errors.Is(err, JobExistError) {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
 						logger.Warning(err)
@@ -791,36 +548,30 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 						logger.Info(err)
 					}
 					continue
+				}
+				// 如果需要下载job,则绑定下载和安装job.无需下载job,直接将安装job添加进队列即可
+				if prepareJob != nil {
+					jobPaths = append(jobPaths, prepareJob.getPath())
+					prepareJob.next = upgradeJob
+				} else {
+					if err := m.jobManager.addJob(upgradeJob); err != nil {
+						errList = append(errList, err.Error())
+						logger.Warning(err)
+					}
 				}
 				jobPaths = append(jobPaths, upgradeJob.getPath())
-				if upgradeJob.next != nil {
-					jobPaths = append(jobPaths, upgradeJob.next.getPath())
-				}
 			} else {
-				prepareJob, err = m.createPrepareClassifiedUpgradeJob(category)
+				prepareJob, err = m.prepareDistUpgrade(sender, category, true)
 				if err != nil {
 					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
 						errList = append(errList, err.Error())
 						logger.Warning(err)
 					} else {
 						logger.Info(err)
-						if autoCheck && m.categorySupportAutoInstall(category) {
-							go m.handlePackagesDownloaded(sender, category)
-						}
 					}
 					continue
 				}
-				prepareJob.autoCheck = autoCheck
 				jobPaths = append(jobPaths, prepareJob.getPath())
-				if autoCheck {
-					prepareJob.setHooks(map[string]func(){
-						string(system.EndStatus): func() {
-							if m.categorySupportAutoInstall(category) {
-								go m.handlePackagesDownloaded(sender, category)
-							}
-						},
-					})
-				}
 			}
 		}
 	}
@@ -830,211 +581,6 @@ func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.Update
 	return jobPaths, nil
 }
 
-func (m *Manager) createPrepareClassifiedUpgradeJob(updateType system.UpdateType) (*Job, error) {
-	m.ensureUpdateSourceOnce()
-	m.updateJobList()
-
-	m.updater.PropsMu.RLock()
-	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
-	m.updater.PropsMu.RUnlock()
-
-	if len(classifiedUpdatablePackagesMap[updateType.JobType()]) == 0 {
-		return nil, system.NotFoundError("empty UpgradableApps")
-	}
-	if s, err := system.QueryPackageDownloadSize(classifiedUpdatablePackagesMap[updateType.JobType()]...); err == nil && s == 0 {
-		return nil, system.NotFoundError("no need download")
-	}
-	categoryMap := GetUpgradeInfoMap()
-	jobType := categoryMap[updateType.JobType()].PrepareJobId
-	const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
-	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, jobType, classifiedUpdatablePackagesMap[updateType.JobType()], nil)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("PrepareDistUpgrade error: %v\n", err)
-		return nil, err
-	}
-	return job, nil
-}
-
-func (m *Manager) createClassifiedUpgradeJob(sender dbus.Sender, updateType system.UpdateType) (*Job, error) {
-	execPath, cmdLine, err := m.getExecutablePathAndCmdline(sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine)
-	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
-	if err != nil {
-		return nil, err
-	}
-
-	m.updateJobList()
-
-	m.updater.PropsMu.RLock()
-	classifiedUpdatablePackagesMap := m.updater.ClassifiedUpdatablePackages
-	m.updater.PropsMu.RUnlock()
-	if len(classifiedUpdatablePackagesMap[updateType.JobType()]) == 0 {
-		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", updateType.JobType()))
-	}
-
-	m.do.Lock()
-	defer m.do.Unlock()
-	categoryMap := GetUpgradeInfoMap()
-	jobType := categoryMap[updateType.JobType()].UpgradeJobId
-	job, err := m.jobManager.CreateJob("", jobType, classifiedUpdatablePackagesMap[updateType.JobType()], environ)
-	if err != nil {
-		logger.Warningf("DistUpgrade error: %v\n", err)
-		return nil, err
-	}
-	if job.next != nil {
-		job.next.setHooks(map[string]func(){
-			string(system.SucceedStatus): func() {
-				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeSucceed, job.next, updateType)
-				}
-			},
-			string(system.FailedStatus): func() {
-				if m.needPostSystemUpgradeMessage() && updateType == system.SystemUpdate {
-					go m.postSystemUpgradeMessage(upgradeFailed, job.next, updateType)
-				}
-			},
-		})
-	}
-
-	job.caller = caller
-	if job.next != nil {
-		job.next.caller = caller
-	}
-	cancelErr := m.cancelAllUpdateJob()
-	if cancelErr != nil {
-		logger.Warning(cancelErr)
-	}
-
-	return job, err
-}
-
-func (m *Manager) StartJob(jobId string) *dbus.Error {
-	m.service.DelayAutoQuit()
-	m.do.Lock()
-	err := m.jobManager.MarkStart(jobId)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("StartJob %q error: %v\n", jobId, err)
-	}
-	return dbusutil.ToError(err)
-}
-
-func (m *Manager) PauseJob(jobId string) *dbus.Error {
-	m.do.Lock()
-	err := m.jobManager.PauseJob(jobId)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("PauseJob %q error: %v\n", jobId, err)
-	}
-	return dbusutil.ToError(err)
-}
-
-func (m *Manager) CleanJob(jobId string) *dbus.Error {
-	m.service.DelayAutoQuit()
-	m.do.Lock()
-	err := m.jobManager.CleanJob(jobId)
-	m.do.Unlock()
-
-	if err != nil {
-		logger.Warningf("CleanJob %q error: %v\n", jobId, err)
-	}
-	return dbusutil.ToError(err)
-}
-
-func (m *Manager) PackagesDownloadSize(packages []string) (size int64, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	m.ensureUpdateSourceOnce()
-
-	s, err := system.QueryPackageDownloadSize(packages...)
-	if err != nil || s == system.SizeUnknown {
-		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), s, err)
-	}
-	return int64(s), dbusutil.ToError(err)
-}
-
-func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	return system.QueryPackageInstallable(pkgId), nil
-}
-
-func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	return system.QueryPackageInstalled(pkgId), nil
-}
-
-// PackageDesktopPath TODO: Remove this API
-func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
-	if err != nil {
-		logger.Warningf("QueryDesktopPath failed: %q\n", err)
-		return "", dbusutil.ToError(err)
-	}
-	return p, nil
-}
-
-func (m *Manager) SetRegion(region string) *dbus.Error {
-	m.service.DelayAutoQuit()
-	err := m.config.SetAppstoreRegion(region)
-	return dbusutil.ToError(err)
-}
-
-func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
-	m.service.DelayAutoQuit()
-	if m.AutoClean == enable {
-		return nil
-	}
-
-	// save the config to disk
-	err := m.config.SetAutoClean(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-
-	m.AutoClean = enable
-	err = m.emitPropChangedAutoClean(enable)
-	if err != nil {
-		logger.Warning(err)
-	}
-	return nil
-}
-
-func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	info, err := getArchiveInfo()
-	if err != nil {
-		return "", dbusutil.ToError(err)
-	}
-	return info, nil
-}
-
-func getArchiveInfo() (string, error) {
-	out, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
-}
-
-func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.cleanArchives(false)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
-}
-
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	var jobName string
 	if needNotify {
@@ -1042,14 +588,26 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil)
-	m.do.Unlock()
-
+	defer m.do.Unlock()
+	isExist, job, err := m.jobManager.CreateJob(jobName, system.CleanJobType, nil, nil, nil)
 	if err != nil {
 		logger.Warningf("CleanArchives error: %v", err)
 		return nil, err
 	}
-
+	if isExist {
+		return job, nil
+	}
+	job.setPreHooks(map[string]func() error{
+		string(system.EndStatus): func() error {
+			// 清理完成的通知
+			msg := gettext.Tr("Package cache wiped")
+			go m.sendNotify(updateNotifyShow, 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			return nil
+		},
+	})
+	if err := m.jobManager.addJob(job); err != nil {
+		return nil, err
+	}
 	err = m.config.UpdateLastCleanTime()
 	if err != nil {
 		return nil, err
@@ -1062,36 +620,31 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.fixError(sender, errType)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
-}
-
 func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 	m.ensureUpdateSourceOnce()
-	environ, err := makeEnvironWithSender(m.service, sender)
+	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
 
-	switch errType {
-	case system.ErrTypeDpkgInterrupted, system.ErrTypeDependenciesBroken:
+	switch system.JobErrorType(errType) {
+	case system.ErrorDpkgInterrupted, system.ErrorDependenciesBroken:
 		// good error type
 	default:
 		return nil, errors.New("invalid error type")
 	}
 
 	m.do.Lock()
-	job, err := m.jobManager.CreateJob("", system.FixErrorJobType,
-		[]string{errType}, environ)
-	m.do.Unlock()
-
+	defer m.do.Unlock()
+	isExist, job, err := m.jobManager.CreateJob("", system.FixErrorJobType, []string{errType}, environ, nil)
 	if err != nil {
 		logger.Warningf("fixError error: %v", err)
+		return nil, err
+	}
+	if isExist {
+		return job, nil
+	}
+	if err := m.jobManager.addJob(job); err != nil {
 		return nil, err
 	}
 	return job, err
@@ -1174,7 +727,7 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 			// 原子更新
 			commit := atomicCommit{}
 			commit.SubmissionTime = fmt.Sprint(time.Now().Unix())
-			commit.UUID = dutils.GenUuid()
+			commit.UUID = utils.GenUuid()
 			commit.Note = "自动安装系统更新时进行备份"
 			commit.SubmissionType = systemCommitType
 			commit.SystemVersion = getSystemVersion()
@@ -1192,115 +745,63 @@ func (m *Manager) handlePackagesDownloaded(sender dbus.Sender, updateType system
 	}
 }
 
-func getNeedCleanCacheSize() (float64, error) {
-	output, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
-	if err != nil {
-		return 0, err
-	}
-	var archivesInfo map[string]json.RawMessage
-	err = json.Unmarshal(output, &archivesInfo)
-	if err != nil {
-		return 0, err
-	}
-	size, err := strconv.ParseFloat(string(archivesInfo["total"]), 64)
-	if err != nil {
-		return 0, err
-	}
-	return size, nil
-}
-
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
-	writeType := system.UpdateType(pw.Value.(uint64))
+	// 调用者判断
+	err := checkInvokePermission(m.service, pw.Sender)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
 
-	if writeType&system.OnlySecurityUpdate != 0 { // 如果更新类别包含仅安全更新，关闭其它更新项
-		writeType = system.OnlySecurityUpdate
-	}
-	pw.Value = writeType
-	err := m.config.SetUpdateMode(writeType)
-	if err != nil {
-		logger.Warning(err)
-	}
-	err = updateSecurityConfigFile(writeType == system.OnlySecurityUpdate)
-	if err != nil {
-		logger.Warning(err)
-	}
+	writeMode := system.UpdateType(pw.Value.(uint64))
+	newMode := m.statusManager.SetUpdateMode(writeMode)
+	pw.Value = newMode
 	return nil
 }
 
-func (m *Manager) modifyUpdateMode() {
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
-	if mode&system.OnlySecurityUpdate != 0 { // 如果更新类别包含仅安全更新，关闭其它更新项
-		mode = system.OnlySecurityUpdate
-	}
-	m.setPropUpdateMode(mode)
-	err := m.config.SetUpdateMode(mode)
+func (m *Manager) syncThirdPartyDconfig() {
+	const (
+		dccDsettingsId         = "org.deepin.dde.control-center"
+		dccUpdateDsettingsName = "org.deepin.dde.control-center.update"
+		dccKeyThirdPartySource = "updateThirdPartySource"
+	)
+	ds := ConfigManager.NewConfigManager(m.service.Conn())
+	dsPath, err := ds.AcquireManager(0, dccDsettingsId, dccUpdateDsettingsName, "")
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
-	err = updateSecurityConfigFile(mode == system.OnlySecurityUpdate)
+	dsDCCManager, err := ConfigManager.NewManager(m.service.Conn(), dsPath)
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
-}
+	systemSigLoop := dbusutil.NewSignalLoop(m.service.Conn(), 10)
+	systemSigLoop.Start()
+	dsDCCManager.InitSignalExt(systemSigLoop, true)
+	v, err := dsDCCManager.Value(0, dccKeyThirdPartySource)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	logger.Info("updateThirdPartySource is ", v.Value().(string))
 
-var _securityConfigUpdateMu sync.Mutex
-
-// 在控制中心打开仅安全更新时,在apt配置文件中增加参数,用户使用命令行安装更新时,也同样仅会进行安全更新
-func updateSecurityConfigFile(create bool) error {
-	_securityConfigUpdateMu.Lock()
-	defer _securityConfigUpdateMu.Unlock()
-	configPath := path.Join(aptConfDir, securityConfFileName)
-	if create {
-		_, err := os.Stat(configPath)
-		if err == nil {
-			return nil
-		}
-		configContent := []string{
-			`Dir::Etc::SourceParts "/dev/null";`,
-			fmt.Sprintf(`Dir::Etc::SourceList "/etc/apt/sources.list.d/%v";`, system.SecurityList),
-		}
-		config := strings.Join(configContent, "\n")
-		err = ioutil.WriteFile(configPath, []byte(config), 0644)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := os.RemoveAll(configPath)
-		if err != nil {
-			return err
+	syncUpdateMode := func(enable string) {
+		if enable == "Hidden" {
+			newMode := m.UpdateMode & (^system.UnknownUpdate)
+			m.statusManager.SetUpdateMode(newMode)
 		}
 	}
-	return nil
-}
-
-func (m *Manager) initAutoInstall(conn *dbus.Conn) {
-	const jobKindBackup = "backup"
-	m.sysPower = power.NewPower(conn)
-	m.abRecovery = abrecovery.NewABRecovery(conn)
-	m.atomic = atomic1.NewAtomicUpgrade1(conn)
-	m.signalLoop = dbusutil.NewSignalLoop(conn, 10)
-	m.signalLoop.Start()
-	m.abRecovery.InitSignalExt(m.signalLoop, true)
-	m.atomic.InitSignalExt(m.signalLoop, true)
-	_, _ = m.abRecovery.ConnectJobEnd(func(kind string, success bool, errMsg string) {
-		m.PropsMu.RLock()
-		updateType := m.autoInstallType
-		shouldHandleBackupJobEnd := m.shouldHandleBackupJobEnd
-		m.PropsMu.RUnlock()
-		if kind == jobKindBackup && shouldHandleBackupJobEnd {
-			if success {
-				m.PropsMu.Lock()
-				m.autoInstallType = 0
-				m.shouldHandleBackupJobEnd = false
-				m.PropsMu.Unlock()
-				_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
-				if err != nil {
-					logger.Warning(err)
-				}
+	syncUpdateMode(v.Value().(string))
+	_, err = dsDCCManager.ConnectValueChanged(func(key string) {
+		switch key {
+		case "updateThirdPartySource":
+			v, err := dsDCCManager.Value(0, dccKeyThirdPartySource)
+			if err != nil {
+				logger.Warning(err)
+				return
 			}
-			m.inhibitAutoQuitCountSub()
+			syncUpdateMode(v.Value().(string))
 		}
 	})
 	_, _ = m.atomic.ConnectStateChanged(func(op int32, state int32, target string, desc string) {
@@ -1313,48 +814,27 @@ func (m *Manager) initAutoInstall(conn *dbus.Conn) {
 			m.autoInstallType = 0
 			m.shouldHandleBackupJobEnd = false
 			m.PropsMu.Unlock()
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true, false)
+			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, true)
 			if err != nil {
 				logger.Warning(err)
 			}
 			m.inhibitAutoQuitCountSub()
 		}
 	})
-	canRestore, err := m.abRecovery.CanRestore(0) // 如果初始化时系统处于可回退状态,则不进行自动安装更新（true： 不自动安装）
-	if err != nil {
-		m.PropsMu.Lock()
-		m.canRestore = true
-		m.PropsMu.Unlock()
-	} else {
-		m.PropsMu.Lock()
-		m.canRestore = canRestore
-		m.PropsMu.Unlock()
-	}
 }
 
-// SystemUpgradeInfo 将update_infos.json数据解析成map
-func (m *Manager) SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
-	r := make(system.SourceUpgradeInfoMap)
-
-	filename := path.Join(system.VarLibDir, "update_infos.json")
-	var updateInfosList []system.UpgradeInfo
-	err := system.DecodeJson(filename, &updateInfosList)
+func (m *Manager) checkUpdateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	// 调用者判断
+	err := checkInvokePermission(m.service, pw.Sender)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, err
-		}
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
 
-		var updateInfoErr system.UpdateInfoError
-		err2 := system.DecodeJson(filename, &updateInfoErr)
-		if err2 == nil {
-			return nil, &updateInfoErr
-		}
-		return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
-	}
-	for _, info := range updateInfosList {
-		r[info.Category] = append(r[info.Category], info)
-	}
-	return r, nil
+	writeType := system.UpdateType(pw.Value.(uint64))
+	newMode := m.statusManager.SetCheckMode(writeType)
+	pw.Value = newMode
+	return nil
 }
 
 func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
@@ -1362,78 +842,16 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 	autoInstallUpdates := m.updater.AutoInstallUpdates
 	autoInstallUpdateType := m.updater.AutoInstallUpdateType
 	m.updater.PropsMu.RUnlock()
-
-	m.PropsMu.RLock()
-	canRestore := m.canRestore
-	m.PropsMu.RUnlock()
-	return !canRestore && autoInstallUpdates && (autoInstallUpdateType&category != 0)
-}
-
-func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
-	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-	if uid != 0 {
-		err = fmt.Errorf("%q is not allowed to trigger system event", uid)
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-	m.service.DelayAutoQuit()
-	switch eventType {
-	case "AutoCheck":
-		go m.handleAutoCheckEvent()
-	case "AutoClean":
-		go m.handleAutoCleanEvent()
-	case "UpdateInfosChanged":
-		m.handleUpdateInfosChanged(false)
-	case "OsVersionChanged":
-		go updateTokenConfigFile()
-	default:
-		return dbusutil.ToError(fmt.Errorf("can not handle %s event", eventType))
-	}
-
-	return nil
+	return autoInstallUpdates && (autoInstallUpdateType&category != 0)
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
-	var checkNeedUpdateSource = func() bool {
-		upgradeTypeList := []string{
-			system.PrepareDistUpgradeJobType,
-			system.PrepareSystemUpgradeJobType,
-			system.PrepareAppStoreUpgradeJobType,
-			system.PrepareUnknownUpgradeJobType,
-			system.PrepareSecurityUpgradeJobType,
-			system.DistUpgradeJobType,
-			system.SystemUpgradeJobType,
-			system.AppStoreUpgradeJobType,
-			system.SecurityUpgradeJobType,
-			system.UnknownUpgradeJobType,
-		}
-		for _, job := range m.jobList {
-			if job.Status == system.RunningStatus && strv.Strv(upgradeTypeList).Contains(job.Type) {
-				return false
-			}
-		}
-		return true
-	}
 	if m.config.AutoCheckUpdates {
-		if !checkNeedUpdateSource() {
-			logger.Info("lastore is running prepare upgrade or upgrade job, not need check update")
-			return nil
-		}
-		_, err := m.updateSource(m.updater.UpdateNotify, true)
+		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 		if err != nil {
 			logger.Warning(err)
 			return err
 		}
-		err = m.config.UpdateLastCheckTime()
-		if err != nil {
-			logger.Warning(err)
-			return err
-		}
-		m.updateAutoCheckSystemUnit()
 	}
 	if !m.config.DisableUpdateMetadata {
 		startUpdateMetadataInfoService()
@@ -1442,7 +860,7 @@ func (m *Manager) handleAutoCheckEvent() error {
 }
 
 func (m *Manager) handleAutoCleanEvent() error {
-
+	const MaxCacheSize = 500.0 // size MB
 	doClean := func() error {
 		logger.Debug("call doClean")
 
@@ -1483,7 +901,7 @@ func (m *Manager) handleAutoCleanEvent() error {
 			logger.Warning(err)
 			return err
 		}
-		cacheSize := size / 1024.0
+		cacheSize := size / 1000.0
 		if cacheSize > MaxCacheSize {
 			remainingCleanCacheOverLimitDuration := calcRemainingCleanCacheOverLimitDuration()
 			logger.Debugf("clean cache over limit remaining duration: %v", remainingCleanCacheOverLimitDuration)
@@ -1497,495 +915,425 @@ func (m *Manager) handleAutoCleanEvent() error {
 	return nil
 }
 
-type upgradePostContent struct {
-	SerialNumber    string   `json:"serialNumber"`
-	MachineID       string   `json:"machineId"`
-	UpgradeStatus   int      `json:"status"`
-	UpgradeErrorMsg string   `json:"msg"`
-	TimeStamp       int64    `json:"timestamp"`
-	SourceUrl       []string `json:"sourceUrl"`
-	Version         string   `json:"version"`
+func (m *Manager) watchSession(uid string, session login1.Session) {
+	logger.Infof("watching '%s session:%s", uid, session.ServiceName_())
+	session.InitSignalExt(m.signalLoop, true)
+	err := session.Active().ConnectChanged(func(hasValue bool, active bool) {
+		if !hasValue {
+			return
+		}
+		if active {
+			m.userAgents.setActiveUid(uid)
+			lang := m.userAgents.getActiveLastoreAgentLang()
+			if len(lang) != 0 {
+				// Active的用户切换后,语言环境切换至对应用户的语言环境,用于发通知
+				logger.Info("SetLocale", lang)
+				gettext.SetLocale(gettext.LcAll, lang)
+			} else {
+				m.updateLocaleByUser(uid)
+			}
+		}
+	})
+
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	active, err := session.Active().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	if active {
+		m.userAgents.setActiveUid(uid)
+		lang := m.userAgents.getActiveLastoreAgentLang()
+		if len(lang) != 0 {
+			logger.Info("SetLocale", lang)
+			gettext.SetLocale(gettext.LcAll, lang)
+		} else {
+			m.updateLocaleByUser(uid)
+		}
+	}
+}
+
+func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath) {
+	logger.Infof("session added %v %v", sessionId, sessionPath)
+	sysBus := m.service.Conn()
+	session, err := login1.NewSession(sysBus, sessionPath)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	sessionType, err := session.Type().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	if sessionType == "tty" {
+		logger.Infof("%v session is tty", sessionPath)
+		return
+	}
+
+	var userInfo login1.UserInfo
+	userInfo, err = session.User().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+
+	uidStr := strconv.Itoa(int(userInfo.UID))
+
+	newlyAdded := m.userAgents.addSession(uidStr, session)
+	if newlyAdded {
+		m.watchSession(uidStr, session)
+	}
+}
+
+func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.ObjectPath) {
+	logger.Info("session removed", sessionId, sessionPath)
+	m.userAgents.removeSession(sessionPath)
+}
+
+func (m *Manager) updateLocaleByUser(uid string) {
+	logger.Info("update locale by user", uid)
+	obj := accounts.NewAccounts(m.service.Conn())
+	path, err := obj.FindUserById(0, uid)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	user, err := accounts.NewUser(m.service.Conn(), dbus.ObjectPath(path))
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	locale, err := user.Locale().Get(0)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	logger.Info("SetLocale", locale)
+	gettext.SetLocale(gettext.LcAll, locale)
+}
+
+func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
+	logger.Info("user removed", uid, userPath)
+	uidStr := strconv.Itoa(int(uid))
+	m.userAgents.removeUser(uidStr)
 }
 
 const (
-	upgradeSucceed = 0
-	upgradeFailed  = 1
+	updateNotifyShow         = "dde-control-center"          // 无论控制中心状态，都需要发送的通知
+	updateNotifyShowOptional = "dde-control-center-optional" // 根据控制中心更新模块焦点状态,选择性的发通知(由dde-session-daemon的lastore agent判断后控制)
 )
 
-// 发送系统更新成功或失败的状态
-func (m *Manager) postSystemUpgradeMessage(upgradeStatus int, j *Job, updateType system.UpdateType) {
-	m.inhibitAutoQuitCountAdd()
-	defer m.inhibitAutoQuitCountSub()
-	var upgradeErrorMsg string
-	var version string
-	if upgradeStatus == upgradeFailed {
-		if j != nil {
-			upgradeErrorMsg = j.Description
-		}
-		version = m.preUpgradeOSVersion
-	} else {
-		infoMap, err := getOSVersionInfo()
+func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
+	if !m.updater.UpdateNotify {
+		return 0
+	}
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		id, err := agent.SendNotify(0, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout)
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			version = strings.Join(
-				[]string{infoMap["MajorVersion"], infoMap["MinorVersion"], infoMap["OsBuild"]},
-				".")
-		}
-	}
-
-	sn, err := getSN()
-	if err != nil {
-		logger.Warning(err)
-	}
-	hardwareId, err := getHardwareId()
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	sourceFilePath := system.GetCategorySourceMap()[updateType]
-	postContent := &upgradePostContent{
-		SerialNumber:    sn,
-		MachineID:       hardwareId,
-		UpgradeStatus:   upgradeStatus,
-		UpgradeErrorMsg: upgradeErrorMsg,
-		TimeStamp:       time.Now().Unix(),
-		SourceUrl:       getUpgradeUrls(sourceFilePath),
-		Version:         version,
-	}
-	content, err := json.Marshal(postContent)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	client := &http.Client{
-		Timeout: 4 * time.Second,
-	}
-	logger.Debug(postContent)
-	encryptMsg, err := EncryptMsg(content)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	base64EncodeString := base64.StdEncoding.EncodeToString(encryptMsg)
-	const url = "https://update-platform.uniontech.com/api/v1/update/status"
-	request, err := http.NewRequest("POST", url, strings.NewReader(base64EncodeString))
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	response, err := client.Do(request)
-	if err == nil {
-		defer func() {
-			_ = response.Body.Close()
-		}()
-		body, _ := ioutil.ReadAll(response.Body)
-		logger.Info(string(body))
-	} else {
-		logger.Warning(err)
-	}
-}
-
-var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file)://[^ ]+)`)
-
-// 获取list文件或list.d文件夹中所有list文件的未被屏蔽的仓库地址
-func getUpgradeUrls(path string) []string {
-	var upgradeUrls []string
-	info, err := os.Stat(path)
-	if err != nil {
-		logger.Warning(err)
-		return nil
-	}
-	if info.IsDir() {
-		infos, err := ioutil.ReadDir(path)
-		if err != nil {
-			logger.Warning(err)
-			return nil
-		}
-		for _, info := range infos {
-			upgradeUrls = append(upgradeUrls, getUpgradeUrls(filepath.Join(path, info.Name()))...)
+			return id
 		}
 	} else {
-		f, err := os.Open(path)
+		users, err := m.loginManager.ListUsers(0)
 		if err != nil {
 			logger.Warning(err)
-			return nil
 		}
-		defer f.Close()
-		r := bufio.NewReader(f)
-		for {
-			s, err := r.ReadString('\n')
-			if err != nil {
-				break
+		app := appName
+		if app == updateNotifyShowOptional {
+			app = updateNotifyShow
+		}
+		actionsArg := "["
+		if len(actions) != 0 {
+			actionsArg = actionsArg + `"` + strings.Join(actions, `","`) + `"`
+		}
+		actionsArg = actionsArg + "]"
+
+		var hintsList []string
+		for key, value := range hints {
+			hintsList = append(hintsList, `"`+key+`":<"`+value.Value().(string)+`">`)
+		}
+		hintsArg := "{" + strings.Join(hintsList, `,`) + "}"
+		timeout := expireTimeout
+		if timeout < 0 {
+			timeout = 5000 // -1: default 5s
+		}
+		args := []string{
+			"gdbus", "call", "--session", "--dest=org.freedesktop.Notifications", "--object-path=/org/freedesktop/Notifications", "--method=org.freedesktop.Notifications.Notify",
+			`'` + app + `'`, strconv.FormatUint(uint64(replacesId), 10), `'` + appIcon + `'`, `'` + summary + `'`, `'` + body + `'`, actionsArg, hintsArg, strconv.FormatInt(int64(timeout), 10),
+		}
+		var id uint32 = 0
+		for _, user := range users {
+			username := user.Name
+			uid := user.UID
+			if m.userAgents.activeUid != strconv.Itoa(int(uid)) {
+				continue
 			}
-			allMatchedString := _urlReg.FindAllStringSubmatch(s, -1)
-			for _, MatchedString := range allMatchedString {
-				if len(MatchedString) == 2 {
-					upgradeUrls = append(upgradeUrls, MatchedString[1])
+			cmdArgs := []string{
+				"-u", username, "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/" + strconv.Itoa(int(uid)) + "/bus",
+			}
+			cmdArgs = append(cmdArgs, args...)
+			cmd := exec.Command("sudo", cmdArgs...)
+			logger.Info(cmd.String())
+			var outBuffer bytes.Buffer
+			var errBuffer bytes.Buffer
+			cmd.Stderr = &errBuffer
+			cmd.Stdout = &outBuffer
+			err = cmd.Run()
+			if err != nil {
+				logger.Warning(err)
+				logger.Warning(errBuffer.String())
+			} else {
+				str := outBuffer.String()
+				if len(str) >= 12 {
+					num, err := strconv.ParseUint(str[8:len(str)-3], 10, 0)
+					if err != nil {
+						logger.Warning(err)
+					} else {
+						id = uint32(num)
+					}
 				}
 			}
+			break
 		}
+		return id
 	}
-	return upgradeUrls
+	return 0
 }
 
-type lastoreSystemUnit struct {
-	UnitName string
-	Args     []string
-}
-
-const (
-	lastoreUnitCache    = "/tmp/lastoreUnitCache"
-	lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
-	run                 = "systemd-run"
-	lastoreDBusCmd      = "dbus-send --system --print-reply --dest=org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager.HandleSystemEvent"
-)
-
-func (m *Manager) getNextUpdateDelay() time.Duration {
-	elapsed := time.Since(m.config.LastCheckTime)
-	remained := m.config.CheckInterval - elapsed
-	if remained < 0 {
-		return 0
-	}
-	// ensure delay at least have 10 seconds
-	return remained + time.Second*10
-
-}
-
-type lastoreUnitMap map[string][]string
-
-// 定时任务和文件监听
-func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
-	unitMap := make(lastoreUnitMap)
-	unitMap["lastoreOnline"] = []string{
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, "AutoCheck"), // 等待网络联通后检查更新
-	}
-	unitMap["lastoreAutoClean"] = []string{
-		"--on-active=600",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoClean"), // 10分钟后自动检查是否需要清理
-	}
-	unitMap["lastoreAutoCheck"] = []string{
-		fmt.Sprintf("--on-active=%d", m.getNextUpdateDelay()/time.Second),
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "AutoCheck"), // 根据上次检查时间,设置下一次自动检查时间
-	}
-	unitMap["lastoreAutoUpdateToken"] = []string{
-		"--on-active=60",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 60s后更新token文件
-	}
-	unitMap["watchOsVersion"] = []string{
-		"--path-property=PathModified=/etc/os-version",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
-	}
-	unitMap["watchUpdateInfo"] = []string{
-		"--path-property=PathModified=/var/lib/lastore/update_infos.json",
-		"--property=StartLimitBurst=0",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "UpdateInfosChanged"), //监听update_infos.json文件
-	}
-	return unitMap
-}
-
-// systemd计时服务需要根据上一次更新时间而变化
-func (m *Manager) updateAutoCheckSystemUnit() {
-	const autoCheckUnit = "lastoreAutoCheck.timer"
-	systemd := systemd1.NewManager(m.service.Conn())
-	_, err := systemd.GetUnit(0, autoCheckUnit)
-	if err == nil {
-		_, err = systemd.StopUnit(0, autoCheckUnit, "replace")
+func (m *Manager) closeNotify(id uint32) error {
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		err := agent.CloseNotification(0, id)
 		if err != nil {
 			logger.Warning(err)
-			return
 		}
-	}
-	var args []string
-	args = append(args, fmt.Sprintf("--unit=%s", "lastoreAutoCheck"))
-	autoCheckArgs := m.getLastoreSystemUnitMap()["lastoreAutoCheck"]
-	args = append(args, autoCheckArgs...)
-	cmd := exec.Command(run, args...)
-	var errBuffer bytes.Buffer
-	cmd.Stderr = &errBuffer
-	err = cmd.Run()
-	if err != nil {
-		logger.Warning(err)
-		logger.Warning(errBuffer.String())
-	}
-	logger.Debug(cmd.String())
-}
-
-// 开启定时任务和文件监听(通过systemd-run实现)
-func (m *Manager) startSystemdUnit() {
-	m.lastoreUnitCacheMu.Lock()
-	defer m.lastoreUnitCacheMu.Unlock()
-
-	if system.NormalFileExists(lastoreUnitCache) {
-		return
-	}
-	kf := keyfile.NewKeyFile()
-	for name, cmdArgs := range m.getLastoreSystemUnitMap() {
-		var args []string
-		args = append(args, fmt.Sprintf("--unit=%s", name))
-		args = append(args, cmdArgs...)
-		cmd := exec.Command(run, args...)
-		logger.Info(cmd.String())
-		var errBuffer bytes.Buffer
-		cmd.Stderr = &errBuffer
-		err := cmd.Run()
-		if err != nil {
-			logger.Warning(err)
-			logger.Warning(errBuffer.String())
-			continue
-		}
-		kf.SetString("UnitName", name, fmt.Sprintf("%s.unit", name))
-	}
-
-	err := kf.SaveToFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-	}
-}
-
-func (m *Manager) canAutoQuit() bool {
-	m.PropsMu.RLock()
-	jobList := m.jobList
-	m.PropsMu.RUnlock()
-	haveActiveJob := false
-	for _, job := range jobList {
-		if (job.Status != system.FailedStatus || job.retry > 0) && job.Status != system.PausedStatus {
-			logger.Info(job.Id)
-			haveActiveJob = true
-		}
-	}
-	m.autoQuitCountMu.Lock()
-	inhibitAutoQuitCount := m.inhibitAutoQuitCount
-	m.autoQuitCountMu.Unlock()
-	logger.Info("haveActiveJob", haveActiveJob)
-	logger.Info("inhibitAutoQuitCount", inhibitAutoQuitCount)
-	return !haveActiveJob && inhibitAutoQuitCount == 0
-}
-
-// 保存检查过更新的状态
-func (m *Manager) saveUpdateSourceOnce() {
-	m.lastoreUnitCacheMu.Lock()
-	defer m.lastoreUnitCacheMu.Unlock()
-
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	kf.SetBool("RecordData", "UpdateSourceOnce", true)
-	err = kf.SaveToFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-	}
-}
-
-// 读取检查过更新的状态
-func (m *Manager) loadUpdateSourceOnce() {
-	m.lastoreUnitCacheMu.Lock()
-	defer m.lastoreUnitCacheMu.Unlock()
-
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	updateSourceOnce, err := kf.GetBool("RecordData", "UpdateSourceOnce")
-	if err == nil {
-		m.PropsMu.Lock()
-		m.updateSourceOnce = updateSourceOnce
-		m.PropsMu.Unlock()
 	} else {
-		logger.Warning(err)
-	}
-
-}
-
-type JobContent struct {
-	Id   string
-	Name string
-
-	Packages     []string
-	CreateTime   int64
-	DownloadSize int64
-
-	Type string
-
-	Status system.Status
-
-	Progress    float64
-	Description string
-	Environ     map[string]string
-	// completed bytes per second
-	QueueName string
-	HaveNext  bool
-	AutoCheck bool
-}
-
-// 读取上一次退出时失败和暂停的job,并导出
-func (m *Manager) loadCacheJob() {
-	var jobList []*JobContent
-	jobContent, err := ioutil.ReadFile(lastoreJobCacheJson)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	err = json.Unmarshal(jobContent, &jobList)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	for _, j := range jobList {
-		if j.Status == system.FailedStatus {
-			failedJob := NewJob(m.service, j.Id, j.Name, j.Packages, j.Type, j.QueueName, j.Environ)
-			failedJob.Description = j.Description
-			failedJob.CreateTime = j.CreateTime
-			failedJob.DownloadSize = j.DownloadSize
-			failedJob.Status = j.Status
-			err = m.jobManager.addJob(failedJob)
-			if err != nil {
-				logger.Warning(err)
+		users, err := m.loginManager.ListUsers(0)
+		if err != nil {
+			logger.Warning(err)
+		}
+		args := []string{
+			"gdbus", "call", "--session", "--dest=org.freedesktop.Notifications", "--object-path=/org/freedesktop/Notifications", "--method=org.freedesktop.Notifications.CloseNotification",
+			strconv.FormatUint(uint64(id), 10),
+		}
+		for _, user := range users {
+			username := user.Name
+			uid := user.UID
+			if m.userAgents.activeUid != strconv.Itoa(int(uid)) {
 				continue
 			}
-		} else if j.Status == system.PausedStatus {
-			var updateType system.UpdateType
-			switch j.Id {
-			case genJobId(system.PrepareSystemUpgradeJobType), genJobId(system.SystemUpgradeJobType):
-				updateType = system.SystemUpdate
-			case genJobId(system.PrepareSecurityUpgradeJobType), genJobId(system.SecurityUpgradeJobType):
-				updateType = system.OnlySecurityUpdate
-			case genJobId(system.PrepareUnknownUpgradeJobType), genJobId(system.UnknownUpgradeJobType):
-				updateType = system.UnknownUpdate
-			default: // lastore目前是对控制中心提供功能，任务暂停场景只有三种类型的分类更新（下载）
-				continue
+			cmdArgs := []string{
+				"-u", username, "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/" + strconv.Itoa(int(uid)) + "/bus",
 			}
-			_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, j.HaveNext, j.AutoCheck)
+			cmdArgs = append(cmdArgs, args...)
+			cmd := exec.Command("sudo", cmdArgs...)
+			logger.Info(cmd.String())
+			var errBuffer bytes.Buffer
+			cmd.Stderr = &errBuffer
+			err = cmd.Run()
 			if err != nil {
 				logger.Warning(err)
-				return
+				logger.Warning(errBuffer.String())
 			}
-			pausedJob := m.jobManager.findJobById(j.Id)
-			if pausedJob != nil {
-				err := m.jobManager.pauseJob(pausedJob)
+		}
+	}
+	return nil
+}
+
+// ChangePrepareDistUpgradeJobOption 当下载job的配置需要修改,通过该接口触发
+func (m *Manager) ChangePrepareDistUpgradeJobOption() {
+	logger.Info("start changed download job option by ForceAbortAndRetry")
+	prepareUpgradeTypeList := []string{
+		system.PrepareDistUpgradeJobType,
+		system.PrepareSystemUpgradeJobType,
+		system.PrepareUnknownUpgradeJobType,
+		system.PrepareSecurityUpgradeJobType,
+	}
+	for _, jobType := range prepareUpgradeTypeList {
+		job := m.jobManager.findJobById(genJobId(jobType))
+		if job != nil {
+			if job.Status == system.PausedStatus {
+				m.handleDownloadLimitChanged(job)
+			} else {
+				err := m.jobManager.ForceAbortAndRetry(job)
 				if err != nil {
 					logger.Warning(err)
 				}
-				pausedJob.Progress = j.Progress
 			}
-		} else {
-			continue
 		}
 	}
 }
 
-// 保存失败和暂停的job内容
-func (m *Manager) saveCacheJob() {
+func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 	m.PropsMu.RLock()
-	jobList := m.jobList
+	updateType := m.UpdateMode
 	m.PropsMu.RUnlock()
+	// UpdateMode修改后,一些对外属性需要同步修改(主要是和UpdateMode有关的数据)
+	func() {
+		updatableApps := m.updater.getUpdatablePackagesByType(updateType)
+		m.updatableApps(updatableApps) // Manager的UpgradableApps实际为可更新的包,而非应用;
+		m.updater.setUpdatablePackages(updatableApps)
+		m.updater.updateUpdatableApps()
+	}()
+}
 
-	var needSaveJobs []*JobContent
-	for _, job := range jobList {
-		if (job.Status == system.FailedStatus && job.retry == 0) || job.Status == system.PausedStatus {
-			haveNext := false
-			if job.next != nil {
-				haveNext = true
-			}
-			needSaveJob := &JobContent{
-				job.Id,
-				job.Name,
-				job.Packages,
-				job.CreateTime,
-				job.DownloadSize,
-				job.Type,
-				job.Status,
-				job.Progress,
-				job.Description,
-				job.environ,
-				job.queueName,
-				haveNext,
-				job.autoCheck,
-			}
-			needSaveJobs = append(needSaveJobs, needSaveJob)
+func (m *Manager) handleDownloadLimitChanged(job *Job) {
+	limitEnable, limitConfig := m.updater.GetLimitConfig()
+	if limitEnable {
+		if job.option == nil {
+			job.option = make(map[string]string)
+		}
+		job.option[aptLimitKey] = limitConfig
+	} else {
+		if job.option != nil {
+			delete(job.option, aptLimitKey)
 		}
 	}
-	b, err := json.Marshal(needSaveJobs)
+}
+
+func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]string, environ map[string]string) {
+	if strv.Strv(m.updater.UpdatablePackages).Contains(pkgName) || system.QueryPackageInstallable(pkgName) {
+		// 该包可更新或者该包未安装可以安装
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		m.do.Lock()
+		defer m.do.Unlock()
+		isExist, installJob, err := m.jobManager.CreateJob(fmt.Sprintf("install %v", pkgName), system.OnlyInstallJobType, []string{pkgName}, environ, nil)
+		if err != nil {
+			wg.Done()
+			logger.Warning(err)
+			return
+		}
+		if isExist {
+			wg.Done()
+			return
+		}
+		if installJob != nil {
+			installJob.option = option
+			installJob.setPreHooks(map[string]func() error{
+				string(system.FailedStatus): func() error {
+					wg.Done()
+					return nil
+				},
+				string(system.SucceedStatus): func() error {
+					wg.Done()
+					return nil
+				},
+			})
+			if err := m.jobManager.addJob(installJob); err != nil {
+				logger.Warning(err)
+				wg.Done()
+				return
+			}
+		}
+		wg.Wait()
+	}
+}
+
+// 只有初始化和检查更新的时候，才能更新系统和安全仓库的Dir，目的是保证检查、下载、安装过程中的一致性，不受配置修改的影响
+func (m *Manager) reloadOemConfig(reloadSourceDir bool) {
+	// 更新仓库Dir
+	if reloadSourceDir {
+		m.config.ReloadSourcesDir()
+	}
+
+	// 更新 dbus 属性
+	InitConfig(m.SystemSourceConfig, m.config.SystemOemSourceConfig, m.config.SystemCustomSource)
+	InitConfig(m.SecuritySourceConfig, m.config.SecurityOemSourceConfig, m.config.SecurityCustomSource)
+	SetUsingRepoType(m.SystemSourceConfig, m.config.SystemRepoType)
+	SetUsingRepoType(m.SecuritySourceConfig, m.config.SecurityRepoType)
+}
+
+type platformCacheContent struct {
+	CoreListPkgs map[string]system.PackageInfo
+	BaselinePkgs map[string]system.PackageInfo
+	SelectPkgs   map[string]system.PackageInfo
+	PreCheck     string
+	MidCheck     string
+	PostCheck    string
+}
+
+func (m *Manager) savePlatformCache() {
+	cache := platformCacheContent{}
+	cache.CoreListPkgs = m.updatePlatform.TargetCorePkgs
+	cache.BaselinePkgs = m.updatePlatform.BaselinePkgs
+	cache.SelectPkgs = m.updatePlatform.SelectPkgs
+	cache.PreCheck = m.updatePlatform.PreCheck
+	cache.MidCheck = m.updatePlatform.MidCheck
+	cache.PostCheck = m.updatePlatform.PostCheck
+	content, err := json.Marshal(cache)
 	if err != nil {
 		logger.Warning(err)
 		return
 	}
-	err = ioutil.WriteFile(lastoreJobCacheJson, b, 0600)
+	err = m.config.SetOnlineCache(string(content))
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
 }
 
-func (m *Manager) inhibitAutoQuitCountSub() {
-	m.autoQuitCountMu.Lock()
-	m.inhibitAutoQuitCount -= 1
-	m.autoQuitCountMu.Unlock()
+func (m *Manager) loadPlatformCache() {
+	cache := platformCacheContent{}
+	err := json.Unmarshal([]byte(m.config.OnlineCache), &cache)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	m.updatePlatform.TargetCorePkgs = cache.CoreListPkgs
+	m.updatePlatform.BaselinePkgs = cache.BaselinePkgs
+	m.updatePlatform.SelectPkgs = cache.SelectPkgs
+	m.updatePlatform.PreCheck = cache.PreCheck
+	m.updatePlatform.MidCheck = cache.MidCheck
+	m.updatePlatform.PostCheck = cache.PostCheck
 }
 
-func (m *Manager) inhibitAutoQuitCountAdd() {
-	m.autoQuitCountMu.Lock()
-	m.inhibitAutoQuitCount += 1
-	m.autoQuitCountMu.Unlock()
+// 埋点数据上报
+
+type reportCategory uint32
+
+const (
+	updateStatusReport reportCategory = iota
+	downloadStatusReport
+	upgradeStatusReport
+)
+
+type reportLogInfo struct {
+	Tid    int
+	Result bool
+	Reason string
 }
 
-func (m *Manager) loadLastoreCache() {
-	m.loadUpdateSourceOnce()
-	m.loadCacheJob()
-}
-
-func (m *Manager) saveLastoreCache() {
-	m.saveUpdateSourceOnce()
-	m.saveCacheJob()
-}
-
-func (m *Manager) handleOSSignal() {
-	var sigChan = make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGSEGV)
-
-	for sig := range sigChan {
-		switch sig {
-		case syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGSEGV:
-			logger.Info("received signal:", sig)
-			m.service.Quit()
+// 数据埋点接口
+func (m *Manager) reportLog(category reportCategory, status bool, description string) {
+	agent := m.userAgents.getActiveLastoreAgent()
+	if agent != nil {
+		logInfo := reportLogInfo{
+			Result: status,
+			Reason: description,
 		}
-	}
-}
-
-func prepareUpdateSource() {
-	partialFilePaths := []string{
-		"/var/lib/apt/lists/partial",
-		"/var/lib/lastore/lists/partial",
-		"/var/cache/apt/archives/partial",
-		"/var/cache/lastore/archives/partial",
-	}
-	for _, partialFilePath := range partialFilePaths {
-		infos, err := ioutil.ReadDir(partialFilePath)
+		switch category {
+		case updateStatusReport:
+			logInfo.Tid = 1000600002
+		case downloadStatusReport:
+			logInfo.Tid = 1000600003
+		case upgradeStatusReport:
+			logInfo.Tid = 1000600004
+		}
+		infoContent, err := json.Marshal(logInfo)
 		if err != nil {
 			logger.Warning(err)
-			continue
 		}
-		for _, info := range infos {
-			err = os.RemoveAll(filepath.Join(partialFilePath, info.Name()))
-			if err != nil {
-				logger.Warning(err)
-			}
+		err = agent.ReportLog(0, string(infoContent))
+		if err != nil {
+			logger.Warning(err)
 		}
 	}
 }

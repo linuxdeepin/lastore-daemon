@@ -11,6 +11,8 @@ GOBUILD = go build
 GOTEST = go test -v
 export GO111MODULE=off
 
+export SECURITY_BUILD_OPTIONS = -fstack-protector-strong -D_FORTITY_SOURCE=1 -z noexecstack -pie -fPIC -z lazy
+
 all:  build
 
 TEST = \
@@ -28,7 +30,11 @@ prepare:
 	@mkdir -p ${GOPATH_DIR}/src/$(dir ${GOPKG_PREFIX});
 	@ln -snf ../../../.. ${GOPATH_DIR}/src/${GOPKG_PREFIX};
 
-build: prepare
+bin/lastore-agent:src/lastore-agent/*.c
+	@mkdir -p bin
+	gcc ${SECURITY_BUILD_OPTIONS} -W -Wall -D_GNU_SOURCE -o $@ $^ $(shell pkg-config --cflags --libs glib-2.0 libsystemd)
+
+build: prepare bin/lastore-agent
 	${GoPath} ${GOBUILD} -o bin/lastore-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-daemon
 	${GoPath} ${GOBUILD} -o bin/lastore-tools ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-tools
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror || echo "build failed, disable smartmirror support "
@@ -61,11 +67,12 @@ install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/usr/bin && cp bin/lastore-apt-clean ${DESTDIR}${PREFIX}/usr/bin/
 	cp bin/lastore-tools ${DESTDIR}${PREFIX}/usr/bin/
 	cp bin/lastore-smartmirror ${DESTDIR}${PREFIX}/usr/bin/
+	cp bin/lastore-agent ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon && cp bin/lastore-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 	cp bin/lastore-smartmirror-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
-	cp -rf etc ${DESTDIR}${PREFIX}/etc
+	cp -rf etc ${DESTDIR}${PREFIX}/
 
 	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/
 	cp -rf var/lib/lastore/* ${DESTDIR}${PREFIX}/var/lib/lastore/

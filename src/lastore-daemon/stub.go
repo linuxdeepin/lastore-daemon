@@ -16,6 +16,14 @@ func (*Manager) GetInterfaceName() string {
 	return "org.deepin.dde.Lastore1.Manager"
 }
 
+func (*Job) GetInterfaceName() string {
+	return "org.deepin.dde.Lastore1.Job"
+}
+
+func (*Updater) GetInterfaceName() string {
+	return "org.deepin.dde.Lastore1.Updater"
+}
+
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
 	var caller methodCaller
@@ -50,7 +58,7 @@ func (m *Manager) updateJobList() {
 
 		jobChanged = true
 
-		if jobChanged && systemOnChanging {
+		if systemOnChanging {
 			break
 		}
 	}
@@ -138,7 +146,10 @@ func DestroyJobDBus(j *Job) {
 	if NotUseDBus {
 		return
 	}
-	j.notifyAll()
+	// 有next的job无需广播状态，会导致前端判断异常
+	if j.next == nil {
+		j.notifyAll()
+	}
 	<-time.After(time.Millisecond * 100)
 	err := j.service.StopExport(j)
 	if err != nil {
@@ -148,14 +159,6 @@ func DestroyJobDBus(j *Job) {
 
 func (j *Job) getPath() dbus.ObjectPath {
 	return dbus.ObjectPath("/org/deepin/dde/Lastore1/Job" + j.Id)
-}
-
-func (*Job) GetInterfaceName() string {
-	return "org.deepin.dde.Lastore1.Job"
-}
-
-func (*Updater) GetInterfaceName() string {
-	return "org.deepin.dde.Lastore1.Updater"
 }
 
 func (j *Job) notifyAll() {

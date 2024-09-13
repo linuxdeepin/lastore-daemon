@@ -117,6 +117,84 @@ func (v *Updater) emitPropChangedAutoInstallUpdateType(value system.UpdateType) 
 	return v.service.EmitPropertyChanged(v, "AutoInstallUpdateType", value)
 }
 
+func (v *Updater) setPropIdleDownloadConfig(value string) (changed bool) {
+	if v.IdleDownloadConfig != value {
+		v.IdleDownloadConfig = value
+		v.emitPropChangedIdleDownloadConfig(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedIdleDownloadConfig(value string) error {
+	return v.service.EmitPropertyChanged(v, "IdleDownloadConfig", value)
+}
+
+func (v *Updater) setPropDownloadSpeedLimitConfig(value string) (changed bool) {
+	if v.DownloadSpeedLimitConfig != value {
+		v.DownloadSpeedLimitConfig = value
+		v.emitPropChangedDownloadSpeedLimitConfig(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedDownloadSpeedLimitConfig(value string) error {
+	return v.service.EmitPropertyChanged(v, "DownloadSpeedLimitConfig", value)
+}
+
+func (v *Updater) setPropUpdateTarget(value string) (changed bool) {
+	if v.UpdateTarget != value {
+		v.UpdateTarget = value
+		v.emitPropChangedUpdateTarget(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedUpdateTarget(value string) error {
+	return v.service.EmitPropertyChanged(v, "UpdateTarget", value)
+}
+
+func (v *Updater) setPropOfflineInfo(value string) (changed bool) {
+	if v.OfflineInfo != value {
+		v.OfflineInfo = value
+		v.emitPropChangedOfflineInfo(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedOfflineInfo(value string) error {
+	return v.service.EmitPropertyChanged(v, "OfflineInfo", value)
+}
+
+func (v *Updater) setPropP2PUpdateEnable(value bool) (changed bool) {
+	if v.P2PUpdateEnable != value {
+		v.P2PUpdateEnable = value
+		v.emitPropChangedP2PUpdateEnable(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedP2PUpdateEnable(value bool) error {
+	return v.service.EmitPropertyChanged(v, "P2PUpdateEnable", value)
+}
+
+func (v *Updater) setPropP2PUpdateSupport(value bool) (changed bool) {
+	if v.P2PUpdateSupport != value {
+		v.P2PUpdateSupport = value
+		v.emitPropChangedP2PUpdateSupport(value)
+		return true
+	}
+	return false
+}
+
+func (v *Updater) emitPropChangedP2PUpdateSupport(value bool) error {
+	return v.service.EmitPropertyChanged(v, "P2PUpdateSupport", value)
+}
+
 func (v *Job) setPropId(value string) (changed bool) {
 	if v.Id != value {
 		v.Id = value
@@ -311,4 +389,43 @@ func (v *Manager) setPropUpdateMode(value system.UpdateType) (changed bool) {
 
 func (v *Manager) emitPropChangedUpdateMode(value system.UpdateType) error {
 	return v.service.EmitPropertyChanged(v, "UpdateMode", value)
+}
+
+func (v *Manager) setPropCheckUpdateMode(value system.UpdateType) (changed bool) {
+	if v.CheckUpdateMode != value {
+		v.CheckUpdateMode = value
+		v.emitPropChangedCheckUpdateMode(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedCheckUpdateMode(value system.UpdateType) error {
+	return v.service.EmitPropertyChanged(v, "CheckUpdateMode", value)
+}
+
+func (v *Manager) setPropUpdateStatus(value string) (changed bool) {
+	if v.UpdateStatus != value {
+		v.UpdateStatus = value
+		v.emitPropChangedUpdateStatus(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedUpdateStatus(value string) error {
+	return v.service.EmitPropertyChanged(v, "UpdateStatus", value)
+}
+
+func (v *Manager) setPropHardwareId(value string) (changed bool) {
+	if v.HardwareId != value {
+		v.HardwareId = value
+		v.emitPropChangedHardwareId(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedHardwareId(value string) error {
+	return v.service.EmitPropertyChanged(v, "HardwareId", value)
 }

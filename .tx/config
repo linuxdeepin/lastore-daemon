@@ -3,14 +3,9 @@ host = https://www.transifex.com
 minimum_perc = 80
 mode = developer
 
-[deepin-desktop-environment.lastore-daemon]
+[o:linuxdeepin:p:deepin-desktop-environment:r:lastore-daemon]
 file_filter = locale/<lang>.po
 source_file = locale/lastore-daemon.pot
 source_lang = en
 type = PO
 
-#[deepin-desktop-environment.application-categories]
-#file_filter = locale_categories/<lang>.po
-#source_file = locale_categories/categories.pot
-#source_lang = en
-#type = PO

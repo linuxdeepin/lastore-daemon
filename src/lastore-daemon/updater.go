@@ -5,16 +5,25 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"sync"
+	"time"
+
+	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/godbus/dbus/v5"
+	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
-	"github.com/linuxdeepin/go-lib/strv"
+)
+
+const (
+	p2pService = "uos-p2p.service"
 )
 
 type ApplicationUpdateInfo struct {
@@ -23,6 +32,16 @@ type ApplicationUpdateInfo struct {
 	Icon           string
 	CurrentVersion string
 	LastVersion    string
+}
+type idleDownloadConfig struct {
+	IdleDownloadEnabled bool
+	BeginTime           string
+	EndTime             string
+}
+
+type downloadSpeedLimitConfig struct {
+	DownloadSpeedLimitEnabled bool
+	LimitSpeed                string
 }
 
 type Updater struct {
@@ -33,6 +52,7 @@ type Updater struct {
 	AutoDownloadUpdates bool
 	UpdateNotify        bool
 	MirrorSource        string
+	systemdManager      systemd1.Manager
 
 	config *Config
 	// dbusutil-gen: equal=nil
@@ -44,21 +64,70 @@ type Updater struct {
 
 	AutoInstallUpdates    bool              `prop:"access:rw"`
 	AutoInstallUpdateType system.UpdateType `prop:"access:rw"`
+
+	IdleDownloadConfig          string
+	idleDownloadConfigObj       idleDownloadConfig
+	DownloadSpeedLimitConfig    string
+	downloadSpeedLimitConfigObj downloadSpeedLimitConfig
+
+	setDownloadSpeedLimitTimer *time.Timer
+	setIdleDownloadConfigTimer *time.Timer
+
+	UpdateTarget string
+
+	OfflineInfo string
+
+	P2PUpdateEnable  bool // p2p更新是否开启
+	P2PUpdateSupport bool // 是否支持p2p更新
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
 	u := &Updater{
-		manager:               m,
-		service:               service,
-		config:                config,
-		AutoCheckUpdates:      config.AutoCheckUpdates,
-		AutoDownloadUpdates:   config.AutoDownloadUpdates,
-		MirrorSource:          config.MirrorSource,
-		UpdateNotify:          config.UpdateNotify,
-		AutoInstallUpdates:    config.AutoInstallUpdates,
-		AutoInstallUpdateType: config.AutoInstallUpdateType,
+		manager:                     m,
+		service:                     service,
+		config:                      config,
+		AutoCheckUpdates:            config.AutoCheckUpdates,
+		AutoDownloadUpdates:         config.AutoDownloadUpdates,
+		MirrorSource:                config.MirrorSource,
+		UpdateNotify:                config.UpdateNotify,
+		AutoInstallUpdates:          config.AutoInstallUpdates,
+		AutoInstallUpdateType:       config.AutoInstallUpdateType,
+		IdleDownloadConfig:          config.IdleDownloadConfig,
+		DownloadSpeedLimitConfig:    config.DownloadSpeedLimitConfig,
+		ClassifiedUpdatablePackages: config.ClassifiedUpdatablePackages,
+		systemdManager:              systemd1.NewManager(service.Conn()),
 	}
-	u.ClassifiedUpdatablePackages = make(map[string][]string)
+	err := json.Unmarshal([]byte(u.IdleDownloadConfig), &u.idleDownloadConfigObj)
+	if err != nil {
+		logger.Warning(err)
+	}
+	err = json.Unmarshal([]byte(u.DownloadSpeedLimitConfig), &u.downloadSpeedLimitConfigObj)
+	if err != nil {
+		logger.Warning(err)
+	}
+	state, err := u.systemdManager.GetUnitFileState(0, p2pService)
+	if err != nil {
+		logger.Warning("get p2p service state err:", err)
+		u.P2PUpdateEnable = false
+		u.P2PUpdateSupport = false
+	} else {
+		u.P2PUpdateEnable = false
+		u.P2PUpdateSupport = true
+		if state == "enabled" {
+			unit, err := u.getP2PUnit()
+			if err != nil {
+				logger.Warning("get p2p unit err:", err)
+			} else {
+				value, err := unit.Unit().ActiveState().Get(0)
+				if err != nil {
+					logger.Warning("get p2p SubState err:", err)
+				}
+				if value == "active" {
+					u.P2PUpdateEnable = true
+				}
+			}
+		}
+	}
 	return u
 }
 
@@ -71,16 +140,9 @@ func startUpdateMetadataInfoService() {
 }
 
 func SetAPTSmartMirror(url string) error {
-	return ioutil.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
+	return os.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
 		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
 		0644) // #nosec G306
-}
-
-// 设置用于下载软件的镜像源
-func (u *Updater) SetMirrorSource(id string) *dbus.Error {
-	u.service.DelayAutoQuit()
-	err := u.setMirrorSource(id)
-	return dbusutil.ToError(err)
 }
 
 func (u *Updater) setMirrorSource(id string) error {
@@ -120,13 +182,6 @@ type LocaleMirrorSource struct {
 	Name string
 }
 
-// ListMirrors 返回当前支持的镜像源列表．顺序按优先级降序排
-// 其中Name会根据传递进来的lang进行本地化
-func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
-	u.service.DelayAutoQuit()
-	return u.listMirrorSources(lang), nil
-}
-
 func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	var raws []system.MirrorSource
 	_ = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
@@ -154,75 +209,32 @@ func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 	return r
 }
 
-func UpdatableNames(infosMap system.SourceUpgradeInfoMap) []string {
-	// 去重,防止出现下载量出现偏差（同一包，重复出现在系统仓库和商店仓库）
-	var apps []string
-	appsMap := make(map[string]struct{})
-	for _, infos := range infosMap {
-		for _, info := range infos {
-			appsMap[info.Package] = struct{}{}
+// 设置更新时间的接口
+func (u *Updater) SetInstallUpdateTime(sender dbus.Sender, timeStr string) *dbus.Error {
+	logger.Info("SetInstallUpdateTime", timeStr)
+
+	if len(timeStr) == 0 {
+		u.config.SetInstallUpdateTime(updateplatform.KeyNow)
+	} else if timeStr == updateplatform.KeyNow || timeStr == updateplatform.KeyShutdown {
+		u.config.SetInstallUpdateTime(timeStr)
+	} else {
+		updateTime, err := time.Parse(updateplatform.KeyLayout, timeStr)
+		if err != nil {
+			logger.Warning(err)
+			updateTime, err = time.Parse(time.RFC3339, timeStr)
+			if err != nil {
+				logger.Warning(err)
+				return dbusutil.ToError(err)
+			}
 		}
+		u.config.SetInstallUpdateTime(updateTime.Format(time.RFC3339))
 	}
-	for name := range appsMap {
-		apps = append(apps, name)
-	}
-	return apps
-}
 
-func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string, busErr *dbus.Error) {
-	u.service.DelayAutoQuit()
-	interval = u.config.CheckInterval.Hours()
-	checkTime = u.config.LastCheckTime.Format("2006-01-02 15:04:05.999999999 -0700 MST")
-	return
-}
-
-func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
-	u.service.DelayAutoQuit()
-	if u.UpdateNotify == enable {
-		return nil
-	}
-	err := u.config.SetUpdateNotify(enable)
+	_, err := u.manager.updateSource(sender) // 自动检查更新按照控制中心更新配置进行检查
 	if err != nil {
+		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	u.UpdateNotify = enable
-
-	_ = u.emitPropChangedUpdateNotify(enable)
-
-	return nil
-}
-
-func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
-	u.service.DelayAutoQuit()
-	if u.AutoCheckUpdates == enable {
-		return nil
-	}
-
-	// save the config to disk
-	err := u.config.SetAutoCheckUpdates(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-
-	u.AutoCheckUpdates = enable
-	_ = u.emitPropChangedAutoCheckUpdates(enable)
-	return nil
-}
-
-func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
-	u.service.DelayAutoQuit()
-	if u.AutoDownloadUpdates == enable {
-		return nil
-	}
-
-	// save the config to disk
-	err := u.config.SetAutoDownloadUpdates(enable)
-	if err != nil {
-		return dbusutil.ToError(err)
-	}
-
-	u.AutoDownloadUpdates = enable
-	_ = u.emitPropChangedAutoDownloadUpdates(enable)
 	return nil
 }
 
@@ -233,9 +245,9 @@ const (
 
 func (u *Updater) restoreSystemSource() error {
 	// write backup file
-	current, err := ioutil.ReadFile(aptSource)
+	current, err := os.ReadFile(aptSource)
 	if err == nil {
-		err = ioutil.WriteFile(aptSource+".bak", current, 0644) // #nosec G306
+		err = os.WriteFile(aptSource+".bak", current, 0644) // #nosec G306
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -243,55 +255,20 @@ func (u *Updater) restoreSystemSource() error {
 		logger.Warning(err)
 	}
 
-	origin, err := ioutil.ReadFile(aptSourceOrigin)
+	origin, err := os.ReadFile(aptSourceOrigin)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(aptSource, origin, 0644) // #nosec G306
+	err = os.WriteFile(aptSource, origin, 0644) // #nosec G306
 	return err
 }
 
-func (u *Updater) RestoreSystemSource() *dbus.Error {
-	u.service.DelayAutoQuit()
-	err := u.restoreSystemSource()
-	if err != nil {
-		logger.Warning("failed to restore system source:", err)
-		return dbusutil.ToError(err)
-	}
-	return nil
-}
-
-func (u *Updater) setClassifiedUpdatablePackages(infosMap system.SourceUpgradeInfoMap) {
-	changed := false
-	newUpdatablePackages := make(map[string][]string)
-
-	u.PropsMu.RLock()
-	oldUpdatablePackages := u.ClassifiedUpdatablePackages
-	u.PropsMu.RUnlock()
-
-	for updateType, infos := range infosMap {
-		var packages []string
-		for _, info := range infos {
-			packages = append(packages, info.Package)
-		}
-		newUpdatablePackages[updateType] = packages
-	}
-	for _, updateType := range system.AllUpdateType() {
-		if !changed {
-			newData := strv.Strv(newUpdatablePackages[updateType.JobType()])
-			oldData := strv.Strv(oldUpdatablePackages[updateType.JobType()])
-			changed = !newData.Equal(oldData)
-			if changed {
-				break
-			}
-		}
-	}
-	if changed {
-		u.PropsMu.Lock()
-		defer u.PropsMu.Unlock()
-		u.setPropClassifiedUpdatablePackages(newUpdatablePackages)
-	}
+func (u *Updater) setClassifiedUpdatablePackages(infosMap map[string][]string) {
+	u.PropsMu.Lock()
+	defer u.PropsMu.Unlock()
+	_ = u.config.SetClassifiedUpdatablePackages(infosMap)
+	u.setPropClassifiedUpdatablePackages(infosMap)
 }
 
 func (u *Updater) autoInstallUpdatesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
@@ -300,4 +277,83 @@ func (u *Updater) autoInstallUpdatesWriteCallback(pw *dbusutil.PropertyWrite) *d
 
 func (u *Updater) autoInstallUpdatesSuitesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	return dbusutil.ToError(u.config.SetAutoInstallUpdateType(system.UpdateType(pw.Value.(uint64))))
+}
+
+func (u *Updater) getIdleDownloadEnabled() bool {
+	u.PropsMu.RLock()
+	defer u.PropsMu.RUnlock()
+	return u.idleDownloadConfigObj.IdleDownloadEnabled
+}
+
+func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []string {
+	u.PropsMu.RLock()
+	defer u.PropsMu.RUnlock()
+	var updatableApps []string
+	for _, t := range system.AllInstallUpdateType() {
+		if updateType&t != 0 {
+			packages := u.ClassifiedUpdatablePackages[t.JobType()]
+			if len(packages) > 0 {
+				updatableApps = append(updatableApps, packages...)
+			}
+		}
+	}
+	return updatableApps
+}
+
+func (u *Updater) GetLimitConfig() (bool, string) {
+	return u.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled, u.downloadSpeedLimitConfigObj.LimitSpeed
+}
+
+func (u *Updater) SetOfflineInfo(res OfflineCheckResult) error {
+	content, err := json.Marshal(res)
+	if err != nil {
+		u.setPropOfflineInfo("")
+		logger.Warning(err)
+		return err
+	}
+	u.setPropOfflineInfo(string(content))
+	return nil
+}
+
+func (u *Updater) getP2PUnit() (systemd1.Unit, error) {
+	p2pPath, err := u.systemdManager.GetUnit(0, p2pService)
+	if err != nil {
+		return nil, err
+	}
+	unit, err := systemd1.NewUnit(u.service.Conn(), p2pPath)
+	if err != nil {
+		return nil, err
+	}
+	return unit, nil
+}
+
+func (u *Updater) setP2PUpdateEnable(enable bool) error {
+	if !u.P2PUpdateSupport {
+		return fmt.Errorf("unsupport p2p update")
+	}
+	if u.P2PUpdateEnable == enable {
+		return nil
+	}
+	files := []string{p2pService}
+	if enable {
+		_, _, err := u.systemdManager.EnableUnitFiles(0, files, false, true)
+		if err != nil {
+			return fmt.Errorf("enable p2p UnitFile err:%v", err)
+		}
+		_, err = u.systemdManager.StartUnit(0, p2pService, "replace")
+		if err != nil {
+			return fmt.Errorf("p2p StartUnit err:%v", err)
+		}
+	} else {
+		_, err := u.systemdManager.DisableUnitFiles(0, files, false)
+		if err != nil {
+			return fmt.Errorf("disable p2p UnitFile err:%v", err)
+		}
+		_, err = u.systemdManager.StopUnit(0, p2pService, "replace")
+		if err != nil {
+			return fmt.Errorf("p2p StopUnit err:%v", err)
+		}
+	}
+	u.setPropP2PUpdateEnable(enable)
+	return nil
 }

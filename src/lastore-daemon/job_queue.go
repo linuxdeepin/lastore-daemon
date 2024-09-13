@@ -54,7 +54,7 @@ func (l *JobQueue) AllJobs() JobList {
 	return r
 }
 
-// PendingJob get the workable ready Jobs and recoverable failed Jobs
+// PendingJobs get the workable ready Jobs and recoverable failed Jobs
 func (l *JobQueue) PendingJobs() JobList {
 	l.mux.RLock()
 

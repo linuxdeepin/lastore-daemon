@@ -4,9 +4,12 @@
 
 package main
 
-import "github.com/linuxdeepin/lastore-daemon/src/internal/system"
-import C "gopkg.in/check.v1"
-import "strings"
+import (
+	"strings"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	C "gopkg.in/check.v1"
+)
 
 func (*testWrap) TestParseApt(c *C.C) {
 	const d = `Reading package lists... Done

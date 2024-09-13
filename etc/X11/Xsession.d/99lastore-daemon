@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# 启动时不显示可更新
+if [ -e "/usr/bin/dde-dconfig" ]; then
+  /usr/bin/dde-dconfig --set -a org.deepin.dde.lastore -r org.deepin.dde.lastore -k lastore-daemon-status -v 0
+fi

@@ -6,9 +6,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -33,7 +33,7 @@ func userAgent() string {
 
 // machineID return content of /etc/machine-id
 func machineID() string {
-	bs, _ := ioutil.ReadFile("/etc/machine-id")
+	bs, _ := os.ReadFile("/etc/machine-id")
 	return strings.TrimSpace(string(bs))
 }
 

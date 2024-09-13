@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,8 +20,8 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
-	debVersion "pault.ag/go/debian/version"
 	"github.com/linuxdeepin/go-lib/log"
+	debVersion "pault.ag/go/debian/version"
 )
 
 const maxElapsed = time.Hour * 24 * 6 // 6 days
@@ -86,7 +85,7 @@ func main() {
 			archivesInfo = newArchivesInfo(dirInfo.archivesDir)
 		}
 
-		fileInfoList, err := ioutil.ReadDir(dirInfo.archivesDir)
+		fileInfoList, err := os.ReadDir(dirInfo.archivesDir)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -96,9 +95,13 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		var testAgainDebInfoList []*debInfo
+		// var testAgainDebInfoList []*debInfo
 
-		for _, fileInfo := range fileInfoList {
+		for _, entry := range fileInfoList {
+			fileInfo, err := entry.Info()
+			if err != nil {
+				logger.Fatal(err)
+			}
 			if fileInfo.IsDir() {
 				continue
 			}
@@ -115,30 +118,31 @@ func main() {
 				delPolicy = DeleteImmediately
 			} else {
 				logger.Debugf("debInfo: %#v\n", debInfo)
-				var testAgain bool
-				delPolicy, testAgain = shouldDelete(debInfo, cache)
-				if testAgain {
-					// 需要更多地判断
-					debInfo.fileInfo = fileInfo
-					testAgainDebInfoList = append(testAgainDebInfoList, debInfo)
-					continue
-				}
+				// var testAgain bool
+				delPolicy, _ = shouldDelete(debInfo, cache)
+				// if testAgain {
+				// 	// 需要更多地判断
+				// 	debInfo.fileInfo = fileInfo
+				// 	testAgainDebInfoList = append(testAgainDebInfoList, debInfo)
+				// 	continue
+				// }
 			}
 			actWithPolicy(delPolicy, fileInfo, filename, archivesInfo)
 		}
 
-		t := time.Now()
-		err = loadCandidateVersions(testAgainDebInfoList, dirInfo.configPath)
-		logger.Debug("loadCandidateVersions cost:", time.Since(t))
-		if err != nil {
-			logger.Fatal("load candidate versions failed:", err)
-		}
+		// 更新治理管控之后，不一定从本地仓库更新，所以不能在通过这种方式获取备选版本和校验,防止包被误删
+		// t := time.Now()
+		// err = loadCandidateVersions(testAgainDebInfoList, dirInfo.configPath)
+		// logger.Debug("loadCandidateVersions cost:", time.Since(t))
+		// if err != nil {
+		// 	logger.Fatal("load candidate versions failed:", err)
+		// }
 
-		for _, info := range testAgainDebInfoList {
-			logger.Debug(">> ", info.fileInfo.Name())
-			delPolicy := shouldDeleteTestAgain(info)
-			actWithPolicy(delPolicy, info.fileInfo, info.filename, archivesInfo)
-		}
+		// for _, info := range testAgainDebInfoList {
+		// 	logger.Debug(">> ", info.fileInfo.Name())
+		// 	delPolicy := shouldDeleteTestAgain(info)
+		// 	actWithPolicy(delPolicy, info.fileInfo, info.filename, archivesInfo)
+		// }
 		if archivesInfo != nil {
 			archivesInfos.Files[archivesInfo.dir] = archivesInfo.Files
 			archivesInfos.TotalSize += archivesInfo.TotalSize

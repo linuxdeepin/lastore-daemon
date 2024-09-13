@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -21,12 +20,12 @@ func TestConfig(t *testing.T) {
 		err := os.RemoveAll(testDataPath)
 		require.NoError(t, err)
 	}()
-	tmpfile, err := ioutil.TempFile(testDataPath, "config.json")
+	tmpfile, err := os.CreateTemp(testDataPath, "config.json")
 	require.NoError(t, err)
 	defer tmpfile.Close()
 
 	data := []byte(`{"filePath":"/","Enable":true}`)
-	err = ioutil.WriteFile(tmpfile.Name(), data, 0777)
+	err = os.WriteFile(tmpfile.Name(), data, 0777)
 	require.NoError(t, err)
 	configBefore := newConfig(tmpfile.Name())
 	require.NotNil(t, configBefore)

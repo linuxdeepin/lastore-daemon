@@ -7,7 +7,7 @@ package pkg_recommend
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -70,7 +70,7 @@ func GetLangCodeInfo(locale, config string) (*LangCodeInfo, error) {
 }
 
 func getSupportedLocaleList(config string) ([]string, error) {
-	content, err := ioutil.ReadFile(config)
+	content, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func getSupportedLocaleList(config string) ([]string, error) {
 }
 
 func getLangInfosFromFile(config string) (LangInfos, error) {
-	content, err := ioutil.ReadFile(config)
+	content, err := os.ReadFile(config)
 	if err != nil {
 		return nil, err
 	}
