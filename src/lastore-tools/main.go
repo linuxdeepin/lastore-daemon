@@ -26,7 +26,7 @@ var CMDUpdater = cli.Command{
 		cli.StringFlag{
 			Name:  "job,j",
 			Value: "",
-			Usage: "categories|applications|xcategories|desktop|update_infos|mirrors",
+			Usage: "categories|applications|xcategories|desktop|update_infos|mirrors|update-monitor",
 		},
 		cli.StringFlag{
 			Name:  "repo,r",
@@ -79,6 +79,8 @@ func MainUpdater(c *cli.Context) (err error) {
 	case "unpublished-mirrors":
 		url := c.String("mirrors-url")
 		err = mirrors.GenerateUnpublishedMirrors(url, fpath)
+	case "update-monitor":
+		err = UpdateMonitor()
 	default:
 		_ = cli.ShowCommandHelp(c, "update")
 	}
@@ -113,7 +115,7 @@ func main() {
 			Value: "http://api.appstore.deepin.org",
 		},
 	}
-	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop}
+	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop, CMDCheckPolicy, CMDPostUpgrade}
 
 	err := app.Run(os.Args)
 	if err != nil {

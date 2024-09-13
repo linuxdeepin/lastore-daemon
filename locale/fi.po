@@ -4,40 +4,196 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Cindy0514, 2020
-# Kimmo Kujansuu <mrkujansuu@gmail.com>, 2022
+# deepiner, 2023
+# Maggie Liu <maggie.liufei@gmail.com>, 2023
+# Deathmist, 2024
+# Kimmo Kujansuu <mrkujansuu@gmail.com>, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-29 10:48+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Kimmo Kujansuu <mrkujansuu@gmail.com>, 2022\n"
-"Language-Team: Finnish (https://www.transifex.com/linuxdeepin/teams/3617/fi/)\n"
+"Last-Translator: Kimmo Kujansuu <mrkujansuu@gmail.com>, 2024\n"
+"Language-Team: Finnish (https://app.transifex.com/linuxdeepin/teams/3617/fi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: fi\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
+#: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
 msgstr "Asentaa päivityksiä..."
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
 msgstr "Tehtävät ovat käynnissä..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
-msgid "Preventing the computer from shutting down..."
-msgstr "Estää tietokonetta sammumasta..."
+#: ../src/lastore-daemon/inhibitor.go:49
+msgid "Preventing from shutting down"
+msgstr "Sammumisen estäminen"
 
-#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
+#: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
 msgstr "Ohjauspaneli"
 
-#: ../src/lastore-daemon/main.go:121
+#: ../src/lastore-daemon/main.go:172
 msgid "App Store"
 msgstr "Sovelluskauppa"
+
+#: ../src/lastore-daemon/manager.go:333
+msgid "Removed successfully"
+msgstr "Poistettu onnistuneesti"
+
+#: ../src/lastore-daemon/manager.go:338
+msgid "Failed to remove the app"
+msgstr "Sovelluksen poisto epäonnistui"
+
+#: ../src/lastore-daemon/manager.go:341
+msgid "Retry"
+msgstr "Uudelleen"
+
+#: ../src/lastore-daemon/manager.go:343
+msgid "Cancel"
+msgstr "Peruuta"
+
+#: ../src/lastore-daemon/manager.go:441
+msgid "Package cache wiped"
+msgstr "Pakettien välimuisti tyhjennettiin"
+
+#: ../src/lastore-daemon/manager_check.go:44
+msgid "Checking and installing updates..."
+msgstr "Päivityksiä tarkistetaan ja asennetaan..."
+
+#: ../src/lastore-daemon/manager_download.go:78
+#: ../src/lastore-daemon/manager_download.go:172
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr "Päivitysten lataaminen epäonnistui. Vapauta ensin %n Gt levytilaa."
+
+#: ../src/lastore-daemon/manager_download.go:136
+msgid "New version available! Downloading..."
+msgstr "Uusi versio saatavilla! Ladataan..."
+
+#: ../src/lastore-daemon/manager_download.go:139
+#: ../src/lastore-daemon/manager_download.go:184
+#: ../src/lastore-daemon/manager_update.go:134
+#: ../src/lastore-daemon/manager_update.go:160
+msgid "View"
+msgstr "Katsele"
+
+#: ../src/lastore-daemon/manager_download.go:177
+#: ../src/lastore-daemon/manager_upgrade.go:500
+msgid "Updates failed: damaged files. Please update again."
+msgstr "Päivitys epäonnistui: viallisia tiedostoja. Päivitä uudelleen."
+
+#: ../src/lastore-daemon/manager_download.go:178
+#: ../src/lastore-daemon/manager_upgrade.go:501
+msgid "Try Again"
+msgstr "Yritä uudelleen"
+
+#: ../src/lastore-daemon/manager_download.go:183
+msgid "Downloading updates failed. Please check your network."
+msgstr "Päivitysten lataaminen epäonnistui. Tarkista verkkoyhteys."
+
+#: ../src/lastore-daemon/manager_download.go:200
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+"Lataus valmis. Voit asentaa päivitykset sammutuksen tai käynnistyksen "
+"yhteydessä."
+
+#: ../src/lastore-daemon/manager_download.go:203
+msgid "Update Now"
+msgstr "Päivitä välittömästi"
+
+#: ../src/lastore-daemon/manager_download.go:205
+msgid "Dismiss"
+msgstr "Hylkää"
+
+#: ../src/lastore-daemon/manager_update.go:133
+msgid "New version available!"
+msgstr "Uusi versio saatavilla!"
+
+#: ../src/lastore-daemon/manager_update.go:159
+msgid "Failed to check for updates. Please check your network."
+msgstr "Päivitysten tarkistus epäonnistui. Tarkista verkkoyhteys."
+
+#: ../src/lastore-daemon/manager_update.go:165
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr "Päivitysten tarkistus epäonnistui. Puhdista levy ensin."
+
+#: ../src/lastore-daemon/manager_upgrade.go:53
+msgid "Backing up and installing updates..."
+msgstr "Varmuuskopioidaan ja asennetaan päivityksiä..."
+
+#: ../src/lastore-daemon/manager_upgrade.go:135
+#: ../src/lastore-daemon/manager_upgrade.go:158
+#: ../src/lastore-daemon/manager_upgrade.go:192
+msgid "Backup failed!"
+msgstr "Varmuuskopiointi epäonnistui!"
+
+#: ../src/lastore-daemon/manager_upgrade.go:136
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Proceed to Update"
+msgstr "Suorita päivitys"
+
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Back Up Again"
+msgstr "Varmuuskopioi uudelleen"
+
+#: ../src/lastore-daemon/manager_upgrade.go:415
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr ""
+"Akun kapasiteetti on alle 60 %. Liitä kone sähköverkkoon päivitysten ajaksi."
+
+#: ../src/lastore-daemon/manager_upgrade.go:507
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+"Päivitys epäonnistui: levytila ei riitä. Käynnistä uudelleen välttääksesi "
+"järjestelmän muutokset."
+
+#: ../src/lastore-daemon/manager_upgrade.go:508
+#: ../src/lastore-daemon/manager_upgrade.go:521
+msgid "Reboot"
+msgstr "Käynnistä"
+
+#: ../src/lastore-daemon/manager_upgrade.go:512
+msgid "Updates failed: insufficient disk space."
+msgstr "Päivitykset epäonnistuivat: levytila ei riitä."
+
+#: ../src/lastore-daemon/manager_upgrade.go:520
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr ""
+"Päivitys epäonnistui. Käynnistä uudelleen välttääksesi järjestelmän "
+"muutokset."
+
+#: ../src/lastore-daemon/manager_upgrade.go:525
+msgid "Updates failed."
+msgstr "Päivitys epäonnistui."
+
+#: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Updates successful"
+msgstr "Päivitykset onnistuivat"
+
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr ""
+"Käynnistä tietokone uudelleen järjestelmän sovelluksien nostoa varten."
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
+msgid "Reboot Later"
+msgstr "Käynnistä myöhemmin"
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
+msgid "Reboot Now"
+msgstr "Käynnistä uudelleen nyt"

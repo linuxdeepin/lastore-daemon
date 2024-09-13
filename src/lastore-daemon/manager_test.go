@@ -9,26 +9,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_handleAutoCheckEvent(t *testing.T) {
 	m := &Manager{
-		config: &Config{
+		config: &config.Config{
 			AutoCheckUpdates:      false,
 			DisableUpdateMetadata: true,
-			filePath:              "./tempCfgPath",
 		},
 	}
 	err := m.handleAutoCheckEvent()
 	assert.Nil(t, err)
-	_ = os.RemoveAll("./tempCfgPath")
 }
 
 func Test_handleAutoCleanEvent(t *testing.T) {
 	m := &Manager{
-		config: &Config{
+		config: &config.Config{
 			AutoClean: false,
 		},
 	}
@@ -38,12 +39,12 @@ func Test_handleAutoCleanEvent(t *testing.T) {
 
 func Test_getNextUpdateDelay(t *testing.T) {
 	m := &Manager{
-		config: &Config{
+		config: &config.Config{
 			LastCheckTime: time.Now(),
 			CheckInterval: 0,
 		},
 	}
-	assert.Equal(t, time.Duration(0), m.getNextUpdateDelay())
+	assert.Equal(t, _minDelayTime, m.getNextUpdateDelay())
 	m.config.CheckInterval = time.Hour * 1
 	assert.True(t, m.getNextUpdateDelay() > time.Second*10)
 }
@@ -52,9 +53,11 @@ func Test_canAutoQuit(t *testing.T) {
 	m := &Manager{
 		jobList:              nil,
 		inhibitAutoQuitCount: 3,
+		config:               config.NewConfig(""),
 	}
 	assert.False(t, m.canAutoQuit())
 	m.inhibitAutoQuitCount = 0
+	m.config.UpgradeStatus.Status = system.UpgradeReady
 	assert.True(t, m.canAutoQuit())
 }
 
@@ -64,6 +67,7 @@ func Test_saveUpdateSourceOnce(t *testing.T) {
 	err := kf.SaveToFile(lastoreUnitCache)
 	if err != nil {
 		logger.Warning(err)
+		return
 	}
 	defer func() {
 		_ = os.RemoveAll(lastoreUnitCache) // lastore有生成时，有对应文件（0644），无权限删除；无生成时，单元测试生成，需要移除

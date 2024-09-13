@@ -1,0 +1,18 @@
+{
+    "Monitor": {
+        "Type": "DBus",
+        "DBus": {
+            "BusType": "System",
+            "Sender": "com.deepin.license",
+            "Interface": "org.freedesktop.DBus.Properties",
+            "Path": "/com/deepin/license/Info",
+            "Signal": "PropertiesChanged"
+        }
+    },
+
+    "Name": "License Info Changed",
+    "Description": "",
+    "Exec": [
+        "/var/lib/lastore/scripts/handle_LicenseInfo_action.sh"
+    ]
+}

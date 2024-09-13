@@ -4,40 +4,197 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Cindy0514, 2020
-# Heimen Stoffels <vistausss@fastmail.com>, 2022
+# Maggie Liu <maggie.liufei@gmail.com>, 2023
+# Lars Acou <lars.acou@gmail.com>, 2023
+# deepiner, 2023
+# Heimen Stoffels <vistausss@fastmail.com>, 2024
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-29 10:48+0800\n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Heimen Stoffels <vistausss@fastmail.com>, 2022\n"
-"Language-Team: Dutch (https://www.transifex.com/linuxdeepin/teams/3617/nl/)\n"
+"Last-Translator: Heimen Stoffels <vistausss@fastmail.com>, 2024\n"
+"Language-Team: Dutch (https://app.transifex.com/linuxdeepin/teams/3617/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: nl\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/lastore-daemon/inhibitor.go:52
+#: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
 msgstr "Bezig met installeren van updates…"
 
-#: ../src/lastore-daemon/inhibitor.go:54
+#: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
 msgstr "Er worden taken uitgevoerd..."
 
-#: ../src/lastore-daemon/inhibitor.go:56
-msgid "Preventing the computer from shutting down..."
-msgstr "De computer kan niet worden afgesloten…"
+#: ../src/lastore-daemon/inhibitor.go:49
+msgid "Preventing from shutting down"
+msgstr "Voorkomt afsluiten"
 
-#: ../src/lastore-daemon/main.go:119 ../src/lastore-daemon/main.go:123
+#: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
 msgstr "Instellingencentrum"
 
-#: ../src/lastore-daemon/main.go:121
+#: ../src/lastore-daemon/main.go:172
 msgid "App Store"
 msgstr "Appwinkel"
+
+#: ../src/lastore-daemon/manager.go:333
+msgid "Removed successfully"
+msgstr "Verwijderen voltooid"
+
+#: ../src/lastore-daemon/manager.go:338
+msgid "Failed to remove the app"
+msgstr "Het programma kan niet worden verwijderd"
+
+#: ../src/lastore-daemon/manager.go:341
+msgid "Retry"
+msgstr "Opnieuw proberen"
+
+#: ../src/lastore-daemon/manager.go:343
+msgid "Cancel"
+msgstr "Annuleren"
+
+#: ../src/lastore-daemon/manager.go:441
+msgid "Package cache wiped"
+msgstr "Pakketcache opgeschoond"
+
+#: ../src/lastore-daemon/manager_check.go:44
+msgid "Checking and installing updates..."
+msgstr "Bezig met afhandelen van updates…"
+
+#: ../src/lastore-daemon/manager_download.go:78
+#: ../src/lastore-daemon/manager_download.go:172
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr ""
+"De updates kunnen niet worden gedownload. Maak minimaal %n GB schijfruimte "
+"vrij en probeer het opnieuw."
+
+#: ../src/lastore-daemon/manager_download.go:136
+msgid "New version available! Downloading..."
+msgstr "Nieuwe versie beschikbaar! Bezig met downloaden…"
+
+#: ../src/lastore-daemon/manager_download.go:139
+#: ../src/lastore-daemon/manager_download.go:184
+#: ../src/lastore-daemon/manager_update.go:134
+#: ../src/lastore-daemon/manager_update.go:160
+msgid "View"
+msgstr "Bekijk"
+
+#: ../src/lastore-daemon/manager_download.go:177
+#: ../src/lastore-daemon/manager_upgrade.go:500
+msgid "Updates failed: damaged files. Please update again."
+msgstr "Updates mislukt: beschadigde bestanden. Probeer het opnieuw."
+
+#: ../src/lastore-daemon/manager_download.go:178
+#: ../src/lastore-daemon/manager_upgrade.go:501
+msgid "Try Again"
+msgstr "Opnieuw proberen"
+
+#: ../src/lastore-daemon/manager_download.go:183
+msgid "Downloading updates failed. Please check your network."
+msgstr ""
+"De updates kunnen niet worden gedownload - controleer je internetverbinding."
+
+#: ../src/lastore-daemon/manager_download.go:200
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+"Het downloaden is voltooid. De updates worden tijdens het afsluiten of "
+"herstarten geïnstalleerd."
+
+#: ../src/lastore-daemon/manager_download.go:203
+msgid "Update Now"
+msgstr "Nu bijwerken"
+
+#: ../src/lastore-daemon/manager_download.go:205
+msgid "Dismiss"
+msgstr "Negeren"
+
+#: ../src/lastore-daemon/manager_update.go:133
+msgid "New version available!"
+msgstr "Nieuwe versie beschikbaar!"
+
+#: ../src/lastore-daemon/manager_update.go:159
+msgid "Failed to check for updates. Please check your network."
+msgstr "De updatecontrole is mislukt - controleer je internetverbinding."
+
+#: ../src/lastore-daemon/manager_update.go:165
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr "De updatecontrole is mislukt - maak ruimte vrij op je schijf."
+
+#: ../src/lastore-daemon/manager_upgrade.go:53
+msgid "Backing up and installing updates..."
+msgstr "Bezig met maken van reservekopie en installeren van updates…"
+
+#: ../src/lastore-daemon/manager_upgrade.go:135
+#: ../src/lastore-daemon/manager_upgrade.go:158
+#: ../src/lastore-daemon/manager_upgrade.go:192
+msgid "Backup failed!"
+msgstr "Reservekopie mislukt!"
+
+#: ../src/lastore-daemon/manager_upgrade.go:136
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Proceed to Update"
+msgstr "Doorgaan met bijwerken"
+
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Back Up Again"
+msgstr "Reservekopie opnieuw maken"
+
+#: ../src/lastore-daemon/manager_upgrade.go:415
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr ""
+"Het accuniveau is lager dan 60%. Sluit de stroomkabel aan om de updates te "
+"installeren."
+
+#: ../src/lastore-daemon/manager_upgrade.go:507
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+"Updates mislukt: onvoldoende vrije schijfruimte. Herstart je computer en "
+"probeer het opnieuw."
+
+#: ../src/lastore-daemon/manager_upgrade.go:508
+#: ../src/lastore-daemon/manager_upgrade.go:521
+msgid "Reboot"
+msgstr "Herstarten"
+
+#: ../src/lastore-daemon/manager_upgrade.go:512
+msgid "Updates failed: insufficient disk space."
+msgstr "Updates mislukt: onvoldoende vrije schijfruimte"
+
+#: ../src/lastore-daemon/manager_upgrade.go:520
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr "Updates mislukt. Herstart je computer en probeer het opnieuw."
+
+#: ../src/lastore-daemon/manager_upgrade.go:525
+msgid "Updates failed."
+msgstr "Updates mislukt."
+
+#: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Updates successful"
+msgstr "Je systeem is bijgewerkt"
+
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr "Start de computer opnieuw op om de wijzigingen toe te passen."
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
+msgid "Reboot Later"
+msgstr "Later herstarten"
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
+msgid "Reboot Now"
+msgstr "Nu herstarten"

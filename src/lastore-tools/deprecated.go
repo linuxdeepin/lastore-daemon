@@ -31,11 +31,11 @@ func BuildDesktopDirectories() []string {
 		"/usr/share/deepin/applications":      {},
 		"/usr/share/deepin/applications/kde4": {},
 	}
-	xdg_data_home := os.Getenv("$XDG_DATA_HOME")
-	if xdg_data_home == "" {
-		xdg_data_home = os.ExpandEnv("$HOME/.local/share")
+	xdgDataHome := os.Getenv("$XDG_DATA_HOME")
+	if xdgDataHome == "" {
+		xdgDataHome = os.ExpandEnv("$HOME/.local/share")
 	}
-	scanDirectories[path.Join(xdg_data_home, "applications")] = struct{}{}
+	scanDirectories[path.Join(xdgDataHome, "applications")] = struct{}{}
 	for _, dir := range strings.Split(os.Getenv("$XDG_DATA_DIR"), ":") {
 		scanDirectories[path.Join(dir, "applications")] = struct{}{}
 	}
@@ -53,10 +53,10 @@ func GetDesktopFiles(dirs []string) []string {
 		if err != nil {
 			continue
 		}
-		for _, finfo := range fs {
-			name := finfo.Name()
+		for _, info := range fs {
+			name := info.Name()
 			if strings.HasSuffix(name, ".desktop") {
-				r = append(r, path.Join(dir, finfo.Name()))
+				r = append(r, path.Join(dir, info.Name()))
 			}
 		}
 	}
@@ -200,8 +200,8 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 		return r, t
 	}
 
-	for _, finfo := range fs {
-		name := finfo.Name()
+	for _, info := range fs {
+		name := info.Name()
 		if strings.HasSuffix(name, ".list") {
 			packageName := getPackageName(name)
 			desktopFiles := getDesktopFilePaths(path.Join("/var/lib/dpkg/info", name))
@@ -212,7 +212,7 @@ func ParsePackageInfos() (map[string]string, map[string]int64) {
 				r[f] = packageName
 				r[path.Base(f)] = packageName
 			}
-			t[packageName] = finfo.ModTime().Unix()
+			t[packageName] = info.ModTime().Unix()
 		}
 	}
 	return r, t

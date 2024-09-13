@@ -23,7 +23,7 @@ func BuildCategories() (map[string]string, error) {
 	return buildMapStringStringInfo(filepath.Join(BaseDir, "override", "xcategories"))
 }
 
-func handleDropinDir(dirPath string, handle func(f io.Reader) error) error {
+func handleDropInDir(dirPath string, handle func(f io.Reader) error) error {
 	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -48,7 +48,7 @@ func handleDropinDir(dirPath string, handle func(f io.Reader) error) error {
 
 func buildMapStringStringInfo(dir string) (map[string]string, error) {
 	var all = make(map[string]string)
-	err := handleDropinDir(dir, func(f io.Reader) error {
+	err := handleDropInDir(dir, func(f io.Reader) error {
 		var t map[string]string
 		d := json.NewDecoder(f)
 		err := d.Decode(&t)

@@ -7,18 +7,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
-	"strings"
-	"sync"
 	"time"
 
+	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
@@ -29,15 +28,13 @@ const (
 	dbusServiceName = "org.deepin.dde.Lastore1"
 )
 const (
-	etcDir               = "/etc"
-	osVersionFileName    = "os-version"
 	aptConfDir           = "/etc/apt/apt.conf.d"
 	tokenConfFileName    = "99lastore-token.conf" // #nosec G101
 	securityConfFileName = "99security.conf"
 )
 
 func Tr(text string) string {
-	return text
+	return gettext.Tr(text)
 }
 
 var logger = log.NewLogger("lastore/lastore-daemon")
@@ -77,11 +74,12 @@ func main() {
 		_ = os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
 
-	b := apt.New()
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
+	aptImpl := dut.NewSystem(config.NonUnknownList, config.OtherSourceList)
+	system.SetSystemUpdate(config.PlatformUpdate) // 设置是否通过平台更新
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
-	manager := NewManager(service, b, config)
+	manager := NewManager(service, aptImpl, config)
 	updater := NewUpdater(service, manager, config)
 
 	manager.updater = updater
@@ -90,7 +88,8 @@ func main() {
 		logger.Error("failed to new server manager and updater object:", err)
 		return
 	}
-
+	manager.initAgent()
+	manager.initPlatformManager()
 	err = serverObject.SetWriteCallback(updater, "AutoInstallUpdates", updater.autoInstallUpdatesWriteCallback)
 	if err != nil {
 		logger.Error("failed to set write cb for property AutoInstallUpdates:", err)
@@ -103,7 +102,27 @@ func main() {
 	if err != nil {
 		logger.Error("failed to set write cb for property UpdateMode:", err)
 	}
-	manager.handleUpdateInfosChanged(false)
+	err = serverObject.ConnectChanged(manager, "UpdateMode", manager.afterUpdateModeChanged)
+	if err != nil {
+		logger.Error("failed to connect changed for property UpdateMode:", err)
+	}
+	err = serverObject.SetWriteCallback(manager, "CheckUpdateMode", manager.checkUpdateModeWriteCallback)
+	if err != nil {
+		logger.Error("failed to set write cb for property CheckUpdateMode:", err)
+	}
+	err = serverObject.SetReadCallback(updater, "OfflineInfo", func(read *dbusutil.PropertyRead) *dbus.Error {
+		return dbusutil.ToError(updater.SetOfflineInfo(manager.offline.GetCheckInfo()))
+	})
+	// 每次读取SystemSourceConfig和SecuritySourceConfig都实时获取一次配置
+	err = serverObject.SetReadCallback(manager, "SystemSourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
+		manager.reloadOemConfig(false)
+		return nil
+	})
+	err = serverObject.SetReadCallback(manager, "SecuritySourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
+		manager.reloadOemConfig(false)
+		return nil
+	})
+	manager.refreshUpdateInfos(false)
 	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况
 	go manager.jobManager.Dispatch() // 导入job缓存之后，再执行job的dispatch，防止暂停任务创建时自动开始
 	err = serverObject.Export()
@@ -111,32 +130,7 @@ func main() {
 		logger.Error("failed to export manager and updater:", err)
 		return
 	}
-	ihObj := inhibit_hint.New("lastore-daemon")
-	ihObj.SetIconFunc(func(why string) string {
-		switch why {
-		case "Updating the system, please do not shut down or reboot now.":
-			return "preferences-system"
-		case "Tasks are running...":
-			return "deepin-app-store"
-		default:
-			return "preferences-system" // TODO
-		}
-	})
-	ihObj.SetNameFunc(func(why string) string {
-		switch why {
-		case "Updating the system, please do not shut down or reboot now.":
-			return Tr("Control Center")
-		case "Tasks are running...":
-			return Tr("App Store")
-		default:
-			return Tr("Control Center") // TODO
-		}
-	})
-	err = ihObj.Export(service)
-	if err != nil {
-		logger.Warning("failed to export inhibit hint:", err)
-	}
-
+	initLastoreInhibitHint(service)
 	err = service.RequestName(dbusServiceName)
 	if err != nil {
 		logger.Error("failed to request name:", err)
@@ -160,39 +154,45 @@ func main() {
 		logger.Warning(err)
 	}
 	manager.PropsMu.RUnlock()
-	manager.startSystemdUnit()
+	manager.startOfflineTask()
 	logger.Info("Started service at system bus")
-	service.SetAutoQuitHandler(60*time.Second, manager.canAutoQuit)
+	autoQuitTime := 60 * time.Second
+	if logger.GetLogLevel() == log.LevelDebug {
+		autoQuitTime = 6000 * time.Second
+	}
+	service.SetAutoQuitHandler(autoQuitTime, manager.canAutoQuit)
 	service.Wait()
 	manager.saveLastoreCache()
-}
-
-var _tokenUpdateMu sync.Mutex
-
-// 更新 99lastore-token.conf 文件的内容
-func updateTokenConfigFile() {
-	logger.Debug("start updateTokenConfigFile")
-	_tokenUpdateMu.Lock()
-	defer _tokenUpdateMu.Unlock()
-	systemInfo := getSystemInfo()
-	tokenPath := path.Join(aptConfDir, tokenConfFileName)
-	var tokenSlice []string
-	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
-	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
-	tokenSlice = append(tokenSlice, "c="+systemInfo.EditionName)
-	tokenSlice = append(tokenSlice, "v="+systemInfo.Version)
-	tokenSlice = append(tokenSlice, "i="+systemInfo.HardwareId)
-	tokenSlice = append(tokenSlice, "m="+systemInfo.Processor)
-	tokenSlice = append(tokenSlice, "ac="+systemInfo.Arch)
-	tokenSlice = append(tokenSlice, "cu="+systemInfo.Custom)
-	tokenSlice = append(tokenSlice, "sn="+systemInfo.SN)
-	tokenSlice = append(tokenSlice, "vs="+systemInfo.HardwareVersion)
-	tokenSlice = append(tokenSlice, "oid="+systemInfo.OEMID)
-	token := strings.Join(tokenSlice, ";")
-	token = strings.Replace(token, "\n", "", -1)
-	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	err := ioutil.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	err = manager.offline.CleanCache()
 	if err != nil {
 		logger.Warning(err)
+	}
+}
+
+func initLastoreInhibitHint(service *dbusutil.Service) {
+	ihObj := inhibit_hint.New("lastore-daemon")
+	ihObj.SetIconFunc(func(why string) string {
+		switch why {
+		case "Updating the system, please do not shut down or reboot now.":
+			return "preferences-system"
+		case "Tasks are running...":
+			return "deepin-app-store"
+		default:
+			return "preferences-system"
+		}
+	})
+	ihObj.SetNameFunc(func(why string) string {
+		switch why {
+		case "Updating the system, please do not shut down or reboot now.":
+			return Tr("Control Center")
+		case "Tasks are running...":
+			return Tr("App Store")
+		default:
+			return Tr("Control Center")
+		}
+	})
+	err := ihObj.Export(service)
+	if err != nil {
+		logger.Warning("failed to export inhibit hint:", err)
 	}
 }

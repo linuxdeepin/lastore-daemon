@@ -12,7 +12,7 @@ import (
 	"github.com/linuxdeepin/go-lib/log"
 )
 
-var logger = log.NewLogger("lastore")
+var logger = log.NewLogger("lastore/dstore")
 
 const (
 	appstoreConfPath        = "/usr/share/deepin-app-store/settings.ini"

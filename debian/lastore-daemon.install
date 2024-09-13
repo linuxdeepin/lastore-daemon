@@ -4,4 +4,4 @@
 /usr/libexec/lastore-daemon
 /var/lib/lastore
 /var/cache/lastore
-lib/systemd/system
+lib/systemd

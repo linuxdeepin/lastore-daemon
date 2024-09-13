@@ -6,14 +6,20 @@ function prepare()
 {
     # The unit is typically launched by apt hooks,
     # so we just directly exit failed when the apt-get is still running, and restart it after 1 seconds.
-    if /usr/bin/pgrep apt-get > /dev/null; then
-        echo "apt-get is running, please try it later"
+    # build_system_info脚本改由updateSource后同步执行,因此无需判断apt-get进程是否存在
+    #    if /usr/bin/pgrep apt-get > /dev/null; then
+    #        echo "apt-get is running, please try it later"
+    #        exit 1;
+    #    fi
+
+    if /usr/bin/pgrep build_system_info > /dev/null; then
+        echo "build_system_info is running, please try it later"
         exit 1;
     fi
 
     if [ "$(/usr/bin/busctl get-property org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager SystemOnChanging)" != "b false" ]; then
         echo "system is on changing, please try it later"
-        exit -1;
+        exit 1;
     fi
 }
 

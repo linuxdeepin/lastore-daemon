@@ -20,6 +20,7 @@ Build-Depends:
  golang-github-codegangsta-cli-dev,
  golang-github-jouyouyun-hardware-dev,
  golang-github-knqyf263-go-deb-version-dev,
+ libsystemd-dev,
 Standards-Version: 4.1.3
 Homepage: http://github.com/linuxdeepin/lastore-daemon
 
@@ -30,6 +31,11 @@ Provides:
 Depends:
  dbus,
  procps,
+ deepin-iso-standard,
+ binutils,
+ deepin-system-fixpkg,
+ deepin-system-update,
+ xz-utils,
  ${dist:Depends},
  ${misc:Depends},
  ${shlibs:Depends},

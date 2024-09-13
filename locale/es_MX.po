@@ -1,0 +1,163 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+# Translators:
+# Grizzly Johnson <wbear_123@hotmail.es>, 2021
+# Jonathan Ponce <jyv0708@gmail.com>, 2023
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-05-25 16:25+0800\n"
+"PO-Revision-Date: 2020-08-24 10:36+0000\n"
+"Last-Translator: Jonathan Ponce <jyv0708@gmail.com>, 2023\n"
+"Language-Team: Spanish (Mexico) (https://app.transifex.com/linuxdeepin/teams/3617/es_MX/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es_MX\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+
+#: ../src/lastore-daemon/inhibitor.go:44
+msgid "Installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/inhibitor.go:46
+msgid "Tasks are running..."
+msgstr ""
+
+#: ../src/lastore-daemon/inhibitor.go:48
+msgid "Preventing from shutting down"
+msgstr ""
+
+#: ../src/lastore-daemon/main.go:161 ../src/lastore-daemon/main.go:165
+msgid "Control Center"
+msgstr "Centro de control"
+
+#: ../src/lastore-daemon/main.go:163
+msgid "App Store"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:312
+msgid "Removed successfully"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:316
+msgid "Failed to remove the app"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:319
+msgid "Retry"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:321
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: ../src/lastore-daemon/manager.go:478
+msgid "New version available!"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:479 ../src/lastore-daemon/manager.go:497
+#: ../src/lastore-daemon/manager.go:953 ../src/lastore-daemon/manager.go:996
+msgid "View"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:496
+msgid "Failed to check for updates. Please check your network."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:502
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:625
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:704 ../src/lastore-daemon/manager.go:989
+msgid "Updates failed: damaged files. Please update again."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:705 ../src/lastore-daemon/manager.go:990
+msgid "Try Again"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:711
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:712 ../src/lastore-daemon/manager.go:725
+msgid "Reboot"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:716
+msgid "Updates failed: insufficient disk space."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:724
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:729
+msgid "Updates failed."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:894 ../src/lastore-daemon/manager.go:984
+#, c-format
+msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:950
+msgid "New version available! Downloading..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:995
+msgid "Downloading updates failed. Please check your network."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:1019
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:1022
+msgid "Update Now"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:1024
+msgid "Dismiss"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:1139
+msgid "Package cache wiped"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:391
+msgid "Backing up and installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:470
+#: ../src/lastore-daemon/manager_ifc.go:493
+#: ../src/lastore-daemon/manager_ifc.go:527
+msgid "Backup failed!"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:471
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
+msgid "Proceed to Update"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_ifc.go:494
+#: ../src/lastore-daemon/manager_ifc.go:528
+msgid "Back Up Again"
+msgstr ""
