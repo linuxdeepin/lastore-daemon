@@ -259,6 +259,7 @@ const (
 	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
 	controlCenterPath     = "/usr/bin/dde-control-center"
 	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
+    oldControlCenterPath  = "/usr/lib/x86_64-linux-gnu/dde-control-center/dde-control-center-old"
 	dataTransferPath      = "/usr/bin/deepin-data-transfer"
 	amDaemonPath          = "/usr/bin/dde-application-manager"
 	launcherPath          = "/usr/bin/dde-launcher"
@@ -273,6 +274,7 @@ var (
 		printerHelperPath,
 		langSelectorPath,
 		controlCenterPath,
+        oldControlCenterPath,
 		dataTransferPath,
 	}
 	allowRemovePackageExecPaths = strv.Strv{
@@ -281,6 +283,7 @@ var (
 		sessionDaemonPath,
 		langSelectorPath,
 		controlCenterPath,
+        oldControlCenterPath,
 		amDaemonPath,
 		launcherPath,
 		amDaemonCompatPath,
