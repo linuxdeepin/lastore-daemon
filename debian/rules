@@ -33,3 +33,6 @@ endif
 
 override_dh_installsystemd:
 	dh_installsystemd -r --no-restart-after-upgrade --no-start
+
+execute_after_dh_installinit:
+	dh_installsysusers
