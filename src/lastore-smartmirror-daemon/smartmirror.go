@@ -126,13 +126,17 @@ func (s *SmartMirror) route(original, officialMirror string) string {
 		return original
 	}
 
-	if strings.HasPrefix(original, officialMirror+"/pool") {
+	if !strings.HasPrefix(original, officialMirror) {
+		return original
+	}
+
+	if strings.Contains(original, "/pool/") {
 		return s.makeChoice(original, officialMirror)
-	} else if strings.HasPrefix(original, officialMirror+"/dists") && strings.HasSuffix(original, "Release") {
+	} else if strings.Contains(original, "/dists/") && strings.HasSuffix(original, "Release") {
 		// Get Release from Release
 		url, _ := handleRequest(buildRequest(makeHeader(), "HEAD", original))
 		return url
-	} else if strings.HasPrefix(original, officialMirror+"/dists") && strings.Contains(original, "/by-hash/") {
+	} else if strings.Contains(original, "/dists/") && strings.Contains(original, "/by-hash/") {
 		return s.makeChoice(original, officialMirror)
 	}
 	return original
