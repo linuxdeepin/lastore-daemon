@@ -1,3 +1,9 @@
+lastore-daemon (6.2.6) unstable; urgency=medium
+
+  * fix: 解决智能镜像源配置不生效的问题 (#133)
+
+ -- fuleyi <fuleyi@uniontech.com>  Mon, 10 Feb 2025 16:19:46 +0800
+
 lastore-daemon (6.2.5) stable; urgency=medium
 
   * fix: Set NotifyAccess to main in lastore-daemon.service
