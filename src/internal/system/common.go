@@ -7,6 +7,7 @@ package system
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/linuxdeepin/go-lib/keyfile"
 	"io"
 	"os"
 	"os/exec"
@@ -273,6 +274,14 @@ const (
 )
 
 func IsAuthorized() bool {
+	edition, err := getEditionName()
+	if err != nil {
+		return false
+	}
+	// 社区版不需要鉴权
+	if edition == "Community" {
+		return true
+	}
 	sysBus, err := dbusutil.NewSystemService()
 	if err != nil {
 		logger.Warning(err)
@@ -334,4 +343,17 @@ func CheckLock(p string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func getEditionName() (string, error) {
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile("/etc/os-version")
+	if err != nil {
+		return "", err
+	}
+	editionName, err := kf.GetString("Version", "EditionName")
+	if err != nil {
+		return "", err
+	}
+	return editionName, nil
 }

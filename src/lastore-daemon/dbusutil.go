@@ -157,8 +157,8 @@ func (v *Updater) emitPropChangedUpdateTarget(value string) error {
 }
 
 func (v *Updater) setPropOfflineInfo(value string) (changed bool) {
-	if v.OfflineInfo != value {
-		v.OfflineInfo = value
+	if v.offlineInfo != value {
+		v.offlineInfo = value
 		v.emitPropChangedOfflineInfo(value)
 		return true
 	}
@@ -166,12 +166,12 @@ func (v *Updater) setPropOfflineInfo(value string) (changed bool) {
 }
 
 func (v *Updater) emitPropChangedOfflineInfo(value string) error {
-	return v.service.EmitPropertyChanged(v, "OfflineInfo", value)
+	return v.service.EmitPropertyChanged(v, "offlineInfo", value)
 }
 
 func (v *Updater) setPropP2PUpdateEnable(value bool) (changed bool) {
-	if v.P2PUpdateEnable != value {
-		v.P2PUpdateEnable = value
+	if v.p2PUpdateEnable != value {
+		v.p2PUpdateEnable = value
 		v.emitPropChangedP2PUpdateEnable(value)
 		return true
 	}
@@ -179,12 +179,12 @@ func (v *Updater) setPropP2PUpdateEnable(value bool) (changed bool) {
 }
 
 func (v *Updater) emitPropChangedP2PUpdateEnable(value bool) error {
-	return v.service.EmitPropertyChanged(v, "P2PUpdateEnable", value)
+	return v.service.EmitPropertyChanged(v, "p2PUpdateEnable", value)
 }
 
 func (v *Updater) setPropP2PUpdateSupport(value bool) (changed bool) {
-	if v.P2PUpdateSupport != value {
-		v.P2PUpdateSupport = value
+	if v.p2PUpdateSupport != value {
+		v.p2PUpdateSupport = value
 		v.emitPropChangedP2PUpdateSupport(value)
 		return true
 	}
@@ -192,7 +192,7 @@ func (v *Updater) setPropP2PUpdateSupport(value bool) (changed bool) {
 }
 
 func (v *Updater) emitPropChangedP2PUpdateSupport(value bool) error {
-	return v.service.EmitPropertyChanged(v, "P2PUpdateSupport", value)
+	return v.service.EmitPropertyChanged(v, "p2PUpdateSupport", value)
 }
 
 func (v *Job) setPropId(value string) (changed bool) {

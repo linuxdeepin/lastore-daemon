@@ -25,7 +25,6 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/procfs"
-	utils2 "github.com/linuxdeepin/go-lib/utils"
 )
 
 /*
@@ -72,9 +71,9 @@ func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) fixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.fixError(sender, errType)
+	jobObj, err := m.delFixError(sender, errType)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -90,8 +89,8 @@ func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
 	return info, nil
 }
 
-func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
-	return dbusutil.ToError(m.handleSystemEvent(sender, eventType))
+func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
+	return dbusutil.ToError(m.delHandleSystemEvent(sender, eventType))
 }
 
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
@@ -123,11 +122,11 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) InstallPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string, repoListPath string, cachePath string, packageName []string) (jobPath dbus.ObjectPath,
+func (m *Manager) installPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string, repoListPath string, cachePath string, packageName []string) (jobPath dbus.ObjectPath,
 	busErr *dbus.Error) {
 	logger.Infof("enter InstallPackageFromRepo,jobName:%v, sourceListPath:%v, repoListPath:%v, cachePath:%v", jobName, sourceListPath, repoListPath, cachePath)
 
-	jobObj, err := m.installPackageFromRepo(sender, jobName, sourceListPath, repoListPath, cachePath, packageName)
+	jobObj, err := m.delInstallPackageFromRepo(sender, jobName, sourceListPath, repoListPath, cachePath, packageName)
 	if err != nil {
 		logger.Error(err)
 		return "/", dbusutil.ToError(err)
@@ -137,7 +136,7 @@ func (m *Manager) InstallPackageFromRepo(sender dbus.Sender, jobName string, sou
 }
 
 // PackageDesktopPath TODO: Remove this API
-func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
+func (m *Manager) packageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
 	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
 	if err != nil {
@@ -147,17 +146,17 @@ func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *
 	return p, nil
 }
 
-func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
+func (m *Manager) packageExists(pkgId string) (exist bool, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
 	return system.QueryPackageInstalled(pkgId), nil
 }
 
-func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
+func (m *Manager) packageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
-func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
+func (m *Manager) getUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
 	res := make(map[system.UpdateType]interface{})
 	if updateType&system.SystemUpdate != 0 {
 		res[system.SystemUpdate] = m.updatePlatform.SystemUpdateLogs
@@ -188,11 +187,11 @@ func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string
 //	ChangelogZh []string
 // }
 
-func (m *Manager) GetHistoryLogs() (changeLogs string, busErr *dbus.Error) {
+func (m *Manager) getHistoryLogs() (changeLogs string, busErr *dbus.Error) {
 	return getHistoryChangelog(upgradeRecordPath), nil
 }
 
-func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
+func (m *Manager) packagesSize(packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()
 	var err error
@@ -216,7 +215,7 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 	return int64(allPackageSize), dbusutil.ToError(err)
 }
 
-func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
+func (m *Manager) packagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
 	m.ensureUpdateSourceOnce()
 	var err error
@@ -370,7 +369,7 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	return nil
 }
 
-func (m *Manager) SetRegion(region string) *dbus.Error {
+func (m *Manager) setRegion(region string) *dbus.Error {
 	m.service.DelayAutoQuit()
 	err := m.config.SetAppstoreRegion(region)
 	return dbusutil.ToError(err)
@@ -405,10 +404,10 @@ func (m *Manager) UnRegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbu
 	return nil
 }
 
-func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
+func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.updatePackage(sender, jobName, packages)
+	jobObj, err := m.delUpdatePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
@@ -431,90 +430,15 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 	return m.distUpgradePartly(sender, mode, needBackup)
 }
 
-// PrepareFullScreenUpgrade option json -> struct
-//
-//	type fullUpgradeOption struct {
-//		DoUpgrade         bool
-//		DoUpgradeMode     system.UpdateType
-//		IsPowerOff        bool
-//		PreGreeterCheck   bool
-//		AfterGreeterCheck bool
-//	}
-func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
-	// 1070以下版本option为空
-	supportOption := len(strings.TrimSpace(option)) > 0
-	checkExecPath := func() (bool, error) {
-		// 只有dde-lock可以设置
-		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
-		if err != nil {
-			logger.Warning(err)
-			return false, err
-		}
-		if !strings.Contains(execPath, "dde-lock") && !strings.Contains(execPath, "deepin-offline-update-tool") {
-			err = fmt.Errorf("%v not allow to call this method", execPath)
-			logger.Warning(err)
-			return false, err
-		}
-
-		return strings.Contains(execPath, "deepin-offline-update-tool"), nil
-	}
-	var isOffline bool
-	uid, err := m.service.GetConnUID(string(sender))
-	if err == nil && uid == 0 {
-		logger.Info("auth root caller")
-	} else {
-		isOffline, err = checkExecPath()
-		if err != nil {
-			return dbusutil.ToError(err)
-		}
-	}
-
+func (m *Manager) prepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
 	// 如果没有/usr/bin/dde-update,则需要进入fallback流程
 	const fullScreenUpdatePath = "/usr/bin/dde-update"
 	if !system.NormalFileExists(fullScreenUpdatePath) {
-		err = fmt.Errorf("%v not exist, need run fallback process", fullScreenUpdatePath)
+		err := fmt.Errorf("%v not exist, need run fallback process", fullScreenUpdatePath)
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
 	logger.Info("start PrepareFullScreenUpgrade")
-
-	if isOffline {
-		content, err := json.Marshal(&fullUpgradeOption{
-			DoUpgrade:         true,
-			DoUpgradeMode:     system.OfflineUpdate,
-			IsPowerOff:        false,
-			PreGreeterCheck:   false,
-			AfterGreeterCheck: false,
-		})
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
-		}
-		if utils2.IsSymlink(optionFilePathTemp) {
-			_ = os.RemoveAll(optionFilePathTemp)
-		}
-		_ = os.WriteFile(optionFilePathTemp, content, 0644)
-	} else if supportOption {
-		opt := fullUpgradeOption{}
-		err = json.Unmarshal([]byte(option), &opt)
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
-		}
-		// 在线更新时填充部分属性
-		opt.DoUpgrade = true
-		opt.PreGreeterCheck = false
-		opt.AfterGreeterCheck = false
-		content, err := json.Marshal(opt)
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
-		}
-		if utils2.IsSymlink(optionFilePathTemp) {
-			_ = os.RemoveAll(optionFilePathTemp)
-		}
-		_ = os.WriteFile(optionFilePathTemp, content, 0644)
-	}
 
 	for {
 		pid, err := m.service.GetConnPID(string(sender))
@@ -553,7 +477,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	}
 
 	// 如果上述方法出错，需要采用重启lightdm方案，此时所有图形session也都会退出
-	_, err = m.systemd.RestartUnit(0, "lightdm.service", "replace")
+	_, err := m.systemd.RestartUnit(0, "lightdm.service", "replace")
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
@@ -562,7 +486,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	return nil
 }
 
-func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
+func (m *Manager) queryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
 	var sourcePathList []string
 	for _, t := range system.AllInstallUpdateType() {
 		category := mode & t
@@ -595,21 +519,10 @@ func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.Updat
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder uint32) (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	job, err := m.checkUpgrade(sender, checkMode, checkType(checkOrder))
-	if err != nil {
-		logger.Warning(err)
-		return "", dbusutil.ToError(err)
-	}
-	logger.Info("CheckUpgrade jobPath:", job)
-	return job, nil
-}
-
-func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option string) (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option string) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
 
-	jobObj, err := m.updateOfflineSource(sender, paths, option)
+	jobObj, err := m.delUpdateOfflineSource(sender, paths, option)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
@@ -618,7 +531,7 @@ func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
+func (m *Manager) powerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 	checkExecPath := func() error {
 		// 只有dde-update可以设置
 		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
@@ -660,7 +573,7 @@ func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 }
 
 // SetUpdateSources 设置系统、安全更新的仓库
-func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateType, repoType config.RepoType, repoConfig []string, isReset bool) *dbus.Error {
+func (m *Manager) setUpdateSources(sender dbus.Sender, updateType system.UpdateType, repoType config.RepoType, repoConfig []string, isReset bool) *dbus.Error {
 	// 管理员鉴权
 	err := checkInvokePermission(m.service, sender)
 	if err != nil {

@@ -416,7 +416,7 @@ func (m *Manager) getNextUpdateDelay() time.Duration {
 	return remained + _minDelayTime
 }
 
-func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) error {
+func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) error {
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil {
 		logger.Warning(err)
