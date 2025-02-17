@@ -1,9 +1,11 @@
+// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package main
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,15 +13,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/godbus/dbus/v5"
@@ -47,7 +46,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
 		mode = origin
 	}
-	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, true)
+	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, false)
 	if createJobErr != nil {
 		if !errors.Is(createJobErr, JobExistError) {
 			return "/", dbusutil.ToError(createJobErr)
@@ -115,14 +114,10 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		return "", dbusutil.ToError(err)
 	}
 	m.inhibitAutoQuitCountAdd() // 开始备份前add，结束备份后sub(无论是否成功)
-	var abHandler dbusutil.SignalHandlerId
-	var canBackup bool
-	var hasBackedUp bool
-	var abErr error
 	inhibit(true)
 	defer func() {
 		// 没有开始更新提前结束时，需要处理抑制锁和job
-		if abErr != nil || startJobErr != nil {
+		if startJobErr != nil {
 			inhibit(false)
 			err = m.CleanJob(upgradeJob.Id)
 			if err != nil {
@@ -132,106 +127,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		}
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
-	if needBackup {
-		// m.statusManager.SetABStatus(mode, system.NotBackup, system.NoABError)
-		canBackup, abErr = m.abObj.CanBackup(0)
-		if abErr != nil || !canBackup {
-			logger.Info("can not backup,", abErr)
 
-			msg := gettext.Tr("Backup failed!")
-			action := []string{"continue", gettext.Tr("Proceed to Update")}
-			hints := map[string]dbus.Variant{"x-deepin-action-continue": dbus.MakeVariant(
-				fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-
-			m.inhibitAutoQuitCountSub()
-			m.statusManager.SetABStatus(mode, system.BackupFailed, system.CanNotBackup)
-			abErr = errors.New("can not backup")
-			return "", dbusutil.ToError(abErr)
-		}
-		hasBackedUp, err = m.abObj.HasBackedUp().Get(0)
-		if err != nil {
-			logger.Warning(err)
-		} else if hasBackedUp {
-			m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
-		}
-		if !hasBackedUp {
-			// 没有备份过，先备份再更新
-			abErr = m.abObj.StartBackup(0)
-			if abErr != nil {
-				logger.Warning(abErr)
-
-				msg := gettext.Tr("Backup failed!")
-				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
-				hints := map[string]dbus.Variant{
-					"x-deepin-action-backup": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
-					"x-deepin-action-continue": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-
-				m.inhibitAutoQuitCountSub()
-				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
-				return "", dbusutil.ToError(abErr)
-			}
-			m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
-			handleBackupFailed := func(errMsg string) {
-				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
-				logger.Warning("ab backup failed:", errMsg)
-				// 备份失败后,需要清理原来的job,因为是监听信号,所以不能通过上面的defer处理.
-				inhibit(false)
-				err = m.CleanJob(upgradeJob.Id)
-				if err != nil {
-					logger.Warning(err)
-				}
-				m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
-				msg := gettext.Tr("Backup failed!")
-				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
-				hints := map[string]dbus.Variant{
-					"x-deepin-action-backup": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,"+
-							"--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
-					"x-deepin-action-continue": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,"+
-							"--dest=org.deepin.dde.Lastore1,/org/deepin/dde/Lastore1,org.deepin.dde.Lastore1.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
-			}
-			var ownerChangedHandler dbusutil.SignalHandlerId
-			abHandler, err = m.abObj.ConnectJobEnd(func(kind string, success bool, errMsg string) {
-				if kind == "backup" {
-					m.abObj.RemoveHandler(abHandler)
-					m.sysDBusDaemon.RemoveHandler(ownerChangedHandler)
-					if success {
-						m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
-						// 开始更新
-						startJobErr = startUpgrade()
-						if startJobErr != nil {
-							logger.Warning(startJobErr)
-						}
-					} else {
-						handleBackupFailed(errMsg)
-					}
-				}
-			})
-			if err != nil {
-				logger.Warning(err)
-			}
-			ownerChangedHandler, err = m.sysDBusDaemon.ConnectNameOwnerChanged(func(name string, oldOwner string, newOwner string) {
-				if strings.HasPrefix(name, "com.deepin.ABRecovery") && oldOwner != "" && newOwner == "" {
-					// ab异常退出
-					m.abObj.RemoveHandler(abHandler)
-					m.sysDBusDaemon.RemoveHandler(ownerChangedHandler)
-					handleBackupFailed("The backup process exits abnormally")
-				}
-			})
-		} else {
-			// 备份过可以直接更新
-			startJobErr = startUpgrade()
-		}
-	} else {
-		// 无需备份,直接更新
-		startJobErr = startUpgrade()
-	}
+	startJobErr = startUpgrade()
 	if startJobErr != nil {
 		logger.Warning(startJobErr)
 		return "", dbusutil.ToError(startJobErr)
@@ -278,9 +175,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	var job *Job
 	var uuid string
 	mergeMode := mode
-	if mode != system.UnknownUpdate {
-		mergeMode = mode & (^system.UnknownUpdate)
-	}
+	//if mode != system.UnknownUpdate {
+	//	mergeMode = mode & (^system.UnknownUpdate)
+	//}
 	/*
 		1. 仅有第三方仓库或没有第三方仓库时,mergeMode为当期更新内容,和原有逻辑一致;
 		2. 多仓库包含第三方时,先融合非第三方仓库内容生成path,CreateJob中,分别创建排除第三方的更新job和第三方更新job,源配置分别在CreateJob后和CreateJob时设置;
@@ -345,24 +242,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		}
 		startJob.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
-				// 防止还在检查更新的时候，就生成了meta文件，此时meta文件可能不准
-				uuid, err = m.prepareAptCheck(mode)
-				if err != nil {
-					logger.Warning(err)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error()))
-					if unref != nil {
-						unref()
-					}
-					return err
-				}
+				uuid = utils.GenUuid()
 				logger.Info(uuid)
 				m.updatePlatform.CreateJobPostMsgInfo(uuid, job.updateTyp)
-				systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
-				if systemErr != nil {
-					logger.Info(systemErr)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
-					return systemErr
-				}
 				if !system.CheckInstallAddSize(mode) {
 					return &system.JobError{
 						ErrType:      system.ErrorInsufficientSpace,
@@ -381,13 +263,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
-				if systemErr != nil {
-					logger.Info(systemErr)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
-					return systemErr
-				}
-
 				if mode&system.SystemUpdate != 0 {
 					recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
 				}
@@ -537,10 +412,6 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 		if err != nil {
 			logger.Warning(err)
 		}
-		canBackup, abErr := m.abObj.CanBackup(0)
-		if abErr != nil {
-			canBackup = false
-		}
 		if strings.Contains(errType, system.ErrorDamagePackage.String()) {
 			// 包损坏，需要下apt-get clean，然后重试更新
 			cleanAllCache()
@@ -549,37 +420,14 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
 			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 		} else if strings.Contains(errType, system.ErrorInsufficientSpace.String()) {
-			// 空间不足
-			// 已备份
-			msg := gettext.Tr("Updates failed: insufficient disk space. Please reboot to avoid the effect on your system.")
-			action := []string{"reboot", gettext.Tr("Reboot")}
-			hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Restart")}
-			// 未备份
-			if !canBackup {
-				msg = gettext.Tr("Updates failed: insufficient disk space.")
-				action = []string{}
-				hints = nil
-			}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			msg := gettext.Tr("Updates failed: insufficient disk space.")
+			action := []string{}
+			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
 		} else {
-			// 其他原因
-			// 已备份
-			msg := gettext.Tr("Updates failed. Please reboot to avoid the effect on your system.")
-			action := []string{"reboot", gettext.Tr("Reboot")}
-			hints := map[string]dbus.Variant{"x-deepin-action-reboot": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Restart")}
-			// 未备份
-			if !canBackup {
-				msg = gettext.Tr("Updates failed.")
-				action = []string{}
-				hints = nil
-			}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			msg := gettext.Tr("Updates failed.")
+			action := []string{}
+			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
 		}
-	}
-	// 安装失败删除配置文件
-	err = m.delRebootCheckOption(all)
-	if err != nil {
-		logger.Warning(err)
 	}
 	if errorContent.IsCheckError {
 		m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.CheckFailed, job.Description)
@@ -621,37 +469,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {
-	supportRebootCheck := true
-	if m.config.EnableVersionCheck {
-		var minorVersionInt int
-		info, err := updateplatform.GetOSVersionInfo("/etc/os-version")
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			if version, ok := info["MinorVersion"]; ok {
-				minorVersionInt, _ = strconv.Atoi(version)
-			}
-		}
-		supportRebootCheck = minorVersionInt >= 1070
-	}
-
-	if supportRebootCheck && !m.config.GetPlatformStatusDisable(config.DisabledRebootCheck) {
-		if needChangeGrub {
-			// 更新成功后修改grub默认入口为当前系统入口
-			err := m.grub.createTempGrubEntry()
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-		// 设置重启后的检查项;重启后需要检查时,需要将本次job的uuid记录到检查配置中,无需检查时只要将uuid直接记录到 upgradeJobMetaInfo 中即可
-		err := m.setRebootCheckOption(mode, uuid)
-		if err != nil {
-			logger.Warning(err)
-		}
-	} else {
-		// 不需要重启检查时,此处可以直接执行整个流程成功的处理逻辑
-		m.handleAfterUpgradeSuccess(mode, job.Description, uuid)
-	}
+	m.handleAfterUpgradeSuccess(mode, job.Description, uuid)
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
 	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
@@ -668,7 +486,7 @@ func (m *Manager) afterUpgradeCmdSuccessHook() error {
 	msg := gettext.Tr("Restart the computer to use the system and applications properly.")
 	action := []string{"reboot", gettext.Tr("Reboot Now"), "cancel", gettext.Tr("Reboot Later")}
 	hints := map[string]dbus.Variant{
-		"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Restart"),
+		"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"),
 		"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
 	go m.sendNotify(updateNotifyShow, 0, "system-updated", summary, msg, action, hints, system.NotifyExpireTimeoutNoHide)
 	return nil
@@ -676,10 +494,6 @@ func (m *Manager) afterUpgradeCmdSuccessHook() error {
 
 // 整个更新流程走完后(安装、检测(如果需要)全部成功)
 func (m *Manager) handleAfterUpgradeSuccess(mode system.UpdateType, des string, uuid string) {
-	err := m.grub.changeGrubDefaultEntry(normalBootEntry)
-	if err != nil {
-		logger.Warning(err)
-	}
 	m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.UpgradeSucceed, des)
 	go func() {
 		m.inhibitAutoQuitCountAdd()
@@ -733,171 +547,6 @@ func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
 	return nil
 }
 
-// 生成meta.json和uuid 暂时不使用dut，使用apt
-func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
-	// 使用dut更新前的准备
-	var uuid string
-	var err error
-	if mode == system.OfflineUpdate {
-		// 转移包路径
-		err = onlyDownloadOfflinePackage(m.offline.upgradeAblePackages)
-		if err != nil {
-			return "", err
-		}
-		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
-		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-			system.LocalCachePath,
-			m.offline.upgradeAblePackages,
-			m.offline.upgradeAblePackages, nil, m.offline.upgradeAblePackages, m.offline.removePackages, nil, genRepoInfo(mode, system.OfflineListPath))
-		if err != nil {
-			logger.Warning(err)
-			return "", err
-		}
-	} else {
-		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
-		var pkgMap map[string]system.PackageInfo
-		var removeMap map[string]system.PackageInfo
-		mode &= system.AllInstallUpdate
-		if mode == 0 {
-			return "", errors.New("invalid mode")
-		}
-
-		// m.allUpgradableInfoMu.Lock()
-		// pkgMap = m.mergePackagesByMode(mode, m.allUpgradableInfo)
-		// m.allUpgradableInfoMu.Unlock()
-		// m.allRemovePkgInfoMu.Lock()
-		// removeMap = m.mergePackagesByMode(mode, m.allRemovePkgInfo)
-		// m.allRemovePkgInfoMu.Unlock()
-
-		coreListMap := make(map[string]system.PackageInfo)
-		if m.coreList != nil && len(m.coreList) > 0 {
-			for _, pkgName := range m.coreList {
-				coreListMap[pkgName] = system.PackageInfo{
-					Name:    pkgName,
-					Version: "",
-					Need:    "skipversion",
-				}
-			}
-		} else {
-			loadCoreList := func() map[string]system.PackageInfo {
-				coreListMap := make(map[string]system.PackageInfo)
-				data, err := os.ReadFile(coreListVarPath)
-				if err != nil {
-					return nil
-				}
-				var pkgList PackageList
-				err = json.Unmarshal(data, &pkgList)
-				if err != nil {
-					return nil
-				}
-				for _, pkg := range pkgList.PkgList {
-					coreListMap[pkg.PkgName] = system.PackageInfo{
-						Name:    pkg.PkgName,
-						Version: "",
-						Need:    "skipversion",
-					}
-				}
-				return nil
-			}
-			coreListMap = loadCoreList()
-		}
-		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			system.LocalCachePath,
-			pkgMap,
-			coreListMap, nil, nil, removeMap,
-			m.updatePlatform.GetRules(), genRepoInfo(mode, system.OnlineListPath))
-
-		if err != nil {
-			logger.Warning(err)
-			return "", err
-		}
-	}
-	return uuid, nil
-}
-
-// 生成meta.json和uuid
-func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
-	var uuid string
-	var err error
-	// pkgMap repo和system.LocalCachePath都是占位用，没有起到真正的作用
-	pkgMap := make(map[string]system.PackageInfo)
-	pkgMap["lastore-daemon"] = system.PackageInfo{
-		Name:    "lastore-daemon",
-		Version: "1.0",
-		Need:    "exist",
-	}
-	var repo []dut.RepoInfo
-	if mode == system.OfflineUpdate {
-		repo = genRepoInfo(system.OfflineUpdate, system.OfflineListPath)
-	} else {
-		repo = genRepoInfo(mode, system.OnlineListPath)
-	}
-
-	// coreList 生成
-	coreListMap := make(map[string]system.PackageInfo)
-	if m.coreList != nil && len(m.coreList) > 0 {
-		for _, pkgName := range m.coreList {
-			coreListMap[pkgName] = system.PackageInfo{
-				Name:    pkgName,
-				Version: "",
-				Need:    "skipversion",
-			}
-		}
-	} else {
-		loadCoreList := func() map[string]system.PackageInfo {
-			coreListMap := make(map[string]system.PackageInfo)
-			data, err := os.ReadFile(coreListVarPath)
-			if err != nil {
-				return nil
-			}
-			var pkgList PackageList
-			err = json.Unmarshal(data, &pkgList)
-			if err != nil {
-				return nil
-			}
-			for _, pkg := range pkgList.PkgList {
-				coreListMap[pkg.PkgName] = system.PackageInfo{
-					Name:    pkg.PkgName,
-					Version: "",
-					Need:    "skipversion",
-				}
-			}
-			return nil
-		}
-		coreListMap = loadCoreList()
-	}
-	// 使用dut检查前的准备
-	if mode == system.OfflineUpdate {
-		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-			system.LocalCachePath,
-			pkgMap,
-			coreListMap, nil, nil, nil, nil, repo)
-		if err != nil {
-			logger.Warning(err)
-			return "", &system.JobError{
-				ErrType:      system.ErrorUnknown,
-				ErrDetail:    err.Error(),
-				IsCheckError: true,
-			}
-		}
-	} else {
-		mode &= system.AllInstallUpdate
-		if mode == 0 {
-			return "", errors.New("invalid mode")
-		}
-		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			system.LocalCachePath,
-			pkgMap,
-			coreListMap, nil, nil, nil,
-			m.updatePlatform.GetRules(), repo)
-		if err != nil {
-			logger.Warning(err)
-			return "", err
-		}
-	}
-	return uuid, err
-}
-
 func (m *Manager) mergePackagesByMode(mode system.UpdateType, needMergePkgMap map[system.UpdateType]map[string]system.PackageInfo) map[string]system.PackageInfo {
 	typeArray := system.UpdateTypeBitToArray(mode)
 	var res map[string]system.PackageInfo
@@ -935,28 +584,6 @@ func (m *Manager) mergePackagesByMode(mode system.UpdateType, needMergePkgMap ma
 		}
 	}
 	return res
-}
-
-// 生成repo信息
-func genRepoInfo(typ system.UpdateType, listPath string) []dut.RepoInfo {
-	var repoInfos []dut.RepoInfo
-	for _, file := range getPackagesPathList(typ, listPath) {
-		info := dut.RepoInfo{
-			Name:       filepath.Base(file),
-			FilePath:   file,
-			HashSha256: "",
-		}
-		data, err := os.ReadFile(file)
-		if err != nil {
-			logger.Warning(err)
-			continue
-		}
-		hash := sha256.New()
-		hash.Write(data)
-		info.HashSha256 = hex.EncodeToString(hash.Sum(nil))
-		repoInfos = append(repoInfos, info)
-	}
-	return repoInfos
 }
 
 func getPackagesPathList(typ system.UpdateType, listPath string) []string {

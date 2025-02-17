@@ -13,7 +13,7 @@ import (
 
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
@@ -74,7 +74,7 @@ func main() {
 	}
 
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
-	aptImpl := dut.NewSystem(config.NonUnknownList, config.OtherSourceList)
+	aptImpl := apt.NewSystem(config.NonUnknownList, config.OtherSourceList)
 	system.SetSystemUpdate(config.PlatformUpdate) // 设置是否通过平台更新
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
 	allowRemovePackageExecPaths = append(allowRemovePackageExecPaths, config.AllowInstallRemovePkgExecPaths...)
@@ -109,15 +109,15 @@ func main() {
 	if err != nil {
 		logger.Error("failed to set write cb for property CheckUpdateMode:", err)
 	}
-	err = serverObject.SetReadCallback(updater, "OfflineInfo", func(read *dbusutil.PropertyRead) *dbus.Error {
+	err = serverObject.SetReadCallback(updater, "offlineInfo", func(read *dbusutil.PropertyRead) *dbus.Error {
 		return dbusutil.ToError(updater.SetOfflineInfo(manager.offline.GetCheckInfo()))
 	})
 	// 每次读取SystemSourceConfig和SecuritySourceConfig都实时获取一次配置
-	err = serverObject.SetReadCallback(manager, "SystemSourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
+	err = serverObject.SetReadCallback(manager, "systemSourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
 		manager.reloadOemConfig(false)
 		return nil
 	})
-	err = serverObject.SetReadCallback(manager, "SecuritySourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
+	err = serverObject.SetReadCallback(manager, "securitySourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
 		manager.reloadOemConfig(false)
 		return nil
 	})

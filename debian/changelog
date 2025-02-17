@@ -1,3 +1,9 @@
+lastore-daemon (6.2.7) unstable; urgency=medium
+
+  * feat: 更新方案变更，去掉dut
+
+ -- fuleyi <fuleyi@uniontech.com>  Mon, 17 Feb 2025 14:36:36 +0800
+
 lastore-daemon (6.2.6) stable; urgency=medium
 
   * fix: 修复旧版控制中心无法加入内测的问题 (linuxdeepin#129)

@@ -86,9 +86,9 @@ func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSo
 	return u.listMirrorSources(lang), nil
 }
 
-func (u *Updater) RestoreSystemSource() *dbus.Error {
+func (u *Updater) restoreSystemSource() *dbus.Error {
 	u.service.DelayAutoQuit()
-	err := u.restoreSystemSource()
+	err := u.delRestoreSystemSource()
 	if err != nil {
 		logger.Warning("failed to restore system source:", err)
 		return dbusutil.ToError(err)
@@ -236,8 +236,8 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) SetP2PUpdateEnable(enable bool) *dbus.Error {
-	err := u.setP2PUpdateEnable(enable)
+func (u *Updater) setP2PUpdateEnable(enable bool) *dbus.Error {
+	err := u.delSetP2PUpdateEnable(enable)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)

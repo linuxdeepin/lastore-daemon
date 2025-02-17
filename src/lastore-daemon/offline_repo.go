@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package main
 
 import (
@@ -11,7 +15,6 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -344,7 +347,7 @@ func (m *OfflineManager) CleanCache() error {
 	return os.RemoveAll(unzipOupDir)
 }
 
-func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option string) (job *Job, err error) {
+func (m *Manager) delUpdateOfflineSource(sender dbus.Sender, paths []string, option string) (job *Job, err error) {
 	var environ map[string]string
 	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec update")
@@ -429,23 +432,4 @@ func (m *Manager) updateOfflineSource(sender dbus.Sender, paths []string, option
 		return nil, err
 	}
 	return job, nil
-}
-
-// 临时废弃
-func (m *OfflineManager) checkOfflineSystemState() bool {
-	_, err := dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-		system.LocalCachePath,
-		m.upgradeAblePackages,
-		m.upgradeAblePackages, nil, m.upgradeAblePackages, m.removePackages, nil, genRepoInfo(system.OfflineUpdate, system.OfflineListPath))
-	if err != nil {
-		logger.Warning(err)
-		return false
-	}
-
-	err = dut.CheckSystem(dut.PreCheck, true, nil)
-	if err != nil {
-		logger.Warning(err)
-		return false
-	}
-	return true
 }

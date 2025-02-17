@@ -44,7 +44,7 @@ Copyright: UnionTech Software Technology Co., Ltd.
 License: GPL-3.0-or-later
 
 # configuration file
-Files: usr/share/* var/lib/* etc/apt/* lib/systemd/*
+Files: usr/share/* var/lib/* etc/* lib/systemd/*
 Copyright: UnionTech Software Technology Co., Ltd.
 License: GPL-3.0-or-later
 

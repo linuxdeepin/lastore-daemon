@@ -76,7 +76,6 @@ type Manager struct {
 
 	apps                     apps.Apps
 	sysPower                 power.Power
-	abRecovery               abrecovery.ABRecovery
 	atomic                   atomic1.AtomicUpgrade1
 	signalLoop               *dbusutil.SignalLoop
 	shouldHandleBackupJobEnd bool
@@ -88,8 +87,8 @@ type Manager struct {
 
 	HardwareId string
 
-	SystemSourceConfig   UpdateSourceConfig
-	SecuritySourceConfig UpdateSourceConfig
+	systemSourceConfig   UpdateSourceConfig
+	securitySourceConfig UpdateSourceConfig
 
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
@@ -144,8 +143,8 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		systemd:              systemd1.NewManager(service.Conn()),
 		sysPower:             power.NewPower(service.Conn()),
 		abObj:                abrecovery.NewABRecovery(service.Conn()),
-		SecuritySourceConfig: make(UpdateSourceConfig),
-		SystemSourceConfig:   make(UpdateSourceConfig),
+		securitySourceConfig: make(UpdateSourceConfig),
+		systemSourceConfig:   make(UpdateSourceConfig),
 		resetIdleDownload:    true,
 	}
 	m.reloadOemConfig(true)
@@ -160,24 +159,12 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
-	m.syncThirdPartyDconfig()
-	// running 状态下证明需要进行重启后check
-	if c.UpgradeStatus.Status == system.UpgradeRunning {
-		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
-			// 启动后600s如果没有触发检查，那么上报更新失败
-			m.updatePlatform.PostStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds"))
-			err = m.delRebootCheckOption(all)
-			if err != nil {
-				logger.Warning(err)
-			}
-		})
-	}
+	//m.syncThirdPartyDconfig()
 	return m
 }
 
 func (m *Manager) initDbusSignalListen() {
 	m.loginManager.InitSignalExt(m.signalLoop, true)
-	m.abObj.InitSignalExt(m.signalLoop, true)
 	_, err := m.loginManager.ConnectSessionNew(m.handleSessionNew)
 	if err != nil {
 		logger.Warning(err)
@@ -259,7 +246,7 @@ func (m *Manager) initPlatformManager() {
 	}
 }
 
-func (m *Manager) updatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
+func (m *Manager) delUpdatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
 	pkgs, err := NormalizePackageNames(packages)
 	if err != nil {
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
@@ -322,7 +309,7 @@ func (m *Manager) installPackage(sender dbus.Sender, jobName string, packages st
 	return m.installPkg(jobName, strings.Join(pkgs, " "), environ)
 }
 
-func (m *Manager) installPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string,
+func (m *Manager) delInstallPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string,
 	repoListPath string, cachePath string, packageName []string) (*Job, error) {
 	if !utils.IsDir(repoListPath) {
 		return nil, fmt.Errorf("illegal repoListPath: %v", repoListPath)
@@ -620,7 +607,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	return job, err
 }
 
-func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
+func (m *Manager) delFixError(sender dbus.Sender, errType string) (*Job, error) {
 	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
@@ -652,7 +639,7 @@ func (m *Manager) fixError(sender dbus.Sender, errType string) (*Job, error) {
 
 func (m *Manager) installUOSReleaseNote() {
 	logger.Info("installUOSReleaseNote begin")
-	bExists, _ := m.PackageExists(uosReleaseNotePkgName)
+	bExists, _ := m.packageExists(uosReleaseNotePkgName)
 	if bExists {
 		for _, v := range m.updater.UpdatablePackages {
 			if v == uosReleaseNotePkgName {
@@ -1245,10 +1232,10 @@ func (m *Manager) reloadOemConfig(reloadSourceDir bool) {
 	}
 
 	// 更新 dbus 属性
-	InitConfig(m.SystemSourceConfig, m.config.SystemOemSourceConfig, m.config.SystemCustomSource)
-	InitConfig(m.SecuritySourceConfig, m.config.SecurityOemSourceConfig, m.config.SecurityCustomSource)
-	SetUsingRepoType(m.SystemSourceConfig, m.config.SystemRepoType)
-	SetUsingRepoType(m.SecuritySourceConfig, m.config.SecurityRepoType)
+	InitConfig(m.systemSourceConfig, m.config.SystemOemSourceConfig, m.config.SystemCustomSource)
+	InitConfig(m.securitySourceConfig, m.config.SecurityOemSourceConfig, m.config.SecurityCustomSource)
+	SetUsingRepoType(m.systemSourceConfig, m.config.SystemRepoType)
+	SetUsingRepoType(m.securitySourceConfig, m.config.SecurityRepoType)
 }
 
 type platformCacheContent struct {

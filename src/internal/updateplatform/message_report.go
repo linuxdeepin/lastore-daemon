@@ -33,7 +33,6 @@ import (
 	"github.com/linuxdeepin/go-lib/utils"
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 )
 
 var logger = log.NewLogger("lastore/messageReport")
@@ -1480,58 +1479,4 @@ func (m *UpdatePlatformManager) RetryPostHistory() {
 		}
 	}
 	return
-}
-
-func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {
-	defaultCmd := "echo default rules"
-	var rules []dut.RuleInfo
-
-	if len(strings.TrimSpace(m.PreCheck)) == 0 {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "00_precheck",
-			Type:    dut.PreCheck,
-			Command: defaultCmd,
-			Argv:    "",
-		})
-	} else {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "00_precheck",
-			Type:    dut.PreCheck,
-			Command: m.PreCheck,
-			Argv:    "",
-		})
-	}
-
-	if len(strings.TrimSpace(m.MidCheck)) == 0 {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "10_midcheck",
-			Type:    dut.MidCheck,
-			Command: defaultCmd,
-			Argv:    "",
-		})
-	} else {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "10_midcheck",
-			Type:    dut.MidCheck,
-			Command: m.MidCheck,
-			Argv:    "",
-		})
-	}
-
-	if len(strings.TrimSpace(m.PostCheck)) == 0 {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "20_postcheck",
-			Type:    dut.PostCheck,
-			Command: defaultCmd,
-			Argv:    "",
-		})
-	} else {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "20_postcheck",
-			Type:    dut.PostCheck,
-			Command: m.PostCheck,
-			Argv:    "",
-		})
-	}
-	return rules
 }

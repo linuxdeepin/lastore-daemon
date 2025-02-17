@@ -75,10 +75,10 @@ type Updater struct {
 
 	UpdateTarget string
 
-	OfflineInfo string
+	offlineInfo string
 
-	P2PUpdateEnable  bool // p2p更新是否开启
-	P2PUpdateSupport bool // 是否支持p2p更新
+	p2PUpdateEnable  bool // p2p更新是否开启
+	p2PUpdateSupport bool // 是否支持p2p更新
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
@@ -108,11 +108,11 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	state, err := u.systemdManager.GetUnitFileState(0, p2pService)
 	if err != nil {
 		logger.Warning("get p2p service state err:", err)
-		u.P2PUpdateEnable = false
-		u.P2PUpdateSupport = false
+		u.p2PUpdateEnable = false
+		u.p2PUpdateSupport = false
 	} else {
-		u.P2PUpdateEnable = false
-		u.P2PUpdateSupport = true
+		u.p2PUpdateEnable = false
+		u.p2PUpdateSupport = true
 		if state == "enabled" {
 			unit, err := u.getP2PUnit()
 			if err != nil {
@@ -123,7 +123,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 					logger.Warning("get p2p SubState err:", err)
 				}
 				if value == "active" {
-					u.P2PUpdateEnable = true
+					u.p2PUpdateEnable = true
 				}
 			}
 		}
@@ -243,7 +243,7 @@ const (
 	aptSourceOrigin = aptSource + ".origin"
 )
 
-func (u *Updater) restoreSystemSource() error {
+func (u *Updater) delRestoreSystemSource() error {
 	// write backup file
 	current, err := os.ReadFile(aptSource)
 	if err == nil {
@@ -327,11 +327,11 @@ func (u *Updater) getP2PUnit() (systemd1.Unit, error) {
 	return unit, nil
 }
 
-func (u *Updater) setP2PUpdateEnable(enable bool) error {
-	if !u.P2PUpdateSupport {
+func (u *Updater) delSetP2PUpdateEnable(enable bool) error {
+	if !u.p2PUpdateSupport {
 		return fmt.Errorf("unsupport p2p update")
 	}
-	if u.P2PUpdateEnable == enable {
+	if u.p2PUpdateEnable == enable {
 		return nil
 	}
 	files := []string{p2pService}
