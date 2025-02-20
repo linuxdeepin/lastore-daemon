@@ -13,7 +13,7 @@ StandardOutput=null
 StandardError=journal
 
 ProtectSystem=strict
-StateDirectory=lastore-smartmirror
+StateDirectory=lastore
 InaccessiblePaths=/etc/shadow
 InaccessiblePaths=-/etc/NetworkManager/system-connections
 InaccessiblePaths=-/etc/pam.d

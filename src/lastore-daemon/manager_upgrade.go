@@ -263,6 +263,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
+				if err := osTreeDeploy(); err != nil {
+					return &system.JobError{
+						ErrType:   system.ErrorUnknown,
+						ErrDetail: "ostree deploy failed," + err.Error(),
+					}
+				}
 				if mode&system.SystemUpdate != 0 {
 					recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
 				}
@@ -465,6 +471,15 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
 	// m.updatePlatform.recoverVersionLink()
+	return nil
+}
+
+func osTreeDeploy() error {
+	bin := "/usr/sbin/deepin-immutable-ctl"
+	if system.NormalFileExists(bin) {
+		logger.Info("deepin-immutable-ctl admin deploy")
+		return exec.Command(bin, "admin", "deploy").Run()
+	}
 	return nil
 }
 

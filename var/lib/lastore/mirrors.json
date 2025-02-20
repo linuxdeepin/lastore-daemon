@@ -2,7 +2,7 @@
   {
     "id": "default",
     "name": "Official Mirror (CDN Acceleration)",
-    "url": "http://cdn.packages.deepin.com/deepin/",
+    "url": "https://cdn-community-packages.deepin.com/deepin",
     "name_locale": {
       "zh_CN": "官方CDN（加速）源",
       "zh_TW": "官方CDN（加速）源"
