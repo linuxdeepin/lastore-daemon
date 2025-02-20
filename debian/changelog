@@ -1,3 +1,10 @@
+lastore-daemon (6.2.8) unstable; urgency=medium
+
+  * feat: ostree deploy, modify smartmirror source
+  * feat: 更新方案变更，去掉dut、ab备份
+
+ -- fuleyi <fuleyi@uniontech.com>  Thu, 20 Feb 2025 15:31:34 +0800
+
 lastore-daemon (6.2.7) unstable; urgency=medium
 
   * feat: 更新方案变更，去掉dut
