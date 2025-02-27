@@ -1,3 +1,11 @@
+lastore-daemon (6.2.9) unstable; urgency=medium
+
+  * fix: 解决系统启动时lastore的自启动的一些服务运行失败的问题
+  * fix: lastore-daemon开机自启
+  * fix: 更新智能镜像源地址
+
+ -- fuleyi <fuleyi@uniontech.com>  Thu, 27 Feb 2025 19:44:02 +0800
+
 lastore-daemon (6.2.8) unstable; urgency=medium
 
   * feat: ostree deploy, modify smartmirror source
