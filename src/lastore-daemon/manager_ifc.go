@@ -89,7 +89,7 @@ func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
 	return info, nil
 }
 
-func (m *Manager) handleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
+func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.Error {
 	return dbusutil.ToError(m.delHandleSystemEvent(sender, eventType))
 }
 
