@@ -28,6 +28,10 @@ import (
 	"github.com/linuxdeepin/go-lib/utils"
 )
 
+const (
+	DEEPIN_IMMUTABLE_CTL = "/usr/sbin/deepin-immutable-ctl"
+)
+
 func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
 	// 创建job，但是不添加到任务队列中
 	var upgradeJob *Job
@@ -264,10 +268,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
 				if err := osTreeDeploy(); err != nil {
-					return &system.JobError{
-						ErrType:   system.ErrorUnknown,
-						ErrDetail: "ostree deploy failed," + err.Error(),
-					}
+					logger.Warning("ostree deploy failed,", err)
 				}
 				if mode&system.SystemUpdate != 0 {
 					recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
@@ -382,14 +383,18 @@ func (m *Manager) handleSysPowerChanged() {
 }
 
 func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
-	if needChangeGrub {
-		// 开始更新时修改grub默认入口为rollback
-		// TODO 备份完成后调用grub2模块接口修改grub，由于grub2模块没有实时获取grub数据，可能需要kill grub2(或者grub2可以更新数据)在调用接口
-		err := m.grub.changeGrubDefaultEntry(rollbackBootEntry)
-		if err != nil {
-			logger.Warning(err)
+	// TODO: 当前控制中心只会调用distupgrade，且是全量更新，每次更新都进行备份
+	if m.statusManager.abStatus == system.NotBackup || m.statusManager.abStatus == system.BackupFailed {
+		m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
+		if err := osTreeBackUp(); err != nil {
+			m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
+			logger.Warning("ostree backup failed,", err)
 		}
+		m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
+	} else {
+		logger.Info("Not need to backup")
 	}
+
 	// 状态更新为running
 	err := m.config.SetUpgradeStatusAndReason(system.UpgradeStatusAndReason{Status: system.UpgradeRunning, ReasonCode: system.NoError})
 	if err != nil {
@@ -474,13 +479,29 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 	return nil
 }
 
-func osTreeDeploy() error {
-	bin := "/usr/sbin/deepin-immutable-ctl"
-	if system.NormalFileExists(bin) {
-		logger.Info("deepin-immutable-ctl admin deploy")
-		return exec.Command(bin, "admin", "deploy").Run()
+func osTreeCmd(args []string) error {
+	if system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
+		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err != nil {
+			return fmt.Errorf("%v", stderr.String())
+		}
+	} else {
+		logger.Warningf("%v not found", DEEPIN_IMMUTABLE_CTL)
+		return nil
 	}
 	return nil
+}
+
+func osTreeBackUp() error {
+	return osTreeCmd([]string{"admin", "backup"})
+}
+
+func osTreeDeploy() error {
+	return osTreeCmd([]string{"admin", "deploy", "--append"})
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {
