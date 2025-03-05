@@ -1,3 +1,10 @@
+lastore-daemon (6.2.10) unstable; urgency=medium
+
+  * feat: preinst不再监听更新过程
+  * feat: 更新前后调用ostree的backup和deploy
+
+ -- fuleyi <fuleyi@uniontech.com>  Wed, 05 Mar 2025 17:43:28 +0800
+
 lastore-daemon (6.2.9) unstable; urgency=medium
 
   * fix: 解决系统启动时lastore的自启动的一些服务运行失败的问题
