@@ -327,7 +327,7 @@ func (u *Updater) getP2PUnit() (systemd1.Unit, error) {
 	return unit, nil
 }
 
-func (u *Updater) delSetP2PUpdateEnable(enable bool) error {
+func (u *Updater) dealSetP2PUpdateEnable(enable bool) error {
 	if !u.p2PUpdateSupport {
 		return fmt.Errorf("unsupport p2p update")
 	}

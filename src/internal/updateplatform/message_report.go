@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"io"
 	"net/http"
 	"net/url"
@@ -73,8 +74,19 @@ type UpdatePlatformManager struct {
 	UpdateNowForce bool      // 立即更新
 	mu             sync.Mutex
 
-	jobPostMsgMap   map[string]*UpgradePostMsg
-	jobPostMsgMapMu sync.Mutex
+	jobPostMsgMap     map[string]*UpgradePostMsg
+	jobPostMsgMapMu   sync.Mutex
+	inhibitAutoQuit   func()
+	UnInhibitAutoQuit func()
+}
+
+type platformCacheContent struct {
+	CoreListPkgs map[string]system.PackageInfo
+	BaselinePkgs map[string]system.PackageInfo
+	SelectPkgs   map[string]system.PackageInfo
+	PreCheck     string
+	MidCheck     string
+	PostCheck    string
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -115,6 +127,12 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 	if updateToken {
 		token = UpdateTokenConfigFile(c.IncludeDiskInfo) // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
 	}
+	cache := platformCacheContent{}
+	err = json.Unmarshal([]byte(c.OnlineCache), &cache)
+	if err != nil {
+		logger.Warning(err)
+	}
+
 	return &UpdatePlatformManager{
 		config:                            c,
 		allowPostSystemUpgradeMessageType: system.SystemUpdate,
@@ -129,6 +147,12 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		Tp:                                UnknownUpdate,
 		UpdateNowForce:                    false,
 		jobPostMsgMap:                     getLocalJobPostMsg(),
+		TargetCorePkgs:                    cache.CoreListPkgs,
+		BaselinePkgs:                      cache.BaselinePkgs,
+		SelectPkgs:                        cache.SelectPkgs,
+		PreCheck:                          cache.PreCheck,
+		MidCheck:                          cache.MidCheck,
+		PostCheck:                         cache.PostCheck,
 	}
 }
 
@@ -1479,4 +1503,92 @@ func (m *UpdatePlatformManager) RetryPostHistory() {
 		}
 	}
 	return
+}
+
+func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {
+	defaultCmd := "echo default rules"
+	var rules []dut.RuleInfo
+
+	if len(strings.TrimSpace(m.PreCheck)) == 0 {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "00_precheck",
+			Type:    dut.PreCheck,
+			Command: defaultCmd,
+			Argv:    "",
+		})
+	} else {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "00_precheck",
+			Type:    dut.PreCheck,
+			Command: m.PreCheck,
+			Argv:    "",
+		})
+	}
+
+	if len(strings.TrimSpace(m.MidCheck)) == 0 {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "10_midcheck",
+			Type:    dut.MidCheck,
+			Command: defaultCmd,
+			Argv:    "",
+		})
+	} else {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "10_midcheck",
+			Type:    dut.MidCheck,
+			Command: m.MidCheck,
+			Argv:    "",
+		})
+	}
+
+	if len(strings.TrimSpace(m.PostCheck)) == 0 {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "20_postcheck",
+			Type:    dut.PostCheck,
+			Command: defaultCmd,
+			Argv:    "",
+		})
+	} else {
+		rules = append(rules, dut.RuleInfo{
+			Name:    "20_postcheck",
+			Type:    dut.PostCheck,
+			Command: m.PostCheck,
+			Argv:    "",
+		})
+	}
+	return rules
+}
+
+func (m *UpdatePlatformManager) SaveCache(c *Config) {
+	cache := platformCacheContent{}
+	cache.CoreListPkgs = m.TargetCorePkgs
+	cache.BaselinePkgs = m.BaselinePkgs
+	cache.SelectPkgs = m.SelectPkgs
+	cache.PreCheck = m.PreCheck
+	cache.MidCheck = m.MidCheck
+	cache.PostCheck = m.PostCheck
+	content, err := json.Marshal(cache)
+	if err != nil {
+		logger.Warning("marshal cache failed:", err)
+		return
+	}
+	err = c.SetOnlineCache(string(content))
+	if err != nil {
+		logger.Warning("save cache failed:", err)
+	}
+}
+
+func (m *UpdatePlatformManager) PostUpgradeStatus(uuid string, upgradeStatus UpgradeResult, Description string) {
+	m.SaveJobPostMsgByUUID(uuid, upgradeStatus, Description)
+	go func() {
+		if m.inhibitAutoQuit != nil && m.UnInhibitAutoQuit != nil {
+			m.inhibitAutoQuit()
+			defer m.inhibitAutoQuit()
+		}
+		m.PostSystemUpgradeMessage(uuid)
+	}()
+}
+
+func (m *UpdatePlatformManager) SetInhibitAutoQuit() {
+
 }

@@ -50,6 +50,8 @@ const (
 	OfflineUpgradeJobType         = "offline_update"
 	OtherUpgradeJobType           = "other_system_update"
 	AppendUpgradeJobTye           = "append_upgrade"
+
+	BackupType = "backup"
 )
 
 const (
@@ -139,6 +141,7 @@ type System interface {
 	AbortWithFailed(jobId string) error
 	AttachIndicator(Indicator)
 	FixError(jobId string, errType string, environ map[string]string, cmdArgs map[string]string) error
+	OsBackup(jobId string) error
 	CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs map[string]string) error
 }
 

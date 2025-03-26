@@ -7,6 +7,7 @@ package apt
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
@@ -517,4 +518,30 @@ func parseAptShowList(r io.Reader, title string) []string {
 	}
 
 	return p
+}
+
+func (p *APTSystem) OsBackup(jobId string) error {
+	c := newAPTCommand(p, jobId, system.BackupType, p.Indicator, nil)
+	c.ParseProgressInfo = func(id, line string) (system.JobProgressInfo, error) {
+		type info struct {
+			Progress    float64 `json:"progress"`
+			Description string  `json:"description"`
+		}
+
+		var progress float64
+		var status system.Status
+		var p info
+		if err := json.Unmarshal([]byte(line), &p); err == nil {
+			progress = p.Progress / 100.0
+			status = system.RunningStatus
+		}
+		return system.JobProgressInfo{
+			JobId:       jobId,
+			Progress:    progress,
+			Description: p.Description,
+			Status:      status,
+			Cancelable:  false,
+		}, nil
+	}
+	return c.Start()
 }

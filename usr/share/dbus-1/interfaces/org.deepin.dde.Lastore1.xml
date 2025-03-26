@@ -1,7 +1,19 @@
 <node>
      <interface name="org.deepin.dde.Lastore1.Manager">
+          <method name="CheckUpgrade">
+               <arg type="u" direction="in"></arg>
+               <arg type="u" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="ClassifiedUpgrade">
+               <arg type="u" direction="in"></arg>
+               <arg type="ao" direction="out"></arg>
+          </method>
           <method name="PauseJob">
                <arg type="s" direction="in"></arg>
+          </method>
+          <method name="CleanArchives">
+               <arg type="o" direction="out"></arg>
           </method>
           <method name="CleanJob">
                <arg type="s" direction="in"></arg>
@@ -9,7 +21,43 @@
           <method name="DistUpgrade">
                <arg type="o" direction="out"></arg>
           </method>
-	  <method name="PrepareDistUpgrade">
+          <method name="DistUpgradePartly">
+               <arg type="u" direction="in"></arg>
+               <arg type="b" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="FixError">
+               <arg type="s" direction="int"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="GetArchivesInfo">
+               <arg type="s" direction="out"></arg>
+          </method>
+          <method name="GetHistoryLogs">
+               <arg type="s" direction="out"></arg>
+          </method>
+          <method name="GetUpdateLogs">
+               <arg type="u" direction="in"></arg>
+               <arg type="s" direction="out"></arg>
+          </method>
+          <method name="HandleSystemEvent">
+               <arg type="s" direction="in"></arg>
+          </method>
+	      <method name="PrepareDistUpgrade">
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="PrepareDistUpgradePartly">
+               <arg type="u" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
+          </method>
+          <method name="PrepareFullScreenUpgrade">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="QueryAllSizeWithSource">
+               <arg type="u" direction="in"></arg>
+               <arg type="i" direction="out"></arg>
+          </method>
+          <method name="RegisterAgent">
                <arg type="o" direction="out"></arg>
           </method>
           <method name="InstallPackage">
@@ -17,15 +65,15 @@
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
-	  <method name="InstallPackageFromRepo">
+	      <method name="InstallPackageFromRepo">
 	       <arg type="s" direction="in"></arg>
 	       <arg type="s" direction="in"></arg>
 	       <arg type="s" direction="in"></arg>
 	       <arg type="s" direction="in"></arg>
 	       <arg type="as" direction="in"></arg>
 	       <arg type="o" direction="out"></arg>
-	  </method>
-	  <method name="PackageDesktopPath">
+	      </method>
+	      <method name="PackageDesktopPath">
                <arg type="s" direction="in"></arg>
                <arg type="s" direction="out"></arg>
           </method>
@@ -46,14 +94,31 @@
                <arg type="s" direction="in"></arg>
                <arg type="o" direction="out"></arg>
           </method>
+          <method name="PackagesSize">
+               <arg type="as" direction="in"></arg>
+               <arg type="i" direction="out"></arg>
+          </method>
+          <method name="SetAutoClean">
+               <arg type="b" direction="in"></arg>
+          </method>
           <method name="SetRegion">
                <arg type="s" direction="in"></arg>
           </method>
-	  <method name="RecordLocaleInfo">
+          <method name="SetUpdateSources">
+               <arg type="usasb" direction="in"></arg>
+          </method>
+	      <method name="RecordLocaleInfo">
                <arg type="s" direction="in"></arg>
           </method>
           <method name="StartJob">
                <arg type="s" direction="in"></arg>
+          </method>
+          <method name="UnRegisterAgent">
+               <arg type="o" direction="in"></arg>
+          </method>
+          <method name="UpdateOfflineSource">
+               <arg type="ass" direction="in"></arg>
+               <arg type="o" direction="out"></arg>
           </method>
           <method name="UpdatePackage">
                <arg type="s" direction="in"></arg>
@@ -67,6 +132,11 @@
           <property name="SystemArchitectures" type="as" access="read"></property>
           <property name="UpgradableApps" type="as" access="read"></property>
           <property name="SystemOnChanging" type="b" access="read"></property>
+          <property name="AutoClean" type="b" access="read"></property>
+          <property name="Hardwareid" type="s" access="read"></property>
+          <property name="UpdateStatus" type="s" access="read"></property>
+          <property name="CheckUpdateMode" type="u" access="readwrite"></property>
+          <property name="UpdateMode" type="u" access="readwrite"></property>
      </interface>
 
      <interface name="org.deepin.dde.Lastore1.Updater">
@@ -74,9 +144,14 @@
                <arg type="s" direction="in"></arg>
                <arg type="a(sssss)" direction="out"></arg>
           </method>
+          <method name="GetCheckIntervalAndTime">
+               <arg type="ds" direction="out"></arg>
+          </method>
           <method name="ListMirrorSources">
                <arg type="s" direction="in"></arg>
                <arg type="a(sss)" direction="out"></arg>
+          </method>
+          <method name="ListMirrorSources">
           </method>
           <method name="SetAutoCheckUpdates">
                <arg type="b" direction="in"></arg>
@@ -87,10 +162,32 @@
           <method name="SetMirrorSource">
                <arg type="s" direction="in"></arg>
           </method>
+          <method name="SetDownloadSpeedLimit">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="SetIdleDownloadConfig">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="SetInstallUpdateTime">
+               <arg type="s" direction="in"></arg>
+          </method>
+          <method name="SetP2PUpdateEnable">
+               <arg type="b" direction="in"></arg>
+          </method>
+          <method name="SetUpdateNotify">
+               <arg type="b" direction="in"></arg>
+          </method>
           <property name="AutoCheckUpdates" type="b" access="read"></property>
           <property name="AutoDownloadUpdates" type="b" access="read"></property>
           <property name="MirrorSource" type="s" access="read"></property>
           <property name="UpdatableApps" type="as" access="read"></property>
           <property name="UpdatablePackages" type="as" access="read"></property>
+          <property name="AutoInstallUpdates" type="b" access="read"></property>
+          <property name="UpdateNotify" type="b" access="read"></property>
+          <property name="ClassifiedUpdatablePackages" type="{sas}" access="read"></property>
+          <property name="DownloadSpeedLimitConfig" type="s" access="read"></property>
+          <property name="IdleDownloadConfig" type="s" access="read"></property>
+          <property name="UpdateTarget" type="s" access="read"></property>
+          <property name="AutoInstallUpdateType" type="u" access="readwrite"></property>
      </interface>
 </node>

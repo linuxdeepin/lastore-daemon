@@ -9,6 +9,12 @@ import (
 func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 	return dbusutil.ExportedMethods{
 		{
+			Name:    "CheckUpgrade",
+			Fn:      v.CheckUpgrade,
+			InArgs:  []string{"checkMode", "checkOrder"},
+			OutArgs: []string{"job"},
+		},
+		{
 			Name:    "ClassifiedUpgrade",
 			Fn:      v.ClassifiedUpgrade,
 			InArgs:  []string{"updateType"},
@@ -36,9 +42,26 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
+			Name:    "FixError",
+			Fn:      v.FixError,
+			InArgs:  []string{"errType"},
+			OutArgs: []string{"job"},
+		},
+		{
 			Name:    "GetArchivesInfo",
 			Fn:      v.GetArchivesInfo,
 			OutArgs: []string{"info"},
+		},
+		{
+			Name:    "GetHistoryLogs",
+			Fn:      v.GetHistoryLogs,
+			OutArgs: []string{"changeLogs"},
+		},
+		{
+			Name:    "GetUpdateLogs",
+			Fn:      v.GetUpdateLogs,
+			InArgs:  []string{"updateType"},
+			OutArgs: []string{"changeLogs"},
 		},
 		{
 			Name:   "HandleSystemEvent",
@@ -50,6 +73,42 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:      v.InstallPackage,
 			InArgs:  []string{"jobName", "packages"},
 			OutArgs: []string{"job"},
+		},
+		{
+			Name:    "InstallPackageFromRepo",
+			Fn:      v.InstallPackageFromRepo,
+			InArgs:  []string{"jobName", "sourceListPath", "repoListPath", "cachePath", "packageName"},
+			OutArgs: []string{"jobPath"},
+		},
+		{
+			Name:    "PackageDesktopPath",
+			Fn:      v.PackageDesktopPath,
+			InArgs:  []string{"pkgId"},
+			OutArgs: []string{"desktopPath"},
+		},
+		{
+			Name:    "PackageExists",
+			Fn:      v.PackageExists,
+			InArgs:  []string{"pkgId"},
+			OutArgs: []string{"exist"},
+		},
+		{
+			Name:    "PackageInstallable",
+			Fn:      v.PackageInstallable,
+			InArgs:  []string{"pkgId"},
+			OutArgs: []string{"installable"},
+		},
+		{
+			Name:    "PackagesDownloadSize",
+			Fn:      v.PackagesDownloadSize,
+			InArgs:  []string{"packages"},
+			OutArgs: []string{"outArg0"},
+		},
+		{
+			Name:    "PackagesSize",
+			Fn:      v.PackagesSize,
+			InArgs:  []string{"packages"},
+			OutArgs: []string{"outArg0"},
 		},
 		{
 			Name:   "PauseJob",
@@ -68,6 +127,17 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
+			Name:   "PrepareFullScreenUpgrade",
+			Fn:     v.PrepareFullScreenUpgrade,
+			InArgs: []string{"option"},
+		},
+		{
+			Name:    "QueryAllSizeWithSource",
+			Fn:      v.QueryAllSizeWithSource,
+			InArgs:  []string{"mode"},
+			OutArgs: []string{"outArg0"},
+		},
+		{
 			Name:   "RegisterAgent",
 			Fn:     v.RegisterAgent,
 			InArgs: []string{"path"},
@@ -84,6 +154,16 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"enable"},
 		},
 		{
+			Name:   "SetRegion",
+			Fn:     v.SetRegion,
+			InArgs: []string{"region"},
+		},
+		{
+			Name:   "SetUpdateSources",
+			Fn:     v.SetUpdateSources,
+			InArgs: []string{"updateType", "repoType", "repoConfig", "isReset"},
+		},
+		{
 			Name:   "StartJob",
 			Fn:     v.StartJob,
 			InArgs: []string{"jobId"},
@@ -92,6 +172,18 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "UnRegisterAgent",
 			Fn:     v.UnRegisterAgent,
 			InArgs: []string{"path"},
+		},
+		{
+			Name:    "UpdateOfflineSource",
+			Fn:      v.UpdateOfflineSource,
+			InArgs:  []string{"paths", "option"},
+			OutArgs: []string{"job"},
+		},
+		{
+			Name:    "UpdatePackage",
+			Fn:      v.UpdatePackage,
+			InArgs:  []string{"jobName", "packages"},
+			OutArgs: []string{"job"},
 		},
 		{
 			Name:    "UpdateSource",
@@ -118,6 +210,10 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:      v.ListMirrorSources,
 			InArgs:  []string{"lang"},
 			OutArgs: []string{"mirrorSources"},
+		},
+		{
+			Name: "RestoreSystemSource",
+			Fn:   v.RestoreSystemSource,
 		},
 		{
 			Name:   "SetAutoCheckUpdates",
@@ -148,6 +244,11 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "SetMirrorSource",
 			Fn:     v.SetMirrorSource,
 			InArgs: []string{"id"},
+		},
+		{
+			Name:   "SetP2PUpdateEnable",
+			Fn:     v.SetP2PUpdateEnable,
+			InArgs: []string{"enable"},
 		},
 		{
 			Name:   "SetUpdateNotify",
