@@ -61,7 +61,8 @@ func StartSystemJob(sys system.System, j *Job) error {
 			pkg = j.Packages[0]
 		}
 		return sys.CheckSystem(j.Id, pkg, j.environ, j.option)
-
+	case system.BackupType:
+		return sys.OsBackup(j.Id)
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)
 	}

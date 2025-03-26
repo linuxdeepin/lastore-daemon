@@ -141,7 +141,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					defer m.inhibitAutoQuitCountSub()
 					m.updatePlatform.PostStatusMessage("update source success")
 				}()
-				m.savePlatformCache()
+				m.updatePlatform.SaveCache(m.config)
 				job.setPropProgress(1.0)
 				return nil
 			},

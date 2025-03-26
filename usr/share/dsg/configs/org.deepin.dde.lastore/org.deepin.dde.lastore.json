@@ -113,7 +113,7 @@
       "visibility": "private"
     },
     "update-mode": {
-      "value": 13,
+      "value": 5,
       "serial": 0,
       "flags": [
         "global"
@@ -124,7 +124,7 @@
       "visibility": "private"
     },
     "check-update-mode": {
-      "value": 13,
+      "value": 5,
       "serial": 0,
       "flags": [
         "global"
@@ -256,7 +256,9 @@
       "visibility": "private"
     },
     "allow-post-system-upgrade-message-version": {
-      "value": [],
+      "value": [
+        "Professional","E"
+      ],
       "serial": 0,
       "flags": [
         "global"

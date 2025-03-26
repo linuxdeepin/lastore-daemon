@@ -86,7 +86,7 @@ func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSo
 	return u.listMirrorSources(lang), nil
 }
 
-func (u *Updater) restoreSystemSource() *dbus.Error {
+func (u *Updater) RestoreSystemSource() *dbus.Error {
 	u.service.DelayAutoQuit()
 	err := u.delRestoreSystemSource()
 	if err != nil {
@@ -236,8 +236,8 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) setP2PUpdateEnable(enable bool) *dbus.Error {
-	err := u.delSetP2PUpdateEnable(enable)
+func (u *Updater) SetP2PUpdateEnable(enable bool) *dbus.Error {
+	err := u.dealSetP2PUpdateEnable(enable)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)

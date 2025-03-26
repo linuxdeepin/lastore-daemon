@@ -232,6 +232,8 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job._InitProgressRange(0, 0.99)
 	case system.CheckSystemJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, system.CheckSystemJobType, SystemChangeQueue, environ)
+	case system.BackupType:
+		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.BackupType, LockQueue, environ)
 	default:
 		return false, nil, system.NotSupportError
 	}
@@ -595,7 +597,7 @@ var genJobId = func() func(string) string {
 	var __count = 0
 	return func(jobType string) string {
 		switch jobType {
-		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType,
+		case system.PrepareDistUpgradeJobType, system.DistUpgradeJobType, system.BackupType,
 			system.UpdateSourceJobType, system.CleanJobType, system.PrepareSystemUpgradeJobType,
 			system.PrepareAppStoreUpgradeJobType, system.PrepareSecurityUpgradeJobType, system.PrepareUnknownUpgradeJobType,
 			system.SystemUpgradeJobType, system.AppStoreUpgradeJobType, system.SecurityUpgradeJobType, system.UnknownUpgradeJobType, system.CheckSystemJobType:

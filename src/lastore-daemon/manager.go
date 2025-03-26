@@ -159,7 +159,18 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
-	//m.syncThirdPartyDconfig()
+	m.syncThirdPartyDconfig()
+	// running 状态下证明需要进行重启后check
+	if c.UpgradeStatus.Status == system.UpgradeRunning {
+		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
+			// 启动后600s如果没有触发检查，那么上报更新失败
+			m.updatePlatform.PostStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds"))
+			err = m.delRebootCheckOption(all)
+			if err != nil {
+				logger.Warning(err)
+			}
+		})
+	}
 	return m
 }
 
@@ -239,7 +250,6 @@ func (m *Manager) initAgent() {
 
 func (m *Manager) initPlatformManager() {
 	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config, false)
-	m.loadPlatformCache()
 	if isFirstBoot() {
 		// 不能阻塞初始化流程,防止dbus服务激活超时
 		go m.updatePlatform.RetryPostHistory() // 此处调用还没有export以及dispatch job,因此可以判断是否需要check.
@@ -639,7 +649,7 @@ func (m *Manager) delFixError(sender dbus.Sender, errType string) (*Job, error) 
 
 func (m *Manager) installUOSReleaseNote() {
 	logger.Info("installUOSReleaseNote begin")
-	bExists, _ := m.packageExists(uosReleaseNotePkgName)
+	bExists, _ := m.PackageExists(uosReleaseNotePkgName)
 	if bExists {
 		for _, v := range m.updater.UpdatablePackages {
 			if v == uosReleaseNotePkgName {
@@ -1237,52 +1247,6 @@ func (m *Manager) reloadOemConfig(reloadSourceDir bool) {
 	SetUsingRepoType(m.systemSourceConfig, m.config.SystemRepoType)
 	SetUsingRepoType(m.securitySourceConfig, m.config.SecurityRepoType)
 }
-
-type platformCacheContent struct {
-	CoreListPkgs map[string]system.PackageInfo
-	BaselinePkgs map[string]system.PackageInfo
-	SelectPkgs   map[string]system.PackageInfo
-	PreCheck     string
-	MidCheck     string
-	PostCheck    string
-}
-
-func (m *Manager) savePlatformCache() {
-	cache := platformCacheContent{}
-	cache.CoreListPkgs = m.updatePlatform.TargetCorePkgs
-	cache.BaselinePkgs = m.updatePlatform.BaselinePkgs
-	cache.SelectPkgs = m.updatePlatform.SelectPkgs
-	cache.PreCheck = m.updatePlatform.PreCheck
-	cache.MidCheck = m.updatePlatform.MidCheck
-	cache.PostCheck = m.updatePlatform.PostCheck
-	content, err := json.Marshal(cache)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	err = m.config.SetOnlineCache(string(content))
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-}
-
-func (m *Manager) loadPlatformCache() {
-	cache := platformCacheContent{}
-	err := json.Unmarshal([]byte(m.config.OnlineCache), &cache)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	m.updatePlatform.TargetCorePkgs = cache.CoreListPkgs
-	m.updatePlatform.BaselinePkgs = cache.BaselinePkgs
-	m.updatePlatform.SelectPkgs = cache.SelectPkgs
-	m.updatePlatform.PreCheck = cache.PreCheck
-	m.updatePlatform.MidCheck = cache.MidCheck
-	m.updatePlatform.PostCheck = cache.PostCheck
-}
-
-// 埋点数据上报
 
 type reportCategory uint32
 

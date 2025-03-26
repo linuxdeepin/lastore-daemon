@@ -1,0 +1,10 @@
+[Unit]
+Description=generate config file for check system
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/lib/lastore/scripts/gen_upgrade_check_config.sh
+
+[Install]
+WantedBy=multi-user.target

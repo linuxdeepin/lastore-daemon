@@ -10,6 +10,3 @@ StandardOutput=null
 StandardError=null
 StateDirectory=lastore
 CacheDirectory=lastore
-
-[Install]
-WantedBy=multi-user.target
