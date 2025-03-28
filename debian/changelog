@@ -1,3 +1,9 @@
+lastore-daemon (6.2.11) unstable; urgency=medium
+
+  * feat: 更新方案变更，添加dut更新
+
+ -- fuleyi <fuleyi@uniontech.com>  Fri, 28 Mar 2025 09:37:12 +0800
+
 lastore-daemon (6.2.10) unstable; urgency=medium
 
   * feat: preinst不再监听更新过程
