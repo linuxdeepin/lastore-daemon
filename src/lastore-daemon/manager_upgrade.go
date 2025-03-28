@@ -267,7 +267,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				if err := osTreeDeploy(); err != nil {
+				if err := osTreeRefresh(); err != nil {
 					logger.Warning("ostree deploy failed,", err)
 				}
 				if mode&system.SystemUpdate != 0 {
@@ -497,11 +497,11 @@ func osTreeCmd(args []string) error {
 }
 
 func osTreeBackUp() error {
-	return osTreeCmd([]string{"admin", "backup"})
+	return osTreeCmd([]string{"admin", "deploy", "--backup"})
 }
 
-func osTreeDeploy() error {
-	return osTreeCmd([]string{"admin", "deploy", "--append"})
+func osTreeRefresh() error {
+	return osTreeCmd([]string{"admin", "deploy", "--refresh"})
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {
