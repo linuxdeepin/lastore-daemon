@@ -1,6 +1,12 @@
-lastore-daemon (6.2.11) unstable; urgency=medium
+lastore-daemon (6.2.12) unstable; urgency=medium
 
   * feat: 更新方案变更，添加dut更新
+
+ -- fuleyi <fuleyi@uniontech.com>  Fri, 11 Apr 2025 14:10:38 +0800
+
+lastore-daemon (6.2.11) unstable; urgency=medium
+
+  * feat: 适配磐石系统备份方案
 
  -- fuleyi <fuleyi@uniontech.com>  Fri, 28 Mar 2025 09:37:12 +0800
 
