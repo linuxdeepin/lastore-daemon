@@ -80,6 +80,7 @@ func main() {
 		TotalSize: 0,
 	}
 	for _, dirInfo := range _archivesDirInfos {
+		logger.Info("dirInfo: %v", dirInfo)
 		var archivesInfo *archivesInfo
 		if options.printJSON {
 			archivesInfo = newArchivesInfo(dirInfo.archivesDir)
@@ -98,6 +99,7 @@ func main() {
 		// var testAgainDebInfoList []*debInfo
 
 		for _, entry := range fileInfoList {
+			logger.Info("entry: %v", entry)
 			fileInfo, err := entry.Info()
 			if err != nil {
 				logger.Fatal(err)

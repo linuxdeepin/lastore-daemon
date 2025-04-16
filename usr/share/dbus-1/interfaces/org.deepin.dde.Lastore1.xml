@@ -177,6 +177,15 @@
           <method name="SetUpdateNotify">
                <arg type="b" direction="in"></arg>
           </method>
+          <method name="ConfirmRollback">
+               <arg type="b" direction="in"></arg>
+          </method>
+          <method name="CanRollback">
+               <arg type="b" direction="out"></arg>
+          </method>
+          <method name="PowerOff">
+               <arg type="b" direction="in"></arg>
+          </method>
           <property name="AutoCheckUpdates" type="b" access="read"></property>
           <property name="AutoDownloadUpdates" type="b" access="read"></property>
           <property name="MirrorSource" type="s" access="read"></property>

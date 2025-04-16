@@ -577,6 +577,7 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 	request.Header.Set("X-Time", xTime)
 	request.Header.Set("X-Sign", sign)
 	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	logger.Debug("genPostProcessResponse:", request.Header)
 	return client.Do(request)
 }
 

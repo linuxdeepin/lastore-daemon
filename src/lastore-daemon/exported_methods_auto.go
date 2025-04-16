@@ -31,6 +31,21 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"jobId"},
 		},
 		{
+			Name:   "ConfirmRollback",
+			Fn:     v.ConfirmRollback,
+			InArgs: []string{"confirm"},
+		},
+		{
+			Name:    "CanRollback",
+			Fn:      v.CanRollback,
+			OutArgs: []string{"result"},
+		},
+		{
+			Name:   "PowerOff",
+			Fn:     v.PowerOff,
+			InArgs: []string{"reboot"},
+		},
+		{
 			Name:    "DistUpgrade",
 			Fn:      v.DistUpgrade,
 			OutArgs: []string{"job"},

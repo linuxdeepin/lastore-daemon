@@ -26,6 +26,7 @@ type APTSystem struct {
 }
 
 func NewSystem(nonUnknownList []string, otherList []string) system.System {
+	logger.Info("using apt for update...")
 	apt := New(nonUnknownList, otherList)
 	return &apt
 }

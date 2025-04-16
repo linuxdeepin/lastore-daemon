@@ -344,10 +344,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				if m.statusManager.abStatus == system.HasBackedUp {
 					if err := osTreeRefresh(); err != nil {
 						logger.Warning("ostree deploy refresh failed,", err)
-					} else {
-						if err := osTreeFinalize(); err != nil {
-							logger.Warning("ostree deploy finalize failed,", err)
-						}
 					}
 				}
 
@@ -547,7 +543,8 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 	return nil
 }
 
-func osTreeCmd(args []string) error {
+// 格式化输出需要添加-j 参数
+func osTreeCmd(args []string) (out string, err error) {
 	if system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
 		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...)
 		logger.Info("run command:", cmd.Args)
@@ -556,25 +553,77 @@ func osTreeCmd(args []string) error {
 		cmd.Stderr = &stderr
 		err := cmd.Run()
 		if err != nil {
-			return fmt.Errorf("%v", stderr.String())
+			return "", fmt.Errorf("%v", stderr.String())
+		} else {
+			return stdout.String(), nil
 		}
 	} else {
 		logger.Warningf("%v not found", DEEPIN_IMMUTABLE_CTL)
-		return nil
+		return "", nil
+	}
+	return
+}
+
+type ostreeError struct {
+	Code    string   `json:"code"`
+	Message []string `json:"message"`
+}
+
+type ostreeRollbackData struct {
+	Version     int  `json:"version"`
+	CanRollback bool `json:"can_rollback"`
+}
+
+type ostreeResponse struct {
+	Code    uint8           `json:"code"`
+	Message string          `json:"message"`
+	Error   *ostreeError    `json:"error"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func osTreeRefresh() error {
+	_, err := osTreeCmd([]string{"admin", "deploy", "--refresh"})
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func osTreeBackUp() error {
-	return osTreeCmd([]string{"admin", "deploy", "--backup"})
-}
-
-func osTreeRefresh() error {
-	return osTreeCmd([]string{"admin", "deploy", "--refresh"})
-}
-
 func osTreeFinalize() error {
-	return osTreeCmd([]string{"admin", "deploy", "--finalize"})
+	_, err := osTreeCmd([]string{"admin", "deploy", "--finalize"})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func osTreeRollback() error {
+	_, err := osTreeCmd([]string{"admin", "rollback"})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func osTreeCanRollback() bool {
+	out, err := osTreeCmd([]string{"admin", "rollback", "--can-rollback", "-j"})
+	if err != nil {
+		logger.Warning(err)
+		return false
+	}
+	logger.Info(out)
+	var resp ostreeResponse
+	err = json.Unmarshal([]byte(out), &resp)
+	if err == nil && resp.Error == nil {
+		var data ostreeRollbackData
+		if err = json.Unmarshal(resp.Data, &data); err != nil {
+			logger.Warning(err)
+		}
+		return data.CanRollback
+	} else {
+		logger.Warning("ostree Unmarshal data failed", err)
+	}
+	return false
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {
@@ -751,11 +800,6 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 	var err error
 	// pkgMap repo和system.LocalCachePath都是占位用，没有起到真正的作用
 	pkgMap := make(map[string]system.PackageInfo)
-	pkgMap["lastore-daemon"] = system.PackageInfo{
-		Name:    "lastore-daemon",
-		Version: "1.0",
-		Need:    "exist",
-	}
 	var repo []dut.RepoInfo
 	if mode == system.OfflineUpdate {
 		repo = genRepoInfo(system.OfflineUpdate, system.OfflineListPath)
