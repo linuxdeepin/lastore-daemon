@@ -617,7 +617,7 @@ func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) powerOff(sender dbus.Sender, reboot bool) *dbus.Error {
+func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 	checkExecPath := func() error {
 		// 只有dde-update可以设置
 		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
@@ -625,12 +625,14 @@ func (m *Manager) powerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 			logger.Warning(err)
 			return err
 		}
-		if !strings.Contains(execPath, "dde-update") {
+		if strings.Contains(execPath, "dde-update") ||
+			strings.Contains(execPath, "dde-rollback") {
+			return nil
+		} else {
 			err = fmt.Errorf("%v not allow to call this method", execPath)
 			logger.Warning(err)
 			return err
 		}
-		return nil
 	}
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil || uid != 0 {
@@ -737,4 +739,24 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 	}
 	m.reloadOemConfig(false)
 	return nil
+}
+
+func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error {
+	var err error
+	if confirm {
+		go func() {
+			err = osTreeRollback()
+			if err != nil {
+				logger.Warning(err)
+			}
+			m.PowerOff(sender, true)
+		}()
+	} else {
+		return m.PowerOff(sender, true)
+	}
+	return nil
+}
+
+func (m *Manager) CanRollback() (bool, *dbus.Error) {
+	return osTreeCanRollback(), nil
 }

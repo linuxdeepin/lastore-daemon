@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2018 - 2025 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package dut
 
 import (
@@ -17,6 +21,7 @@ type DutSystem struct {
 }
 
 func NewSystem(nonUnknownList []string, otherList []string) system.System {
+	logger.Info("using dut for update...")
 	aptImpl := apt.New(nonUnknownList, otherList)
 	if !utils.IsFileExist(system.PlatFormSourceFile) {
 		file, err := os.Create(system.PlatFormSourceFile)
