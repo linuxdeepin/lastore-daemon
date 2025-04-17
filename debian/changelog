@@ -1,3 +1,10 @@
+lastore-daemon (6.2.13) unstable; urgency=medium
+
+  * feat: 适配系统检查工具，meta支持空数据
+  * feat: 支持更新平台更新和ostree备份
+
+ -- fuleyi <fuleyi@uniontech.com>  Thu, 17 Apr 2025 17:40:15 +0800
+
 lastore-daemon (6.2.12) unstable; urgency=medium
 
   * feat: 更新方案变更，添加dut更新
