@@ -45,7 +45,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	case system.CheckSystemJobType:
 		args = append(args, "check")
 		args = append(args, cmdArgs...)
-		args = append(args, "--ignore-warning")
+		args = append(args, "--ignore-warning", "--ignore-meta-empty-check")
 	case system.DistUpgradeJobType:
 		args = append(args, "update")
 		args = append(args, cmdArgs...)
@@ -180,7 +180,7 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) *system.JobErr
 		args = append(args, system.DutOnlineMetaConfPath)
 	}
 	args = append(args, cmdArgs...)
-	args = append(args, "--ignore-warning")
+	args = append(args, "--ignore-warning", "--ignore-meta-empty-check")
 	cmd := exec.Command(bin, args...)
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
