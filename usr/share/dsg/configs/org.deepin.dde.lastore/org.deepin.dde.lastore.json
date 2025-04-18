@@ -346,7 +346,7 @@
       "visibility": "private"
     },
     "platform-update":{
-      "value": true,
+      "value": false,
       "serial": 0,
       "flags": [
         "global"
