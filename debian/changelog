@@ -1,3 +1,9 @@
+lastore-daemon (6.2.14) unstable; urgency=medium
+
+  * fix: 默认走本地更新
+
+ -- fuleyi <fuleyi@uniontech.com>  Fri, 18 Apr 2025 11:03:53 +0800
+
 lastore-daemon (6.2.13) unstable; urgency=medium
 
   * feat: 适配系统检查工具，meta支持空数据
