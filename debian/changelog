@@ -1,3 +1,9 @@
+lastore-daemon (6.2.15) unstable; urgency=medium
+
+  * fix: 更新流程优化，回滚时设置grub
+
+ -- fuleyi <fuleyi@uniontech.com>  Tue, 22 Apr 2025 21:42:40 +0800
+
 lastore-daemon (6.2.14) unstable; urgency=medium
 
   * fix: 默认走本地更新
