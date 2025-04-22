@@ -125,7 +125,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	inhibit(true)
 	var isExist bool
 	var backupJob *Job
-	if needBackup {
+	if needBackup && system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
 		isExist, backupJob, err = m.jobManager.CreateJob("", system.BackupType, nil, nil, nil)
 		if isExist {
 			return "", dbusutil.ToError(JobExistError)
@@ -558,10 +558,8 @@ func osTreeCmd(args []string) (out string, err error) {
 			return stdout.String(), nil
 		}
 	} else {
-		logger.Warningf("%v not found", DEEPIN_IMMUTABLE_CTL)
-		return "", nil
+		return "", fmt.Errorf("%v not found", DEEPIN_IMMUTABLE_CTL)
 	}
-	return
 }
 
 type ostreeError struct {
