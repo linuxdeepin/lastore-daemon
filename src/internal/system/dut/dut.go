@@ -187,6 +187,7 @@ func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) *system.JobErr
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
+	logger.Info("dut run:", cmd.Args)
 	if err != nil {
 		if typ.String() == PreCheck.String() {
 			return parsePreCheckError(errBuf.String())

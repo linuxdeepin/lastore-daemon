@@ -208,7 +208,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 								"ignore",
 								gettext.Tr("Dismiss"),
 							}
-							hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.shutdownFront1,/org/deepin/dde/shutdownFront1,org.deepin.dde.shutdownFront1.Show")}
+							hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-control-center,-m,update")}
 							m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 						}
 						m.reportLog(downloadStatusReport, true, "")

@@ -749,6 +749,12 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 			if err != nil {
 				logger.Warning(err)
 			}
+			if m.grub != nil {
+				err = m.grub.changeGrubDefaultEntry(normalBootEntry)
+				if err != nil {
+					logger.Warning(err)
+				}
+			}
 			m.PowerOff(sender, true)
 		}()
 	} else {

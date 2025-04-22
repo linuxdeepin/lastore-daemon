@@ -131,8 +131,8 @@ const (
 const (
 	GrubTitleRollbackPrefix = "BEGIN /etc/grub.d/11_deepin_ab_recovery"
 	GrubTitleRollbackSuffix = "END /etc/grub.d/11_deepin_ab_recovery"
-	GrubTitleNormalPrefix   = "BEGIN /etc/grub.d/10_linux"
-	GrubTitleNormalSuffix   = "END /etc/grub.d/10_linux"
+	GrubTitleNormalPrefix   = "BEGIN /etc/grub.d/15_immutable"
+	GrubTitleNormalSuffix   = "END /etc/grub.d/15_immutable"
 )
 
 func GetGrubRollbackTitle(grubPath string) string {

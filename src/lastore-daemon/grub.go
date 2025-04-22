@@ -14,7 +14,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	"github.com/godbus/dbus/v5"
-	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
+	grub2 "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.grub2"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
 	"github.com/linuxdeepin/go-lib/strv"
@@ -73,16 +73,20 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	var title string
 	var err error
 	switch to {
-	case rollbackBootEntry:
-		title = system.GetGrubRollbackTitle(grubScriptFile)
+	//case rollbackBootEntry:
+	//	title = system.GetGrubRollbackTitle(grubScriptFile)
 	case normalBootEntry:
 		title = system.GetGrubNormalTitle(grubScriptFile)
+	default:
+		logger.Info("unknown boot entry", to)
+		return nil
 	}
 	if strings.TrimSpace(title) == "" {
 		return fmt.Errorf("failed to get %v entry form %v", to, grubScriptFile)
 	}
 	curEntryTitle, err := m.grub.DefaultEntry().Get(0)
 	if err != nil {
+		logger.Warning(err)
 		return err
 	}
 	// 如果DefaultEntry一样，就不再设置了，不然会下面的会超时
@@ -93,6 +97,7 @@ func (m *grubManager) changeGrubDefaultEntry(to bootEntry) error {
 	logger.Info("try change grub default entry to:", title)
 	entryTitles, err := m.grub.GetSimpleEntryTitles(0)
 	if err != nil {
+		logger.Warning(err)
 		return err
 	}
 	if !strv.Strv(entryTitles).Contains(title) {
