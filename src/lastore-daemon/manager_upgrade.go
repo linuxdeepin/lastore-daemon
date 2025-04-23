@@ -112,6 +112,11 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 			inhibit(false)
 			return nil
 		},
+		string(system.RunningStatus): func() error {
+			logger.Info("DistUpgradePartly:run wrap running hook")
+			inhibit(true)
+			return nil
+		},
 	})
 	m.updateJobList()
 	// 将job的状态修改为pause,并添加到队列中,但是不开始
@@ -122,7 +127,6 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		return "", dbusutil.ToError(err)
 	}
 	m.inhibitAutoQuitCountAdd() // 开始备份前add，结束备份后sub(无论是否成功)
-	inhibit(true)
 	var isExist bool
 	var backupJob *Job
 	if needBackup && system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
@@ -133,19 +137,18 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		backupJob.next = upgradeJob
 		backupJob.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
+				inhibit(true)
 				m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
-				return nil
-			},
-			string(system.EndStatus): func() error {
-				logger.Info("OsBackup: run end hook")
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
+				inhibit(false)
 				return nil
 			},
 			string(system.FailedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
+				inhibit(false)
 				msg := gettext.Tr("Backup failed!")
 				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
 				hints := map[string]dbus.Variant{
@@ -159,7 +162,6 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		})
 		backupJob.setAfterHooks(map[string]func() error{
 			string(system.EndStatus): func() error {
-				inhibit(false)
 				startJobErr = startUpgrade()
 				if startJobErr != nil {
 					logger.Warning(err)
@@ -176,7 +178,6 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	defer func() {
 		// 没有开始更新提前结束时，需要处理抑制锁和job
 		if startJobErr != nil {
-			inhibit(false)
 			err = m.CleanJob(upgradeJob.Id)
 			if err != nil {
 				logger.Warning(err)
