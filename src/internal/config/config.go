@@ -88,14 +88,15 @@ type Config struct {
 	UpdateStatus             string
 	PlatformUpdate           bool
 
-	PlatformUrl        string // 更新接口地址
-	CheckPolicyCron    string // 策略检查间隔
-	StartCheckRange    []int  // 开机检查更新区间
-	IncludeDiskInfo    bool   // machineID是否包含硬盘信息
-	PostUpgradeCron    string // 更新上报间隔
-	UpdateTime         string // 定时更新
-	PlatformDisabled   DisabledStatus
-	EnableVersionCheck bool
+	PlatformUrl            string // 更新接口地址
+	CheckPolicyCron        string // 策略检查间隔
+	StartCheckRange        []int  // 开机检查更新区间
+	IncludeDiskInfo        bool   // machineID是否包含硬盘信息
+	PostUpgradeCron        string // 更新上报间隔
+	UpdateTime             string // 定时更新
+	PlatformDisabled       DisabledStatus
+	EnableVersionCheck     bool
+	PlatformRepoComponents string // 更新平台仓库组件
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
@@ -198,6 +199,7 @@ const (
 	dSettingsKeySecurityCustomSource                 = "security-custom-source"
 	dSettingsKeySystemRepoType                       = "system-repo-type"
 	dSettingsKeySecurityRepoType                     = "security-repo-type"
+	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -501,6 +503,13 @@ func getConfigFromDSettings() *Config {
 		c.PlatformUrl = "https://update-platform.uniontech.com"
 	} else {
 		c.PlatformUrl = url
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformRepoComponents)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.PlatformRepoComponents = v.Value().(string)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckPolicyOnCalendar)

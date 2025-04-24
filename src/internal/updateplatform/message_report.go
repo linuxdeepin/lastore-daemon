@@ -1102,7 +1102,11 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 
 func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 	prefix := "deb"
-	suffix := "main contrib non-free"
+	// v25上应该是这个
+	suffix := "main community commercial"
+	if m.config.PlatformRepoComponents != "" {
+		suffix = m.config.PlatformRepoComponents
+	}
 	var repos []string
 	for _, repo := range m.repoInfos {
 		codeName := repo.CodeName
