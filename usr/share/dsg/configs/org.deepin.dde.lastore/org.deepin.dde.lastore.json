@@ -369,6 +369,19 @@
       "permissions": "readonly",
       "visibility": "private"
     },
+    "platform-repo-components": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "Platform Repo Components",
+      "name[zh_CN]": "更新平台仓库组件",
+      "description[zh_CN]": "更新平台仓库组件",
+      "description": "Platform Repo Components",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "check-policy-on-calendar": {
       "value": "",
       "serial": 0,
