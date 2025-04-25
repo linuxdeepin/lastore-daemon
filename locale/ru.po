@@ -4,13 +4,14 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Анатолий Валерианович <ffox909@mail.ru>, 2023
-# gandalfthewhite19890404 <gandalfthewhite@mail.ru>, 2023
-# Владимир Киреев <vovan_kireev@mail.ru>, 2023
-# deepiner, 2023
-# Caarmi, 2023
-# Basil Russu <basil_russu@hotmail.com>, 2023
-# Валерий Владимирович, 2024
+# Caarmi, 2025
+# Анатолий Валерианович <ffox909@mail.ru>, 2025
+# gandalfthewhite19890404 <gandalfthewhite@mail.ru>, 2025
+# Валерий Владимирович, 2025
+# Basil Russu <basil_russu@hotmail.com>, 2025
+# deepiner, 2025
+# Okubir Gienum, 2025
+# Владимир Киреев <vovan_kireev@mail.ru>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -18,8 +19,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Валерий Владимирович, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Владимир Киреев <vovan_kireev@mail.ru>, 2025\n"
 "Language-Team: Russian (https://app.transifex.com/linuxdeepin/teams/3617/ru/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -69,7 +70,7 @@ msgstr "Сброс кэша пакета"
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "Проверка и установка обновлений..."
 
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
@@ -79,7 +80,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "Новая версия доступна! Загрузка..."
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
@@ -92,6 +93,7 @@ msgstr "Просмотр"
 #: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
+"Обновление не удалось: файлы повреждены. Пожалуйста, обновите еще раз."
 
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
@@ -101,47 +103,52 @@ msgstr "Попробовать снова"
 #: ../src/lastore-daemon/manager_download.go:183
 msgid "Downloading updates failed. Please check your network."
 msgstr ""
+"Не удалось загрузить обновления. Пожалуйста, проверьте интернет соединение."
 
 #: ../src/lastore-daemon/manager_download.go:200
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
+"Загрузка завершена. Вы можете установить обновления при выключении или "
+"перезагрузке."
 
 #: ../src/lastore-daemon/manager_download.go:203
 msgid "Update Now"
-msgstr "Обновить Сейчас"
+msgstr "Обновить сейчас"
 
 #: ../src/lastore-daemon/manager_download.go:205
 msgid "Dismiss"
-msgstr ""
+msgstr "Отклонить"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr ""
+msgstr "Доступна новая версия!"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
 msgstr ""
+"Не удалось проверить наличие обновлений. Проверьте сетевое соединение."
 
 #: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr ""
+"Не удалось проверить наличие обновлений. Пожалуйста, сначала очистите диск."
 
 #: ../src/lastore-daemon/manager_upgrade.go:53
 msgid "Backing up and installing updates..."
-msgstr ""
+msgstr "Резервное копирование и установка обновлений..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:135
 #: ../src/lastore-daemon/manager_upgrade.go:158
 #: ../src/lastore-daemon/manager_upgrade.go:192
 msgid "Backup failed!"
-msgstr ""
+msgstr "Резервное копирование не выполнено!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:136
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Proceed to Update"
-msgstr ""
+msgstr "Приступить к обновлению"
 
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
@@ -153,12 +160,16 @@ msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
+"Заряд аккумулятора составляет 60%. Для успешного обновления, пожалуйста, "
+"подключите устройство к сети."
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr ""
+"Обновление не удалось: недостаточно места на диске. Пожалуйста, "
+"перезагрузитесь, чтобы избежать последствий для вашей системы."
 
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
@@ -167,27 +178,30 @@ msgstr "Перезагрузка"
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "Ошибка обновления: недостаточно места на диске"
 
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
+"Обновление не удалось. Пожалуйста, перезагрузитесь, чтобы избежать "
+"последствий для вашей системы."
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr ""
+msgstr "Ошибка обновления"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
-msgstr ""
+msgstr "Обновления успешны"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
+"Перезагрузите компьютер, чтобы правильно использовать систему и приложения."
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
-msgstr ""
+msgstr "Перезагрузить позже"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
