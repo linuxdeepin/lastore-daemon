@@ -27,11 +27,11 @@ msgstr "Aktualisierungen werden installiert…"
 
 #: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
-msgstr ""
+msgstr "Prozesse laufen…"
 
 #: ../src/lastore-daemon/inhibitor.go:49
 msgid "Preventing from shutting down"
-msgstr ""
+msgstr "Ausschalten wird verhindert"
 
 #: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
@@ -39,15 +39,15 @@ msgstr "Kontrollzentrum"
 
 #: ../src/lastore-daemon/main.go:172
 msgid "App Store"
-msgstr ""
+msgstr "App Store"
 
 #: ../src/lastore-daemon/manager.go:333
 msgid "Removed successfully"
-msgstr ""
+msgstr "Erfolgreich entfernt"
 
 #: ../src/lastore-daemon/manager.go:338
 msgid "Failed to remove the app"
-msgstr ""
+msgstr "Entfernen der App fehlgeschlagen"
 
 #: ../src/lastore-daemon/manager.go:341
 msgid "Retry"
@@ -59,7 +59,7 @@ msgstr "Abbrechen"
 
 #: ../src/lastore-daemon/manager.go:441
 msgid "Package cache wiped"
-msgstr ""
+msgstr "Paketzwischenspeicher gelöscht"
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
@@ -75,7 +75,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "Neue Version erhältlich! Herunterladen…"
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
@@ -94,7 +94,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
 msgid "Try Again"
-msgstr ""
+msgstr "Nochmals versuchen"
 
 #: ../src/lastore-daemon/manager_download.go:183
 msgid "Downloading updates failed. Please check your network."
@@ -114,11 +114,11 @@ msgstr "Jetzt aktualisieren"
 
 #: ../src/lastore-daemon/manager_download.go:205
 msgid "Dismiss"
-msgstr ""
+msgstr "Ablehnen"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr ""
+msgstr "Neue Version erhältlich!"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
@@ -140,7 +140,7 @@ msgstr "Sicherungskopie wird erstellt und Aktualisierungen installiert…"
 #: ../src/lastore-daemon/manager_upgrade.go:158
 #: ../src/lastore-daemon/manager_upgrade.go:192
 msgid "Backup failed!"
-msgstr ""
+msgstr "Sicherung fehlgeschlagen!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:136
 #: ../src/lastore-daemon/manager_upgrade.go:159
@@ -151,7 +151,7 @@ msgstr "Mit Aktualisierung fortfahren"
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Back Up Again"
-msgstr ""
+msgstr "Erneut Sicherung erstellen"
 
 #: ../src/lastore-daemon/manager_upgrade.go:415
 msgid ""
@@ -172,7 +172,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
 msgid "Reboot"
-msgstr ""
+msgstr "Neustart"
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
@@ -190,11 +190,12 @@ msgstr "Aktualisierungen fehlgeschlagen"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
-msgstr ""
+msgstr "Aktualisierungen erfolgreich"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
+"Starten Sie ihren Computer neu, damit System und Programme gut funktionieren"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
