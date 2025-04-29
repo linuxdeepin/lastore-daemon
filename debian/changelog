@@ -1,3 +1,11 @@
+lastore-daemon (6.2.16) unstable; urgency=medium
+
+  * chore: add transifex config file
+  * fix: 更新平台仓库的组件可配置
+  * fix: 解决安装时没有阻塞重启/关机的问题
+
+ -- YeShanShan <yeshanshan@uniontech.com>  Tue, 29 Apr 2025 13:44:35 +0800
+
 lastore-daemon (6.2.15) unstable; urgency=medium
 
   * fix: 更新流程优化，回滚时设置grub
