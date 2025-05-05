@@ -94,7 +94,7 @@ msgstr "Ver"
 #: ../src/lastore-daemon/manager_download.go:177
 #: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
-msgstr "Actualizaciones fallidas: archivos dañados. Actualice de nuevo."
+msgstr "La actualización falló: archivos dañados. Actualice de nuevo."
 
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
@@ -184,7 +184,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr "Actualización fallida"
+msgstr "La actualización falló."
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
