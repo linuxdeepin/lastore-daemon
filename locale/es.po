@@ -193,7 +193,7 @@ msgstr "Actualizaciones exitosas"
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
-"Reinicia la computadora para usar el sistema y las aplicaciones "
+"Reinicie el equipo para que el sistema y las aplicaciones funcionen "
 "correctamente."
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
