@@ -161,7 +161,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 			},
 		})
 		backupJob.setAfterHooks(map[string]func() error{
-			string(system.EndStatus): func() error {
+			string(system.SucceedStatus): func() error {
 				startJobErr = startUpgrade()
 				if startJobErr != nil {
 					logger.Warning(err)
