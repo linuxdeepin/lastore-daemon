@@ -763,6 +763,7 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 	return nil
 }
 
-func (m *Manager) CanRollback() (bool, *dbus.Error) {
-	return osTreeCanRollback(), nil
+func (m *Manager) CanRollback() (bool, string, *dbus.Error) {
+	can, info := osTreeCanRollback()
+	return can, info, nil
 }

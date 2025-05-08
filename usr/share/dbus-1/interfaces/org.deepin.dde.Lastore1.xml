@@ -182,6 +182,7 @@
           </method>
           <method name="CanRollback">
                <arg type="b" direction="out"></arg>
+               <arg type="s" direction="out"></arg>
           </method>
           <method name="PowerOff">
                <arg type="b" direction="in"></arg>
