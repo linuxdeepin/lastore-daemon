@@ -571,6 +571,8 @@ type ostreeError struct {
 type ostreeRollbackData struct {
 	Version     int  `json:"version"`
 	CanRollback bool `json:"can_rollback"`
+	//Time        int64  `json:"time"`
+	//Name        string `json:"name"`
 }
 
 type ostreeResponse struct {
@@ -604,11 +606,11 @@ func osTreeRollback() error {
 	return nil
 }
 
-func osTreeCanRollback() bool {
+func osTreeCanRollback() (bool, string) {
 	out, err := osTreeCmd([]string{"admin", "rollback", "--can-rollback", "-j"})
 	if err != nil {
 		logger.Warning(err)
-		return false
+		return false, ""
 	}
 	logger.Info(out)
 	var resp ostreeResponse
@@ -618,11 +620,11 @@ func osTreeCanRollback() bool {
 		if err = json.Unmarshal(resp.Data, &data); err != nil {
 			logger.Warning(err)
 		}
-		return data.CanRollback
+		return data.CanRollback, string(resp.Data)
 	} else {
 		logger.Warning("ostree Unmarshal data failed", err)
 	}
-	return false
+	return false, ""
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {

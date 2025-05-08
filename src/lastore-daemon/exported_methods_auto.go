@@ -38,7 +38,7 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 		{
 			Name:    "CanRollback",
 			Fn:      v.CanRollback,
-			OutArgs: []string{"result"},
+			OutArgs: []string{"result", "info"},
 		},
 		{
 			Name:   "PowerOff",
