@@ -4,10 +4,7 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Marck Hrin, 2025
-# deepiner, 2025
-# Maggie Liu <maggie.liufei@gmail.com>, 2025
-# Yuri Chornoivan <yurchor@ukr.net>, 2025
+# Keine Werbung, 2025
 # 
 #, fuzzy
 msgid ""
@@ -16,195 +13,194 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Yuri Chornoivan <yurchor@ukr.net>, 2025\n"
-"Language-Team: Ukrainian (https://app.transifex.com/linuxdeepin/teams/3617/uk/)\n"
+"Last-Translator: Keine Werbung, 2025\n"
+"Language-Team: German (Germany) (https://app.transifex.com/linuxdeepin/teams/3617/de_DE/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: uk\n"
-"Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n % 10 == 1 && n % 100 != 11 ? 0 : n % 1 == 0 && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || (n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
+"Language: de_DE\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
-msgstr "Встановлення оновлень…"
+msgstr "Aktualisierungen werden installiert…"
 
 #: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
-msgstr "Виконуємо завдання…"
+msgstr "Prozesse laufen…"
 
 #: ../src/lastore-daemon/inhibitor.go:49
 msgid "Preventing from shutting down"
-msgstr "Запобігаємо вимиканню"
+msgstr "Ausschalten wird verhindert"
 
 #: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
-msgstr "Центр керування"
+msgstr "Kontrollzentrum"
 
 #: ../src/lastore-daemon/main.go:172
 msgid "App Store"
-msgstr "Крамниця програм"
+msgstr "App Store"
 
 #: ../src/lastore-daemon/manager.go:333
 msgid "Removed successfully"
-msgstr "Успішно вилучено"
+msgstr "Erfolgreich entfernt"
 
 #: ../src/lastore-daemon/manager.go:338
 msgid "Failed to remove the app"
-msgstr "Не вдалося вилучити програму"
+msgstr "Entfernen der App fehlgeschlagen"
 
 #: ../src/lastore-daemon/manager.go:341
 msgid "Retry"
-msgstr "Спробувати ще раз"
+msgstr "Erneut versuchen"
 
 #: ../src/lastore-daemon/manager.go:343
 msgid "Cancel"
-msgstr "Скасувати"
+msgstr "Abbrechen"
 
 #: ../src/lastore-daemon/manager.go:441
 msgid "Package cache wiped"
-msgstr "Очищення кешу пакету"
+msgstr "Paketzwischenspeicher gelöscht"
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
-msgstr "Шукаємо і встановлюємо оновлення…"
+msgstr "Prüfen und installieren der Aktualisierungen…"
 
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
 msgid "Downloading updates failed. Please free up %n GB disk space first."
 msgstr ""
-"Не вдалося отримати оновлення. Будь ласка, звільніть на диску принаймні %n "
-"ГБ."
+"Herunterladen der Aktualisierungen schlug fehl, bitte zuerst %n GB "
+"Festplattenplatz frei machen."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr "Доступна нова версія! Отримуємо…"
+msgstr "Neue Version erhältlich! Herunterladen…"
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
 #: ../src/lastore-daemon/manager_update.go:134
 #: ../src/lastore-daemon/manager_update.go:160
 msgid "View"
-msgstr "Переглянути"
+msgstr "Ansicht"
 
 #: ../src/lastore-daemon/manager_download.go:177
 #: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
-"Не вдалося оновити: пошкоджено файли. Будь ласка, повторіть спробу "
-"оновлення."
+"Aktualisierungen schlugen fehl wegen beschädigter Dateien. Bitte erneut "
+"aktualisieren."
 
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
 msgid "Try Again"
-msgstr "Повторити спробу"
+msgstr "Nochmals versuchen"
 
 #: ../src/lastore-daemon/manager_download.go:183
 msgid "Downloading updates failed. Please check your network."
 msgstr ""
-"Не вдалося отримати оновлення. Будь ласка, перевірте, чи є працездатною "
-"мережа."
+"Das Herunterladen der Aktualisierungen schlug fehl. Bitte Netzwerk prüfen."
 
 #: ../src/lastore-daemon/manager_download.go:200
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
-"Отримання даних завершено. Ви можете встановити оновлення під час вимикання "
-"або перезавантаження системи."
+"Herunterladen abgeschlossen. Sie können beim Herunterfahren oder Neustart "
+"die Aktualisierungen installieren."
 
 #: ../src/lastore-daemon/manager_download.go:203
 msgid "Update Now"
-msgstr "Оновити зараз"
+msgstr "Jetzt aktualisieren"
 
 #: ../src/lastore-daemon/manager_download.go:205
 msgid "Dismiss"
-msgstr "Відкинути"
+msgstr "Ablehnen"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr "Доступна нова версія!"
+msgstr "Neue Version erhältlich!"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
 msgstr ""
-"Не вдалося виконати пошук оновлень. Будь ласка, перевірте працездатність "
-"мережі."
+"Es konnte nicht auf Aktualisierungen geprüft werden. Bitte prüfen Sie ihr "
+"Netzwerk."
 
 #: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr ""
-"Не вдалося виконати пошук оновлень. Будь ласка, спочатку очистьте диск від "
-"зайвих даних."
+"Es konnte nicht auf Aktualisierungen geprüft werden. Bitte räumen Sie ihre "
+"Festpaltte zuerst auf.."
 
 #: ../src/lastore-daemon/manager_upgrade.go:53
 msgid "Backing up and installing updates..."
-msgstr "Створюємо резервну копію і встановлюємо оновлення…"
+msgstr "Sicherungskopie wird erstellt und Aktualisierungen installiert…"
 
 #: ../src/lastore-daemon/manager_upgrade.go:135
 #: ../src/lastore-daemon/manager_upgrade.go:158
 #: ../src/lastore-daemon/manager_upgrade.go:192
 msgid "Backup failed!"
-msgstr "Не вдалося створити резервну копію!"
+msgstr "Sicherung fehlgeschlagen!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:136
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Proceed to Update"
-msgstr "Перейти до оновлення"
+msgstr "Mit Aktualisierung fortfahren"
 
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Back Up Again"
-msgstr "Повторити спробу копіювання"
+msgstr "Erneut Sicherung erstellen"
 
 #: ../src/lastore-daemon/manager_upgrade.go:415
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
-"Батарею заряджено менше ніж на 60%. Для успішного оновлення, будь ласка, "
-"з'єднайте пристрій із джерелом струму."
+"Die Akkukapazität liegt unter 60%. Um erfolgreich zu aktualisieren, "
+"verbinden Sie bitte ihr Gerät mit dem Stromnetz."
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr ""
-"Невдале оновлення: недостатньо місця на диску. Будь ласка, перезавантажте "
-"систему, щоб уникнути її пошкодження."
+"Aktualisierungen fehlgeschlagen: zu wenig Speicherplatz. Bitte führen Sie "
+"einen Neustart durch, um ihr System zu schützen."
 
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
 msgid "Reboot"
-msgstr "Перезавантажити"
+msgstr "Neustart"
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
-msgstr "Помилка оновлення: недостатньо місця на диску."
+msgstr "Updates fehlgeschlagen: zu wenig Speicherplatz."
 
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
-"Невдале оновлення. Будь ласка, перезавантажте систему, щоб уникнути її "
-"пошкодження."
+"Aktualisierungen fehlgeschlagen. Bitte führen Sie einen Neustart durch, um "
+"ihr System zu schützen."
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr "Не вдалося оновити."
+msgstr "Aktualisierungen fehlgeschlagen"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
-msgstr "Успішно оновлено"
+msgstr "Aktualisierungen erfolgreich"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
-"Перезавантажте систему, щоб належним чином користуватися нею та програмами."
+"Starten Sie ihren Computer neu, damit System und Programme gut funktionieren"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
-msgstr "Перезавантажити пізніше"
+msgstr "Später neustarten"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
-msgstr "Перезавантажити зараз"
+msgstr "Jetzt neustarten"

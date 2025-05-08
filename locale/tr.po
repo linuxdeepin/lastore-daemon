@@ -4,12 +4,12 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Kaya Zeren <kayazeren@gmail.com>, 2023
-# 9d4282795e87ad099e39d98812f1a822_ade2f01 <c3fa67bcf1b8b90bf10d2d5dae1637ab_127851>, 2023
-# Serdar Sağlam <teknomobil@msn.com>, 2023
-# deepiner, 2023
-# Maggie Liu <maggie.liufei@gmail.com>, 2023
-# meda <ademcal@yahoo.com>, 2024
+# 9d4282795e87ad099e39d98812f1a822_ade2f01 <c3fa67bcf1b8b90bf10d2d5dae1637ab_127851>, 2025
+# Kaya Zeren <kayazeren@gmail.com>, 2025
+# deepiner, 2025
+# Maggie Liu <maggie.liufei@gmail.com>, 2025
+# Adem Çalışkan <ademcal@yahoo.com>, 2025
+# Serdar Sağlam <teknomobil@msn.com>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -17,8 +17,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: meda <ademcal@yahoo.com>, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Serdar Sağlam <teknomobil@msn.com>, 2025\n"
 "Language-Team: Turkish (https://app.transifex.com/linuxdeepin/teams/3617/tr/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -68,7 +68,7 @@ msgstr "Paket ön belleği silindi"
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "Güncellemeleri kontrol ediliyor ve yükleniyor ..."
 
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
@@ -78,7 +78,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "Yeni sürüm mevcut! İndiriliyor ..."
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
@@ -105,6 +105,8 @@ msgstr ""
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
+"İndirme tamamlandı.Kapatma veya yeniden başlattığında güncellemeleri "
+"yükleyebilirsiniz."
 
 #: ../src/lastore-daemon/manager_download.go:203
 msgid "Update Now"
@@ -112,11 +114,11 @@ msgstr "Şimdi Güncelle"
 
 #: ../src/lastore-daemon/manager_download.go:205
 msgid "Dismiss"
-msgstr ""
+msgstr "Yok say"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr ""
+msgstr "Yeni sürüm mevcut!"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
@@ -134,18 +136,18 @@ msgstr ""
 #: ../src/lastore-daemon/manager_upgrade.go:158
 #: ../src/lastore-daemon/manager_upgrade.go:192
 msgid "Backup failed!"
-msgstr ""
+msgstr "Yedekleme başarısız oldu!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:136
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Proceed to Update"
-msgstr ""
+msgstr "Güncellemeye devam et"
 
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Back Up Again"
-msgstr ""
+msgstr "Tekrar Yedekle"
 
 #: ../src/lastore-daemon/manager_upgrade.go:415
 msgid ""
@@ -158,6 +160,8 @@ msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr ""
+"Güncellemeler başarısız oldu: Yetersiz disk alanı. Sisteminiz üzerindeki "
+"etkisini önlemek için lütfen yeniden başlatın."
 
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
@@ -166,27 +170,30 @@ msgstr "Yeniden başlat"
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "Güncelleme başarısız oldu: yetersiz disk alanı."
 
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
+"Güncellemeler başarısız oldu.Sisteminiz üzerindeki etkisini önlemek için "
+"lütfen yeniden başlatın."
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr ""
+msgstr "Güncelleme başarısız oldu."
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
-msgstr ""
+msgstr "Güncellemeler başarılı"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
+"Sistemi ve uygulamaları düzgün kullanmak için bilgisayarı yeniden başlatın."
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
-msgstr ""
+msgstr "Sonra Yeniden Başlat"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"

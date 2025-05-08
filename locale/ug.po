@@ -4,12 +4,12 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# نۇرمۇھەممەت ئۆمەر <tanha451634873@qq.com>, 2020
-# Ug HushBeg <HushBeg@163.com>, 2023
-# مۇختەر مەخمۇت <yeganaaa@163.com>, 2023
-# deepiner, 2023
-# Bashqut <2250907458@qq.com>, 2024
-# 阿迪力 买买提明 <251078110@qq.com>, 2024
+# نۇرمۇھەممەت ئۆمەر <tanha451634873@qq.com>, 2025
+# مۇختەر مەخمۇت <yeganaaa@163.com>, 2025
+# Bashqut <2250907458@qq.com>, 2025
+# deepiner, 2025
+# 阿迪力 买买提明 <251078110@qq.com>, 2025
+# Ug HushBeg <HushBeg@163.com>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -17,8 +17,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: 阿迪力 买买提明 <251078110@qq.com>, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Ug HushBeg <HushBeg@163.com>, 2025\n"
 "Language-Team: Uyghur (https://app.transifex.com/linuxdeepin/teams/3617/ug/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
