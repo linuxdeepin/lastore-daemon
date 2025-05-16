@@ -178,8 +178,7 @@ msgstr "Błąd aktualizacji: za mało miejsca na dysku."
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
-"Błąd aktualizacji. Uruchom ponownie komputer, aby uniknąć wpływu na jego "
-"działanie."
+"Błąd aktualizacji. Uruchom ponownie, aby uniknąć problemów z komputerem."
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
