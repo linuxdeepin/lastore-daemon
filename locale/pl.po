@@ -8,8 +8,8 @@
 # Wiktor Jezioro <wikjezioro@op.pl>, 2025
 # deepiner, 2025
 # Piotr Strebski <strebski@gmail.com>, 2025
-# Janusz Ruchała, 2025
 # Marcin Kozioł <koziol.martin@gmail.com>, 2025
+# Janusz Ruchała, 2025
 # 
 #, fuzzy
 msgid ""
@@ -18,7 +18,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Marcin Kozioł <koziol.martin@gmail.com>, 2025\n"
+"Last-Translator: Janusz Ruchała, 2025\n"
 "Language-Team: Polish (https://app.transifex.com/linuxdeepin/teams/3617/pl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -155,8 +155,8 @@ msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
-"Poziom naładowania baterii spadł poniżej 60%. Aby uzyskać pomyślną "
-"aktualizacje, podłącz się do zasilania."
+"Poziom naładowania spadł poniżej 60%. Aby uniknąć problemów podczas "
+"aktualizacji, podłącz zasilanie."
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
