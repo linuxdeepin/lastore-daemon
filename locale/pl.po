@@ -79,7 +79,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr "Jest dostępna nowa wersja! Pobieram..."
+msgstr "Nowa wersja jest dostępna! Rozpoczynam pobieranie..."
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
@@ -100,7 +100,7 @@ msgstr "Spróbuj ponownie"
 
 #: ../src/lastore-daemon/manager_download.go:183
 msgid "Downloading updates failed. Please check your network."
-msgstr "Błąd pobierania aktualizacji. Sprawdź swoją sieć."
+msgstr "Błąd pobierania aktualizacji. Sprawdź połączenie z siecią."
 
 #: ../src/lastore-daemon/manager_download.go:200
 msgid ""
@@ -119,11 +119,11 @@ msgstr "Pomiń"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr "Jest dostępna nowa wersja!"
+msgstr "Nowa wersja jest dostępna!"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
-msgstr "Nie udało się sprawdzić aktualizacji. Sprawdź swoją sieć."
+msgstr "Nie udało się sprawdzić aktualizacji. Sprawdź połączenie z siecią."
 
 #: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
@@ -155,8 +155,8 @@ msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
-"Poziom naładowania spadł poniżej 60%. Aby uniknąć problemów podczas "
-"aktualizacji, podłącz zasilanie."
+"Poziom naładowania spadł poniżej 60%. Podłącz zasilanie, aby uniknąć "
+"problemów podczas aktualizacji."
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
