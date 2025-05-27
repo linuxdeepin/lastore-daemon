@@ -8,8 +8,8 @@
 # Wiktor Jezioro <wikjezioro@op.pl>, 2025
 # deepiner, 2025
 # Piotr Strebski <strebski@gmail.com>, 2025
-# Janusz Ruchała, 2025
 # Marcin Kozioł <koziol.martin@gmail.com>, 2025
+# Janusz Ruchała, 2025
 # 
 #, fuzzy
 msgid ""
@@ -18,7 +18,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Marcin Kozioł <koziol.martin@gmail.com>, 2025\n"
+"Last-Translator: Janusz Ruchała, 2025\n"
 "Language-Team: Polish (https://app.transifex.com/linuxdeepin/teams/3617/pl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -79,7 +79,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr "Jest dostępna nowa wersja! Pobieram..."
+msgstr "Nowa wersja jest dostępna! Rozpoczynam pobieranie..."
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
@@ -100,7 +100,7 @@ msgstr "Spróbuj ponownie"
 
 #: ../src/lastore-daemon/manager_download.go:183
 msgid "Downloading updates failed. Please check your network."
-msgstr "Błąd pobierania aktualizacji. Sprawdź swoją sieć."
+msgstr "Błąd pobierania aktualizacji. Sprawdź połączenie z siecią."
 
 #: ../src/lastore-daemon/manager_download.go:200
 msgid ""
@@ -119,11 +119,11 @@ msgstr "Pomiń"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr "Jest dostępna nowa wersja!"
+msgstr "Nowa wersja jest dostępna!"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
-msgstr "Nie udało się sprawdzić aktualizacji. Sprawdź swoją sieć."
+msgstr "Nie udało się sprawdzić aktualizacji. Sprawdź połączenie z siecią."
 
 #: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
@@ -155,8 +155,8 @@ msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
-"Poziom naładowania baterii spadł poniżej 60%. Aby uzyskać pomyślną "
-"aktualizacje, podłącz się do zasilania."
+"Poziom naładowania spadł poniżej 60%. Podłącz zasilanie, aby uniknąć "
+"problemów podczas aktualizacji."
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
@@ -178,8 +178,7 @@ msgstr "Błąd aktualizacji: za mało miejsca na dysku."
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
-"Błąd aktualizacji. Uruchom ponownie komputer, aby uniknąć wpływu na jego "
-"działanie."
+"Błąd aktualizacji. Uruchom ponownie, aby uniknąć problemów z komputerem."
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
