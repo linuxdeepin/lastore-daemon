@@ -1,3 +1,9 @@
+lastore-daemon (6.2.18) unstable; urgency=medium
+
+  * fix: 解决升级过程中，磐石系统remount次数过多的问题
+
+ -- fuleyi <fuleyi@uniontech.com>  Tue, 27 May 2025 20:18:12 +0800
+
 lastore-daemon (6.2.17) unstable; urgency=medium
 
   * feat: rollback can return backup system info
