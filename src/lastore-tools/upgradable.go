@@ -109,6 +109,7 @@ func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
 	}
 	args = append(args, []string{"list", "--upgradable"}...)
 	cmd := exec.Command("apt", append(args, ps...)...) // #nosec G204
+	cmd.Env = append(cmd.Env, "IMMUTABLE_DISABLE_REMOUNT=true")
 	r, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -142,7 +143,9 @@ func queryDpkgUpgradeInfoByAptList(sourcePath string) ([]string, error) {
 }
 
 func getSystemArchitectures() []system.Architecture {
-	foreignArchs, err := exec.Command("dpkg", "--print-foreign-architectures").Output()
+	cmd := exec.Command("dpkg", "--print-foreign-architectures")
+	cmd.Env = append(cmd.Env, "IMMUTABLE_DISABLE_REMOUNT=true")
+	foreignArchs, err := cmd.Output()
 	if err != nil {
 		logger.Warningf("GetSystemArchitecture failed:%v\n", foreignArchs)
 	}

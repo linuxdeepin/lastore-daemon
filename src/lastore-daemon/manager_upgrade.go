@@ -547,7 +547,8 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 // 格式化输出需要添加-j 参数
 func osTreeCmd(args []string) (out string, err error) {
 	if system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
-		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...)
+		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...) // #nosec G204
+		cmd.Env = append(cmd.Env, "IMMUTABLE_DISABLE_REMOUNT=false")
 		logger.Info("run command:", cmd.Args)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout

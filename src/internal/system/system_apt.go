@@ -372,6 +372,7 @@ func init() {
 	_ = os.Setenv("DEBIAN_FRONTEND", "noninteractive")
 	_ = os.Setenv("DEBIAN_PRIORITY", "critical")
 	_ = os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
+	_ = os.Setenv("IMMUTABLE_DISABLE_REMOUNT", "true")
 }
 
 func DetectDefaultRepoInfo(rInfos []RepositoryInfo) RepositoryInfo {

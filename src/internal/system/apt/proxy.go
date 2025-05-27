@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"io"
 	"os"
 	"os/exec"
@@ -18,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
 type APTSystem struct {
@@ -268,6 +269,7 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 	}
 
 	c := newAPTCommand(p, jobId, system.RemoveJobType, p.Indicator, packages)
+	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)
 }
@@ -279,6 +281,7 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 		return err
 	}
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(OptionToArgs(args), packages...))
+	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)
 }
@@ -295,6 +298,7 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 		}
 	}
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, append(OptionToArgs(args), packages...))
+	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)
 }
@@ -343,6 +347,7 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	if system.JobErrorType(errType) == system.ErrorDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
 	}
+	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	return c.Start()
 }
 

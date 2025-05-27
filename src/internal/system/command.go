@@ -53,10 +53,26 @@ func (c *Command) SetEnv(envVarMap map[string]string) {
 		return
 	}
 
-	envVarSlice := os.Environ()
+	// Create a map from existing environment variables
+	envMap := make(map[string]string)
+	for _, env := range os.Environ() {
+		pair := strings.SplitN(env, "=", 2)
+		if len(pair) == 2 {
+			envMap[pair[0]] = pair[1]
+		}
+	}
+
+	// Update with new values, overwriting existing keys
 	for key, value := range envVarMap {
+		envMap[key] = value
+	}
+
+	// Convert back to slice
+	envVarSlice := make([]string, 0, len(envMap))
+	for key, value := range envMap {
 		envVarSlice = append(envVarSlice, key+"="+value)
 	}
+
 	c.Cmd.Env = envVarSlice
 }
 
