@@ -1053,30 +1053,67 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 			osBuildSlice := strings.Split(osBuild, ".")
 			var secVersionStr string
 			if len(osBuildSlice) >= 3 {
-				secVersionStr = osBuildSlice[1]
-				secVersionInt, err := strconv.Atoi(secVersionStr)
-				if err != nil {
-					logger.Warning(err)
-					return nil
-				}
-				realSecVersion := secVersionInt - 100
-				minorVersionInt, err := strconv.Atoi(minorVersion)
-				if err != nil {
-					logger.Warning(err)
-					return nil
-				}
-				globalVersion := minorVersionInt + realSecVersion
-				if globalVersion < 1000 {
-					logger.Warningf("system version is %v, not support compare with %v", globalVersion, m.targetVersion)
-					return nil
-				}
-				targetVersionInt, err := strconv.Atoi(m.targetVersion)
-				if err != nil {
-					logger.Warning(err)
-					return nil
+				var globalVersionStr string
+				var ok bool
+				// 社区版的version是minorVersion，直接可以显示小版本
+				if osVersionInfoMap["EditionName"] == "Community" {
+					globalVersionSlice := strings.Split(minorVersion, ".")
+					targetVersionSlice := strings.Split(m.targetVersion, ".")
+					for i := 0; i < len(targetVersionSlice); i++ {
+						if i >= len(globalVersionSlice) {
+							ok = true
+							break
+						}
+						targetVersionInt, err := strconv.Atoi(targetVersionSlice[i])
+						if err != nil {
+							logger.Warning(err)
+							return nil
+						}
+						globalVersionInt, err := strconv.Atoi(globalVersionSlice[i])
+						if err != nil {
+							logger.Warning(err)
+							return nil
+						}
+						if targetVersionInt > globalVersionInt {
+							ok = true
+							break
+						} else if targetVersionInt == globalVersionInt {
+							continue
+						} else {
+							break
+						}
+					}
+					globalVersionStr = minorVersion
+				} else {
+					secVersionStr = osBuildSlice[1]
+					secVersionInt, err := strconv.Atoi(secVersionStr)
+					if err != nil {
+						logger.Warning(err)
+						return nil
+					}
+					realSecVersion := secVersionInt - 100
+					minorVersionInt, err := strconv.Atoi(minorVersion)
+					if err != nil {
+						logger.Warning(err)
+						return nil
+					}
+					globalVersion := minorVersionInt + realSecVersion
+					if globalVersion < 1000 {
+						logger.Warningf("system version is %v, not support compare with %v", globalVersion, m.targetVersion)
+						return nil
+					}
+					targetVersionInt, err := strconv.Atoi(m.targetVersion)
+					if err != nil {
+						logger.Warning(err)
+						return nil
+					}
+					if targetVersionInt > globalVersion {
+						ok = true
+					}
+					globalVersionStr = fmt.Sprintf("%v", globalVersion)
 				}
 				logData := getUpdateLogData(data)
-				if targetVersionInt > globalVersion {
+				if ok {
 					m.SystemUpdateLogs = logData
 				} else {
 					var lastLog UpdateLogMeta
@@ -1086,7 +1123,7 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 
 					m.SystemUpdateLogs = append(m.SystemUpdateLogs, UpdateLogMeta{
 						Baseline:      lastLog.Baseline,
-						ShowVersion:   fmt.Sprintf("%v", globalVersion),
+						ShowVersion:   globalVersionStr,
 						CnLog:         "修复部分系统已知问题与缺陷",
 						EnLog:         "Fixing some of the system's known problems and defects",
 						LogType:       lastLog.LogType,

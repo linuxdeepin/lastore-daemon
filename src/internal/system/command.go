@@ -320,17 +320,6 @@ func (c *Command) updateProgress() {
 			return
 		}
 
-		// Write pipe output to log file
-		if c.ff != nil {
-			_, err := c.ff.WriteString(line)
-			if err != nil {
-				logger.Warning("failed to write pipe output to log file:", err)
-			} else {
-				// Ensure data is written to disk immediately
-				c.ff.Sync()
-			}
-		}
-
 		info, err := c.ParseProgressInfo(c.JobId, line)
 		if err != nil {
 			logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)

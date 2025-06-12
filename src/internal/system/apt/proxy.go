@@ -180,7 +180,20 @@ func CheckPkgSystemError(lock bool) error {
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
-	err := cmd.Run()
+	ff, err := system.OpenFlush(system.FlushName)
+	if err == nil {
+		defer func() {
+			ff.WriteString(fmt.Sprintf("=== CheckPkg %v end ===\n", cmd.Args))
+			ff.Close()
+		}()
+
+		err = ff.SetFlushCmd(cmd)
+		if err != nil {
+			logger.Warning(err)
+		}
+	}
+	ff.WriteString(fmt.Sprintf("=== CheckPkg cmd running: %v ===\n", cmd.Args))
+	err = cmd.Run()
 	if err == nil {
 		return nil
 	}
