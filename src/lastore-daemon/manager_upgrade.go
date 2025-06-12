@@ -548,13 +548,27 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 // 格式化输出需要添加-j 参数
 func osTreeCmd(args []string) (out string, err error) {
 	if system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
+		args = append(args, "-v")
 		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...) // #nosec G204
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
 		logger.Info("run command:", cmd.Args)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
-		err := cmd.Run()
+		ff, err := system.OpenFlush(system.FlushName)
+		if err == nil {
+			defer func() {
+				ff.WriteString(fmt.Sprintf("=== Ostree %v end ===\n", cmd.Args))
+				ff.Close()
+			}()
+
+			err = ff.SetFlushCmd(cmd)
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
+		ff.WriteString(fmt.Sprintf("=== Ostree cmd running: %v ===\n", cmd.Args))
+		err = cmd.Run()
 		if err != nil {
 			return "", fmt.Errorf("%v", stderr.String())
 		} else {

@@ -343,11 +343,11 @@ func (p *APTSystem) AbortWithFailed(jobId string) error {
 func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
 	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, OptionToArgs(args)...))
+	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	if system.JobErrorType(errType) == system.ErrorDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
 	}
-	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	return c.Start()
 }
 
@@ -549,5 +549,9 @@ func (p *APTSystem) OsBackup(jobId string) error {
 			Cancelable:  false,
 		}, nil
 	}
+	environ := map[string]string{
+		"IMMUTABLE_DISABLE_REMOUNT": "false",
+	}
+	c.SetEnv(environ)
 	return c.Start()
 }

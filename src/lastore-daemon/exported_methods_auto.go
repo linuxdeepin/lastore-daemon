@@ -205,6 +205,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:      v.UpdateSource,
 			OutArgs: []string{"job"},
 		},
+		{
+			Name:    "ExportUpdateDetails",
+			Fn:      v.ExportUpdateDetails,
+			InArgs: []string{"filename"},
+		},
 	}
 }
 func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {

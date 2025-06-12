@@ -9,12 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
@@ -766,4 +767,73 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 func (m *Manager) CanRollback() (bool, string, *dbus.Error) {
 	can, info := osTreeCanRollback()
 	return can, info, nil
+}
+
+func (m *Manager) ExportUpdateDetails(sender dbus.Sender, filename string) (busErr *dbus.Error) {
+	m.service.DelayAutoQuit()
+	// 管理员鉴权
+	err := checkInvokePermission(m.service, sender)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	// 验证文件路径合法性
+	if filename == "" {
+		return dbusutil.ToError(fmt.Errorf("filename cannot be empty"))
+	}
+
+	// 检查路径是否包含危险字符
+	if strings.Contains(filename, "..") {
+		return dbusutil.ToError(fmt.Errorf("path traversal not allowed"))
+	}
+
+	// 检查是否为绝对路径
+	if !strings.HasPrefix(filename, "/") {
+		return dbusutil.ToError(fmt.Errorf("path must be absolute"))
+	}
+
+	// 限制只能导出到安全目录
+	allowedPrefixes := []string{
+		"/home/",
+		"/tmp/",
+		"/var/tmp/",
+		"/opt/",
+	}
+
+	allowed := false
+	for _, prefix := range allowedPrefixes {
+		if strings.HasPrefix(filename, prefix) {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		return dbusutil.ToError(fmt.Errorf("export path must be in /home/, /tmp/, /var/tmp/, or /opt/"))
+	}
+
+	// 源文件路径
+	sourceFile := system.FlushName
+
+	// 检查源文件是否存在
+	if !system.NormalFileExists(sourceFile) {
+		err := fmt.Errorf("update detail log file not found: %s", sourceFile)
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	err = utils2.CopyFile(sourceFile, filename)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	// 设置文件权限为用户可读写可删除 (0666)
+	err = os.Chmod(filename, 0666)
+	if err != nil {
+		logger.Warning("failed to set file permissions:", err)
+		// 不返回错误，因为文件已经成功复制
+	}
+
+	return nil
 }
