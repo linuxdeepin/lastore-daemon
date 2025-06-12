@@ -771,12 +771,6 @@ func (m *Manager) CanRollback() (bool, string, *dbus.Error) {
 
 func (m *Manager) ExportUpdateDetails(sender dbus.Sender, filename string) (busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	// 管理员鉴权
-	err := checkInvokePermission(m.service, sender)
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
 	// 验证文件路径合法性
 	if filename == "" {
 		return dbusutil.ToError(fmt.Errorf("filename cannot be empty"))
@@ -822,7 +816,7 @@ func (m *Manager) ExportUpdateDetails(sender dbus.Sender, filename string) (busE
 		return dbusutil.ToError(err)
 	}
 
-	err = utils2.CopyFile(sourceFile, filename)
+	err := utils2.CopyFile(sourceFile, filename)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
