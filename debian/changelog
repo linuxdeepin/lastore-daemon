@@ -1,3 +1,11 @@
+lastore-daemon (6.2.20) unstable; urgency=medium
+
+  * refactor: improve version comparison logic in updateLogMetaSync
+  * feat: add logging functionality to Job management
+  * i18n: Updates for project Deepin Desktop Environment (#166)
+
+ -- fuleyi <fuleyi@uniontech.com>  Thu, 12 Jun 2025 20:22:13 +0800
+
 lastore-daemon (6.2.19) unstable; urgency=medium
 
   * fix: 修复环境变量设置方式，确保在执行命令时正确传递环境变量
