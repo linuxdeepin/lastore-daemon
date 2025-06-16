@@ -589,6 +589,7 @@ type ostreeRollbackData struct {
 	CanRollback bool `json:"can_rollback"`
 	//Time        int64  `json:"time"`
 	//Name        string `json:"name"`
+	Auto bool `json:"auto"`
 }
 
 type ostreeResponse struct {
@@ -622,25 +623,57 @@ func osTreeRollback() error {
 	return nil
 }
 
-func osTreeCanRollback() (bool, string) {
+func osTreeParseRollbackData() (*ostreeRollbackData, error) {
 	out, err := osTreeCmd([]string{"admin", "rollback", "--can-rollback", "-j"})
 	if err != nil {
-		logger.Warning(err)
-		return false, ""
+		logger.Warning("osTreeCmd failed:", err)
+		return nil, err
 	}
-	logger.Info(out)
+
+	logger.Info("osTree rollback output:", out)
+
 	var resp ostreeResponse
 	err = json.Unmarshal([]byte(out), &resp)
-	if err == nil && resp.Error == nil {
-		var data ostreeRollbackData
-		if err = json.Unmarshal(resp.Data, &data); err != nil {
-			logger.Warning(err)
-		}
-		return data.CanRollback, string(resp.Data)
-	} else {
-		logger.Warning("ostree Unmarshal data failed", err)
+	if err != nil {
+		logger.Warning("unmarshal ostree response failed:", err)
+		return nil, err
 	}
-	return false, ""
+
+	if resp.Error != nil {
+		logger.Warning("ostree response has error:", resp.Error)
+		return nil, fmt.Errorf("ostree error: %v", resp.Error)
+	}
+
+	var data ostreeRollbackData
+	err = json.Unmarshal(resp.Data, &data)
+	if err != nil {
+		logger.Warning("unmarshal rollback data failed:", err)
+		return nil, err
+	}
+
+	return &data, nil
+}
+
+func osTreeCanRollback() (bool, string) {
+	data, err := osTreeParseRollbackData()
+	if err != nil {
+		return false, ""
+	}
+
+	rawData, err := json.Marshal(data)
+	if err != nil {
+		return data.CanRollback, ""
+	}
+
+	return data.CanRollback, string(rawData)
+}
+
+func osTreeIsAutoRollback() bool {
+	data, err := osTreeParseRollbackData()
+	if err != nil {
+		return false
+	}
+	return data.Auto
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {

@@ -756,7 +756,11 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 					logger.Warning(err)
 				}
 			}
-			m.PowerOff(sender, true)
+
+			// 如果自动回滚，则无需重启
+			if !osTreeIsAutoRollback() {
+				m.PowerOff(sender, true)
+			}
 		}()
 	} else {
 		return m.PowerOff(sender, true)
