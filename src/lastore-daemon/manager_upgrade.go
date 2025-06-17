@@ -284,7 +284,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			job.option["Dir::State::lists"] = system.OfflineListPath
 		}
 
-		if mode == system.UnknownUpdate {
+		if m.supportDpkgScriptIgnore && mode == system.UnknownUpdate {
 			job.option["DPkg::Options::"] = "--script-ignore-error"
 		}
 
