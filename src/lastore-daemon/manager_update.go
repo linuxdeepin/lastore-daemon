@@ -54,6 +54,12 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec update")
 	}
+
+	if m.ImmutableAutoRecovery {
+		logger.Info("immutable auto recovery is enabled, don't allow to exec update")
+		return nil, errors.New("immutable auto recovery is enabled, don't allow to exec update")
+	}
+
 	defer func() {
 		if err == nil {
 			err1 := m.config.UpdateLastCheckTime()
