@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -81,6 +82,9 @@ type Manager struct {
 	UpdateMode      system.UpdateType `prop:"access:rw"` // 更新设置的内容
 	CheckUpdateMode system.UpdateType `prop:"access:rw"` // 检查更新选中的内容
 	UpdateStatus    string            // 每一个更新项的状态 json字符串
+
+	// 无忧还原是否开启的状态
+	ImmutableAutoRecovery bool `prop:"access:r"`
 
 	HardwareId string
 
@@ -157,6 +161,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
 	m.syncThirdPartyDconfig()
+	m.updateAutoRecoveryStatus()
 	// running 状态下证明需要进行重启后check
 	if c.UpgradeStatus.Status == system.UpgradeRunning {
 		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
@@ -752,14 +757,14 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
-	if m.config.AutoCheckUpdates {
+	if m.config.AutoCheckUpdates && !m.ImmutableAutoRecovery {
 		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 		if err != nil {
 			logger.Warning(err)
 			return err
 		}
 	}
-	if !m.config.DisableUpdateMetadata {
+	if !m.config.DisableUpdateMetadata && !m.ImmutableAutoRecovery {
 		startUpdateMetadataInfoService()
 	}
 	return nil
@@ -1196,4 +1201,25 @@ func (m *Manager) reportLog(category reportCategory, status bool, description st
 			logger.Warning(err)
 		}
 	}
+}
+
+// 检查无忧还原状态，只需要启动时检查一次
+func (m *Manager) updateAutoRecoveryStatus() {
+	bootedFile := "/run/deepin-immutable-writable/booted"
+	bootedContent, err := os.ReadFile(bootedFile)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+
+	isEnabled := string(bootedContent) == "overlay"
+	if isEnabled {
+		logger.Info("immutable auto recovery is enabled")
+	} else {
+		logger.Info("immutable auto recovery is disabled")
+	}
+
+	m.PropsMu.Lock()
+	m.setPropImmutableAutoRecovery(isEnabled)
+	m.PropsMu.Unlock()
 }

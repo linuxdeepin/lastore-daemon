@@ -429,3 +429,16 @@ func (v *Manager) setPropHardwareId(value string) (changed bool) {
 func (v *Manager) emitPropChangedHardwareId(value string) error {
 	return v.service.EmitPropertyChanged(v, "HardwareId", value)
 }
+
+func (v *Manager) setPropImmutableAutoRecovery(value bool) (changed bool) {
+	if v.ImmutableAutoRecovery != value {
+		v.ImmutableAutoRecovery = value
+		v.emitPropChangedImmutableAutoRecovery(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedImmutableAutoRecovery(value bool) error {
+	return v.service.EmitPropertyChanged(v, "ImmutableAutoRecovery", value)
+}
