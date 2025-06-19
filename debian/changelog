@@ -1,3 +1,13 @@
+lastore-daemon (6.2.21) unstable; urgency=medium
+
+  * feat: Prohibit checking for updates when automatic restore is
+    enabled
+  * fix: check if dpkg supports --script-ignore-error
+  * feat: adapt to automatic rollback
+  * i18n: Updates for project Deepin Desktop Environment (#174)
+
+ -- zhangkun <zhangkun2@uniontech.com>  Thu, 19 Jun 2025 09:53:13 +0800
+
 lastore-daemon (6.2.20) unstable; urgency=medium
 
   * refactor: improve version comparison logic in updateLogMetaSync
