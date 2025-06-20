@@ -1,3 +1,10 @@
+lastore-daemon (6.2.22) unstable; urgency=medium
+
+  * refactor: simplify version check for Community edition in
+    updateLogMetaSync
+
+ -- fuleyi <fuleyi@uniontech.com>  Fri, 20 Jun 2025 14:33:09 +0800
+
 lastore-daemon (6.2.21) unstable; urgency=medium
 
   * feat: Prohibit checking for updates when automatic restore is
