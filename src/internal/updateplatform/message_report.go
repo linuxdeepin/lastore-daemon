@@ -1057,33 +1057,7 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 				var ok bool
 				// 社区版的version是minorVersion，直接可以显示小版本
 				if osVersionInfoMap["EditionName"] == "Community" {
-					globalVersionSlice := strings.Split(minorVersion, ".")
-					targetVersionSlice := strings.Split(m.targetVersion, ".")
-					for i := 0; i < len(targetVersionSlice); i++ {
-						if i >= len(globalVersionSlice) {
-							ok = true
-							break
-						}
-						targetVersionInt, err := strconv.Atoi(targetVersionSlice[i])
-						if err != nil {
-							logger.Warning(err)
-							return nil
-						}
-						globalVersionInt, err := strconv.Atoi(globalVersionSlice[i])
-						if err != nil {
-							logger.Warning(err)
-							return nil
-						}
-						if targetVersionInt > globalVersionInt {
-							ok = true
-							break
-						} else if targetVersionInt == globalVersionInt {
-							continue
-						} else {
-							break
-						}
-					}
-					globalVersionStr = minorVersion
+					ok = true
 				} else {
 					secVersionStr = osBuildSlice[1]
 					secVersionInt, err := strconv.Atoi(secVersionStr)
