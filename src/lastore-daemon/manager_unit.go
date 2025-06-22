@@ -67,7 +67,7 @@ type lastoreUnitMap map[UnitName][]string
 // 定时任务和文件监听
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
-	if (m.config.GetLastoreDaemonStatus() & config.DisableUpdate) == 0 { // 更新禁用未开启时
+	if (m.config.GetLastoreDaemonStatus()&config.DisableUpdate) == 0 && !m.ImmutableAutoRecovery { // 更新禁用未开启且无忧还原未开启时
 		unitMap[lastoreOnline] = []string{
 			// 随机数范围1800-21600，时间为0.5~6小时
 			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0]),
@@ -260,6 +260,13 @@ func (m *Manager) loadResetIdleDownload() {
 
 // 下载中断或者修改下载时间段后,需要更新timer   用户手动中断下载时，需要再第二天的设置实际重新下载   开机时间在自动下载时间段内时，
 func (m *Manager) updateAutoDownloadTimer() error {
+	if m.ImmutableAutoRecovery {
+		logger.Info("immutable auto recovery is enabled, stopping and don't allow to update auto download timer")
+		// 在无忧还原模式下，主动停止现有的定时器
+		_ = m.stopTimerUnit(lastoreAbortAutoDownload)
+		_ = m.stopTimerUnit(lastoreAutoDownload)
+		return errors.New("immutable auto recovery is enabled, don't allow to update auto download timer")
+	}
 	err := m.updateTimerUnit(lastoreAbortAutoDownload)
 	if err != nil {
 		return err
@@ -280,6 +287,12 @@ func (m *Manager) updateAutoCheckSystemUnit() error {
 	err := m.stopTimerUnit(lastoreOnline)
 	if err != nil {
 		logger.Info(err)
+	}
+	if m.ImmutableAutoRecovery {
+		logger.Info("immutable auto recovery is enabled, stopping and don't allow to update auto check timer")
+		// 在无忧还原模式下，主动停止现有的自动检查定时器
+		_ = m.stopTimerUnit(lastoreAutoCheck)
+		return errors.New("immutable auto recovery is enabled, don't allow to update auto check timer")
 	}
 	return m.updateTimerUnit(lastoreAutoCheck)
 }
