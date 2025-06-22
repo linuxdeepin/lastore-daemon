@@ -23,6 +23,10 @@ import (
 
 // prepareDistUpgrade isClassify true: mode只能是单类型,创建一个单类型的下载job; false: mode类型不限,创建一个全mode类型的下载job
 func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool) (*Job, error) {
+	if m.ImmutableAutoRecovery {
+		logger.Info("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
+		return nil, errors.New("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
+	}
 	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec download")
 	}

@@ -1215,6 +1215,11 @@ func (m *Manager) updateAutoRecoveryStatus() {
 	isEnabled := string(bootedContent) == "overlay"
 	if isEnabled {
 		logger.Info("immutable auto recovery is enabled")
+		// 在无忧还原模式下，主动停止相关定时器
+		_ = m.stopTimerUnit(lastoreAutoCheck)
+		_ = m.stopTimerUnit(lastoreOnline)
+		_ = m.stopTimerUnit(lastoreAutoDownload)
+		_ = m.stopTimerUnit(lastoreAbortAutoDownload)
 	} else {
 		logger.Info("immutable auto recovery is disabled")
 	}
