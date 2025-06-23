@@ -585,11 +585,11 @@ type ostreeError struct {
 }
 
 type ostreeRollbackData struct {
-	Version     int  `json:"version"`
-	CanRollback bool `json:"can_rollback"`
-	//Time        int64  `json:"time"`
-	//Name        string `json:"name"`
-	Auto bool `json:"auto"`
+	Version     int    `json:"version"`
+	CanRollback bool   `json:"can_rollback"`
+	Time        int64  `json:"time"`
+	Name        string `json:"name"`
+	Auto        bool   `json:"auto"`
 }
 
 type ostreeResponse struct {

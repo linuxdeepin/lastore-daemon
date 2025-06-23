@@ -179,8 +179,7 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 			// 不仅仅只存在第三方更新
 			includeUnknown = true
 		}
-
-		if includeUnknown && supportIgnore {
+		if includeUnknown {
 			// 非第三方job
 			commonJob := NewJob(jm.service, genJobId(jobType), jobName, packages, system.DistUpgradeJobType, LockQueue, environ)
 			commonJob._InitProgressRange(0, 0.70)
@@ -201,7 +200,9 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 					"Dir::Etc::SourceParts": "/dev/null",
 				}
 			}
-			thirdJob.option["DPkg::Options::"] = "--script-ignore-error"
+			if supportIgnore {
+				thirdJob.option["DPkg::Options::"] = "--script-ignore-error"
+			}
 			thirdJob.updateTyp = mode
 			thirdJob.retry = 0
 			commonJob.next = thirdJob
