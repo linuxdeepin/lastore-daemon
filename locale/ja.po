@@ -91,7 +91,7 @@ msgstr "表示"
 #: ../src/lastore-daemon/manager_download.go:177
 #: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
-msgstr ""
+msgstr "アップデートできませんでした: ファイルが破損しています。もう一度お試しください。"
 
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
@@ -158,7 +158,7 @@ msgstr "バッテリー残量が60%以下です。正常にアップデートを
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
-msgstr ""
+msgstr "アップデートできませんでした: ディスクの容量が不足しています。システムへの影響を避けるため、再起動してください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
@@ -167,15 +167,15 @@ msgstr "再起動"
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "アップデートできませんでしたした: ディスクの空き領域が不足しています"
 
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
-msgstr ""
+msgstr "アップデートできませんでした。システムへの影響を避けるため、再起動してください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr ""
+msgstr "アップデートできませんでした"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
