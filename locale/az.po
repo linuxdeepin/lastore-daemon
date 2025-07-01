@@ -7,7 +7,7 @@
 # Gunash Kamzaevi <g.kamzaevi@iset.ge>, 2025
 # Nicat Məmmədov <n1c4t97@gmail.com>, 2025
 # deepiner, 2025
-# Xəyyam Qocayev <xxmn77@gmail.com>, 2025
+# xxmn77 <xxmn77@gmail.com>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -16,7 +16,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Xəyyam Qocayev <xxmn77@gmail.com>, 2025\n"
+"Last-Translator: xxmn77 <xxmn77@gmail.com>, 2025\n"
 "Language-Team: Azerbaijani (https://app.transifex.com/linuxdeepin/teams/3617/az/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -71,10 +71,8 @@ msgstr "Yenilənmələr yoxlanılır və quraşdırılır..."
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr ""
-"Yenilənmələrin endirilməsi mümkün olmadı. Öncə %n QB disk sahəsini "
-"təmizləyin."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
