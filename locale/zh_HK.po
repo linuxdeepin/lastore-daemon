@@ -70,8 +70,8 @@ msgstr ""
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %n GB disk space first."
-msgstr "更新包下載失敗，請釋放%n GB空間"
+msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgstr "更新包下載失敗，請釋放%g GB空間"
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."

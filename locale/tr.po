@@ -74,9 +74,9 @@ msgstr "Güncellemeleri kontrol ediliyor ve yükleniyor ..."
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %n GB disk space first."
+msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr ""
-"Güncellemeleri indirme başarısız oldu. Lütfen önce %n GB disk alanını "
+"Güncellemeleri indirme başarısız oldu. Lütfen önce %g GB disk alanını "
 "boşaltın."
 
 #: ../src/lastore-daemon/manager_download.go:136
