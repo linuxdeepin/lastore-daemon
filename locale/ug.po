@@ -73,8 +73,8 @@ msgstr ""
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %n GB disk space first."
-msgstr "يېڭىلاش بولىقىنى چۈشۈرۈش مەغلۇب بولدى، GB%n بوشلۇق بىكارلاڭ"
+msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgstr "يېڭىلاش بولىقىنى چۈشۈرۈش مەغلۇب بولدى، GB%g بوشلۇق بىكارلاڭ"
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
