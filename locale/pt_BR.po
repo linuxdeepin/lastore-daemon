@@ -9,8 +9,8 @@
 # Raphael Miquelis <raphaelmiquelis@gmail.com>, 2025
 # Flavio Lima <flaviolimaviolinista@gmail.com>, 2025
 # deepiner, 2025
-# Alex, 2025
 # 380125ae2590f93d3e1eff2258abdf75_6979c31, 2025
+# Alex, 2025
 # 
 #, fuzzy
 msgid ""
@@ -19,7 +19,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: 380125ae2590f93d3e1eff2258abdf75_6979c31, 2025\n"
+"Last-Translator: Alex, 2025\n"
 "Language-Team: Portuguese (Brazil) (https://app.transifex.com/linuxdeepin/teams/3617/pt_BR/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -75,7 +75,7 @@ msgstr "Verificando e instalando as atualizações..."
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
-msgstr ""
+msgstr "O download das atualizações falhou. Libere %g GB de espaço em disco."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
