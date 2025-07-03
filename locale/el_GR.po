@@ -4,10 +4,7 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Microtus <hrabosmartin@gmail.com>, 2025
-# deepiner, 2025
-# 6a031f57f79e736069d8f4ea6d230365_39313e6 <902495911fc964c4ba556aa7711a2823_20303>, 2025
-# Jozef Gaal <preklady@mayday.sk>, 2025
+# Dimitris Spentzos <jimspentzos2000@gmail.com>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -16,13 +13,13 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Jozef Gaal <preklady@mayday.sk>, 2025\n"
-"Language-Team: Slovak (https://app.transifex.com/linuxdeepin/teams/3617/sk/)\n"
+"Last-Translator: Dimitris Spentzos <jimspentzos2000@gmail.com>, 2025\n"
+"Language-Team: Greek (Greece) (https://app.transifex.com/linuxdeepin/teams/3617/el_GR/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: sk\n"
-"Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n == 1 ? 0 : n % 1 == 0 && n >= 2 && n <= 4 ? 1 : n % 1 != 0 ? 2: 3);\n"
+"Language: el_GR\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
@@ -38,7 +35,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
-msgstr "Ovládacie centrum"
+msgstr "Κέντρο Ελέγχου"
 
 #: ../src/lastore-daemon/main.go:172
 msgid "App Store"
@@ -46,23 +43,23 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager.go:333
 msgid "Removed successfully"
-msgstr "Úspešne odstránené"
+msgstr ""
 
 #: ../src/lastore-daemon/manager.go:338
 msgid "Failed to remove the app"
-msgstr "Odstránenie aplikácie zlyhalo "
+msgstr ""
 
 #: ../src/lastore-daemon/manager.go:341
 msgid "Retry"
-msgstr "Skúsiť znova"
+msgstr ""
 
 #: ../src/lastore-daemon/manager.go:343
 msgid "Cancel"
-msgstr "Zrušiť"
+msgstr ""
 
 #: ../src/lastore-daemon/manager.go:441
 msgid "Package cache wiped"
-msgstr "Vyrovnávaciu pamäť balíčkov vymazaná"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
@@ -83,7 +80,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_update.go:134
 #: ../src/lastore-daemon/manager_update.go:160
 msgid "View"
-msgstr "Pohľad"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:177
 #: ../src/lastore-daemon/manager_upgrade.go:500
@@ -106,7 +103,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:203
 msgid "Update Now"
-msgstr "Teraz aktualizovať"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:205
 msgid "Dismiss"
@@ -160,7 +157,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
 msgid "Reboot"
-msgstr "Reštart"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
@@ -188,4 +185,4 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
-msgstr "Reštartovať teraz"
+msgstr ""

@@ -4,10 +4,10 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# 94595490bb4a8f0d2bb452d023d6604b_82c10ac <26484501b3f9b24023bee4a6caa607eb_805378>, 2020
-# Tobias Ahlström <tobias.ahlstrom@gmail.com>, 2023
-# deepiner, 2023
-# Maggie Liu <maggie.liufei@gmail.com>, 2024
+# 94595490bb4a8f0d2bb452d023d6604b_82c10ac <26484501b3f9b24023bee4a6caa607eb_805378>, 2025
+# Tobias Ahlström <tobias.ahlstrom@gmail.com>, 2025
+# deepiner, 2025
+# Maggie Liu <maggie.liufei@gmail.com>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -15,8 +15,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Maggie Liu <maggie.liufei@gmail.com>, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Maggie Liu <maggie.liufei@gmail.com>, 2025\n"
 "Language-Team: Swedish (https://app.transifex.com/linuxdeepin/teams/3617/sv/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"

@@ -4,11 +4,11 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Ricardo Simões <xmcorporation@gmail.com>, 2020
-# 00101f7862160fbf8a065655a48ad879_875972c <c486e5cdf80c8fbbc1127ec062b107b4_205162>, 2023
-# deepiner, 2023
-# Hugo Carvalho <hugokarvalho@hotmail.com>, 2023
-# Maggie Liu <maggie.liufei@gmail.com>, 2024
+# Ricardo Simões <xmcorporation@gmail.com>, 2025
+# 00101f7862160fbf8a065655a48ad879_875972c <c486e5cdf80c8fbbc1127ec062b107b4_205162>, 2025
+# Maggie Liu <maggie.liufei@gmail.com>, 2025
+# deepiner, 2025
+# Hugo Carvalho <hugokarvalho@hotmail.com>, 2025
 # 
 #, fuzzy
 msgid ""
@@ -16,8 +16,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: Maggie Liu <maggie.liufei@gmail.com>, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Hugo Carvalho <hugokarvalho@hotmail.com>, 2025\n"
 "Language-Team: Portuguese (https://app.transifex.com/linuxdeepin/teams/3617/pt/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
