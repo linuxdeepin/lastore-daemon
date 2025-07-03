@@ -4,12 +4,13 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Hinaloe <hina@hinaloe.net>, 2020
-# Ryo Nakano, 2023
-# MMP 0 <mmmmpp0@yahoo.co.jp>, 2023
-# Maggie Liu <maggie.liufei@gmail.com>, 2023
-# deepiner, 2023
-# 🎈 BALLOON | FU-SEN, 2024
+# Hinaloe <hina@hinaloe.net>, 2025
+# Maggie Liu <maggie.liufei@gmail.com>, 2025
+# Ryo Nakano, 2025
+# 🎈 BALLOON | FU-SEN, 2025
+# deepiner, 2025
+# MMP 0 <mmmmpp0@yahoo.co.jp>, 2025
+# Keita Kunishi (Keitan924111), 2025
 # 
 #, fuzzy
 msgid ""
@@ -17,8 +18,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: 🎈 BALLOON | FU-SEN, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Keita Kunishi (Keitan924111), 2025\n"
 "Language-Team: Japanese (https://app.transifex.com/linuxdeepin/teams/3617/ja/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -28,7 +29,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:45
 msgid "Installing updates..."
-msgstr ""
+msgstr "アップデートをインストールしています..."
 
 #: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
@@ -68,7 +69,7 @@ msgstr "パッケージキャッシュを消去しました"
 
 #: ../src/lastore-daemon/manager_check.go:44
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "確認してアップデートをインストールしています..."
 
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
@@ -78,7 +79,7 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "新しいバージョンが利用可能です。ダウンロードしています..."
 
 #: ../src/lastore-daemon/manager_download.go:139
 #: ../src/lastore-daemon/manager_download.go:184
@@ -90,74 +91,74 @@ msgstr "表示"
 #: ../src/lastore-daemon/manager_download.go:177
 #: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
-msgstr ""
+msgstr "アップデートできませんでした: ファイルが破損しています。もう一度お試しください。"
 
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
 msgid "Try Again"
-msgstr ""
+msgstr "もう一度試す"
 
 #: ../src/lastore-daemon/manager_download.go:183
 msgid "Downloading updates failed. Please check your network."
-msgstr ""
+msgstr "アップデートをダウンロードできませんでした。ネットワーク接続を確認してもう一度お試しください。"
 
 #: ../src/lastore-daemon/manager_download.go:200
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
-msgstr ""
+msgstr "ダウンロードが完了しました。シャットダウンまたは再起動時に更新をインストールできます。"
 
 #: ../src/lastore-daemon/manager_download.go:203
 msgid "Update Now"
-msgstr "今すぐ更新"
+msgstr "今すぐアップデートする"
 
 #: ../src/lastore-daemon/manager_download.go:205
 msgid "Dismiss"
-msgstr ""
+msgstr "無視"
 
 #: ../src/lastore-daemon/manager_update.go:133
 msgid "New version available!"
-msgstr ""
+msgstr "新しいバージョンが利用可能です"
 
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
-msgstr ""
+msgstr "アップデートを確認できませんでした。ネットワーク接続を確認してもう一度お試しください。"
 
 #: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
-msgstr ""
+msgstr "アップデートを確認できませんでした。ディスクの容量を確保してもう一度お試しください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:53
 msgid "Backing up and installing updates..."
-msgstr ""
+msgstr "バックアップしてアップデートをインストールしています..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:135
 #: ../src/lastore-daemon/manager_upgrade.go:158
 #: ../src/lastore-daemon/manager_upgrade.go:192
 msgid "Backup failed!"
-msgstr ""
+msgstr "バックアップできませんでした"
 
 #: ../src/lastore-daemon/manager_upgrade.go:136
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Proceed to Update"
-msgstr ""
+msgstr "アップデートを続行"
 
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Back Up Again"
-msgstr ""
+msgstr "もう一度バックアップする"
 
 #: ../src/lastore-daemon/manager_upgrade.go:415
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
-msgstr ""
+msgstr "バッテリー残量が60%以下です。正常にアップデートを実行するため、電源に接続してください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
-msgstr ""
+msgstr "アップデートできませんでした: ディスクの容量が不足しています。システムへの影響を避けるため、再起動してください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:508
 #: ../src/lastore-daemon/manager_upgrade.go:521
@@ -166,27 +167,27 @@ msgstr "再起動"
 
 #: ../src/lastore-daemon/manager_upgrade.go:512
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "アップデートできませんでしたした: ディスクの空き領域が不足しています"
 
 #: ../src/lastore-daemon/manager_upgrade.go:520
 msgid "Updates failed. Please reboot to avoid the effect on your system."
-msgstr ""
+msgstr "アップデートできませんでした。システムへの影響を避けるため、再起動してください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr ""
+msgstr "アップデートできませんでした"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
-msgstr ""
+msgstr "アップデートが完了しました"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
-msgstr ""
+msgstr "システムとアプリケーションが正常に動作するように再起動してください。"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Later"
-msgstr ""
+msgstr "あとで再起動する"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
