@@ -1,0 +1,188 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+# Translators:
+# Dimitris Spentzos <jimspentzos2000@gmail.com>, 2025
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-05-24 10:32+0800\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: Dimitris Spentzos <jimspentzos2000@gmail.com>, 2025\n"
+"Language-Team: Greek (Greece) (https://app.transifex.com/linuxdeepin/teams/3617/el_GR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: el_GR\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ../src/lastore-daemon/inhibitor.go:45
+msgid "Installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/inhibitor.go:47
+msgid "Tasks are running..."
+msgstr ""
+
+#: ../src/lastore-daemon/inhibitor.go:49
+msgid "Preventing from shutting down"
+msgstr ""
+
+#: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
+msgid "Control Center"
+msgstr "Κέντρο Ελέγχου"
+
+#: ../src/lastore-daemon/main.go:172
+msgid "App Store"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:333
+msgid "Removed successfully"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:338
+msgid "Failed to remove the app"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:341
+msgid "Retry"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:343
+msgid "Cancel"
+msgstr ""
+
+#: ../src/lastore-daemon/manager.go:441
+msgid "Package cache wiped"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_check.go:44
+msgid "Checking and installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:78
+#: ../src/lastore-daemon/manager_download.go:172
+#, c-format
+msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:136
+msgid "New version available! Downloading..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:139
+#: ../src/lastore-daemon/manager_download.go:184
+#: ../src/lastore-daemon/manager_update.go:134
+#: ../src/lastore-daemon/manager_update.go:160
+msgid "View"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:177
+#: ../src/lastore-daemon/manager_upgrade.go:500
+msgid "Updates failed: damaged files. Please update again."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:178
+#: ../src/lastore-daemon/manager_upgrade.go:501
+msgid "Try Again"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:183
+msgid "Downloading updates failed. Please check your network."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:200
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:203
+msgid "Update Now"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_download.go:205
+msgid "Dismiss"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_update.go:133
+msgid "New version available!"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_update.go:159
+msgid "Failed to check for updates. Please check your network."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_update.go:165
+msgid "Failed to check for updates. Please clean up your disk first."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:53
+msgid "Backing up and installing updates..."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:135
+#: ../src/lastore-daemon/manager_upgrade.go:158
+#: ../src/lastore-daemon/manager_upgrade.go:192
+msgid "Backup failed!"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:136
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Proceed to Update"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:159
+#: ../src/lastore-daemon/manager_upgrade.go:193
+msgid "Back Up Again"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:415
+msgid ""
+"The battery capacity is lower than 60%. To get successful updates, please "
+"plug in."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:507
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:508
+#: ../src/lastore-daemon/manager_upgrade.go:521
+msgid "Reboot"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:512
+msgid "Updates failed: insufficient disk space."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:520
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:525
+msgid "Updates failed."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:589
+msgid "Updates successful"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:590
+msgid "Restart the computer to use the system and applications properly."
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
+msgid "Reboot Later"
+msgstr ""
+
+#: ../src/lastore-daemon/manager_upgrade.go:591
+msgid "Reboot Now"
+msgstr ""
