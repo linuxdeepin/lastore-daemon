@@ -72,8 +72,6 @@ msgstr ""
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr ""
-"Stažení aktualizací se nezdařilo. Nejprve prosím uvolněte %g GB místa na "
-"disku."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
