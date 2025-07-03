@@ -1108,10 +1108,11 @@ func (m *Manager) handleDownloadLimitChanged(job *Job) {
 	}
 }
 
-func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]string, environ map[string]string) {
+func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]string, environ map[string]string) (bool, error) {
 	if strv.Strv(m.updater.UpdatablePackages).Contains(pkgName) || system.QueryPackageInstallable(pkgName) {
 		// 该包可更新或者该包未安装可以安装
 		var wg sync.WaitGroup
+		var installErr error
 		wg.Add(1)
 
 		m.do.Lock()
@@ -1120,20 +1121,22 @@ func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]st
 		if err != nil {
 			wg.Done()
 			logger.Warning(err)
-			return
+			return false, nil
 		}
 		if isExist {
 			wg.Done()
-			return
+			return false, nil
 		}
 		if installJob != nil {
 			installJob.option = option
 			installJob.setPreHooks(map[string]func() error{
 				string(system.FailedStatus): func() error {
+					installErr = fmt.Errorf("install package failed:%v", installJob.Description)
 					wg.Done()
 					return nil
 				},
 				string(system.SucceedStatus): func() error {
+					installErr = nil
 					wg.Done()
 					return nil
 				},
@@ -1141,11 +1144,16 @@ func (m *Manager) installSpecialPackageSync(pkgName string, option map[string]st
 			if err := m.jobManager.addJob(installJob); err != nil {
 				logger.Warning(err)
 				wg.Done()
-				return
+				return false, err
 			}
 		}
 		wg.Wait()
+		if installErr != nil {
+			return false, installErr
+		}
+		return true, nil
 	}
+	return false, nil
 }
 
 // 只有初始化和检查更新的时候，才能更新系统和安全仓库的Dir，目的是保证检查、下载、安装过程中的一致性，不受配置修改的影响

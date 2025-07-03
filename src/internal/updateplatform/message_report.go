@@ -82,12 +82,15 @@ type UpdatePlatformManager struct {
 }
 
 type platformCacheContent struct {
-	CoreListPkgs map[string]system.PackageInfo
-	BaselinePkgs map[string]system.PackageInfo
-	SelectPkgs   map[string]system.PackageInfo
-	PreCheck     string
-	MidCheck     string
-	PostCheck    string
+	CoreListPkgs   map[string]system.PackageInfo
+	BaselinePkgs   map[string]system.PackageInfo
+	SelectPkgs     map[string]system.PackageInfo
+	PreCheck       string
+	MidCheck       string
+	PostCheck      string
+	Tp             UpdateTp
+	UpdateTime     string
+	UpdateNowForce bool
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -134,6 +137,10 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		logger.Warning(err)
 	}
 
+	updateTime, err := time.Parse(time.RFC3339, cache.UpdateTime)
+	if err != nil {
+		logger.Warning(err)
+	}
 	return &UpdatePlatformManager{
 		config:                            c,
 		allowPostSystemUpgradeMessageType: system.SystemUpdate,
@@ -145,8 +152,9 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		cvePkgs:                           make(map[string][]string),
 		Token:                             token,
 		arch:                              arch,
-		Tp:                                UnknownUpdate,
-		UpdateNowForce:                    false,
+		Tp:                                cache.Tp,
+		UpdateNowForce:                    cache.UpdateNowForce,
+		UpdateTime:                        updateTime,
 		jobPostMsgMap:                     getLocalJobPostMsg(),
 		TargetCorePkgs:                    cache.CoreListPkgs,
 		BaselinePkgs:                      cache.BaselinePkgs,
@@ -1576,7 +1584,7 @@ func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {
 	return rules
 }
 
-func (m *UpdatePlatformManager) SaveCache(c *Config) {
+func (m *UpdatePlatformManager) SaveCache() {
 	cache := platformCacheContent{}
 	cache.CoreListPkgs = m.TargetCorePkgs
 	cache.BaselinePkgs = m.BaselinePkgs
@@ -1584,12 +1592,15 @@ func (m *UpdatePlatformManager) SaveCache(c *Config) {
 	cache.PreCheck = m.PreCheck
 	cache.MidCheck = m.MidCheck
 	cache.PostCheck = m.PostCheck
+	cache.Tp = m.Tp
+	cache.UpdateNowForce = m.UpdateNowForce
+	cache.UpdateTime = m.UpdateTime.Format(time.RFC3339)
 	content, err := json.Marshal(cache)
 	if err != nil {
 		logger.Warning("marshal cache failed:", err)
 		return
 	}
-	err = c.SetOnlineCache(string(content))
+	err = m.config.SetOnlineCache(string(content))
 	if err != nil {
 		logger.Warning("save cache failed:", err)
 	}
