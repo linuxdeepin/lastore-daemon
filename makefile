@@ -11,8 +11,6 @@ GOBUILD = go build
 GOTEST = go test -v
 export GO111MODULE=off
 
-export SECURITY_BUILD_OPTIONS = -fstack-protector-strong -D_FORTITY_SOURCE=1 -z noexecstack -pie -fPIC -z lazy
-
 all:  build
 
 TEST = \

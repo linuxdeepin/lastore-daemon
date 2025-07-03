@@ -2,6 +2,7 @@
 
 export GOCACHE := /tmp/gocache
 export GOPATH := /usr/share/gocode
+export SECURITY_BUILD_OPTIONS = -fstack-protector-strong -D_FORTITY_SOURCE=1 -z noexecstack -pie -fPIC -z lazy
 
 SYSTYPE=$(shell grep Type= /etc/deepin-version|cut -d= -f 2)
 
