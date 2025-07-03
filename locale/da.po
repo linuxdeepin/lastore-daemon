@@ -4,10 +4,10 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# scootergrisen, 2023
-# Michael Millet <mikevlet@protonmail.com>, 2023
-# deepiner, 2023
-# 31c8ff7daf246c6bd598eefe84c1433c, 2024
+# Michael Millet <mikevlet@protonmail.com>, 2025
+# scootergrisen, 2025
+# deepiner, 2025
+# 31c8ff7daf246c6bd598eefe84c1433c, 2025
 # 
 #, fuzzy
 msgid ""
@@ -15,8 +15,8 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
-"PO-Revision-Date: 2020-08-24 10:36+0000\n"
-"Last-Translator: 31c8ff7daf246c6bd598eefe84c1433c, 2024\n"
+"PO-Revision-Date: 2025-04-25 05:57+0000\n"
+"Last-Translator: 31c8ff7daf246c6bd598eefe84c1433c, 2025\n"
 "Language-Team: Danish (https://app.transifex.com/linuxdeepin/teams/3617/da/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
