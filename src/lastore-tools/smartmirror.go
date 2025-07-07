@@ -21,7 +21,7 @@ var CMDSmartMirror = cli.Command{
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "official",
-			Value: "http://packages.deepin.com/deepin",
+			Value: "",
 			Usage: "the official package repository",
 		},
 		cli.StringFlag{
@@ -121,7 +121,7 @@ func SubmainMirrorSynProgress(c *cli.Context) error {
 	return err
 }
 
-//  appendSuffix 如果 r 没有后缀 suffix，则加上。
+// appendSuffix 如果 r 没有后缀 suffix，则加上。
 func appendSuffix(r string, suffix string) string {
 	if strings.HasSuffix(r, suffix) {
 		return r

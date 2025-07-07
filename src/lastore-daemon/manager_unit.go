@@ -64,7 +64,7 @@ const (
 
 type lastoreUnitMap map[UnitName][]string
 
-// 定时任务和文件监听
+// 定时任务和文件监听map
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
 	if (m.config.GetLastoreDaemonStatus()&config.DisableUpdate) == 0 && !m.ImmutableAutoRecovery { // 更新禁用未开启且无忧还原未开启时

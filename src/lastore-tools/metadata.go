@@ -37,7 +37,7 @@ var CMDMetadata = cli.Command{
 		},
 		cli.StringFlag{
 			Name:  "remote",
-			Value: "http://cdn.packages.deepin.com/deepin/tree/lastore",
+			Value: "",
 			Usage: "the remote to fetch metadata",
 		},
 	},
