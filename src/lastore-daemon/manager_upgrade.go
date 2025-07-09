@@ -590,6 +590,7 @@ type ostreeRollbackData struct {
 	Time        int64  `json:"time"`
 	Name        string `json:"name"`
 	Auto        bool   `json:"auto"`
+	Reboot      bool   `json:"reboot"`
 }
 
 type ostreeResponse struct {
@@ -623,11 +624,11 @@ func osTreeRollback() error {
 	return nil
 }
 
-func osTreeParseRollbackData() (*ostreeRollbackData, error) {
+func osTreeParseRollbackData() (string, error) {
 	out, err := osTreeCmd([]string{"admin", "rollback", "--can-rollback", "-j"})
 	if err != nil {
 		logger.Warning("osTreeCmd failed:", err)
-		return nil, err
+		return "", err
 	}
 
 	logger.Info("osTree rollback output:", out)
@@ -636,44 +637,53 @@ func osTreeParseRollbackData() (*ostreeRollbackData, error) {
 	err = json.Unmarshal([]byte(out), &resp)
 	if err != nil {
 		logger.Warning("unmarshal ostree response failed:", err)
-		return nil, err
+		return "", err
 	}
 
 	if resp.Error != nil {
 		logger.Warning("ostree response has error:", resp.Error)
-		return nil, fmt.Errorf("ostree error: %v", resp.Error)
+		return "", fmt.Errorf("ostree error: %v", resp.Error)
 	}
 
-	var data ostreeRollbackData
-	err = json.Unmarshal(resp.Data, &data)
-	if err != nil {
-		logger.Warning("unmarshal rollback data failed:", err)
-		return nil, err
-	}
-
-	return &data, nil
+	return string(resp.Data), nil
 }
 
 func osTreeCanRollback() (bool, string) {
-	data, err := osTreeParseRollbackData()
+	dataJson, err := osTreeParseRollbackData()
 	if err != nil {
 		return false, ""
 	}
 
-	rawData, err := json.Marshal(data)
+	var data ostreeRollbackData
+	err = json.Unmarshal([]byte(dataJson), &data)
 	if err != nil {
-		return data.CanRollback, ""
+		return false, ""
 	}
 
-	return data.CanRollback, string(rawData)
+	return data.CanRollback, dataJson
 }
 
-func osTreeIsAutoRollback() bool {
-	data, err := osTreeParseRollbackData()
+func osTreeNeedRebootAfterRollback() bool {
+	dataJson, err := osTreeParseRollbackData()
 	if err != nil {
 		return false
 	}
-	return data.Auto
+
+	var data ostreeRollbackData
+	err = json.Unmarshal([]byte(dataJson), &data)
+	if err != nil {
+		return false
+	}
+
+	// 兼容旧版本，Auto为true时，表示不需要重启
+	var rawData map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(dataJson), &rawData); err == nil {
+		if _, hasReboot := rawData["reboot"]; !hasReboot {
+			return !data.Auto
+		}
+	}
+
+	return data.Reboot
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {
