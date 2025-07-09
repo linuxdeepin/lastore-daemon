@@ -745,23 +745,24 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error {
 	var err error
 	if confirm {
-		go func() {
-			err = osTreeRollback()
+		needReboot := osTreeNeedRebootAfterRollback()
+		err = osTreeRollback()
+		if err != nil {
+			logger.Warning(err)
+		}
+		if m.grub != nil {
+			err = m.grub.changeGrubDefaultEntry(normalBootEntry)
 			if err != nil {
 				logger.Warning(err)
 			}
-			if m.grub != nil {
-				err = m.grub.changeGrubDefaultEntry(normalBootEntry)
-				if err != nil {
-					logger.Warning(err)
-				}
-			}
+		}
 
-			// 如果自动回滚，则无需重启
-			if !osTreeIsAutoRollback() {
-				m.PowerOff(sender, true)
+		if needReboot {
+			err := m.PowerOff(sender, true)
+			if err != nil {
+				logger.Warning(err)
 			}
-		}()
+		}
 	} else {
 		return m.PowerOff(sender, true)
 	}
