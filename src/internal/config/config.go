@@ -137,11 +137,6 @@ func NewConfig(configPath string) *Config {
 	if dc.CheckInterval < MinCheckInterval {
 		_ = dc.SetCheckInterval(MinCheckInterval)
 	}
-	if dc.Repository == "" || dc.MirrorSource == "" {
-		info := system.DetectDefaultRepoInfo(system.RepoInfos)
-		_ = dc.SetRepository(info.Name)
-		_ = dc.SetMirrorSource("default") // info.Mirror
-	}
 	if dc.Version == "" {
 		_ = dc.SetVersion(ConfigVersion)
 		_ = dc.SetCheckInterval(time.Hour * 24 * 7)
@@ -499,11 +494,7 @@ func getConfigFromDSettings() *Config {
 	} else {
 		url = v.Value().(string)
 	}
-	if len(url) == 0 {
-		c.PlatformUrl = "https://update-platform.uniontech.com"
-	} else {
-		c.PlatformUrl = url
-	}
+	c.PlatformUrl = url
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformRepoComponents)
 	if err != nil {

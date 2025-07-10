@@ -5,6 +5,7 @@
 package dstore
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -38,15 +39,15 @@ func NewStore() *Store {
 	return s
 }
 
-func (s *Store) GetMetadataServer() string {
+func (s *Store) GetMetadataServer() (string, error) {
 	var metadataServer string
 	if s.sysCfg != nil {
 		metadataServer = s.sysCfg.Section("General").Key("Server").String()
 	}
 	if metadataServer == "" {
-		metadataServer = "https://store.chinauos.com"
+		return "", errors.New("no metadata server")
 	}
-	return metadataServer
+	return metadataServer, nil
 }
 
 type AppInfo struct {
@@ -77,11 +78,17 @@ type packageApps map[string]*PackageInfo
 func (s *Store) GetPackageApplication(path string) (v []*PackageInfo, err error) {
 	// cachePath := filepath.Join(system.VarLibDir, "packages.cache.json")
 	cachePath := path + ".cache.json"
-	apiAppURL := s.GetMetadataServer() + "/api/public/packages"
+	server, err := s.GetMetadataServer()
+	if err != nil {
+		return nil, err
+	}
+	apiAppURL := server + "/api/public/packages"
 
 	packages := make(packageApps)
 	err = cacheFetchJSON(&packages, apiAppURL, cachePath, expireDelay)
-
+	if err != nil {
+		return nil, err
+	}
 	for dpk, app := range packages {
 		app.PackageURI = dpk
 		app.PackageName = strings.Replace(dpk, "dpk://deb/", "", -1)

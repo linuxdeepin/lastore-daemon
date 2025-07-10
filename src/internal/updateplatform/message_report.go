@@ -106,9 +106,6 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 	platformUrl := c.PlatformUrl
 	if len(platformUrl) == 0 {
 		platformUrl = os.Getenv("UPDATE_PLATFORM_URL")
-		if len(platformUrl) == 0 {
-			platformUrl = "https://update-platform.uniontech.com"
-		}
 	}
 
 	if !utils.IsFileExist(CacheVersion) {

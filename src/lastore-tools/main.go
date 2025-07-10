@@ -112,7 +112,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "dstoreapi",
 			Usage: "the dstore api server url. There has many jobs would use the to fetch data",
-			Value: "http://api.appstore.deepin.org",
+			Value: "",
 		},
 	}
 	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop, CMDCheckPolicy, CMDPostUpgrade}

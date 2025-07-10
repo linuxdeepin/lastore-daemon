@@ -9,7 +9,6 @@ lastore-daemon
 package system
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -358,50 +357,15 @@ func SystemArchitectures() ([]Architecture, error) {
 	return r, nil
 }
 
-var defaultRepoInfo = RepositoryInfo{
-	Name:   "desktop",
-	Url:    "http://packages.deepin.com/deepin",
-	Mirror: "http://cdn.packages.deepin.com/deepin",
-}
-
 func init() {
 	err := DecodeJson(path.Join(VarLibDir, "repository_info.json"), &RepoInfos)
 	if err != nil {
-		RepoInfos = []RepositoryInfo{defaultRepoInfo}
+		RepoInfos = []RepositoryInfo{}
 	}
 	_ = os.Setenv("DEBIAN_FRONTEND", "noninteractive")
 	_ = os.Setenv("DEBIAN_PRIORITY", "critical")
 	_ = os.Setenv("DEBCONF_NONINTERACTIVE_SEEN", "true")
 	_ = os.Setenv("IMMUTABLE_DISABLE_REMOUNT", "true")
-}
-
-func DetectDefaultRepoInfo(rInfos []RepositoryInfo) RepositoryInfo {
-	f, err := os.Open("/etc/apt/sources.list")
-	if err != nil {
-		return defaultRepoInfo
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	r := bufio.NewReader(f)
-	for {
-		bs, _, err := r.ReadLine()
-		if err != nil {
-			break
-		}
-		line := strings.TrimLeft(string(bs), " ")
-		if strings.IndexByte(line, '#') == 0 {
-			continue
-		}
-
-		for _, repo := range rInfos {
-			if strings.Contains(line, " "+repo.Url+" ") {
-				return repo
-			}
-		}
-	}
-	return defaultRepoInfo
 }
 
 func guestBasePackageName(pkgId string) string {

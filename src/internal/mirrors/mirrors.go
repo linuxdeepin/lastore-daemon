@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
@@ -92,6 +94,7 @@ func getUnpublishedMirrorSources(url string) ([]system.MirrorSource, error) {
 
 // LoadMirrorSources return supported MirrorSource from remote server
 func LoadMirrorSources(url string) ([]system.MirrorSource, error) {
+	config := config.NewConfig(path.Join("/var/lib/lastore", "config.json"))
 	var mirrorsUrl string
 	if url != "" {
 		mirrorsUrl = url
@@ -100,14 +103,14 @@ func LoadMirrorSources(url string) ([]system.MirrorSource, error) {
 		data, err := os.ReadFile(filepath.Join(system.VarLibDir, "config.json"))
 		if err != nil {
 			if os.IsNotExist(err) {
-				mirrorsUrl = system.DefaultMirrorsUrl
+				mirrorsUrl = config.MirrorsUrl
 			} else {
 				return nil, err
 			}
 		} else {
 			cfg := struct {
 				MirrorsUrl string
-			}{system.DefaultMirrorsUrl}
+			}{config.MirrorsUrl}
 
 			err = json.Unmarshal(data, &cfg)
 			if err != nil {

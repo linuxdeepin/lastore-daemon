@@ -11,7 +11,6 @@ import (
 )
 
 const VarLibDir = "/var/lib/lastore"
-const DefaultMirrorsUrl = "http://packages.deepin.com/mirrors/community.json"
 
 type Status string
 
