@@ -1,3 +1,11 @@
+lastore-daemon (6.2.25) unstable; urgency=medium
+
+  * i18n: Updates for project Deepin Desktop Environment (#190)
+  * fix: 移除硬编码的公网 url (#191)
+  * fix: improve rollback handling logic
+
+ -- WuJiangYu <wujiangyu@uniontech.com>  Thu, 10 Jul 2025 20:59:29 +0800
+
 lastore-daemon (6.2.24) unstable; urgency=medium
 
   * i18n: Updates for project Deepin Desktop Environment (#187)
