@@ -498,7 +498,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		go func() {
 			m.inhibitAutoQuitCountAdd()
 			logger.Info("auto download force updates")
-			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), system.SystemUpdate, false) // TODO system.SystemUpdate
+			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), system.SystemUpdate) // TODO system.SystemUpdate
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}
@@ -522,7 +522,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		logger.Info("auto download updates")
 		go func() {
 			m.inhibitAutoQuitCountAdd()
-			_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
+			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode)
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)
 			}

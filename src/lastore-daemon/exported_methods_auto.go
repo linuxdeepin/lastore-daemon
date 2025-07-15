@@ -15,12 +15,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{
-			Name:    "ClassifiedUpgrade",
-			Fn:      v.ClassifiedUpgrade,
-			InArgs:  []string{"updateType"},
-			OutArgs: []string{"outArg0"},
-		},
-		{
 			Name:    "CleanArchives",
 			Fn:      v.CleanArchives,
 			OutArgs: []string{"job"},
@@ -30,25 +24,20 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:     v.CleanJob,
 			InArgs: []string{"jobId"},
 		},
-		{
+		{ //TODO
 			Name:   "ConfirmRollback",
 			Fn:     v.ConfirmRollback,
 			InArgs: []string{"confirm"},
 		},
-		{
+		{ //TODO
 			Name:    "CanRollback",
 			Fn:      v.CanRollback,
 			OutArgs: []string{"result", "info"},
 		},
-		{
+		{ //TODO
 			Name:   "PowerOff",
 			Fn:     v.PowerOff,
 			InArgs: []string{"reboot"},
-		},
-		{
-			Name:    "DistUpgrade",
-			Fn:      v.DistUpgrade,
-			OutArgs: []string{"job"},
 		},
 		{
 			Name:    "DistUpgradePartly",
@@ -96,12 +85,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"jobPath"},
 		},
 		{
-			Name:    "PackageDesktopPath",
-			Fn:      v.PackageDesktopPath,
-			InArgs:  []string{"pkgId"},
-			OutArgs: []string{"desktopPath"},
-		},
-		{
 			Name:    "PackageExists",
 			Fn:      v.PackageExists,
 			InArgs:  []string{"pkgId"},
@@ -131,11 +114,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"jobId"},
 		},
 		{
-			Name:    "PrepareDistUpgrade",
-			Fn:      v.PrepareDistUpgrade,
-			OutArgs: []string{"job"},
-		},
-		{
 			Name:    "PrepareDistUpgradePartly",
 			Fn:      v.PrepareDistUpgradePartly,
 			InArgs:  []string{"mode"},
@@ -157,7 +135,7 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:     v.RegisterAgent,
 			InArgs: []string{"path"},
 		},
-		{
+		{ // TODO
 			Name:    "RemovePackage",
 			Fn:      v.RemovePackage,
 			InArgs:  []string{"jobName", "packages"},
@@ -167,11 +145,6 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "SetAutoClean",
 			Fn:     v.SetAutoClean,
 			InArgs: []string{"enable"},
-		},
-		{
-			Name:   "SetRegion",
-			Fn:     v.SetRegion,
-			InArgs: []string{"region"},
 		},
 		{
 			Name:   "SetUpdateSources",
@@ -189,25 +162,13 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"path"},
 		},
 		{
-			Name:    "UpdateOfflineSource",
-			Fn:      v.UpdateOfflineSource,
-			InArgs:  []string{"paths", "option"},
-			OutArgs: []string{"job"},
-		},
-		{
-			Name:    "UpdatePackage",
-			Fn:      v.UpdatePackage,
-			InArgs:  []string{"jobName", "packages"},
-			OutArgs: []string{"job"},
-		},
-		{
 			Name:    "UpdateSource",
 			Fn:      v.UpdateSource,
 			OutArgs: []string{"job"},
 		},
-		{
-			Name:    "ExportUpdateDetails",
-			Fn:      v.ExportUpdateDetails,
+		{ // 危险函数
+			Name:   "ExportUpdateDetails",
+			Fn:     v.ExportUpdateDetails,
 			InArgs: []string{"filename"},
 		},
 	}
@@ -215,25 +176,9 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 	return dbusutil.ExportedMethods{
 		{
-			Name:    "ApplicationUpdateInfos",
-			Fn:      v.ApplicationUpdateInfos,
-			InArgs:  []string{"lang"},
-			OutArgs: []string{"updateInfos"},
-		},
-		{
 			Name:    "GetCheckIntervalAndTime",
 			Fn:      v.GetCheckIntervalAndTime,
 			OutArgs: []string{"interval", "checkTime"},
-		},
-		{
-			Name:    "ListMirrorSources",
-			Fn:      v.ListMirrorSources,
-			InArgs:  []string{"lang"},
-			OutArgs: []string{"mirrorSources"},
-		},
-		{
-			Name: "RestoreSystemSource",
-			Fn:   v.RestoreSystemSource,
 		},
 		{
 			Name:   "SetAutoCheckUpdates",
@@ -259,11 +204,6 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "SetInstallUpdateTime",
 			Fn:     v.SetInstallUpdateTime,
 			InArgs: []string{"timeStr"},
-		},
-		{
-			Name:   "SetMirrorSource",
-			Fn:     v.SetMirrorSource,
-			InArgs: []string{"id"},
 		},
 		{
 			Name:   "SetP2PUpdateEnable",

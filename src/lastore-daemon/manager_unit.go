@@ -406,7 +406,7 @@ func (m *Manager) startCheckPolicyTask() {
 }
 
 func (m *Manager) handleAutoDownload() {
-	_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
+	_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode)
 	if err != nil {
 		logger.Warning(err)
 	}

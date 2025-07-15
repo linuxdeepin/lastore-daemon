@@ -39,7 +39,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 	case system.RemoveJobType:
 		return sys.Remove(j.Id, j.Packages, j.environ)
 
-	case system.UpdateSourceJobType, system.OfflineUpdateJobType:
+	case system.UpdateSourceJobType:
 		return sys.UpdateSource(j.Id, j.environ, j.option)
 
 	case system.UpdateJobType:

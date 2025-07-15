@@ -59,15 +59,3 @@ func TestJobManager(t *testing.T) {
 	err = jm.markReady(jobDownload2)
 	assert.NoError(t, err)
 }
-
-func Test_GetUpgradeInfoMap(t *testing.T) {
-	upgradeInfoMap := GetUpgradeInfoMap()
-	_, ok := upgradeInfoMap[system.SystemUpdate]
-	assert.Equal(t, true, ok)
-	_, ok = upgradeInfoMap[system.AppStoreUpdate]
-	assert.Equal(t, true, ok)
-	_, ok = upgradeInfoMap[system.UnknownUpdate]
-	assert.Equal(t, true, ok)
-	_, ok = upgradeInfoMap[system.SecurityUpdate]
-	assert.Equal(t, true, ok)
-}

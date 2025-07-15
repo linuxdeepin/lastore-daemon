@@ -109,9 +109,6 @@ func main() {
 	if err != nil {
 		logger.Error("failed to set write cb for property CheckUpdateMode:", err)
 	}
-	err = serverObject.SetReadCallback(updater, "offlineInfo", func(read *dbusutil.PropertyRead) *dbus.Error {
-		return dbusutil.ToError(updater.SetOfflineInfo(manager.offline.GetCheckInfo()))
-	})
 	// 每次读取SystemSourceConfig和SecuritySourceConfig都实时获取一次配置
 	err = serverObject.SetReadCallback(manager, "systemSourceConfig", func(read *dbusutil.PropertyRead) *dbus.Error {
 		manager.reloadOemConfig(false)
@@ -162,10 +159,6 @@ func main() {
 	service.SetAutoQuitHandler(autoQuitTime, manager.canAutoQuit)
 	service.Wait()
 	manager.saveLastoreCache()
-	err = manager.offline.CleanCache()
-	if err != nil {
-		logger.Warning(err)
-	}
 }
 
 func initLastoreInhibitHint(service *dbusutil.Service) {

@@ -44,18 +44,15 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	var startJobErr error
 	var mode system.UpdateType
 	// 非离线安装需要过滤可更新的选项
-	if origin&system.OfflineUpdate == 0 {
-		mode = m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
-		if mode == 0 {
-			return "", dbusutil.ToError(errors.New("don't exist can distUpgrade mode"))
-		}
-	} else {
-		mode = origin
+	mode = m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
+	if mode == 0 {
+		return "", dbusutil.ToError(errors.New("don't exist can distUpgrade mode"))
 	}
+
 	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
 		mode = origin
 	}
-	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, false)
+	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false)
 	if createJobErr != nil {
 		if !errors.Is(createJobErr, JobExistError) {
 			return "/", dbusutil.ToError(createJobErr)
@@ -195,9 +192,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	return upgradeJob.getPath(), nil
 }
 
-// distUpgrade isClassify true: mode只能是单类型,创建一个单类型的更新job; false: mode类型不限,创建一个全mode类型的更新job
-// needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
-func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClassify bool, needAdd bool, needChangeGrub bool) (*Job, error) {
+// distUpgrade needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
+func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAdd bool, needChangeGrub bool) (*Job, error) {
 	m.checkDpkgCapabilityOnce.Do(func() {
 		m.supportDpkgScriptIgnore = checkSupportDpkgScriptIgnore()
 	})
@@ -218,16 +214,9 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	m.updateJobList()
 	var packages []string
 
-	// 判断是否有可离线更新内容
-	if mode == system.OfflineUpdate {
-		if len(m.offline.upgradeAblePackageList) == 0 {
-			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
-		}
-	} else {
-		packages = m.updater.getUpdatablePackagesByType(mode)
-		if len(packages) == 0 {
-			return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
-		}
+	packages = m.updater.getUpdatablePackagesByType(mode)
+	if len(packages) == 0 {
+		return nil, system.NotFoundError(fmt.Sprintf("empty %v UpgradableApps", mode))
 	}
 
 	var isExist bool
@@ -245,10 +234,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 	err = system.CustomSourceWrapper(mergeMode, func(path string, unref func()) error {
 		m.do.Lock()
 		defer m.do.Unlock()
-		if isClassify {
-			jobType := GetUpgradeInfoMap()[mode].UpgradeJobId
-			isExist, job, err = m.jobManager.CreateJob("", jobType, nil, environ, nil)
-		} else {
+		{
 			option := map[string]interface{}{
 				"UpdateMode":              mode, // 原始mode
 				"SupportDpkgScriptIgnore": m.supportDpkgScriptIgnore,
@@ -280,10 +266,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 			}
 		}
 
-		if mode == system.OfflineUpdate {
-			job.option["Dir::State::lists"] = system.OfflineListPath
-		}
-
 		if m.supportDpkgScriptIgnore && mode == system.UnknownUpdate {
 			job.option["DPkg::Options::"] = "--script-ignore-error"
 		}
@@ -313,7 +295,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 				}
 				logger.Info(uuid)
 				m.updatePlatform.CreateJobPostMsgInfo(uuid, job.updateTyp)
-				systemErr := dut.CheckSystem(dut.PreCheck, mode == system.OfflineUpdate, nil) // 只是为了执行precheck的hook脚本
+				systemErr := dut.CheckSystem(dut.PreCheck, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
 					logger.Info(systemErr)
 					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
@@ -337,7 +319,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, isClas
 
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				systemErr := dut.CheckSystem(dut.MidCheck, mode == system.OfflineUpdate, nil)
+				systemErr := dut.CheckSystem(dut.MidCheck, nil)
 				if systemErr != nil {
 					logger.Info(systemErr)
 					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
@@ -751,48 +733,12 @@ func (m *Manager) cancelAllUpdateJob() error {
 	return nil
 }
 
-func onlyDownloadOfflinePackage(pkgsMap map[string]system.PackageInfo) error {
-	var packages []string
-	for _, info := range pkgsMap {
-		packages = append(packages, fmt.Sprintf("%v=%v", info.Name, info.Version))
-	}
-	cmdStr := fmt.Sprintf("apt-get download %v -c /var/lib/lastore/apt_v2_common.conf --allow-change-held-packages -o Dir::State::lists=/var/lib/lastore/offline_list -o Dir::Etc::SourceParts=/dev/null -o Dir::Etc::SourceList=/var/lib/lastore/offline.list", strings.Join(packages, " "))
-	cmd := exec.Command("/bin/sh", "-c", cmdStr)
-	cmd.Dir = system.LocalCachePath // 该路径和/var/lib/lastore/apt_v2_common.conf保持一致
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	err := cmd.Run()
-	if err != nil {
-		logger.Info(err)
-		logger.Info(errBuf.String())
-		return err
-	}
-	return nil
-}
-
 // 生成meta.json和uuid 暂时不使用dut，使用apt
 func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
 	// 使用dut更新前的准备
 	var uuid string
 	var err error
-	if mode == system.OfflineUpdate {
-		// 转移包路径
-		err = onlyDownloadOfflinePackage(m.offline.upgradeAblePackages)
-		if err != nil {
-			return "", err
-		}
-		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
-		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-			system.LocalCachePath,
-			m.offline.upgradeAblePackages,
-			m.offline.upgradeAblePackages, nil, m.offline.upgradeAblePackages, m.offline.removePackages, nil, genRepoInfo(mode, system.OfflineListPath))
-		if err != nil {
-			logger.Warning(err)
-			return "", err
-		}
-	} else {
+	{
 		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
 		var pkgMap map[string]system.PackageInfo
 		var removeMap map[string]system.PackageInfo
@@ -861,11 +807,8 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 	// pkgMap repo和system.LocalCachePath都是占位用，没有起到真正的作用
 	pkgMap := make(map[string]system.PackageInfo)
 	var repo []dut.RepoInfo
-	if mode == system.OfflineUpdate {
-		repo = genRepoInfo(system.OfflineUpdate, system.OfflineListPath)
-	} else {
-		repo = genRepoInfo(mode, system.OnlineListPath)
-	}
+
+	repo = genRepoInfo(mode, system.OnlineListPath)
 
 	// coreList 生成
 	coreListMap := make(map[string]system.PackageInfo)
@@ -901,20 +844,7 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 		coreListMap = loadCoreList()
 	}
 	// 使用dut检查前的准备
-	if mode == system.OfflineUpdate {
-		uuid, err = dut.GenDutMetaFile(system.DutOfflineMetaConfPath,
-			system.LocalCachePath,
-			pkgMap,
-			coreListMap, nil, nil, nil, nil, repo)
-		if err != nil {
-			logger.Warning(err)
-			return "", &system.JobError{
-				ErrType:      system.ErrorUnknown,
-				ErrDetail:    err.Error(),
-				IsCheckError: true,
-			}
-		}
-	} else {
+	{
 		mode &= system.AllInstallUpdate
 		if mode == 0 {
 			return "", errors.New("invalid mode")
@@ -1002,9 +932,6 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 	}
 	if typ&system.SecurityUpdate != 0 {
 		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.SecurityUpdate])...)
-	}
-	if typ&system.OfflineUpdate != 0 {
-		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.OfflineUpdate])...)
 	}
 	if typ&system.UnknownUpdate != 0 {
 		urls = append(urls, getUpgradeUrls(system.GetCategorySourceMap()[system.UnknownUpdate])...)

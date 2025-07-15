@@ -21,8 +21,7 @@ import (
 	"github.com/linuxdeepin/go-lib/gettext"
 )
 
-// prepareDistUpgrade isClassify true: mode只能是单类型,创建一个单类型的下载job; false: mode类型不限,创建一个全mode类型的下载job
-func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType, isClassify bool) (*Job, error) {
+func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType) (*Job, error) {
 	if m.ImmutableAutoRecovery {
 		logger.Info("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
 		return nil, errors.New("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
@@ -96,14 +95,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	// 新的下载处理方式
 	m.do.Lock()
 	defer m.do.Unlock()
-	if isClassify {
-		jobType := GetUpgradeInfoMap()[mode].PrepareJobId
-		if jobType == "" {
-			return nil, fmt.Errorf("invalid args: %v", mode)
-		}
-		const jobName = "OnlyDownload" // 提供给daemon的lastore模块判断当前下载任务是否还有后续更新任务
-		isExist, job, err = m.jobManager.CreateJob(jobName, jobType, nil, environ, nil)
-	} else {
+	{
 		m.updater.PropsMu.Lock()
 		option := map[string]interface{}{
 			"UpdateMode":   mode,

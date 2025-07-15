@@ -106,7 +106,6 @@ type Manager struct {
 	updatePlatform *updateplatform.UpdatePlatformManager
 	isDownloading  bool
 
-	offline            *OfflineManager
 	rebootTimeoutTimer *time.Timer
 
 	coreList   []string
@@ -152,7 +151,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
-	m.offline = NewOfflineManager()
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.initStatusManager()
@@ -514,70 +512,6 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 		return nil, err
 	}
 	return job, nil
-}
-
-// 根据更新类型,创建对应的下载或下载+安装的job
-func (m *Manager) classifiedUpgrade(sender dbus.Sender, updateType system.UpdateType, isUpgrade bool) ([]dbus.ObjectPath, *dbus.Error) {
-	var jobPaths []dbus.ObjectPath
-	var err error
-	var errList []string
-	// 保证任务创建顺序
-	for _, t := range system.AllInstallUpdateType() {
-		category := updateType & t
-		if category != 0 {
-			var upgradeJob, prepareJob *Job
-			if isUpgrade {
-				prepareJob, err = m.prepareDistUpgrade(sender, category, true)
-				if err != nil {
-					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
-						errList = append(errList, err.Error())
-						logger.Warning(err)
-						continue
-					} else {
-						logger.Info(err)
-						// 可能无需下载,因此继续后面安装job的创建
-					}
-				}
-				upgradeJob, err = m.distUpgrade(sender, category, true, false, false)
-				if err != nil && !errors.Is(err, JobExistError) {
-					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
-						errList = append(errList, err.Error())
-						logger.Warning(err)
-					} else {
-						logger.Info(err)
-					}
-					continue
-				}
-				// 如果需要下载job,则绑定下载和安装job.无需下载job,直接将安装job添加进队列即可
-				if prepareJob != nil {
-					jobPaths = append(jobPaths, prepareJob.getPath())
-					prepareJob.next = upgradeJob
-				} else {
-					if err := m.jobManager.addJob(upgradeJob); err != nil {
-						errList = append(errList, err.Error())
-						logger.Warning(err)
-					}
-				}
-				jobPaths = append(jobPaths, upgradeJob.getPath())
-			} else {
-				prepareJob, err = m.prepareDistUpgrade(sender, category, true)
-				if err != nil {
-					if !strings.Contains(err.Error(), system.NotFoundErrorMsg) {
-						errList = append(errList, err.Error())
-						logger.Warning(err)
-					} else {
-						logger.Info(err)
-					}
-					continue
-				}
-				jobPaths = append(jobPaths, prepareJob.getPath())
-			}
-		}
-	}
-	if len(errList) > 0 {
-		return jobPaths, dbusutil.ToError(errors.New(strings.Join(errList, ",")))
-	}
-	return jobPaths, nil
 }
 
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {

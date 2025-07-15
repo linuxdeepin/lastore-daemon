@@ -78,11 +78,9 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 		return "", err
 	}
 	job.option[dut.PostCheck.String()] = "--check-succeed" // TODO 还有--check-failed 的情况需要处理
-	if checkMode == system.OfflineUpdate {
-		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
-	} else {
-		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
-	}
+
+	job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
+
 	if checkOrder == firstCheck {
 		job.option["--stage1"] = ""
 	} else {

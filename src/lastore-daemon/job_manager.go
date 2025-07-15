@@ -161,9 +161,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
 		job._InitProgressRange(0.11, 0.9)
-	case system.OfflineUpdateJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.OfflineUpdateJobType, LockQueue, environ)
-		job._InitProgressRange(0.11, 0.9)
 	case system.DistUpgradeJobType:
 		mode, ok := jobArgc["UpdateMode"].(system.UpdateType)
 		if !ok {
@@ -609,47 +606,3 @@ var genJobId = func() func(string) string {
 		}
 	}
 }()
-
-// 分类更新任务需要创建Job的内容
-type upgradeJobInfo struct {
-	PrepareJobId   string // 下载Job的Id
-	PrepareJobType string // 下载Job的类型
-	UpgradeJobId   string // 更新Job的Id
-	UpgradeJobType string // 更新Job的类型
-}
-
-// GetUpgradeInfoMap 更新种类和具体job类型的映射  classify使用
-func GetUpgradeInfoMap() map[system.UpdateType]upgradeJobInfo {
-	return map[system.UpdateType]upgradeJobInfo{
-		system.SystemUpdate: {
-			PrepareJobId:   genJobId(system.PrepareSystemUpgradeJobType),
-			PrepareJobType: system.PrepareSystemUpgradeJobType,
-			UpgradeJobId:   genJobId(system.SystemUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-		system.SecurityUpdate: {
-			PrepareJobId:   genJobId(system.PrepareSecurityUpgradeJobType),
-			PrepareJobType: system.PrepareSecurityUpgradeJobType,
-			UpgradeJobId:   genJobId(system.SecurityUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-		system.AppStoreUpdate: {
-			PrepareJobId:   genJobId(system.PrepareAppStoreUpgradeJobType),
-			PrepareJobType: system.PrepareAppStoreUpgradeJobType,
-			UpgradeJobId:   genJobId(system.AppStoreUpgradeJobType),
-			UpgradeJobType: system.InstallJobType,
-		},
-		system.UnknownUpdate: {
-			PrepareJobId:   genJobId(system.PrepareUnknownUpgradeJobType),
-			PrepareJobType: system.PrepareUnknownUpgradeJobType,
-			UpgradeJobId:   genJobId(system.UnknownUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-		system.OnlySecurityUpdate: {
-			PrepareJobId:   genJobId(system.PrepareSecurityUpgradeJobType),
-			PrepareJobType: system.PrepareSecurityUpgradeJobType,
-			UpgradeJobId:   genJobId(system.SecurityUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-	}
-}

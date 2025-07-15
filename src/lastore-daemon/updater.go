@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"sync"
 	"time"
 
@@ -74,8 +73,6 @@ type Updater struct {
 	setIdleDownloadConfigTimer *time.Timer
 
 	UpdateTarget string
-
-	offlineInfo string
 
 	p2PUpdateEnable  bool // p2p更新是否开启
 	p2PUpdateSupport bool // 是否支持p2p更新
@@ -145,68 +142,10 @@ func SetAPTSmartMirror(url string) error {
 		0644) // #nosec G306
 }
 
-func (u *Updater) setMirrorSource(id string) error {
-	if id == "" || u.MirrorSource == id {
-		return nil
-	}
-
-	found := false
-	for _, m := range u.listMirrorSources("") {
-		if m.Id != id {
-			continue
-		}
-		found = true
-		if m.Url == "" {
-			return system.NotFoundError("empty url")
-		}
-		if err := SetAPTSmartMirror(m.Url); err != nil {
-			logger.Warningf("SetMirrorSource(%q) failed:%v\n", id, err)
-			return err
-		}
-	}
-	if !found {
-		return system.NotFoundError("invalid mirror source id")
-	}
-	err := u.config.SetMirrorSource(id)
-	if err != nil {
-		return err
-	}
-	u.MirrorSource = u.config.MirrorSource
-	_ = u.emitPropChangedMirrorSource(u.MirrorSource)
-	return nil
-}
-
 type LocaleMirrorSource struct {
 	Id   string
 	Url  string
 	Name string
-}
-
-func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
-	var raws []system.MirrorSource
-	_ = system.DecodeJson(path.Join(system.VarLibDir, "mirrors.json"), &raws)
-
-	makeLocaleMirror := func(lang string, m system.MirrorSource) LocaleMirrorSource {
-		ms := LocaleMirrorSource{
-			Id:   m.Id,
-			Url:  m.Url,
-			Name: m.Name,
-		}
-		if v, ok := m.NameLocale[lang]; ok {
-			ms.Name = v
-		}
-		return ms
-	}
-
-	var r []LocaleMirrorSource
-	for _, raw := range raws {
-		if raw.Weight < 0 {
-			continue
-		}
-		r = append(r, makeLocaleMirror(lang, raw))
-	}
-
-	return r
 }
 
 // 设置更新时间的接口
@@ -242,27 +181,6 @@ const (
 	aptSource       = "/etc/apt/sources.list"
 	aptSourceOrigin = aptSource + ".origin"
 )
-
-func (u *Updater) delRestoreSystemSource() error {
-	// write backup file
-	current, err := os.ReadFile(aptSource)
-	if err == nil {
-		err = os.WriteFile(aptSource+".bak", current, 0644) // #nosec G306
-		if err != nil {
-			logger.Warning(err)
-		}
-	} else {
-		logger.Warning(err)
-	}
-
-	origin, err := os.ReadFile(aptSourceOrigin)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(aptSource, origin, 0644) // #nosec G306
-	return err
-}
 
 func (u *Updater) setClassifiedUpdatablePackages(infosMap map[string][]string) {
 	u.PropsMu.Lock()
@@ -302,17 +220,6 @@ func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []str
 
 func (u *Updater) GetLimitConfig() (bool, string) {
 	return u.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled, u.downloadSpeedLimitConfigObj.LimitSpeed
-}
-
-func (u *Updater) SetOfflineInfo(res OfflineCheckResult) error {
-	content, err := json.Marshal(res)
-	if err != nil {
-		u.setPropOfflineInfo("")
-		logger.Warning(err)
-		return err
-	}
-	u.setPropOfflineInfo(string(content))
-	return nil
 }
 
 func (u *Updater) getP2PUnit() (systemd1.Unit, error) {

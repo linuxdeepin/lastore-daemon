@@ -6,12 +6,11 @@ package dut
 
 import (
 	"encoding/json"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 
 	"github.com/linuxdeepin/go-lib/utils"
 )

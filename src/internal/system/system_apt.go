@@ -33,13 +33,11 @@ const (
 )
 
 const (
-	DutOnlineMetaConfPath  = "/var/lib/lastore/online_meta.json"  // 在线更新元数据
-	DutOfflineMetaConfPath = "/var/lib/lastore/offline_meta.json" // 离线更新元数据
+	DutOnlineMetaConfPath = "/var/lib/lastore/online_meta.json" // 在线更新元数据
 )
 
 const (
-	OnlineListPath  = "/var/lib/apt/lists"
-	OfflineListPath = "/var/lib/lastore/offline_list"
+	OnlineListPath = "/var/lib/apt/lists"
 )
 
 const (
