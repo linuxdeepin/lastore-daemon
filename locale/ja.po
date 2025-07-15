@@ -75,7 +75,7 @@ msgstr "確認してアップデートをインストールしています..."
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
-msgstr ""
+msgstr "アップデートをダウンロードできませんでした。%gGB以上のディスク容量を開放してください。"
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
