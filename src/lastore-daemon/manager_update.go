@@ -123,6 +123,11 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			handleUpdateSourceFailed(j)
 		}
 		job.setPreHooks(map[string]func() error{
+			string(system.RunningStatus): func() error {
+				// 检查更新需要重置备份状态,主要是处理备份失败后再检查更新,会直接显示失败的场景
+				m.statusManager.SetABStatus(system.AllCheckUpdate, system.NotBackup, system.NoABError)
+				return nil
+			},
 			string(system.SucceedStatus): func() error {
 				m.refreshUpdateInfos(true)
 				m.PropsMu.Lock()
