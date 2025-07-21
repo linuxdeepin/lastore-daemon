@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,7 +12,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -135,6 +133,14 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		backupJob.next = upgradeJob
 		backupJob.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
+				// 每次开始更新前，清理之前记录的日志文件
+				_ = os.RemoveAll(logTmpPath)
+				_ = m.logTmpFile.Close()
+				m.logTmpFile = nil
+				m.logTmpFile, err = os.OpenFile(logTmpPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+				if err != nil {
+					return fmt.Errorf("failed to open file %s: %v", logTmpPath, err)
+				}
 				inhibit(true)
 				m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
 				return nil
@@ -326,7 +332,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 					return systemErr
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
-					if err := osTreeRefresh(); err != nil {
+					if err := m.immutableManager.osTreeRefresh(); err != nil {
 						logger.Warning("ostree deploy refresh failed,", err)
 					}
 				}
@@ -525,147 +531,6 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
 	// m.updatePlatform.recoverVersionLink()
 	return nil
-}
-
-// 格式化输出需要添加-j 参数
-func osTreeCmd(args []string) (out string, err error) {
-	if system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
-		args = append(args, "-v")
-		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...) // #nosec G204
-		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
-		logger.Info("run command:", cmd.Args)
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-		ff, err := system.OpenFlush(system.FlushName)
-		if err == nil {
-			defer func() {
-				ff.WriteString(fmt.Sprintf("=== Ostree %v end ===\n", cmd.Args))
-				ff.Close()
-			}()
-
-			err = ff.SetFlushCmd(cmd)
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-		ff.WriteString(fmt.Sprintf("=== Ostree cmd running: %v ===\n", cmd.Args))
-		err = cmd.Run()
-		if err != nil {
-			return "", fmt.Errorf("%v", stderr.String())
-		} else {
-			return stdout.String(), nil
-		}
-	} else {
-		return "", fmt.Errorf("%v not found", DEEPIN_IMMUTABLE_CTL)
-	}
-}
-
-type ostreeError struct {
-	Code    string   `json:"code"`
-	Message []string `json:"message"`
-}
-
-type ostreeRollbackData struct {
-	Version     int    `json:"version"`
-	CanRollback bool   `json:"can_rollback"`
-	Time        int64  `json:"time"`
-	Name        string `json:"name"`
-	Auto        bool   `json:"auto"`
-	Reboot      bool   `json:"reboot"`
-}
-
-type ostreeResponse struct {
-	Code    uint8           `json:"code"`
-	Message string          `json:"message"`
-	Error   *ostreeError    `json:"error"`
-	Data    json.RawMessage `json:"data"`
-}
-
-func osTreeRefresh() error {
-	_, err := osTreeCmd([]string{"admin", "deploy", "--refresh"})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func osTreeFinalize() error {
-	_, err := osTreeCmd([]string{"admin", "deploy", "--finalize"})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func osTreeRollback() error {
-	_, err := osTreeCmd([]string{"admin", "rollback"})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func osTreeParseRollbackData() (string, error) {
-	out, err := osTreeCmd([]string{"admin", "rollback", "--can-rollback", "-j"})
-	if err != nil {
-		logger.Warning("osTreeCmd failed:", err)
-		return "", err
-	}
-
-	logger.Info("osTree rollback output:", out)
-
-	var resp ostreeResponse
-	err = json.Unmarshal([]byte(out), &resp)
-	if err != nil {
-		logger.Warning("unmarshal ostree response failed:", err)
-		return "", err
-	}
-
-	if resp.Error != nil {
-		logger.Warning("ostree response has error:", resp.Error)
-		return "", fmt.Errorf("ostree error: %v", resp.Error)
-	}
-
-	return string(resp.Data), nil
-}
-
-func osTreeCanRollback() (bool, string) {
-	dataJson, err := osTreeParseRollbackData()
-	if err != nil {
-		return false, ""
-	}
-
-	var data ostreeRollbackData
-	err = json.Unmarshal([]byte(dataJson), &data)
-	if err != nil {
-		return false, ""
-	}
-
-	return data.CanRollback, dataJson
-}
-
-func osTreeNeedRebootAfterRollback() bool {
-	dataJson, err := osTreeParseRollbackData()
-	if err != nil {
-		return false
-	}
-
-	var data ostreeRollbackData
-	err = json.Unmarshal([]byte(dataJson), &data)
-	if err != nil {
-		return false
-	}
-
-	// 兼容旧版本，Auto为true时，表示不需要重启
-	var rawData map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(dataJson), &rawData); err == nil {
-		if _, hasReboot := rawData["reboot"]; !hasReboot {
-			return !data.Auto
-		}
-	}
-
-	return data.Reboot
 }
 
 func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {

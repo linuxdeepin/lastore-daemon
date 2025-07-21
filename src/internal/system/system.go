@@ -64,6 +64,8 @@ type JobProgressInfo struct {
 	Cancelable  bool
 	Error       *JobError
 	FatalError  bool
+	OriginalLog string
+	OnlyLog     bool
 }
 
 type UpgradeInfo struct {

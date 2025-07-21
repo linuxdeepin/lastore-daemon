@@ -13,7 +13,7 @@ import (
 )
 
 func TestJobManager(t *testing.T) {
-	jm := NewJobManager(nil, apt.NewSystem(nil, nil), nil)
+	jm := NewJobManager(nil, apt.NewSystem(nil, nil), nil, nil)
 	option := map[string]interface{}{
 		"UpdateMode":              system.SystemUpdate, // 原始mode
 		"WrapperModePath":         "",

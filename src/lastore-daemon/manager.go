@@ -43,8 +43,6 @@ const (
 
 	UserExperInstallApp   = "installapp"
 	UserExperUninstallApp = "uninstallapp"
-
-	uosReleaseNotePkgName = "uos-release-note"
 )
 
 const MaxCacheSize = 500.0 //size MB
@@ -73,11 +71,9 @@ type Manager struct {
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
 
-	apps                     apps.Apps
-	sysPower                 power.Power
-	signalLoop               *dbusutil.SignalLoop
-	shouldHandleBackupJobEnd bool
-	autoInstallType          system.UpdateType // 保存需要自动安装的类别
+	apps       apps.Apps
+	sysPower   power.Power
+	signalLoop *dbusutil.SignalLoop
 
 	UpdateMode      system.UpdateType `prop:"access:rw"` // 更新设置的内容
 	CheckUpdateMode system.UpdateType `prop:"access:rw"` // 检查更新选中的内容
@@ -100,11 +96,11 @@ type Manager struct {
 	systemd       systemd1.Manager
 	abObj         abrecovery.ABRecovery
 
-	grub           *grubManager
-	userAgents     *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
-	statusManager  *UpdateModeStatusManager
-	updatePlatform *updateplatform.UpdatePlatformManager
-	isDownloading  bool
+	grub             *grubManager
+	userAgents       *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
+	statusManager    *UpdateModeStatusManager
+	updatePlatform   *updateplatform.UpdatePlatformManager
+	immutableManager *immutableManager
 
 	rebootTimeoutTimer *time.Timer
 
@@ -115,6 +111,10 @@ type Manager struct {
 	supportDpkgScriptIgnore bool
 
 	resetIdleDownload bool
+
+	logFds     []*os.File
+	logFdsMu   sync.Mutex
+	logTmpFile *os.File
 }
 
 /*
@@ -150,7 +150,8 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
 	m.grub = newGrubManager(service.Conn(), m.signalLoop)
-	m.jobManager = NewJobManager(service, updateApi, m.updateJobList)
+	m.jobManager = NewJobManager(service, updateApi, m.updateJobList, m.processLogFds)
+	m.immutableManager = newImmutableManager(m.jobManager.handleJobProgressInfo)
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.initStatusManager()
@@ -581,30 +582,6 @@ func (m *Manager) delFixError(sender dbus.Sender, errType string) (*Job, error) 
 		return nil, err
 	}
 	return job, err
-}
-
-func (m *Manager) installUOSReleaseNote() {
-	logger.Info("installUOSReleaseNote begin")
-	bExists, _ := m.PackageExists(uosReleaseNotePkgName)
-	if bExists {
-		for _, v := range m.updater.UpdatablePackages {
-			if v == uosReleaseNotePkgName {
-				_, err := m.installPkg("", uosReleaseNotePkgName, nil)
-				if err != nil {
-					logger.Warning(err)
-				}
-				break
-			}
-		}
-	} else {
-		bInstalled := system.QueryPackageInstallable(uosReleaseNotePkgName)
-		if bInstalled {
-			_, err := m.installPkg("", uosReleaseNotePkgName, nil)
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
-	}
 }
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
@@ -1161,4 +1138,49 @@ func (m *Manager) updateAutoRecoveryStatus() {
 	m.PropsMu.Lock()
 	m.setPropImmutableAutoRecovery(isEnabled)
 	m.PropsMu.Unlock()
+}
+
+const (
+	logTmpPath = "/run/lastore/lastore_update_detail.log"
+)
+
+// processLogFds 遍历logFds，检查fd有效性，写入消息，移除无效的fd
+func (m *Manager) processLogFds(message string) {
+	m.logFdsMu.Lock()
+	defer m.logFdsMu.Unlock()
+	// 将 message 所有内容汇总不断的追加到 logTmpPath 文件中
+	err := func() error {
+		if m.logTmpFile != nil {
+			_, err := m.logTmpFile.WriteString(message)
+			if err != nil {
+				return fmt.Errorf("failed to write to file %s: %v", logTmpPath, err)
+			}
+		}
+		return nil
+	}()
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	validFds := make([]*os.File, 0, len(m.logFds))
+	for _, file := range m.logFds {
+		if file == nil {
+			continue
+		}
+
+		// 尝试写入字符串，如果成功说明fd有效
+		_, err := file.WriteString(message)
+		if err != nil {
+			// 写入失败，fd无效，关闭文件并跳过
+			file.Close()
+			logger.Debugf("Removed invalid log fd due to write error: %v", err)
+			continue
+		}
+
+		// 写入成功，保留这个有效的fd
+		validFds = append(validFds, file)
+	}
+
+	// 更新logFds，只保留有效的fd
+	m.logFds = validFds
 }

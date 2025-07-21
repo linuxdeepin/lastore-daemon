@@ -167,9 +167,9 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"job"},
 		},
 		{ // 危险函数
-			Name:   "ExportUpdateDetails",
-			Fn:     v.ExportUpdateDetails,
-			InArgs: []string{"filename"},
+			Name:   "GetUpdateDetails",
+			Fn:     v.GetUpdateDetails,
+			InArgs: []string{"filename", "realtime"},
 		},
 	}
 }

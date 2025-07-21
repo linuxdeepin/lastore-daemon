@@ -48,17 +48,20 @@ type JobManager struct {
 
 	dispatchMux sync.Mutex
 	notify      func()
+
+	jobDetailFn func(msg string)
 }
 
-func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()) *JobManager {
+func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func(), jobDetailFn func(msg string)) *JobManager {
 	if api == nil {
 		panic("NewJobManager with api=nil")
 	}
 	m := &JobManager{
-		service: service,
-		queues:  make(map[string]*JobQueue),
-		notify:  notifyFn,
-		system:  api,
+		service:     service,
+		queues:      make(map[string]*JobQueue),
+		notify:      notifyFn,
+		system:      api,
+		jobDetailFn: jobDetailFn,
 	}
 	m.createJobList(DownloadQueue, DownloadQueueCap)
 	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
@@ -548,7 +551,12 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 		logger.Warningf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
-
+	if jm.jobDetailFn != nil && len(info.OriginalLog) > 0 {
+		jm.jobDetailFn(fmt.Sprintf("[%s] %s", time.Now().Format(time.DateTime), info.OriginalLog))
+	}
+	if info.OnlyLog {
+		return
+	}
 	if j.updateInfo(info) {
 		jm.markDirty()
 	}

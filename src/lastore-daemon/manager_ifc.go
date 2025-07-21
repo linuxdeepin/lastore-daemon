@@ -9,20 +9,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	utils2 "github.com/linuxdeepin/go-lib/utils"
-
 	"github.com/godbus/dbus/v5"
+	"github.com/linuxdeepin/dde-api/polkit"
 	agent "github.com/linuxdeepin/go-dbus-factory/session/org.deepin.dde.lastore1.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/procfs"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
@@ -631,8 +632,8 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error {
 	var err error
 	if confirm {
-		needReboot := osTreeNeedRebootAfterRollback()
-		err = osTreeRollback()
+		needReboot := m.immutableManager.osTreeNeedRebootAfterRollback()
+		err = m.immutableManager.osTreeRollback()
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -656,70 +657,38 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 }
 
 func (m *Manager) CanRollback() (bool, string, *dbus.Error) {
-	can, info := osTreeCanRollback()
+	can, info := m.immutableManager.osTreeCanRollback()
 	return can, info, nil
 }
 
-// TODO
-func (m *Manager) ExportUpdateDetails(sender dbus.Sender, filename string) (busErr *dbus.Error) {
+func (m *Manager) GetUpdateDetails(sender dbus.Sender, fd dbus.UnixFD, realTime bool) (busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	// 验证文件路径合法性
-	if filename == "" {
-		return dbusutil.ToError(fmt.Errorf("filename cannot be empty"))
+	// default pass
+	err := polkit.CheckAuth("org.deepin.dde.lastore.doAction", string(sender), nil)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
 	}
+	f := os.NewFile(uintptr(fd), "")
+	if realTime {
+		m.logFdsMu.Lock()
+		m.logFds = append(m.logFds, f)
+		m.logFdsMu.Unlock()
+	} else {
+		defer f.Close()
+		// 使用流式复制，避免将整个文件读入内存
+		logFile, err := os.Open(logTmpPath)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		defer logFile.Close()
 
-	// 检查路径是否包含危险字符
-	if strings.Contains(filename, "..") {
-		return dbusutil.ToError(fmt.Errorf("path traversal not allowed"))
-	}
-
-	// 检查是否为绝对路径
-	if !strings.HasPrefix(filename, "/") {
-		return dbusutil.ToError(fmt.Errorf("path must be absolute"))
-	}
-
-	// 限制只能导出到安全目录
-	allowedPrefixes := []string{
-		"/home/",
-		"/tmp/",
-		"/var/tmp/",
-		"/opt/",
-	}
-
-	allowed := false
-	for _, prefix := range allowedPrefixes {
-		if strings.HasPrefix(filename, prefix) {
-			allowed = true
-			break
+		_, err = io.Copy(f, logFile)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
 		}
 	}
-
-	if !allowed {
-		return dbusutil.ToError(fmt.Errorf("export path must be in /home/, /tmp/, /var/tmp/, or /opt/"))
-	}
-
-	// 源文件路径
-	sourceFile := system.FlushName
-
-	// 检查源文件是否存在
-	if !system.NormalFileExists(sourceFile) {
-		err := fmt.Errorf("update detail log file not found: %s", sourceFile)
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-
-	err := utils2.CopyFile(sourceFile, filename)
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-
-	// 设置文件权限为用户可读写可删除 (0666)
-	err = os.Chmod(filename, 0666)
-	if err != nil {
-		logger.Warning("failed to set file permissions:", err)
-		// 不返回错误，因为文件已经成功复制
-	}
-
 	return nil
 }

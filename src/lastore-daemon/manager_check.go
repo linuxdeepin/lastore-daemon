@@ -141,7 +141,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					logger.Warning(err)
 				}
 			case secondCheck:
-				if err = osTreeFinalize(); err != nil {
+				if err = m.immutableManager.osTreeFinalize(); err != nil {
 					logger.Warning(err)
 				}
 				// ps: 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置
