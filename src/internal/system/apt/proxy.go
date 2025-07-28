@@ -294,6 +294,9 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 		return err
 	}
 	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(OptionToArgs(args), packages...))
+	if environ == nil {
+		environ = make(map[string]string)
+	}
 	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)

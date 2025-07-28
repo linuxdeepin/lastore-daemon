@@ -6,7 +6,13 @@ After=display-manager.service
 Type=dbus
 BusName=org.deepin.dde.Lastore1
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
+
+Restart=on-failure
+RestartForceExitStatus=2
+StartLimitBurst=0
+
 StandardOutput=null
-StandardError=null
+StandardError=journal
+
 StateDirectory=lastore
 CacheDirectory=lastore

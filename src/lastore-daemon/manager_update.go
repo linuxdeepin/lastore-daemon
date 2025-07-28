@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/linuxdeepin/go-lib/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,6 +46,8 @@ func prepareUpdateSource() {
 	}
 
 }
+
+const UpgradePackageName = "TODO"
 
 // updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
 // 任务进度划分: 0-10%-80%-90%-100%
@@ -122,6 +125,8 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 		job.subRetryHookFn = func(j *Job) {
 			handleUpdateSourceFailed(j)
 		}
+		var installedUpgradePart bool
+		var installErr error
 		job.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				// 检查更新需要重置备份状态,主要是处理备份失败后再检查更新,会直接显示失败的场景
@@ -129,7 +134,15 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
-				m.refreshUpdateInfos(true)
+				installedUpgradePart, installErr = m.installSpecialPackageSync(UpgradePackageName, nil, nil)
+				if installErr != nil {
+					logger.Warning(installErr)
+					go func() {
+						m.updatePlatform.PostStatusMessage(fmt.Sprintf("upgrade self failed:: %v", installErr))
+					}()
+				}
+				m.updatePlatform.SaveCache() // updatePlatform初始化时自动 load 该配置；
+				m.refreshUpdateInfos(true, installedUpgradePart)
 				m.PropsMu.Lock()
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
@@ -152,7 +165,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					defer m.inhibitAutoQuitCountSub()
 					m.updatePlatform.PostStatusMessage("update source success")
 				}()
-				m.updatePlatform.SaveCache(m.config)
+
 				job.setPropProgress(1.0)
 				return nil
 			},
@@ -191,6 +204,8 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 		})
 		job.setAfterHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
+				// 清理自动下载的 flag
+				_ = os.RemoveAll(DelayAutoDownloadFlag)
 				job.setPropProgress(0.01)
 				_ = os.Setenv("http_proxy", environ["http_proxy"])
 				_ = os.Setenv("https_proxy", environ["https_proxy"])
@@ -227,6 +242,13 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 
 				// 从更新平台获取数据并处理完成后,进度更新到10%
 				job.setPropProgress(0.10)
+				return nil
+			},
+			string(system.EndStatus): func() error {
+				if installedUpgradePart {
+					logger.Info("enter end and exit 2")
+					os.Exit(2)
+				}
 				return nil
 			},
 		})
@@ -461,8 +483,10 @@ func (m *Manager) getCoreList(online bool) []string {
 }
 
 const TimeOnly = "15:04:05"
+const DelayAutoDownloadFlag = "/var/lib/lastore/lastore-download-delay"
 
-func (m *Manager) refreshUpdateInfos(sync bool) {
+func (m *Manager) refreshUpdateInfos(sync, delay bool) {
+	logger.Info("refreshUpdateInfos:", delay)
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
 		// 检查更新后，先下载解析coreList，获取必装清单
@@ -523,10 +547,22 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 		// 强制更新开启后，以强制更新下载策略优先
 		return
 	}
-	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && sync && !m.updater.getIdleDownloadEnabled() {
+	if m.updater.AutoDownloadUpdates && len(m.updater.UpdatablePackages) > 0 && !m.updater.getIdleDownloadEnabled() {
+		if !sync && !utils.IsFileExist(DelayAutoDownloadFlag) {
+			// 没有标记文件的初始化，无需做自动下载操作
+			return
+		}
+		if delay {
+			err := os.WriteFile(DelayAutoDownloadFlag, []byte{}, 0644)
+			if err != nil {
+				logger.Warning(err)
+			}
+			return
+		}
 		logger.Info("auto download updates")
 		go func() {
 			m.inhibitAutoQuitCountAdd()
+			_ = os.RemoveAll(DelayAutoDownloadFlag)
 			_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
 			if err != nil {
 				logger.Error("failed to prepare dist-upgrade:", err)

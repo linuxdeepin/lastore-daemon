@@ -121,7 +121,7 @@ func main() {
 		manager.reloadOemConfig(false)
 		return nil
 	})
-	manager.refreshUpdateInfos(false)
+	manager.refreshUpdateInfos(false, false)
 	manager.loadLastoreCache()       // object导出前将job处理完成,否则控制中心继续任务时,StartJob会出现job未导出的情况
 	go manager.jobManager.Dispatch() // 导入job缓存之后，再执行job的dispatch，防止暂停任务创建时自动开始
 	err = serverObject.Export()
