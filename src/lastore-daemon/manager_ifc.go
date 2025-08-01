@@ -9,35 +9,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	utils2 "github.com/linuxdeepin/go-lib/utils"
-
-	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
-
 	"github.com/godbus/dbus/v5"
+	"github.com/linuxdeepin/dde-api/polkit"
 	agent "github.com/linuxdeepin/go-dbus-factory/session/org.deepin.dde.lastore1.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/procfs"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
 /*
 NOTE: Most of export function of Manager will hold the lock,
 so don't invoke they in inner functions
 */
-
-func (m *Manager) ClassifiedUpgrade(sender dbus.Sender, updateType system.UpdateType) ([]dbus.ObjectPath, *dbus.Error) {
-	m.service.DelayAutoQuit()
-	return m.classifiedUpgrade(sender, updateType, true)
-}
 
 func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
@@ -59,18 +53,6 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 		logger.Warningf("CleanJob %q error: %v\n", jobId, err)
 	}
 	return dbusutil.ToError(err)
-}
-
-func (m *Manager) DistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	m.PropsMu.RLock()
-	mode := m.UpdateMode
-	m.PropsMu.RUnlock()
-	jobObj, err := m.distUpgrade(sender, mode, false, true, false)
-	if err != nil && !errors.Is(err, JobExistError) {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
 }
 
 func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
@@ -135,17 +117,6 @@ func (m *Manager) InstallPackageFromRepo(sender dbus.Sender, jobName string, sou
 	}
 
 	return jobObj.getPath(), nil
-}
-
-// PackageDesktopPath TODO: Remove this API
-func (m *Manager) PackageDesktopPath(pkgId string) (desktopPath string, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	p, err := utils.RunCommand("/usr/bin/lastore-tools", "querydesktop", pkgId)
-	if err != nil {
-		logger.Warningf("QueryDesktopPath failed: %q\n", err)
-		return "", dbusutil.ToError(err)
-	}
-	return p, nil
 }
 
 func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
@@ -252,18 +223,6 @@ func (m *Manager) PauseJob(jobId string) *dbus.Error {
 	return dbusutil.ToError(err)
 }
 
-func (m *Manager) PrepareDistUpgrade(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	m.PropsMu.RLock()
-	mode := m.CheckUpdateMode
-	m.PropsMu.RUnlock()
-	jobObj, err := m.prepareDistUpgrade(sender, mode, false)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
-}
-
 func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.Error {
 	logger.Infof("Register lastore agent form %v, sender:%v.", path, sender)
 	uid, err := m.service.GetConnUID(string(sender))
@@ -324,30 +283,31 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	if !allowRemovePackageExecPaths.Contains(execPath) &&
-		uid != 0 {
-		err = fmt.Errorf("%q is not allowed to remove packages", execPath)
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
+	//execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
+	//if err != nil {
+	//	logger.Warning(err)
+	//	return "/", dbusutil.ToError(err)
+	//}
+	//
+	//uid, err := m.service.GetConnUID(string(sender))
+	//if err != nil {
+	//	logger.Warning(err)
+	//	return "/", dbusutil.ToError(err)
+	//}
+	//
+	//if !allowRemovePackageExecPaths.Contains(execPath) &&
+	//	uid != 0 {
+	//	err = fmt.Errorf("%q is not allowed to remove packages", execPath)
+	//	logger.Warning(err)
+	//	return "/", dbusutil.ToError(err)
+	//}
+	// TODO
+	// 鉴权或者给 dde-launcher 加 loader 启动,或者是否可以给 dde-launcher setgid and set group deepin-daemon
 	jobObj, err := m.removePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	jobObj.caller = mapMethodCaller(execPath, cmdLine)
+	//jobObj.caller = mapMethodCaller(execPath, cmdLine)
 	return jobObj.getPath(), nil
 }
 
@@ -369,12 +329,6 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 		logger.Warning(err)
 	}
 	return nil
-}
-
-func (m *Manager) SetRegion(region string) *dbus.Error {
-	m.service.DelayAutoQuit()
-	err := m.config.SetAppstoreRegion(region)
-	return dbusutil.ToError(err)
 }
 
 func (m *Manager) StartJob(jobId string) *dbus.Error {
@@ -406,16 +360,6 @@ func (m *Manager) UnRegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbu
 	return nil
 }
 
-func (m *Manager) UpdatePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
-	busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-	jobObj, err := m.delUpdatePackage(sender, jobName, packages)
-	if err != nil {
-		return "/", dbusutil.ToError(err)
-	}
-	return jobObj.getPath(), nil
-}
-
 func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
 	jobObj, err := m.updateSource(sender)
@@ -443,60 +387,15 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 //	}
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
 	supportOption := len(strings.TrimSpace(option)) > 0
-	checkExecPath := func() (bool, error) {
-		// 只有dde-lock可以设置
-		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
-		if err != nil {
-			logger.Warning(err)
-			return false, err
-		}
-		if !strings.Contains(execPath, "dde-lock") && !strings.Contains(execPath, "deepin-offline-update-tool") {
-			err = fmt.Errorf("%v not allow to call this method", execPath)
-			logger.Warning(err)
-			return false, err
-		}
 
-		return strings.Contains(execPath, "deepin-offline-update-tool"), nil
-	}
-	var isOffline bool
-	uid, err := m.service.GetConnUID(string(sender))
-	if err == nil && uid == 0 {
-		logger.Info("auth root caller")
-	} else {
-		isOffline, err = checkExecPath()
-		if err != nil {
-			return dbusutil.ToError(err)
-		}
-	}
-
-	// 如果没有/usr/bin/dde-update,则需要进入fallback流程
-	const fullScreenUpdatePath = "/usr/bin/dde-update"
-	if !system.NormalFileExists(fullScreenUpdatePath) {
-		err := fmt.Errorf("%v not exist, need run fallback process", fullScreenUpdatePath)
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
+	// TODO
+	// 应该只有 dde-lock 会调用
+	// 用鉴权方案或者给 dde-lock 增加 group
 	logger.Info("start PrepareFullScreenUpgrade")
 
-	if isOffline {
-		content, err := json.Marshal(&fullUpgradeOption{
-			DoUpgrade:         true,
-			DoUpgradeMode:     system.OfflineUpdate,
-			IsPowerOff:        false,
-			PreGreeterCheck:   false,
-			AfterGreeterCheck: false,
-		})
-		if err != nil {
-			logger.Warning(err)
-			return dbusutil.ToError(err)
-		}
-		if utils2.IsSymlink(optionFilePathTemp) {
-			_ = os.RemoveAll(optionFilePathTemp)
-		}
-		_ = os.WriteFile(optionFilePathTemp, content, 0644)
-	} else if supportOption {
+	if supportOption {
 		opt := fullUpgradeOption{}
-		err = json.Unmarshal([]byte(option), &opt)
+		err := json.Unmarshal([]byte(option), &opt)
 		if err != nil {
 			logger.Warning(err)
 			return dbusutil.ToError(err)
@@ -553,7 +452,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	}
 
 	// 如果上述方法出错，需要采用重启lightdm方案，此时所有图形session也都会退出
-	_, err = m.systemd.RestartUnit(0, "lightdm.service", "replace")
+	_, err := m.systemd.RestartUnit(0, "lightdm.service", "replace")
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
@@ -587,7 +486,7 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 
 func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.UpdateType) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.prepareDistUpgrade(sender, mode, false)
+	jobObj, err := m.prepareDistUpgrade(sender, mode)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
@@ -604,18 +503,6 @@ func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	}
 	logger.Info("CheckUpgrade jobPath:", job)
 	return job, nil
-}
-
-func (m *Manager) UpdateOfflineSource(sender dbus.Sender, paths []string, option string) (job dbus.ObjectPath, busErr *dbus.Error) {
-	m.service.DelayAutoQuit()
-
-	jobObj, err := m.delUpdateOfflineSource(sender, paths, option)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
-
-	return jobObj.getPath(), nil
 }
 
 func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
@@ -745,8 +632,8 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error {
 	var err error
 	if confirm {
-		needReboot := osTreeNeedRebootAfterRollback()
-		err = osTreeRollback()
+		needReboot := m.immutableManager.osTreeNeedRebootAfterRollback()
+		err = m.immutableManager.osTreeRollback()
 		if err != nil {
 			logger.Warning(err)
 		}
@@ -770,69 +657,38 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 }
 
 func (m *Manager) CanRollback() (bool, string, *dbus.Error) {
-	can, info := osTreeCanRollback()
+	can, info := m.immutableManager.osTreeCanRollback()
 	return can, info, nil
 }
 
-func (m *Manager) ExportUpdateDetails(sender dbus.Sender, filename string) (busErr *dbus.Error) {
+func (m *Manager) GetUpdateDetails(sender dbus.Sender, fd dbus.UnixFD, realTime bool) (busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	// 验证文件路径合法性
-	if filename == "" {
-		return dbusutil.ToError(fmt.Errorf("filename cannot be empty"))
+	// default pass
+	err := polkit.CheckAuth("org.deepin.dde.lastore.doAction", string(sender), nil)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
 	}
+	f := os.NewFile(uintptr(fd), "")
+	if realTime {
+		m.logFdsMu.Lock()
+		m.logFds = append(m.logFds, f)
+		m.logFdsMu.Unlock()
+	} else {
+		defer f.Close()
+		// 使用流式复制，避免将整个文件读入内存
+		logFile, err := os.Open(logTmpPath)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		defer logFile.Close()
 
-	// 检查路径是否包含危险字符
-	if strings.Contains(filename, "..") {
-		return dbusutil.ToError(fmt.Errorf("path traversal not allowed"))
-	}
-
-	// 检查是否为绝对路径
-	if !strings.HasPrefix(filename, "/") {
-		return dbusutil.ToError(fmt.Errorf("path must be absolute"))
-	}
-
-	// 限制只能导出到安全目录
-	allowedPrefixes := []string{
-		"/home/",
-		"/tmp/",
-		"/var/tmp/",
-		"/opt/",
-	}
-
-	allowed := false
-	for _, prefix := range allowedPrefixes {
-		if strings.HasPrefix(filename, prefix) {
-			allowed = true
-			break
+		_, err = io.Copy(f, logFile)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
 		}
 	}
-
-	if !allowed {
-		return dbusutil.ToError(fmt.Errorf("export path must be in /home/, /tmp/, /var/tmp/, or /opt/"))
-	}
-
-	// 源文件路径
-	sourceFile := system.FlushName
-
-	// 检查源文件是否存在
-	if !system.NormalFileExists(sourceFile) {
-		err := fmt.Errorf("update detail log file not found: %s", sourceFile)
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-
-	err := utils2.CopyFile(sourceFile, filename)
-	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
-	}
-
-	// 设置文件权限为用户可读写可删除 (0666)
-	err = os.Chmod(filename, 0666)
-	if err != nil {
-		logger.Warning("failed to set file permissions:", err)
-		// 不返回错误，因为文件已经成功复制
-	}
-
 	return nil
 }

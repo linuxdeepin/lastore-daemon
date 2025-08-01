@@ -9,17 +9,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"syscall"
-	"time"
-)
-
-const (
-	FlushName = "/tmp/lastore_update_detail.log"
 )
 
 type CommandSet interface {
@@ -47,8 +41,6 @@ type Command struct {
 	Stdout   bytes.Buffer
 	Stderr   bytes.Buffer
 	AtExitFn func() bool
-
-	ff *fileFlush
 }
 
 func (c *Command) String() string {
@@ -86,11 +78,6 @@ func (c *Command) SetEnv(envVarMap map[string]string) {
 
 func (c *Command) Start() error {
 	var err error
-	c.ff, err = OpenFlush(FlushName)
-	if err != nil {
-		return err
-	}
-
 	rr, ww, err := os.Pipe()
 	if err != nil {
 		return fmt.Errorf("aptCommand.Start pipe : %v", err)
@@ -102,16 +89,10 @@ func (c *Command) Start() error {
 
 	// Print command start information
 	cmdStr := strings.Join(c.Cmd.Args, " ")
-	startMsg := fmt.Sprintf("=== Job %s running: %s ===\n", c.JobId, cmdStr)
-	if c.ff != nil {
-		c.ff.SetFlushCmd(c.Cmd)
-		_, err := c.ff.WriteString(startMsg)
-		if err != nil {
-			logger.Warning("failed to write start message to log file:", err)
-		} else {
-			c.ff.Sync()
-		}
-	}
+	c.Indicator(JobProgressInfo{
+		OnlyLog:     true,
+		OriginalLog: fmt.Sprintf("=== Job %s running: %s ===\n", c.JobId, cmdStr),
+	})
 
 	c.Cmd.ExtraFiles = append(c.Cmd.ExtraFiles, ww)
 
@@ -173,26 +154,10 @@ func (c *Command) atExit() {
 		statusStr = "UNKNOWN"
 	}
 
-	cmdStr := strings.Join(c.Cmd.Args, " ")
-	endMsg := fmt.Sprintf("=== Job %s end: %s [Status: %s] ===\n", c.JobId, cmdStr, statusStr)
-	logger.Info(endMsg)
-	if c.ff != nil {
-		_, err := c.ff.WriteString(endMsg)
-		if err != nil {
-			logger.Warning("failed to write end message to log file:", err)
-		} else {
-			c.ff.Sync()
-		}
-	}
-
-	// Close log file when process exits
-	if c.ff != nil {
-		err := c.ff.Close()
-		if err != nil {
-			logger.Warning("failed to close log file:", err)
-		}
-	}
-
+	c.Indicator(JobProgressInfo{
+		OnlyLog:     true,
+		OriginalLog: fmt.Sprintf("=== Job %s end: %s [Status: %s] ===\n", c.JobId, strings.Join(c.Cmd.Args, " "), statusStr),
+	})
 	logger.Infof("job %s Stdout: %s", c.JobId, c.Stdout.Bytes())
 	logger.Infof("job %s Stderr: %s", c.JobId, c.Stderr.Bytes())
 
@@ -214,6 +179,10 @@ func (c *Command) atExit() {
 			Cancelable: false,
 		})
 	case ExitFailure:
+		c.Indicator(JobProgressInfo{
+			OnlyLog:     true,
+			OriginalLog: c.Stderr.String(),
+		})
 		err := c.ParseJobError(c.Stderr.String(), c.Stdout.String())
 		if err != nil {
 			c.Indicator(JobProgressInfo{
@@ -248,23 +217,8 @@ func (c *Command) IndicateFailed(errType JobErrorType, errDetail string, isFatal
 	logger.Warningf("IndicateFailed: type: %s, detail: %s", errType, errDetail)
 
 	// Print command end information with failed status and close log file
-	cmdStr := strings.Join(c.Cmd.Args, " ")
-	endMsg := fmt.Sprintf("=== Job %s end: %s [Status: FAILED - %s] ===\n", c.JobId, cmdStr, errType)
+	endMsg := fmt.Sprintf("=== Job %s end: %s [Status: FAILED - %s] ===\n", c.JobId, strings.Join(c.Cmd.Args, " "), errType.String())
 	logger.Info(endMsg)
-	if c.ff != nil {
-		_, err := c.ff.WriteString(endMsg)
-		if err != nil {
-			logger.Warning("failed to write end message to log file:", err)
-		} else {
-			c.ff.Sync()
-		}
-		// Close log file when indicating failed
-		err = c.ff.Close()
-		if err != nil {
-			logger.Warning("failed to close log file:", err)
-		}
-	}
-
 	progressInfo := JobProgressInfo{
 		JobId:      c.JobId,
 		Progress:   -1.0,
@@ -274,7 +228,8 @@ func (c *Command) IndicateFailed(errType JobErrorType, errDetail string, isFatal
 			ErrType:   errType,
 			ErrDetail: errDetail,
 		},
-		FatalError: isFatalErr,
+		FatalError:  isFatalErr,
+		OriginalLog: endMsg,
 	}
 	c.CmdSet.RemoveCMD(c.JobId)
 	c.Indicator(progressInfo)
@@ -323,109 +278,14 @@ func (c *Command) updateProgress() {
 		info, err := c.ParseProgressInfo(c.JobId, line)
 		if err != nil {
 			logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
+			c.Indicator(JobProgressInfo{
+				OnlyLog:     true,
+				OriginalLog: line,
+			})
 			continue
 		}
-
+		info.OriginalLog = line
 		c.Cancelable = info.Cancelable
 		c.Indicator(info)
 	}
-}
-
-type fileFlush struct {
-	fileName string
-	file     *os.File
-	fileMu   sync.Mutex
-}
-
-func OpenFlush(file string) (*fileFlush, error) {
-	if file == "" {
-		return nil, fmt.Errorf("file name is empty")
-	}
-
-	ff := &fileFlush{fileName: file}
-	ff.fileMu.Lock()
-	defer ff.fileMu.Unlock()
-
-	var err error
-	ff.file, err = os.OpenFile(ff.fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	return ff, nil
-}
-
-func (ff *fileFlush) Close() error {
-	ff.fileMu.Lock()
-	defer ff.fileMu.Unlock()
-	if ff.file != nil {
-		return ff.file.Close()
-	}
-	return nil
-}
-
-func (ff *fileFlush) SetFlushCmd(cmd *exec.Cmd) error {
-	ff.fileMu.Lock()
-	defer ff.fileMu.Unlock()
-	if ff.file == nil {
-		return fmt.Errorf("file is not open")
-	}
-
-	// Handle case where cmd.Stdout/Stderr might be nil
-	if cmd.Stdout != nil {
-		cmd.Stdout = io.MultiWriter(cmd.Stdout, ff)
-	} else {
-		cmd.Stdout = ff
-	}
-
-	if cmd.Stderr != nil {
-		cmd.Stderr = io.MultiWriter(cmd.Stderr, ff)
-	} else {
-		cmd.Stderr = ff
-	}
-
-	return nil
-}
-
-func (ff *fileFlush) Write(data []byte) (int, error) {
-	ff.fileMu.Lock()
-	defer ff.fileMu.Unlock()
-	if ff.file == nil {
-		return 0, fmt.Errorf("file is not open")
-	}
-
-	// Add timestamp to each line
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	lines := strings.Split(string(data), "\n")
-	var timestampedLines []string
-
-	for _, line := range lines {
-		if line != "" {
-			timestampedLines = append(timestampedLines, fmt.Sprintf("[%s] %s", timestamp, line))
-		} else {
-			timestampedLines = append(timestampedLines, "")
-		}
-	}
-
-	timestampedData := []byte(strings.Join(timestampedLines, "\n"))
-	_, err := ff.file.Write(timestampedData)
-	if err != nil {
-		return 0, err
-	}
-
-	// 重要：必须返回原始数据的长度，不是时间戳数据的长度
-	return len(data), nil
-}
-
-func (ff *fileFlush) WriteString(data string) (int, error) {
-	return ff.Write([]byte(data))
-}
-
-func (ff *fileFlush) Sync() error {
-	ff.fileMu.Lock()
-	defer ff.fileMu.Unlock()
-	if ff.file == nil {
-		return fmt.Errorf("file is not open")
-	}
-	return ff.file.Sync()
 }

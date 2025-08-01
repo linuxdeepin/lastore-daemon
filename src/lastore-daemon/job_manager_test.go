@@ -13,7 +13,7 @@ import (
 )
 
 func TestJobManager(t *testing.T) {
-	jm := NewJobManager(nil, apt.NewSystem(nil, nil), nil)
+	jm := NewJobManager(nil, apt.NewSystem(nil, nil), nil, nil)
 	option := map[string]interface{}{
 		"UpdateMode":              system.SystemUpdate, // 原始mode
 		"WrapperModePath":         "",
@@ -58,16 +58,4 @@ func TestJobManager(t *testing.T) {
 	NotUseDBus = true
 	err = jm.markReady(jobDownload2)
 	assert.NoError(t, err)
-}
-
-func Test_GetUpgradeInfoMap(t *testing.T) {
-	upgradeInfoMap := GetUpgradeInfoMap()
-	_, ok := upgradeInfoMap[system.SystemUpdate]
-	assert.Equal(t, true, ok)
-	_, ok = upgradeInfoMap[system.AppStoreUpdate]
-	assert.Equal(t, true, ok)
-	_, ok = upgradeInfoMap[system.UnknownUpdate]
-	assert.Equal(t, true, ok)
-	_, ok = upgradeInfoMap[system.SecurityUpdate]
-	assert.Equal(t, true, ok)
 }

@@ -168,7 +168,7 @@ func parsePkgSystemError(out, err []byte) error {
 	}
 }
 
-func CheckPkgSystemError(lock bool) error {
+func CheckPkgSystemError(lock bool, indicator system.Indicator) error {
 	args := []string{"check"}
 	if !lock {
 		// without locking, it can only check for dependencies broken
@@ -180,20 +180,18 @@ func CheckPkgSystemError(lock bool) error {
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
-	ff, err := system.OpenFlush(system.FlushName)
-	if err == nil {
-		defer func() {
-			ff.WriteString(fmt.Sprintf("=== CheckPkg %v end ===\n", cmd.Args))
-			ff.Close()
-		}()
+	defer func() {
+		indicator(system.JobProgressInfo{
+			OnlyLog:     true,
+			OriginalLog: fmt.Sprintf("=== CheckPkg %v end ===\n", cmd.Args),
+		})
+	}()
 
-		err = ff.SetFlushCmd(cmd)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}
-	ff.WriteString(fmt.Sprintf("=== CheckPkg cmd running: %v ===\n", cmd.Args))
-	err = cmd.Run()
+	indicator(system.JobProgressInfo{
+		OnlyLog:     true,
+		OriginalLog: fmt.Sprintf("=== CheckPkg cmd running: %v ===\n", cmd.Args),
+	})
+	err := cmd.Run()
 	if err == nil {
 		return nil
 	}
@@ -251,7 +249,7 @@ func OptionToArgs(options map[string]string) []string {
 }
 
 func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, args map[string]string) error {
-	err := CheckPkgSystemError(false)
+	err := CheckPkgSystemError(false, p.Indicator)
 	if err != nil {
 		return err
 	}
@@ -276,7 +274,7 @@ func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[
 
 func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
 	WaitDpkgLockRelease()
-	err := CheckPkgSystemError(true)
+	err := CheckPkgSystemError(true, p.Indicator)
 	if err != nil {
 		return err
 	}
@@ -289,7 +287,7 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 
 func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
-	err := CheckPkgSystemError(true)
+	err := CheckPkgSystemError(true, p.Indicator)
 	if err != nil {
 		return err
 	}
@@ -301,7 +299,7 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 
 func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
-	err := CheckPkgSystemError(true)
+	err := CheckPkgSystemError(true, p.Indicator)
 	if err != nil {
 		// 无需处理依赖错误,在获取可更新包时,使用dist-upgrade -d命令获取,就会报错了
 		var e *system.JobError

@@ -266,6 +266,7 @@ const (
 	amDaemonCompatPath    = "/usr/libexec/dde-application-wizard-daemon-compat"
 )
 
+// TODO delete
 var (
 	allowInstallPackageExecPaths = strv.Strv{
 		appStoreDaemonPath,
@@ -340,34 +341,6 @@ func getFilterPackages(infosMap map[string][]string, updateType system.UpdateTyp
 		}
 	}
 	return r
-}
-
-// SystemUpgradeInfo 将update_infos.json数据解析成map TODO 包相关信息已经不在update_infos.json文件中了
-func SystemUpgradeInfo() (map[string][]system.UpgradeInfo, error) {
-	r := make(system.SourceUpgradeInfoMap)
-
-	filename := path.Join(system.VarLibDir, "update_infos.json")
-	var updateInfosList []system.UpgradeInfo
-	err := system.DecodeJson(filename, &updateInfosList)
-	if err != nil {
-		if os.IsNotExist(err) {
-			outputErrorPath := fmt.Sprintf("error_%v", "update_infos.json")
-			filename = path.Join(system.VarLibDir, outputErrorPath)
-			if system.NormalFileExists(filename) {
-				var updateInfoErr system.UpdateInfoError
-				err2 := system.DecodeJson(filename, &updateInfoErr)
-				if err2 == nil {
-					return nil, &updateInfoErr
-				}
-				return nil, fmt.Errorf("Invalid update_infos: %v\n", err)
-			}
-			return nil, err
-		}
-	}
-	for _, info := range updateInfosList {
-		r[info.Category] = append(r[info.Category], info)
-	}
-	return r, nil
 }
 
 func cleanAllCache() {

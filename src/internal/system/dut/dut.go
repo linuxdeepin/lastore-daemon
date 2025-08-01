@@ -167,15 +167,12 @@ func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	}
 }
 
-func CheckSystem(typ checkType, ifOffline bool, cmdArgs []string) *system.JobError {
+func CheckSystem(typ checkType, cmdArgs []string) *system.JobError {
 	bin := "/usr/bin/deepin-system-update"
 	var args []string
 	args = append(args, "check")
 	args = append(args, typ.String())
-	if ifOffline {
-		args = append(args, "--meta-cfg")
-		args = append(args, system.DutOfflineMetaConfPath)
-	} else {
+	{
 		args = append(args, "--meta-cfg")
 		args = append(args, system.DutOnlineMetaConfPath)
 	}

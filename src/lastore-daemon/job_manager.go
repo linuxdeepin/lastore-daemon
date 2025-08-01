@@ -48,17 +48,20 @@ type JobManager struct {
 
 	dispatchMux sync.Mutex
 	notify      func()
+
+	jobDetailFn func(msg string)
 }
 
-func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()) *JobManager {
+func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func(), jobDetailFn func(msg string)) *JobManager {
 	if api == nil {
 		panic("NewJobManager with api=nil")
 	}
 	m := &JobManager{
-		service: service,
-		queues:  make(map[string]*JobQueue),
-		notify:  notifyFn,
-		system:  api,
+		service:     service,
+		queues:      make(map[string]*JobQueue),
+		notify:      notifyFn,
+		system:      api,
+		jobDetailFn: jobDetailFn,
 	}
 	m.createJobList(DownloadQueue, DownloadQueueCap)
 	m.createJobList(SystemChangeQueue, SystemChangeQueueCap)
@@ -160,9 +163,6 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		job = NewJob(jm.service, genJobId(jobType), jobName, packages, jobType, SystemChangeQueue, environ)
 	case system.UpdateSourceJobType:
 		job = NewJob(jm.service, genJobId(jobType), jobName, nil, jobType, LockQueue, environ)
-		job._InitProgressRange(0.11, 0.9)
-	case system.OfflineUpdateJobType:
-		job = NewJob(jm.service, genJobId(jobType), jobName, packages, system.OfflineUpdateJobType, LockQueue, environ)
 		job._InitProgressRange(0.11, 0.9)
 	case system.DistUpgradeJobType:
 		mode, ok := jobArgc["UpdateMode"].(system.UpdateType)
@@ -551,7 +551,12 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 		logger.Warningf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
-
+	if jm.jobDetailFn != nil && len(info.OriginalLog) > 0 {
+		jm.jobDetailFn(fmt.Sprintf("[%s] %s", time.Now().Format(time.DateTime), info.OriginalLog))
+	}
+	if info.OnlyLog {
+		return
+	}
 	if j.updateInfo(info) {
 		jm.markDirty()
 	}
@@ -609,47 +614,3 @@ var genJobId = func() func(string) string {
 		}
 	}
 }()
-
-// 分类更新任务需要创建Job的内容
-type upgradeJobInfo struct {
-	PrepareJobId   string // 下载Job的Id
-	PrepareJobType string // 下载Job的类型
-	UpgradeJobId   string // 更新Job的Id
-	UpgradeJobType string // 更新Job的类型
-}
-
-// GetUpgradeInfoMap 更新种类和具体job类型的映射  classify使用
-func GetUpgradeInfoMap() map[system.UpdateType]upgradeJobInfo {
-	return map[system.UpdateType]upgradeJobInfo{
-		system.SystemUpdate: {
-			PrepareJobId:   genJobId(system.PrepareSystemUpgradeJobType),
-			PrepareJobType: system.PrepareSystemUpgradeJobType,
-			UpgradeJobId:   genJobId(system.SystemUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-		system.SecurityUpdate: {
-			PrepareJobId:   genJobId(system.PrepareSecurityUpgradeJobType),
-			PrepareJobType: system.PrepareSecurityUpgradeJobType,
-			UpgradeJobId:   genJobId(system.SecurityUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-		system.AppStoreUpdate: {
-			PrepareJobId:   genJobId(system.PrepareAppStoreUpgradeJobType),
-			PrepareJobType: system.PrepareAppStoreUpgradeJobType,
-			UpgradeJobId:   genJobId(system.AppStoreUpgradeJobType),
-			UpgradeJobType: system.InstallJobType,
-		},
-		system.UnknownUpdate: {
-			PrepareJobId:   genJobId(system.PrepareUnknownUpgradeJobType),
-			PrepareJobType: system.PrepareUnknownUpgradeJobType,
-			UpgradeJobId:   genJobId(system.UnknownUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-		system.OnlySecurityUpdate: {
-			PrepareJobId:   genJobId(system.PrepareSecurityUpgradeJobType),
-			PrepareJobType: system.PrepareSecurityUpgradeJobType,
-			UpgradeJobId:   genJobId(system.SecurityUpgradeJobType),
-			UpgradeJobType: system.DistUpgradeJobType,
-		},
-	}
-}

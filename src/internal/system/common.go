@@ -118,7 +118,6 @@ const (
 	ErrorDamagePackage           JobErrorType = "damagePackage" // 包损坏,需要删除后重新下载或者安装
 	ErrorInvalidSourcesList      JobErrorType = "invalidSourceList"
 	ErrorPlatformUnreachable     JobErrorType = "platformUnreachable"
-	ErrorOfflineCheck            JobErrorType = "offlineCheckError"
 
 	ErrorMissCoreFile  JobErrorType = "missCoreFile"
 	ErrorScript        JobErrorType = "scriptError"

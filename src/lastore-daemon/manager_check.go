@@ -78,11 +78,9 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 		return "", err
 	}
 	job.option[dut.PostCheck.String()] = "--check-succeed" // TODO 还有--check-failed 的情况需要处理
-	if checkMode == system.OfflineUpdate {
-		job.option["--meta-cfg"] = system.DutOfflineMetaConfPath
-	} else {
-		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
-	}
+
+	job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
+
 	if checkOrder == firstCheck {
 		job.option["--stage1"] = ""
 	} else {
@@ -143,7 +141,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					logger.Warning(err)
 				}
 			case secondCheck:
-				if err = osTreeFinalize(); err != nil {
+				if err = m.immutableManager.osTreeFinalize(); err != nil {
 					logger.Warning(err)
 				}
 				// ps: 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置

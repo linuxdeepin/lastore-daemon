@@ -28,8 +28,7 @@ const (
 	AllCheckUpdate   = SystemUpdate | AppStoreUpdate | SecurityUpdate | UnknownUpdate | OtherSystemUpdate | AppendUpdate // 所有需要检查的仓库 TODO 该字段变动，需要检查所有使用者
 	AllInstallUpdate = SystemUpdate | SecurityUpdate | UnknownUpdate                                                     // 所有控制中心需要显示的仓库
 
-	OfflineUpdate UpdateType = 1 << 6 // 离线仓库，控制中心不检查、不显示；离线更新工具检查和显示；
-	AppendUpdate  UpdateType = 1 << 7 // 追加仓库/etc/deepin/lastore-daemon/sources.list.d/ 用于打印管理追加离线包.检查该仓库,不显示更新内容
+	AppendUpdate UpdateType = 1 << 7 // 追加仓库/etc/deepin/lastore-daemon/sources.list.d/ 用于打印管理追加离线包.检查该仓库,不显示更新内容
 )
 
 func (m UpdateType) JobType() string {
@@ -42,8 +41,6 @@ func (m UpdateType) JobType() string {
 		return SecurityUpgradeJobType
 	case UnknownUpdate:
 		return UnknownUpgradeJobType
-	case OfflineUpdate:
-		return OfflineUpgradeJobType
 	case OtherSystemUpdate:
 		return OtherUpgradeJobType
 	case AppendUpdate:
@@ -70,7 +67,6 @@ func AllUpdateType() []UpdateType {
 		SecurityUpdate,
 		UnknownUpdate,
 		OtherSystemUpdate,
-		OfflineUpdate,
 		AppendUpdate,
 	}
 }
@@ -116,7 +112,6 @@ const (
 	PlatFormSourceFile      = "/var/lib/lastore/platform.list"            // 从更新平台获取的仓库,为系统更新仓库,在message_report.go 中的 获取升级版本信息genUpdatePolicyByToken后即可 更新
 	UnknownSourceDir        = "/var/lib/lastore/unknownSource.d"          // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 	OtherSystemSourceDir    = "/var/lib/lastore/otherSystemSource.d"      // 其他需要检查的系统仓库
-	OfflineSourceFile       = "/var/lib/lastore/offline.list"             // 在offline_repo.go 中的 UpdateOfflineSourceFile 更新
 	AppendSourceDir         = "/etc/deepin/lastore-daemon/sources.list.d" // 追加仓库的路径
 )
 
@@ -138,7 +133,6 @@ func GetCategorySourceMap() map[UpdateType]string {
 		SecurityUpdate:    SecuritySourceDir,
 		UnknownUpdate:     UnknownSourceDir,
 		OtherSystemUpdate: OtherSystemSourceDir,
-		OfflineUpdate:     OfflineSourceFile,
 		AppendUpdate:      AppendSourceDir,
 	}
 }
@@ -317,9 +311,6 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			sourcePath := GetCategorySourceMap()[t]
 			sourcePathList = append(sourcePathList, sourcePath)
 		}
-	}
-	if updateType&OfflineUpdate != 0 {
-		sourcePathList = append(sourcePathList, GetCategorySourceMap()[updateType])
 	}
 	// 由于103x版本兼容，检查更新时需要检查商店仓库
 	// if updateType&AppStoreUpdate != 0 {

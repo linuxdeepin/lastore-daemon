@@ -12,6 +12,7 @@ import (
 	"github.com/codegangsta/cli"
 )
 
+// TODO remove
 var CMDQueryDesktop = cli.Command{
 	Name:  "querydesktop",
 	Usage: `pkgname`,

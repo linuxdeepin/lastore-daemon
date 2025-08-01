@@ -101,6 +101,7 @@ clean:
 	rm -rf pkg
 	rm -rf vendor/pkg
 	rm -rf vendor/bin
+	rm -rf gopath
 
 check_code_quality:
 	${GoPath} go vet ./src/...

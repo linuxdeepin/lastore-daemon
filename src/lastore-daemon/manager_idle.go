@@ -85,36 +85,10 @@ func (m *Manager) loadCacheJob() {
 				continue
 			}
 		case system.PausedStatus:
-			var updateType system.UpdateType
-			var isClassified bool
-			switch j.Id {
-			case genJobId(system.PrepareSystemUpgradeJobType), genJobId(system.SystemUpgradeJobType):
-				updateType = system.SystemUpdate
-				isClassified = true
-			case genJobId(system.PrepareSecurityUpgradeJobType), genJobId(system.SecurityUpgradeJobType):
-				updateType = system.OnlySecurityUpdate
-				isClassified = true
-			case genJobId(system.PrepareUnknownUpgradeJobType), genJobId(system.UnknownUpgradeJobType):
-				updateType = system.UnknownUpdate
-				isClassified = true
-			case genJobId(system.PrepareDistUpgradeJobType):
-				updateType = m.CheckUpdateMode
-				isClassified = false
-			default: // lastore目前是对控制中心提供功能，任务暂停场景只有三种类型的分类更新（下载）和全量下载
-				continue
-			}
-			if isClassified {
-				_, err := m.classifiedUpgrade(dbus.Sender(m.service.Conn().Names()[0]), updateType, j.HaveNext)
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
-			} else {
-				_, err := m.PrepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]))
-				if err != nil {
-					logger.Warning(err)
-					return
-				}
+			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode)
+			if err != nil {
+				logger.Warning(err)
+				return
 			}
 			pausedJob := m.jobManager.findJobById(j.Id)
 			if pausedJob != nil {

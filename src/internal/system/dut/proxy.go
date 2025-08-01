@@ -6,12 +6,11 @@ package dut
 
 import (
 	"encoding/json"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -54,7 +53,7 @@ func (p *DutSystem) UpdateSource(jobId string, environ map[string]string, args m
 }
 
 func (p *DutSystem) DistUpgrade(jobId string, packages []string, environ map[string]string, args map[string]string) error {
-	err := checkSystemDependsError()
+	err := checkSystemDependsError(p.Indicator)
 	if err != nil {
 		return err
 	}
@@ -75,8 +74,8 @@ func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[stri
 	return c.Start()
 }
 
-func checkSystemDependsError() error {
-	err := apt.CheckPkgSystemError(false)
+func checkSystemDependsError(indicator system.Indicator) error {
+	err := apt.CheckPkgSystemError(false, indicator)
 	if err != nil {
 		logger.Warningf("apt-get check failed:%v", err)
 		return err
