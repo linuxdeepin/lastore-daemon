@@ -1,3 +1,11 @@
+lastore-daemon (6.2.26) unstable; urgency=medium
+
+  * Fixcve (#197)
+  * fix: reset backup status before update source check
+  * i18n: Translate locale/lastore-daemon.pot in ja (#195)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 01 Aug 2025 10:35:07 +0800
+
 lastore-daemon (6.2.25) unstable; urgency=medium
 
   * i18n: Updates for project Deepin Desktop Environment (#190)
