@@ -38,7 +38,7 @@ func newDUTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn sy
 }
 
 func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
-	bin := "deepin-system-update"
+	bin := "/usr/bin/lastore-update-tools"
 	var args []string
 	logger.Info("cmdArgs is:", cmdArgs)
 	switch cmdType {
@@ -168,7 +168,7 @@ func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 }
 
 func CheckSystem(typ checkType, cmdArgs []string) *system.JobError {
-	bin := "/usr/bin/deepin-system-update"
+	bin := "/usr/bin/lastore-update-tools"
 	var args []string
 	args = append(args, "check")
 	args = append(args, typ.String())
