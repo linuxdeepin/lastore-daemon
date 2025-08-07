@@ -1,0 +1,3 @@
+CacheList: caches.yaml
+Base: /var/lib/deepin-system-update/
+DebugMode: false
