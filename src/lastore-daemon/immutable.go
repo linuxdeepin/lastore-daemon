@@ -16,6 +16,7 @@ func (i *immutableManager) osTreeCmd(args []string) (out string, err error) {
 		args = append(args, "-v")
 		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...) // #nosec G204
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
+		cmd.Env = append(cmd.Env, originalLocaleEnvs...)
 		logger.Info("run command:", cmd.Args)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
