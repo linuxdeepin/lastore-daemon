@@ -14,7 +14,6 @@ import (
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
@@ -61,10 +60,8 @@ func main() {
 		return
 	}
 
-	_ = utils.UnsetEnv("LC_ALL")
-	_ = utils.UnsetEnv("LANGUAGE")
-	_ = utils.UnsetEnv("LC_MESSAGES")
-	_ = utils.UnsetEnv("LANG")
+	// Collect and clear locale environment variables
+	collectAndClearLocaleEnvs()
 
 	gettext.InitI18n()
 	gettext.Textdomain("lastore-daemon")
