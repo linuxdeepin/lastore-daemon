@@ -23,8 +23,12 @@ import (
 )
 
 const (
+	// D-Bus service name for lastore service
 	dbusServiceName = "org.deepin.dde.Lastore1"
+	// D-Bus object path for lastore manager and updater object
+	dbusObjectPath = "/org/deepin/dde/Lastore1"
 )
+
 const (
 	aptConfDir           = "/etc/apt/apt.conf.d"
 	tokenConfFileName    = "99lastore-token.conf" // #nosec G101
@@ -79,7 +83,7 @@ func main() {
 	updater := NewUpdater(service, manager, config)
 
 	manager.updater = updater
-	serverObject, err := service.NewServerObject("/org/deepin/dde/Lastore1", manager, updater)
+	serverObject, err := service.NewServerObject(dbusObjectPath, manager, updater)
 	if err != nil {
 		logger.Error("failed to new server manager and updater object:", err)
 		return

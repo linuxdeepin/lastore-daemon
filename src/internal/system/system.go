@@ -48,7 +48,7 @@ const (
 	OtherUpgradeJobType           = "other_system_update"
 	AppendUpgradeJobTye           = "append_upgrade"
 
-	BackupType = "backup"
+	BackupJobType = "backup"
 )
 
 const (
@@ -57,15 +57,16 @@ const (
 )
 
 type JobProgressInfo struct {
-	JobId       string
-	Progress    float64
-	Description string
-	Status      Status
-	Cancelable  bool
-	Error       *JobError
-	FatalError  bool
-	OriginalLog string
-	OnlyLog     bool
+	JobId         string
+	Progress      float64
+	ResetProgress bool
+	Description   string
+	Status        Status
+	Cancelable    bool
+	Error         *JobError
+	FatalError    bool
+	OriginalLog   string
+	OnlyLog       bool
 }
 
 type UpgradeInfo struct {

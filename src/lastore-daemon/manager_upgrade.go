@@ -31,9 +31,45 @@ import (
 	"github.com/linuxdeepin/go-lib/utils"
 )
 
-const (
-	DEEPIN_IMMUTABLE_CTL = "/usr/sbin/deepin-immutable-ctl"
-)
+func (m *Manager) retryDistUpgrade(upgradeJob *Job, needBackup bool) error {
+	if upgradeJob == nil {
+		return errors.New("upgrade job is nil")
+	}
+	m.do.Lock()
+	defer m.do.Unlock()
+
+	backupJob := m.jobManager.findJobByType(system.BackupJobType, nil)
+	// Handle existing backup job
+	if backupJob != nil {
+		if !backupJob.HasStatus(system.FailedStatus) {
+			return errors.New("backup job status is not failed")
+		}
+
+		if needBackup {
+			// Retry backup job
+			if err := m.jobManager.MarkStart(backupJob.Id); err != nil {
+				logger.Warningf("retryDistUpgrade: failed to mark start backup job: %v", err)
+				return fmt.Errorf("failed to start backup job: %w", err)
+			}
+			return nil
+		}
+
+		// Clean backup job when backup is not needed
+		if err := m.jobManager.CleanJob(backupJob.Id); err != nil {
+			logger.Warningf("retryDistUpgrade: failed to clean backup job: %v", err)
+			return fmt.Errorf("failed to clean backup job: %w", err)
+		}
+	} else {
+		logger.Debug("backup job not found")
+	}
+
+	// Start upgrade job
+	if err := m.jobManager.MarkStart(upgradeJob.Id); err != nil {
+		logger.Warningf("retryDistUpgrade: failed to mark start upgrade job: %v", err)
+		return fmt.Errorf("failed to start upgrade job: %w", err)
+	}
+	return nil
+}
 
 func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
 	// 创建job，但是不添加到任务队列中
@@ -52,11 +88,16 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	}
 	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false)
 	if createJobErr != nil {
-		if !errors.Is(createJobErr, JobExistError) {
-			return "/", dbusutil.ToError(createJobErr)
-		} else {
+		if errors.Is(createJobErr, JobExistError) {
+			// job exist, retry dist upgrade
+			err := m.retryDistUpgrade(upgradeJob, needBackup)
+			if err != nil {
+				logger.Warningf("DistUpgradePartly: retry upgrade job failed: %v", err)
+				return "/", dbusutil.ToError(err)
+			}
 			return upgradeJob.getPath(), nil
 		}
+		return "/", dbusutil.ToError(createJobErr)
 	}
 	var inhibitFd dbus.UnixFD = -1
 	why := Tr("Backing up and installing updates...")
@@ -125,8 +166,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	m.inhibitAutoQuitCountAdd() // 开始备份前add，结束备份后sub(无论是否成功)
 	var isExist bool
 	var backupJob *Job
-	if needBackup && system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
-		isExist, backupJob, err = m.jobManager.CreateJob("", system.BackupType, nil, nil, nil)
+	if needBackup && system.NormalFileExists(system.DeepinImmutableCtlPath) {
+		isExist, backupJob, err = m.jobManager.CreateJob("", system.BackupJobType, nil, nil, nil)
 		if isExist {
 			return "", dbusutil.ToError(JobExistError)
 		}
@@ -156,10 +197,12 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				msg := gettext.Tr("Backup failed!")
 				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
 				hints := map[string]dbus.Variant{
+					// Backup and continue dist upgrade
 					"x-deepin-action-backup": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, true)),
+						buildDistUpgradePartlyCommand(mode, true)),
+					// Continue dist upgrade without backup
 					"x-deepin-action-continue": dbus.MakeVariant(
-						fmt.Sprintf("dbus-send,--system,--print-reply,--dest=com.deepin.lastore,/com/deepin/lastore,com.deepin.lastore.Manager.DistUpgradePartly,uint64:%v,boolean:%v", mode, false))}
+						buildDistUpgradePartlyCommand(mode, false))}
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 				return nil
 			},
@@ -196,6 +239,25 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		return "", dbusutil.ToError(startJobErr)
 	}
 	return upgradeJob.getPath(), nil
+}
+
+// buildDistUpgradePartlyCommand builds a dbus-send command to invoke the DistUpgradePartly method
+func buildDistUpgradePartlyCommand(mode system.UpdateType, needBackup bool) string {
+	const methodName = "DistUpgradePartly"
+
+	// Build dbus-send command with proper arguments
+	args := []string{
+		"dbus-send",
+		"--system",
+		"--print-reply",
+		fmt.Sprintf("--dest=%s", dbusServiceName),
+		dbusObjectPath,
+		fmt.Sprintf("%s.%s", dbusInterfaceManager, methodName),
+		fmt.Sprintf("uint64:%v", mode),
+		fmt.Sprintf("boolean:%v", needBackup),
+	}
+
+	return strings.Join(args, ",")
 }
 
 // distUpgrade needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add

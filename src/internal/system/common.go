@@ -7,7 +7,6 @@ package system
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/linuxdeepin/go-lib/keyfile"
 	"io"
 	"os"
 	"os/exec"
@@ -19,7 +18,13 @@ import (
 	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
 	license "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.license"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/log"
+)
+
+const (
+	// DeepinImmutableCtlPath is the path of deepin-immutable-ctl
+	DeepinImmutableCtlPath = "/usr/sbin/deepin-immutable-ctl"
 )
 
 type MirrorSource struct {

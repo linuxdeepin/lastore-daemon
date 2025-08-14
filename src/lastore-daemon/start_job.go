@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
@@ -61,7 +62,7 @@ func StartSystemJob(sys system.System, j *Job) error {
 			pkg = j.Packages[0]
 		}
 		return sys.CheckSystem(j.Id, pkg, j.environ, j.option)
-	case system.BackupType:
+	case system.BackupJobType:
 		return sys.OsBackup(j.Id)
 	default:
 		return system.NotFoundError("StartSystemJob unknown job type " + j.Type)
