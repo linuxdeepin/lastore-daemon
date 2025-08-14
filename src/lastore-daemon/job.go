@@ -8,9 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"sync"
 	"time"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 )
@@ -145,11 +146,24 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	if info.Status == system.RunningStatus && j.realRunningHookFn != nil {
 		j.realRunningHookFn()
 	}
-	cProgress := buildProgress(info.Progress, j.progressRangeBegin, j.progressRangeEnd)
-	if cProgress > j.Progress {
+
+	var newProgress float64
+	var shouldUpdateProgress bool
+
+	if info.ResetProgress {
+		newProgress = 0
+		shouldUpdateProgress = true
+	} else {
+		newProgress = buildProgress(info.Progress, j.progressRangeBegin, j.progressRangeEnd)
+		// Only update when new progress is greater than current progress
+		shouldUpdateProgress = newProgress > j.Progress
+	}
+
+	if shouldUpdateProgress {
+		// Update progress
 		changed = true
-		j.Progress = cProgress
-		_ = j.emitPropChangedProgress(cProgress)
+		j.Progress = newProgress
+		_ = j.emitPropChangedProgress(newProgress)
 	}
 
 	// see the apt.go, we scale download progress value range in [0,0.5
@@ -318,4 +332,11 @@ func (j *Job) subRetryCount(toZero bool) {
 		j.subRetryHookFn(j)
 	}
 	j.retry--
+}
+
+// HasStatus check if the job has the given status
+func (j *Job) HasStatus(status system.Status) bool {
+	j.PropsMu.RLock()
+	defer j.PropsMu.RUnlock()
+	return j.Status == status
 }

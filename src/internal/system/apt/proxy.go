@@ -537,8 +537,48 @@ func parseAptShowList(r io.Reader, title string) []string {
 	return p
 }
 
+// ImmutableCtlOutput is the json output of deepin-immutable-ctl command
+type ImmutableCtlOutput struct {
+	Code    uint8              `json:"code"`
+	Message string             `json:"message"`
+	Error   *ImmutableCtlError `json:"error"`
+	Data    interface{}        `json:"data"`
+}
+
+// ImmutableCtlError is the error of deepin-immutable-ctl command
+type ImmutableCtlError struct {
+	Code    string   `json:"code"`
+	Message []string `json:"message"`
+}
+
+func parseBackupJobError(stdErrStr string, stdOutStr string) *system.JobError {
+	var output ImmutableCtlOutput
+	err := json.Unmarshal([]byte(stdOutStr), &output)
+	if err != nil {
+		return &system.JobError{
+			ErrType:   system.ErrorUnknown,
+			ErrDetail: err.Error(),
+			ErrorLog:  []string{stdErrStr},
+		}
+	}
+	if output.Code == 0 {
+		// success
+		return nil
+	}
+
+	errDetail := fmt.Sprintf("err code: %v, err message: %+v",
+		output.Error.Code, output.Error.Message)
+
+	return &system.JobError{
+		ErrType:   system.ErrorUnknown,
+		ErrDetail: errDetail,
+		ErrorLog:  []string{stdErrStr},
+	}
+}
+
 func (p *APTSystem) OsBackup(jobId string) error {
-	c := newAPTCommand(p, jobId, system.BackupType, p.Indicator, nil)
+	c := newAPTCommand(p, jobId, system.BackupJobType, p.Indicator, nil)
+	c.ParseJobError = parseBackupJobError
 	c.ParseProgressInfo = func(id, line string) (system.JobProgressInfo, error) {
 		type info struct {
 			Progress    float64 `json:"progress"`
@@ -546,17 +586,15 @@ func (p *APTSystem) OsBackup(jobId string) error {
 		}
 
 		var progress float64
-		var status system.Status
 		var p info
 		if err := json.Unmarshal([]byte(line), &p); err == nil {
 			progress = p.Progress / 100.0
-			status = system.RunningStatus
 		}
 		return system.JobProgressInfo{
 			JobId:       jobId,
 			Progress:    progress,
 			Description: p.Description,
-			Status:      status,
+			Status:      system.RunningStatus,
 			Cancelable:  false,
 		}, nil
 	}
@@ -564,5 +602,11 @@ func (p *APTSystem) OsBackup(jobId string) error {
 		"IMMUTABLE_DISABLE_REMOUNT": "false",
 	}
 	c.SetEnv(environ)
+	c.Indicator(system.JobProgressInfo{
+		JobId:         jobId,
+		ResetProgress: true,
+		Status:        system.RunningStatus,
+		Cancelable:    false,
+	})
 	return c.Start()
 }
