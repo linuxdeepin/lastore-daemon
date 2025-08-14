@@ -84,8 +84,8 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		return exec.Command("/bin/sh", "-c", sh)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
-	case system.BackupType:
-		return exec.Command("/usr/sbin/deepin-immutable-ctl", "admin", "deploy", "--backup", "-v")
+	case system.BackupJobType:
+		return exec.Command(system.DeepinImmutableCtlPath, "admin", "deploy", "--backup", "-j")
 	case system.FixErrorJobType:
 		var errType system.JobErrorType
 		if len(cmdArgs) >= 1 {

@@ -12,16 +12,22 @@ import (
 
 var NotUseDBus = false
 
+const (
+	dbusInterfaceManager = "org.deepin.dde.Lastore1.Manager"
+	dbusInterfaceJob     = "org.deepin.dde.Lastore1.Job"
+	dbusInterfaceUpdater = "org.deepin.dde.Lastore1.Updater"
+)
+
 func (*Manager) GetInterfaceName() string {
-	return "org.deepin.dde.Lastore1.Manager"
+	return dbusInterfaceManager
 }
 
 func (*Job) GetInterfaceName() string {
-	return "org.deepin.dde.Lastore1.Job"
+	return dbusInterfaceJob
 }
 
 func (*Updater) GetInterfaceName() string {
-	return "org.deepin.dde.Lastore1.Updater"
+	return dbusInterfaceUpdater
 }
 
 func (m *Manager) updateJobList() {

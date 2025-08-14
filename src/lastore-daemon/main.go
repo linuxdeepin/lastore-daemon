@@ -24,6 +24,7 @@ import (
 
 const (
 	dbusServiceName = "org.deepin.dde.Lastore1"
+	dbusPathManager = "/org/deepin/dde/Lastore1"
 )
 const (
 	aptConfDir           = "/etc/apt/apt.conf.d"
@@ -79,7 +80,7 @@ func main() {
 	updater := NewUpdater(service, manager, config)
 
 	manager.updater = updater
-	serverObject, err := service.NewServerObject("/org/deepin/dde/Lastore1", manager, updater)
+	serverObject, err := service.NewServerObject(dbusPathManager, manager, updater)
 	if err != nil {
 		logger.Error("failed to new server manager and updater object:", err)
 		return
