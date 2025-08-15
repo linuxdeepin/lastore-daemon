@@ -1,0 +1,56 @@
+{
+  "cachepath": "",
+  "updateinfo": {
+    "repoinfo": [
+      {
+        "type": "deb",
+        "url": "xxxxs://example.com/testapp",
+        "suite": "eagle",
+        "components": [
+          "main",
+          "non-free",
+          "contrib"
+        ]
+      }
+    ],
+    "applist": [
+      {
+        "name": "systemd",
+        "version": "251.04"
+      }
+    ],
+    "corelist": [
+      {
+        "name": "systemd",
+        "version": "241.50-1+deepin1",
+        "need": "strict"
+      },
+      {
+        "name": "startdde",
+        "version": "5.10.8.3-1",
+        "need": "true"
+      },
+      {
+        "name": "libdtkgui5",
+        "version": "5.6.8-1",
+        "need": "true"
+      }
+    ],
+    "freezelist": [
+      {
+        "name": "dpkg",
+        "version": "1.19.7.15-1+dde",
+        "need": "true"
+      }
+    ],
+    "optionlist": [
+      {
+        "name": "org.deepin.scanner",
+        "version": "5.5.15-1",
+        "need": "false"
+      }
+    ]
+  },
+  "time": "2023-07-24T18:19:52+08:00",
+  "uuid": "fbcfe027-2b49-4b71-a6e2-2f150c205189"
+}
