@@ -101,21 +101,21 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		"-c",
 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
 	}
-	if m.updater.getIdleDownloadEnabled() {
-		begin, end := m.getNextIdleUnitDelay()
-		unitMap[lastoreAutoDownload] = []string{
-			fmt.Sprintf("--on-active=%d", begin/time.Second),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoDownload), // 根据用户设置的自动下载的时间段，设置自动下载开始的时间
-		}
-		unitMap[lastoreAbortAutoDownload] = []string{
-			fmt.Sprintf("--on-active=%d", end/time.Second),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AbortAutoDownload), // 根据用户设置的自动下载的时间段，终止自动下载
-		}
-	}
+	// if m.updater.getIdleDownloadEnabled() {
+	// 	begin, end := m.getNextIdleUnitDelay()
+	// 	unitMap[lastoreAutoDownload] = []string{
+	// 		fmt.Sprintf("--on-active=%d", begin/time.Second),
+	// 		"/bin/bash",
+	// 		"-c",
+	// 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoDownload), // 根据用户设置的自动下载的时间段，设置自动下载开始的时间
+	// 	}
+	// 	unitMap[lastoreAbortAutoDownload] = []string{
+	// 		fmt.Sprintf("--on-active=%d", end/time.Second),
+	// 		"/bin/bash",
+	// 		"-c",
+	// 		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AbortAutoDownload), // 根据用户设置的自动下载的时间段，终止自动下载
+	// 	}
+	// }
 	// PostUpgradeCron 可以配置为*:0/30,每小时的0分和30分触发一次
 	if len(strings.TrimSpace(m.config.PostUpgradeCron)) > 0 {
 		unitMap[lastoreRetryPostMsg] = []string{

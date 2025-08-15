@@ -6,6 +6,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -83,7 +86,57 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 	return nil
 }
 
+func writeTimerFile(desc, hourMinute, unit string) error {
+	unit = strings.TrimSpace(unit)
+	template := `[Unit]
+Description=%s
+
+[Timer]
+OnCalendar=*-*-* %s:00
+Unit=%s.service
+
+[Install]
+WantedBy=timers.target
+`
+	data := fmt.Sprintf(template, desc, hourMinute, unit)
+	err := os.WriteFile("/etc/systemd/system/"+unit+".timer", []byte(data), 0644)
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	return nil
+}
+
+// SetIdleDownloadConfig is used to set the idle download config
 func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
+	err := u.setIdleDownloadConfig(idleConfig)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+	return nil
+}
+
+func (u *Updater) setIdleDownloadConfig(idleConfig string) error {
+	err := json.Unmarshal([]byte(idleConfig), &u.idleDownloadConfigObj)
+	if err != nil {
+		return err
+	}
+
+	// TODO
+	err = writeTimerFile("Auto download every day", u.idleDownloadConfigObj.BeginTime, "lastore-auto-download")
+	if err != nil {
+		return err
+	}
+
+	err = writeTimerFile("Abort auto download every day", u.idleDownloadConfigObj.EndTime, "lastore-abort-auto-download")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *Updater) SetIdleDownloadConfig_Old(idleConfig string) *dbus.Error {
 	err := json.Unmarshal([]byte(idleConfig), &u.idleDownloadConfigObj)
 	if err != nil {
 		logger.Warning(err)
