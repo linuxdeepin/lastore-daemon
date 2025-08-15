@@ -6,9 +6,12 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -248,25 +251,40 @@ const autoDownloadTimeLayout = "15:04"
 
 var _minDelayTime = 10 * time.Second
 
-// getCustomTimeDuration 按照autoDownloadTimeLayout的格式计算时间差
-func getCustomTimeDuration(presetTime string) time.Duration {
-	presetTimer, err := time.Parse(autoDownloadTimeLayout, presetTime)
+func parseAutoDownloadTime(hourMinute string, now time.Time) (time.Time, error) {
+	if hourMinute == "" {
+		return time.Time{}, fmt.Errorf("hourMinute cannot be empty")
+	}
+
+	t, err := time.Parse(autoDownloadTimeLayout, hourMinute)
 	if err != nil {
-		logger.Warning(err)
-		return _minDelayTime
+		return time.Time{}, fmt.Errorf("failed to parse time %q: %w",
+			hourMinute, err)
 	}
-	var timeStr string
-	if time.Now().Minute() < 10 {
-		timeStr = fmt.Sprintf("%v:0%v", time.Now().Hour(), time.Now().Minute())
-	} else {
-		timeStr = fmt.Sprintf("%v:%v", time.Now().Hour(), time.Now().Minute())
+
+	result := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
+	return result, nil
+}
+
+func parseAutoDownloadRange(idleDownloadConfig idleDownloadConfig, now time.Time) (TimeRange, error) {
+	if idleDownloadConfig.BeginTime == "" || idleDownloadConfig.EndTime == "" {
+		return TimeRange{}, fmt.Errorf("begin time and end time cannot be empty")
 	}
-	nowTimer, err := time.Parse(autoDownloadTimeLayout, timeStr)
+
+	beginTime, err := parseAutoDownloadTime(idleDownloadConfig.BeginTime, now)
 	if err != nil {
-		logger.Warning(err)
-		return _minDelayTime
+		return TimeRange{}, fmt.Errorf("failed to parse begin time: %w", err)
 	}
-	return presetTimer.Sub(nowTimer)
+	endTime, err := parseAutoDownloadTime(idleDownloadConfig.EndTime, now)
+	if err != nil {
+		return TimeRange{}, fmt.Errorf("failed to parse end time: %w", err)
+	}
+	// If beginTime is greater than endTime, for example, if beginTime is 23:00 and endTime is 03:00,
+	// we need to add one day to endTime to ensure that beginTime is less than endTime.
+	if beginTime.After(endTime) {
+		endTime = endTime.AddDate(0, 0, 1)
+	}
+	return NewTimeRange(beginTime, endTime), nil
 }
 
 const (
@@ -639,4 +657,53 @@ func SetUsingRepoType(sourceConfig UpdateSourceConfig, repoType config.RepoType)
 			v.IsUsing = false
 		}
 	}
+}
+
+// getFileSha256 calculates the SHA-256 hash of a file.
+func getFileSha256(filePath string) (string, error) {
+	if filePath == "" {
+		return "", fmt.Errorf("filePath cannot be empty")
+	}
+	hash := sha256.New()
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file %q: %w", filePath, err)
+	}
+	defer file.Close()
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return "", fmt.Errorf("failed to copy file %q: %w", filePath, err)
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// getContentSha256 calculates the SHA-256 hash of a string.
+func getContentSha256(content string) string {
+	hash := sha256.New()
+	hash.Write([]byte(content))
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+// TimeRange represents a time range
+type TimeRange struct {
+	Start time.Time
+	End   time.Time
+}
+
+// NewTimeRange creates a new time range
+// If start > end, they will be swapped automatically
+func NewTimeRange(start, end time.Time) TimeRange {
+	if start.After(end) {
+		start, end = end, start
+	}
+	return TimeRange{Start: start, End: end}
+}
+
+// Contains determines if a given time point is within the range (inclusive)
+func (tr TimeRange) Contains(t time.Time) bool {
+	return !t.Before(tr.Start) && !t.After(tr.End)
+}
+
+func (tr TimeRange) String() string {
+	return fmt.Sprintf("%v ~ %v", tr.Start.Format(time.RFC3339), tr.End.Format(time.RFC3339))
 }

@@ -21,7 +21,7 @@ import (
 	"github.com/linuxdeepin/go-lib/gettext"
 )
 
-func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType) (*Job, error) {
+func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType, initiator Initiator) (*Job, error) {
 	if m.ImmutableAutoRecovery {
 		logger.Info("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
 		return nil, errors.New("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
@@ -112,6 +112,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	if isExist {
 		return job, nil
 	}
+	job.initiator = initiator
 	currentJob := job
 	var sendDownloadingOnce sync.Once
 	// 遍历job和所有next

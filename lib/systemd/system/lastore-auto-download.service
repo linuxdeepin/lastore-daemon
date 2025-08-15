@@ -1,0 +1,7 @@
+[Unit]
+Description=System Update Auto Download Service
+Wants=lastore-daemon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/dbus-send --system --print-reply --dest=org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager.HandleSystemEvent string:AutoDownload

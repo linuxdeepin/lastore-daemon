@@ -85,7 +85,7 @@ func (m *Manager) loadCacheJob() {
 				continue
 			}
 		case system.PausedStatus:
-			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode)
+			_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode, initiatorAuto)
 			if err != nil {
 				logger.Warning(err)
 				return
@@ -162,13 +162,10 @@ func (m *Manager) inhibitAutoQuitCountAdd() {
 
 func (m *Manager) loadLastoreCache() {
 	m.loadUpdateSourceOnce()
-	m.loadResetIdleDownload()
-	// m.loadCacheJob()
 }
 
 func (m *Manager) saveLastoreCache() {
 	m.saveUpdateSourceOnce()
-	m.saveResetIdleDownload()
 	m.userAgents.saveRecordContent(userAgentRecordPath)
 }
 

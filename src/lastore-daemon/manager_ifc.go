@@ -486,7 +486,7 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 
 func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.UpdateType) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	jobObj, err := m.prepareDistUpgrade(sender, mode)
+	jobObj, err := m.prepareDistUpgrade(sender, mode, initiatorUser)
 	if err != nil {
 		logger.Warning(err)
 		return "/", dbusutil.ToError(err)

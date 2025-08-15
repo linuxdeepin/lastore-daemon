@@ -152,6 +152,11 @@ func main() {
 	}
 	manager.PropsMu.RUnlock()
 	manager.startOfflineTask()
+	// Ensure that the systemd timer configuration is consistent with the current configuration.
+	err = updater.applyIdleDownloadConfig(updater.idleDownloadConfigObj, time.Time{}, true)
+	if err != nil {
+		logger.Warning("failed to apply idle download config at startup:", err)
+	}
 	logger.Info("Started service at system bus")
 	autoQuitTime := 60 * time.Second
 	if logger.GetLogLevel() == log.LevelDebug {
