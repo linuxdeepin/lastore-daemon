@@ -1,3 +1,9 @@
+lastore-daemon (6.2.27) unstable; urgency=medium
+
+  * fix: GRUB menu entries appear in English after system upgrade (#201)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 15 Aug 2025 10:35:07 +0800
+
 lastore-daemon (6.2.26) unstable; urgency=medium
 
   * Fixcve (#197)
