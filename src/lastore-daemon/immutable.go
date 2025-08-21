@@ -12,10 +12,10 @@ import (
 
 // 格式化输出需要添加-j 参数
 func (i *immutableManager) osTreeCmd(args []string) (out string, err error) {
-	if system.NormalFileExists(DEEPIN_IMMUTABLE_CTL) {
-		args = append(args, "-v")
-		cmd := exec.Command(DEEPIN_IMMUTABLE_CTL, args...) // #nosec G204
+	if system.NormalFileExists(system.DeepinImmutableCtlPath) {
+		cmd := exec.Command(system.DeepinImmutableCtlPath, args...) // #nosec G204
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
+		cmd.Env = append(cmd.Env, originalLocaleEnvs...)
 		logger.Info("run command:", cmd.Args)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -38,7 +38,7 @@ func (i *immutableManager) osTreeCmd(args []string) (out string, err error) {
 			return stdout.String(), nil
 		}
 	} else {
-		return "", fmt.Errorf("%v not found", DEEPIN_IMMUTABLE_CTL)
+		return "", fmt.Errorf("%v not found", system.DeepinImmutableCtlPath)
 	}
 }
 

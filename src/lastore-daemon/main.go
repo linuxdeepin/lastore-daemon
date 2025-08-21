@@ -14,7 +14,6 @@ import (
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/dde-api/inhibit_hint"
@@ -24,8 +23,12 @@ import (
 )
 
 const (
+	// D-Bus service name for lastore service
 	dbusServiceName = "org.deepin.dde.Lastore1"
+	// D-Bus object path for lastore manager and updater object
+	dbusObjectPath = "/org/deepin/dde/Lastore1"
 )
+
 const (
 	aptConfDir           = "/etc/apt/apt.conf.d"
 	tokenConfFileName    = "99lastore-token.conf" // #nosec G101
@@ -61,10 +64,8 @@ func main() {
 		return
 	}
 
-	_ = utils.UnsetEnv("LC_ALL")
-	_ = utils.UnsetEnv("LANGUAGE")
-	_ = utils.UnsetEnv("LC_MESSAGES")
-	_ = utils.UnsetEnv("LANG")
+	// Collect and clear locale environment variables
+	collectAndClearLocaleEnvs()
 
 	gettext.InitI18n()
 	gettext.Textdomain("lastore-daemon")
@@ -82,7 +83,7 @@ func main() {
 	updater := NewUpdater(service, manager, config)
 
 	manager.updater = updater
-	serverObject, err := service.NewServerObject("/org/deepin/dde/Lastore1", manager, updater)
+	serverObject, err := service.NewServerObject(dbusObjectPath, manager, updater)
 	if err != nil {
 		logger.Error("failed to new server manager and updater object:", err)
 		return

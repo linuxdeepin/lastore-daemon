@@ -25,6 +25,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -141,6 +142,24 @@ func getLang(envVars procfs.EnvVars) string {
 		}
 	}
 	return ""
+}
+
+var originalLocaleEnvs []string
+
+// collectAndClearLocaleEnvs collects current locale environment variables,
+// clears them from the environment, and stores the original values for later use
+func collectAndClearLocaleEnvs() {
+	originalLocaleEnvs = nil
+	// Iterate over the list of environment variable names related to locale settings
+	for _, localeEnvName := range []string{"LC_ALL", "LANGUAGE",
+		"LC_MESSAGES", "LANG"} {
+		localeEnvValue, exists := os.LookupEnv(localeEnvName)
+		if exists {
+			// Store the original locale environment variables for later use
+			originalLocaleEnvs = append(originalLocaleEnvs, localeEnvName+"="+localeEnvValue)
+		}
+		_ = utils.UnsetEnv(localeEnvName)
+	}
 }
 
 func listPackageDesktopFiles(pkg string) []string {
