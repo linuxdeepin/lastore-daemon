@@ -1,3 +1,9 @@
+lastore-daemon (6.2.28) unstable; urgency=medium
+
+  * fix: The issue of unresponsive button clicks in the backup failure notification dialog (#203)
+
+ -- electricface <songwentai@uniontech.com>  Fri, 22 Aug 2025 14:28:38 +0800
+
 lastore-daemon (6.2.27) unstable; urgency=medium
 
   * fix: GRUB menu entries appear in English after system upgrade (#201)
