@@ -50,7 +50,6 @@ const (
 type UnitName string
 
 const (
-	lastoreOnline           UnitName = "lastoreOnline"
 	lastoreAutoClean        UnitName = "lastoreAutoClean"
 	lastoreAutoCheck        UnitName = "lastoreAutoCheck"
 	lastoreAutoUpdateToken  UnitName = "lastoreAutoUpdateToken"
@@ -68,13 +67,6 @@ type lastoreUnitMap map[UnitName][]string
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
 	if (m.config.GetLastoreDaemonStatus()&config.DisableUpdate) == 0 && !m.ImmutableAutoRecovery { // 更新禁用未开启且无忧还原未开启时
-		unitMap[lastoreOnline] = []string{
-			// 随机数范围1800-21600，时间为0.5~6小时
-			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0]),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf("/usr/bin/nm-online -t 3600 && %s string:%s", lastoreDBusCmd, AutoCheck), // 等待网络联通后检查更新
-		}
 		unitMap[lastoreAutoCheck] = []string{
 			// 随机数范围1800-21600，时间为0.5~6小时
 			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0]),
@@ -219,10 +211,6 @@ func (m *Manager) loadUpdateSourceOnce() {
 
 // systemd计时服务需要根据上一次更新时间而变化
 func (m *Manager) updateAutoCheckSystemUnit() error {
-	err := m.stopTimerUnit(lastoreOnline)
-	if err != nil {
-		logger.Info(err)
-	}
 	if m.ImmutableAutoRecovery {
 		logger.Info("immutable auto recovery is enabled, stopping and don't allow to update auto check timer")
 		// 在无忧还原模式下，主动停止现有的自动检查定时器

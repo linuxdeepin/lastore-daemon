@@ -204,7 +204,6 @@ func (m *Manager) initDbusSignalListen() {
 func (m *Manager) initDSettingsChangedHandle() {
 	m.config.ConnectConfigChanged(config.DSettingsKeyLastoreDaemonStatus, func(bit config.LastoreDaemonStatus, value interface{}) {
 		if bit == config.DisableUpdate {
-			_ = m.updateTimerUnit(lastoreOnline)
 			_ = m.updateTimerUnit(lastoreAutoCheck)
 		}
 	})
@@ -1125,7 +1124,6 @@ func (m *Manager) updateAutoRecoveryStatus() {
 		logger.Info("immutable auto recovery is enabled")
 		// 在无忧还原模式下，主动停止相关定时器
 		_ = m.stopTimerUnit(lastoreAutoCheck)
-		_ = m.stopTimerUnit(lastoreOnline)
 	} else {
 		logger.Info("immutable auto recovery is disabled")
 	}
