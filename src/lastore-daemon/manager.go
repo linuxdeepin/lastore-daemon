@@ -110,8 +110,6 @@ type Manager struct {
 	checkDpkgCapabilityOnce sync.Once
 	supportDpkgScriptIgnore bool
 
-	resetIdleDownload bool
-
 	logFds     []*os.File
 	logFdsMu   sync.Mutex
 	logTmpFile *os.File
@@ -145,7 +143,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		abObj:                abrecovery.NewABRecovery(service.Conn()),
 		securitySourceConfig: make(UpdateSourceConfig),
 		systemSourceConfig:   make(UpdateSourceConfig),
-		resetIdleDownload:    true,
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
@@ -1129,8 +1126,6 @@ func (m *Manager) updateAutoRecoveryStatus() {
 		// 在无忧还原模式下，主动停止相关定时器
 		_ = m.stopTimerUnit(lastoreAutoCheck)
 		_ = m.stopTimerUnit(lastoreOnline)
-		_ = m.stopTimerUnit(lastoreAutoDownload)
-		_ = m.stopTimerUnit(lastoreAbortAutoDownload)
 	} else {
 		logger.Info("immutable auto recovery is disabled")
 	}

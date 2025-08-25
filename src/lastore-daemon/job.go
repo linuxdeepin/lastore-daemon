@@ -63,7 +63,19 @@ type Job struct {
 	updateTyp system.UpdateType
 
 	errLogPath []string
+
+	initiator Initiator // source of trigger
 }
+
+// Initiator is the source of trigger
+type Initiator uint
+
+const (
+	// initiatorUser User manually triggered
+	initiatorUser Initiator = iota
+	// initiatorAuto Automatically triggered
+	initiatorAuto
+)
 
 func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jobType, queueName string, environ map[string]string) *Job {
 	j := &Job{

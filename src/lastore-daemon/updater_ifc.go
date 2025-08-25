@@ -41,9 +41,9 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 	if u.AutoDownloadUpdates == enable {
 		return nil
 	}
-	u.PropsMu.Lock()
+	u.PropsMu.RLock()
 	idleDownloadConfigObj := u.idleDownloadConfigObj
-	u.PropsMu.Unlock()
+	u.PropsMu.RUnlock()
 	if !enable && idleDownloadConfigObj.IdleDownloadEnabled == true {
 		idleDownloadConfigObj.IdleDownloadEnabled = false
 		idleDownloadByte, err := json.Marshal(idleDownloadConfigObj)
@@ -83,29 +83,35 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 	return nil
 }
 
+// SetIdleDownloadConfig is used to set the idle download config
 func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
-	err := json.Unmarshal([]byte(idleConfig), &u.idleDownloadConfigObj)
+	var idleDownloadConfigObj idleDownloadConfig
+	err := json.Unmarshal([]byte(idleConfig), &idleDownloadConfigObj)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-
+	// This dbus method may be called concurrently, need to add lock to ensure concurrent data safety
+	u.PropsMu.Lock()
+	u.idleDownloadConfigObj = idleDownloadConfigObj
 	if u.setIdleDownloadConfigTimer == nil {
 		u.setIdleDownloadConfigTimer = time.AfterFunc(time.Second, func() {
-			config, err := json.Marshal(u.idleDownloadConfigObj)
+			u.PropsMu.RLock()
+			idleDownloadConfig := u.idleDownloadConfigObj
+			u.PropsMu.RUnlock()
+			config, err := json.Marshal(idleDownloadConfig)
 			if err != nil {
 				logger.Warning(err)
 				return
 			}
 			changed := u.setPropIdleDownloadConfig(string(config))
 			if changed {
-				u.manager.resetIdleDownload = true
 				err = u.config.SetIdleDownloadConfig(string(config))
 				if err != nil {
 					logger.Warning(err)
 					return
 				}
-				err = u.manager.updateAutoDownloadTimer()
+				err = u.applyIdleDownloadConfig(idleDownloadConfig, time.Now(), false)
 				if err != nil {
 					logger.Warning(err)
 					return
@@ -113,9 +119,12 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 			}
 		})
 	} else {
+		// Stop the timer before resetting to avoid concurrent scheduling races
+		_ = u.setIdleDownloadConfigTimer.Stop()
 		u.setIdleDownloadConfigTimer.Reset(time.Second)
 		logger.Info("reset idle timer")
 	}
+	u.PropsMu.Unlock()
 	return nil
 }
 

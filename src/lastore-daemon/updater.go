@@ -6,9 +6,13 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -201,6 +205,206 @@ func (u *Updater) getIdleDownloadEnabled() bool {
 	u.PropsMu.RLock()
 	defer u.PropsMu.RUnlock()
 	return u.idleDownloadConfigObj.IdleDownloadEnabled
+}
+
+// initIdleDownloadConfig initializes the idle download configuration
+func (u *Updater) initIdleDownloadConfig() error {
+	u.PropsMu.RLock()
+	idleDownloadConfig := u.idleDownloadConfigObj
+	u.PropsMu.RUnlock()
+
+	err := u.applyIdleDownloadConfigImmediately(idleDownloadConfig, time.Now())
+	if err != nil {
+		return fmt.Errorf("failed to apply idle download config immediately: %w", err)
+	}
+	return nil
+}
+
+// writeTimerFile writes a systemd timer file to the specified path.
+// It returns true if the timer file is changed, false otherwise.
+func writeTimerFile(desc, hourMinute, unit string) (bool, error) {
+	// Validate and parse the time format (HH:MM)
+	_, err := time.Parse(autoDownloadTimeLayout, hourMinute)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse time %q: %w",
+			hourMinute, err)
+	}
+
+	// Validate unit parameter
+	if unit == "" {
+		return false, errors.New("unit is empty")
+	}
+
+	filePath := filepath.Join("/etc/systemd/system", unit)
+
+	// Get current file hash to check if content has changed
+	currentHash, err := getFileSha256(filePath)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			logger.Warningf("Failed to get file sha256 of %s: %v", filePath, err)
+		}
+	}
+
+	unit = strings.TrimSpace(unit)
+	serviceUnit := strings.TrimSuffix(unit, ".timer") + ".service"
+
+	// Define systemd timer unit template
+	template := `[Unit]
+Description=%s
+
+[Timer]
+OnCalendar=*-*-* %s:00
+Unit=%s
+
+[Install]
+WantedBy=timers.target
+`
+	data := fmt.Sprintf(template, desc, hourMinute, serviceUnit)
+	newHash := getContentSha256(data)
+
+	// Check if content has changed to avoid unnecessary writes
+	if currentHash == newHash {
+		return false, nil
+	}
+
+	// Write the timer file to disk
+	err = os.WriteFile(filePath, []byte(data), 0644)
+	if err != nil {
+		return false, fmt.Errorf("failed to write timer file: %w", err)
+	}
+	return true, nil
+}
+
+// applyIdleDownloadConfigImmediately applies the idle download configuration immediately based on current time.
+// This function makes the configuration take effect immediately by checking if the current time is within
+// the download time period and starting or aborting auto download accordingly.
+func (u *Updater) applyIdleDownloadConfigImmediately(idleDownloadConfig idleDownloadConfig, now time.Time) error {
+	if !idleDownloadConfig.IdleDownloadEnabled {
+		// If auto download is disabled, abort the download
+		u.manager.handleAbortAutoDownload()
+		return nil
+	}
+	// Parse auto download time range
+	tr, err := parseAutoDownloadRange(idleDownloadConfig, now)
+	if err != nil {
+		return fmt.Errorf("failed to parse auto download range: %w", err)
+	}
+	logger.Debug("Idle download time range: ", tr)
+	if tr.Contains(now) {
+		// Current time is within download period, start download
+		u.manager.handleAutoDownload()
+	} else {
+		// Current time is outside download period, abort download
+		u.manager.handleAbortAutoDownload()
+	}
+	return nil
+}
+
+const (
+	autoDownloadTimer      = "lastore-auto-download.timer"
+	abortAutoDownloadTimer = "lastore-abort-auto-download.timer"
+)
+
+// applyIdleDownloadConfig applies the idle download configuration by creating and managing systemd timer units.
+// It creates timer files for auto download and abort auto download, then enables or disables them based on the configuration.
+func (u *Updater) applyIdleDownloadConfig(idleDownloadConfig idleDownloadConfig, now time.Time, isStartup bool) error {
+	if !isStartup {
+		err := u.applyIdleDownloadConfigImmediately(idleDownloadConfig, now)
+		if err != nil {
+			return fmt.Errorf("failed to apply idle download config immediately: %w", err)
+		}
+	}
+
+	needReload := false
+	defer func() {
+		// Reload systemd daemon
+		if needReload {
+			logger.Debug("Reload systemd daemon")
+			if err := u.systemdManager.Reload(0); err != nil {
+				logger.Warningf("Failed to reload systemd daemon: %v", err)
+			}
+		}
+	}()
+
+	// Setup timer files
+	changed, err := writeTimerFile("Auto download every day", idleDownloadConfig.BeginTime, autoDownloadTimer)
+	if err != nil {
+		return fmt.Errorf("failed to write timer file %s: %w", autoDownloadTimer, err)
+	}
+	if changed {
+		needReload = true
+		logger.Debug("Auto download timer file changed")
+	}
+
+	changed, err = writeTimerFile("Abort auto download every day", idleDownloadConfig.EndTime, abortAutoDownloadTimer)
+	if err != nil {
+		return fmt.Errorf("failed to write timer file %s: %w", abortAutoDownloadTimer, err)
+	}
+	if changed {
+		needReload = true
+		logger.Debug("Abort auto download timer file changed")
+	}
+
+	// Enable or disable timer units
+	units := []string{autoDownloadTimer, abortAutoDownloadTimer}
+	if idleDownloadConfig.IdleDownloadEnabled {
+		changed, err := u.enableAndStartTimerUnits(units)
+		if err != nil {
+			return fmt.Errorf("failed to enable and start timer units: %w", err)
+		}
+		if changed {
+			needReload = true
+			logger.Debug("Enable auto download timer units changed")
+		}
+	} else {
+		changed, err := u.disableAndStopTimerUnits(units)
+		if err != nil {
+			return fmt.Errorf("failed to disable and stop timer units: %w", err)
+		}
+		if changed {
+			needReload = true
+			logger.Debug("Disable auto download timer units changed")
+		}
+	}
+
+	return nil
+}
+
+// enableAndStartTimerUnits enables and starts the timer units for idle download
+func (u *Updater) enableAndStartTimerUnits(units []string) (bool, error) {
+
+	// enable timer units
+	_, changes, err := u.systemdManager.EnableUnitFiles(0, units, false, true)
+	if err != nil {
+		return false, fmt.Errorf("enable idle download timer units err: %w", err)
+	}
+	// start timer units
+	for _, unit := range units {
+		_, err = u.systemdManager.StartUnit(0, unit, "replace")
+		if err != nil {
+			return false, fmt.Errorf("failed to start unit %s: %w", unit, err)
+		}
+	}
+
+	return len(changes) > 0, nil
+}
+
+// disableAndStopTimerUnits disables and stops the timer units for idle download
+func (u *Updater) disableAndStopTimerUnits(units []string) (bool, error) {
+	// disable timer units
+	changes, err := u.systemdManager.DisableUnitFiles(0, units, false)
+	if err != nil {
+		return false, fmt.Errorf("disable idle download timer units err: %w", err)
+	}
+	// stop timer units
+	for _, unit := range units {
+		_, err = u.systemdManager.StopUnit(0, unit, "replace")
+		if err != nil {
+			return false, fmt.Errorf("failed to stop unit %s: %w", unit, err)
+		}
+	}
+
+	return len(changes) > 0, nil
 }
 
 func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []string {

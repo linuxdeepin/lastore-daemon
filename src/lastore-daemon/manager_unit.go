@@ -40,6 +40,7 @@ const (
 	AutoClean              systemdEventType = "AutoClean"
 	UpdateInfosChanged     systemdEventType = "UpdateInfosChanged"
 	OsVersionChanged       systemdEventType = "OsVersionChanged"
+	InitIdleDownload       systemdEventType = "InitIdleDownload"
 	AutoDownload           systemdEventType = "AutoDownload"
 	AbortAutoDownload      systemdEventType = "AbortAutoDownload"
 	UpdateTimer            systemdEventType = "UpdateTimer"
@@ -49,17 +50,16 @@ const (
 type UnitName string
 
 const (
-	lastoreOnline            UnitName = "lastoreOnline"
-	lastoreAutoClean         UnitName = "lastoreAutoClean"
-	lastoreAutoCheck         UnitName = "lastoreAutoCheck"
-	lastoreAutoUpdateToken   UnitName = "lastoreAutoUpdateToken"
-	watchOsVersion           UnitName = "watchOsVersion"
-	lastoreAutoDownload      UnitName = "lastoreAutoDownload"
-	lastoreAbortAutoDownload UnitName = "lastoreAbortAutoDownload"
-	lastoreRegularlyUpdate   UnitName = "lastoreRegularlyUpdate" // 到触发时间后开始检查更新->下载更新->安装更新
-	lastoreCronCheck         UnitName = "lastoreCronCheck"
-	lastorePostUpgrade       UnitName = "lastorePostUpgrade"
-	lastoreRetryPostMsg      UnitName = "lastoreRetryPostMsg"
+	lastoreOnline           UnitName = "lastoreOnline"
+	lastoreAutoClean        UnitName = "lastoreAutoClean"
+	lastoreAutoCheck        UnitName = "lastoreAutoCheck"
+	lastoreAutoUpdateToken  UnitName = "lastoreAutoUpdateToken"
+	watchOsVersion          UnitName = "watchOsVersion"
+	lastoreInitIdleDownload UnitName = "lastoreInitIdleDownload"
+	lastoreRegularlyUpdate  UnitName = "lastoreRegularlyUpdate" // 到触发时间后开始检查更新->下载更新->安装更新
+	lastoreCronCheck        UnitName = "lastoreCronCheck"
+	lastorePostUpgrade      UnitName = "lastorePostUpgrade"
+	lastoreRetryPostMsg     UnitName = "lastoreRetryPostMsg"
 )
 
 type lastoreUnitMap map[UnitName][]string
@@ -99,23 +99,21 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 		"--path-property=PathModified=/etc/os-version",
 		"/bin/bash",
 		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, "OsVersionChanged"), // 监听os-version文件，更新token
+		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, OsVersionChanged), // 监听os-version文件，更新token
 	}
-	if m.updater.getIdleDownloadEnabled() {
-		begin, end := m.getNextIdleUnitDelay()
-		unitMap[lastoreAutoDownload] = []string{
-			fmt.Sprintf("--on-active=%d", begin/time.Second),
+
+	// Start processing idle downloads 11 minutes after the system boots up
+	// Delayed to 11min to avoid affecting boot performance. AutoClean task runs at 10min,
+	// so this task executes one minute after that.
+	if !m.ImmutableAutoRecovery && m.updater.getIdleDownloadEnabled() {
+		unitMap[lastoreInitIdleDownload] = []string{
+			"--on-active=660",
 			"/bin/bash",
 			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoDownload), // 根据用户设置的自动下载的时间段，设置自动下载开始的时间
-		}
-		unitMap[lastoreAbortAutoDownload] = []string{
-			fmt.Sprintf("--on-active=%d", end/time.Second),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AbortAutoDownload), // 根据用户设置的自动下载的时间段，终止自动下载
+			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, InitIdleDownload),
 		}
 	}
+
 	// PostUpgradeCron 可以配置为*:0/30,每小时的0分和30分触发一次
 	if len(strings.TrimSpace(m.config.PostUpgradeCron)) > 0 {
 		unitMap[lastoreRetryPostMsg] = []string{
@@ -219,69 +217,6 @@ func (m *Manager) loadUpdateSourceOnce() {
 	}
 }
 
-// 保存ResetIdleDownload状态
-func (m *Manager) saveResetIdleDownload() {
-	m.lastoreUnitCacheMu.Lock()
-	defer m.lastoreUnitCacheMu.Unlock()
-
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	kf.SetBool("RecordData", "ResetIdleDownload", true)
-	err = kf.SaveToFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-	}
-}
-
-// 读取ResetIdleDownload状态
-func (m *Manager) loadResetIdleDownload() {
-	m.lastoreUnitCacheMu.Lock()
-	defer m.lastoreUnitCacheMu.Unlock()
-
-	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile(lastoreUnitCache)
-	if err != nil {
-		logger.Warning(err)
-		return
-	}
-	resetIdleDownload, err := kf.GetBool("RecordData", "ResetIdleDownload")
-	if err == nil {
-		m.PropsMu.Lock()
-		m.resetIdleDownload = resetIdleDownload
-		m.PropsMu.Unlock()
-	} else {
-		logger.Warning(err)
-	}
-}
-
-// 下载中断或者修改下载时间段后,需要更新timer   用户手动中断下载时，需要再第二天的设置实际重新下载   开机时间在自动下载时间段内时，
-func (m *Manager) updateAutoDownloadTimer() error {
-	if m.ImmutableAutoRecovery {
-		logger.Info("immutable auto recovery is enabled, stopping and don't allow to update auto download timer")
-		// 在无忧还原模式下，主动停止现有的定时器
-		_ = m.stopTimerUnit(lastoreAbortAutoDownload)
-		_ = m.stopTimerUnit(lastoreAutoDownload)
-		return errors.New("immutable auto recovery is enabled, don't allow to update auto download timer")
-	}
-	err := m.updateTimerUnit(lastoreAbortAutoDownload)
-	if err != nil {
-		return err
-	}
-	err = m.updateTimerUnit(lastoreAutoDownload)
-	if err != nil {
-		return err
-	}
-	// 如果关闭闲时更新，需要终止下载job
-	// if !m.updater.getIdleDownloadEnabled() {
-	// 	m.handleAbortAutoDownload()
-	// }
-	return nil
-}
-
 // systemd计时服务需要根据上一次更新时间而变化
 func (m *Manager) updateAutoCheckSystemUnit() error {
 	err := m.stopTimerUnit(lastoreOnline)
@@ -341,47 +276,6 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 	return nil
 }
 
-func (m *Manager) getNextIdleUnitDelay() (time.Duration, time.Duration) {
-	m.PropsMu.RLock()
-	defer m.PropsMu.RUnlock()
-	m.updater.PropsMu.RLock()
-	beginDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.BeginTime)
-	endDur := getCustomTimeDuration(m.updater.idleDownloadConfigObj.EndTime)
-	m.updater.PropsMu.RUnlock()
-	defer func() {
-		logger.Debug("auto download begin time duration:", beginDur)
-		logger.Debug("auto download end time duration:", endDur)
-	}()
-	// 修改idle配置或初始化时
-	if m.resetIdleDownload {
-		if beginDur <= 0 && endDur > 0 {
-			// 当前时间处于idle时间段内,即刻开始
-			beginDur = _minDelayTime
-		}
-		if beginDur <= 0 && endDur <= 0 {
-			beginDur += 24 * time.Hour
-			endDur += 24 * time.Hour
-		}
-		if beginDur > 0 && endDur > 0 {
-			// idle时间段还没到
-		}
-		if beginDur > 0 && endDur <= 0 {
-			// 不可能触发这种场景
-			panic("EndTime < BeginTime")
-		}
-	} else { // 响应事件时
-		if beginDur < 0 {
-			// 开始间隔小于0证明是下载开始事件,下一次下载开始时间在24小时之后
-			beginDur += 24 * time.Hour
-		}
-		if endDur <= 0 {
-			// 结束间隔小于0证明是下载结束事件,下一次下载结束时间在24小时之后
-			endDur += 24 * time.Hour
-		}
-	}
-	return beginDur, endDur
-}
-
 func (m *Manager) startCheckPolicyTask() {
 	if len(m.config.CheckPolicyCron) == 0 {
 		logger.Info("config: not CheckPolicyCron")
@@ -406,13 +300,36 @@ func (m *Manager) startCheckPolicyTask() {
 }
 
 func (m *Manager) handleAutoDownload() {
-	_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode)
+	if m.ImmutableAutoRecovery {
+		logger.Debug("Immutable auto recovery is enabled, don't allow to auto download")
+		return
+	}
+
+	logger.Debug("Start auto download")
+	_, err := m.prepareDistUpgrade(dbus.Sender(m.service.Conn().Names()[0]), m.CheckUpdateMode, initiatorAuto)
 	if err != nil {
 		logger.Warning(err)
 	}
 }
 
 func (m *Manager) handleAbortAutoDownload() {
+	if m.ImmutableAutoRecovery {
+		logger.Debug("Immutable auto recovery is enabled, don't allow to abort auto download")
+		return
+	}
+
+	job := m.jobManager.findJobById(system.PrepareDistUpgradeJobType)
+	if job == nil {
+		// job not found
+		return
+	}
+
+	if job.initiator == initiatorUser {
+		logger.Debug("User manually triggered, don't allow to abort auto download")
+		return
+	}
+
+	logger.Debug("Abort auto download")
 	err := m.CleanJob(system.PrepareDistUpgradeJobType)
 	if err != nil {
 		logger.Warning(err)
@@ -463,27 +380,15 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 	// 	m.handleUpdateInfosChanged()
 	case OsVersionChanged:
 		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
+	case InitIdleDownload:
+		m.updater.initIdleDownloadConfig()
 	case AutoDownload:
 		if m.updater.getIdleDownloadEnabled() { // 如果自动下载关闭,则空闲下载同样会关闭
 			m.handleAutoDownload()
-			go func() {
-				m.resetIdleDownload = false
-				err := m.updateAutoDownloadTimer()
-				if err != nil {
-					logger.Warning(err)
-				}
-			}()
 		}
 	case AbortAutoDownload:
 		if m.updater.getIdleDownloadEnabled() {
 			m.handleAbortAutoDownload()
-			go func() {
-				m.resetIdleDownload = false
-				err := m.updateAutoDownloadTimer()
-				if err != nil {
-					logger.Warning(err)
-				}
-			}()
 		}
 	case UpdateTimer:
 		go func() {
