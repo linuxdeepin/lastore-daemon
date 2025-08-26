@@ -184,6 +184,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				}
 				inhibit(true)
 				m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
+				// 设置UpdateStatus为WaitRunUpgrade，隐藏更新并关机/重启按钮
+				m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
@@ -193,6 +195,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 			},
 			string(system.FailedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
+				// 备份失败时重置UpdateStatus为CanUpgrade，让用户可以重新操作
+				m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
 				inhibit(false)
 				msg := gettext.Tr("Backup failed!")
 				action := []string{"backup", gettext.Tr("Back Up Again"), "continue", gettext.Tr("Proceed to Update")}
