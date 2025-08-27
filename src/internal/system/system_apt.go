@@ -255,8 +255,9 @@ func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, 
 
 // QueryPackageInstalled query whether the pkgId installed
 func QueryPackageInstalled(pkgId string) bool {
-	// #nosec G204
-	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${db:Status-Status}", "--", pkgId).CombinedOutput()
+	// Use Output() instead of CombinedOutput() because we only need stdout for status parsing,
+	// and stderr might contain warnings that don't affect the actual package status
+	out, err := exec.Command("/usr/bin/dpkg-query", "-W", "-f", "${db:Status-Status}", "--", pkgId).Output() // #nosec G204
 	if err != nil {
 		return false
 	}
