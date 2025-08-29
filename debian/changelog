@@ -1,3 +1,12 @@
+lastore-daemon (6.2.29) unstable; urgency=medium
+
+  * fix: Use Ouput for quering installed packages (#208)
+  * fix: hide power menu update buttons during backup process (#207)
+  * feat: Automatically check for updates on startup, (#202)
+  * fix: Issues related to idle-time downloading (#205)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 29 Aug 2025 14:57:38 +0800
+
 lastore-daemon (6.2.28) unstable; urgency=medium
 
   * fix: The issue of unresponsive button clicks in the backup failure notification dialog (#203)
