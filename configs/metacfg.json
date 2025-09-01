@@ -1,0 +1,81 @@
+{
+    "PkgDebPath":"/var/lib/",
+    "PkgList": [
+        {
+            "Name": "systemd",
+            "Version": "251.0+dde",
+            "Need": "strict"
+        },
+        {
+            "Name": "libsystemd0",
+            "Version": "251.0+dde",
+            "Need": "strict"
+        }
+    ],
+    "CoreList": [
+        {
+            "Name": "systemd",
+            "Version": "251.0+dde",
+            "Need": "skipversion"
+        },
+        {
+            "Name": "libsystemd0",
+            "Version": "251.0+dde",
+            "Need": "skipversion"
+        }
+    ],
+    "OptionList": [
+        {
+            "Name": "wps",
+            "Version": "251.0+dde",
+            "Need": "exist"
+        }
+    ],
+    "BaseLine": [
+        {
+            "Name": "systemd",
+            "Version": "251.0+dde",
+            "Need": "skipversion"
+        },
+        {
+            "Name": "startdde",
+            "Version": "251.0+dde",
+            "Need": "skipversion"
+        }
+    ],
+    "Rules": [
+        {
+            "Name": "00_precheck",
+            "Type": 0,
+            "Command": "echo \"This is precheck\"\nexit 0\n",
+            "Argv": "--ignore-warring --ignore-error"
+        },
+        {
+            "Name": "10_midcheck",
+            "Type": 1,
+            "Command": "echo \"This is midcheck\"\nexit 0\n",
+            "Argv": "--ignore-warring --ignore-error"
+        },
+        {
+            "Name": "20_postcheck",
+            "Type": 2,
+            "Command": "echo \"This is postcheck\"\nexit 0\n",
+            "Argv": "--ignore-warring --ignore-error"
+        }
+    ],
+    "RepoInfo": [
+        {
+            "Name": "eagle/1050_nonfree",
+            "FilePath": "/var/lib/apt/lists/mirrors.ustc.edu.cn_debian_dists_stable_main_binary-amd64_Packages",
+            "HashSha256": "82df7ef9c4dd759bce8cd208e5b1b5e22c0a5fdc92b645a678ad6abfb7ad1d65"
+        },
+        {
+            "Name": "eagle/1050_main",
+            "FilePath": "/var/lib/apt/lists/packages.microsoft.com_repos_code_dists_stable_main_binary-amd64_Packages",
+            "HashSha256": "7033ef56b1f4d641fe7dc4c42a80dafaccc6ade08959787949bdb05fd9551561"
+        }
+       
+    ],
+    "UUID": "c2ade74e-015c-49b2-8a7d-cb5767486e48",
+    "TIme": "2023-10-10T15:34:42.233Z"
+}
