@@ -110,3 +110,9 @@ func TestAdjustPkgArchWithName(t *testing.T) {
 	Warp(&olddata4, &newdata3)
 
 }
+
+func TestCheckDynHook(t *testing.T) {
+	CheckDynHook(nil, cache.PreUpdate)
+	CheckDynHook(nil, cache.UpdateCheck)
+	CheckDynHook(nil, cache.PostCheck)
+}
