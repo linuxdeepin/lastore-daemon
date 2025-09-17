@@ -23,7 +23,3 @@ var versionCmd = &cobra.Command{
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {},
 }
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
-}

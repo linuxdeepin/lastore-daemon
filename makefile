@@ -38,7 +38,6 @@ build: prepare bin/lastore-agent
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-smartmirror-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD} -o bin/lastore-apt-clean ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-apt-clean
-	${GoPath} ${GOBUILD} -o bin/lastore-update-tools ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-update-tools || echo "build failed, disable update-tools support "
 
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
@@ -67,7 +66,6 @@ install: gen_mo
 	cp bin/lastore-tools ${DESTDIR}${PREFIX}/usr/bin/
 	cp bin/lastore-smartmirror ${DESTDIR}${PREFIX}/usr/bin/
 	cp bin/lastore-agent ${DESTDIR}${PREFIX}/usr/bin/
-	cp bin/lastore-update-tools ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon && cp bin/lastore-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 	cp bin/lastore-smartmirror-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 

@@ -31,9 +31,6 @@ type UpdateInfo struct {
 func (ts *UpdateInfo) VerifyUpdateInfo() error {
 	// check update meta info
 
-	if flags, err := ts.IsEmpty(); flags {
-		return fmt.Errorf("%+v not found update meta info", err)
-	}
 	// check repo backend list
 	for _, repoBackend := range ts.RepoBackend {
 		if err := repoBackend.CheckRepoFile(); err != nil {
@@ -48,9 +45,6 @@ func (ts *UpdateInfo) VerifyUpdateInfo() error {
 func (ts *UpdateInfo) UpdateInfoFormatVerify() error {
 	// check update meta info
 
-	if flags, err := ts.IsEmpty(); flags {
-		return fmt.Errorf("%+v not found update meta info", err)
-	}
 	// check repo backend list
 	for _, repoBackend := range ts.RepoBackend {
 		if err := repoBackend.CheckRepoIndexExist(); err != nil {

@@ -58,3 +58,8 @@ const (
 	UpdatePkgInstallFailed // 软件包安装失败
 	UpdateRulesCheckFailed // 更新规则检查失败
 )
+
+const (
+	OptionCheckSucceed = "checkSucceed"
+	OptionFirstCheck   = "firstCheck"
+)
