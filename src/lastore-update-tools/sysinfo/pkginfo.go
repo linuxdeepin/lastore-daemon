@@ -24,6 +24,10 @@ func CheckAppIsExist(app string) (bool, error) {
 }
 
 func GetCurrInstPkgStat(pkgs map[string]*cache.AppTinyInfo) error {
+	// clear pkgs map
+	for pkgName := range pkgs {
+		delete(pkgs, pkgName)
+	}
 
 	// bash -c "dpkg -l | tail -n +6 | awk '{print $1,$2,$3}'"
 	outputStream, err := runcmd.RunnerOutput(10, "bash", "-c", "dpkg -l | tail -n +6 | awk '{print $1,$2,$3}'")

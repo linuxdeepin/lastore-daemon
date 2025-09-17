@@ -7,26 +7,33 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
+const (
+	// Stage1 stage 1
+	Stage1 = "stage1"
+	// Stage2 stage 2
+	Stage2 = "stage2"
+
+	lightdmProgram = "/usr/sbin/lightdm"
+)
+
 var ProgramCheckMap = map[string][]string{
-	"stage1": []string{
-		"/usr/sbin/lightdm",
+	Stage1: {
+		lightdmProgram,
 	},
-	"stage2": []string{
-		"/usr/sbin/lightdm",
+	Stage2: {
+		lightdmProgram,
 	},
 }
 
 func CheckImportantProgress(stage string) (int64, error) {
 	if programCheckList, ok := ProgramCheckMap[stage]; ok {
 		for _, program := range programCheckList {
-			pidCheckCmd := "pidof " + program
-			programPid, err := runcmd.RunnerOutput(10, "bash", "-c", pidCheckCmd)
+			programPid, err := runcmd.RunnerOutput(10, "pidof", program)
 			if err != nil {
 				return ecode.CHK_PROGRAM_ERROR, err
 			}
@@ -38,7 +45,6 @@ func CheckImportantProgress(stage string) (int64, error) {
 		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("%s is error postcheck stage parameter", stage)
 	}
 	return ecode.CHK_PROGRAM_SUCCESS, nil
-
 }
 
 func LogRemoveSensitiveInformation(logPath string) (int64, error) {
@@ -73,24 +79,24 @@ func ArchiveLogAndCache(uuid string) (int64, error) {
 	TarArgs := []string{"-czvf", archivePath}
 
 	if err := fs.CheckFileExistState(archivePath); err == nil {
-		log.Debugf("The archive file %s has exists and will not archive generate filed", archivePath)
+		logger.Debugf("The archive file %s has exists and will not archive generate filed", archivePath)
 		return ecode.CHK_PROGRAM_SUCCESS, nil
 	}
 	if err := fs.CheckFileExistState(uuidDir); err != nil {
-		log.Warn(err)
+		logger.Warning(err)
 		return ecode.CHK_UUID_DIR_NOT_EXIST, err
 	}
 
 	if err := fs.CheckFileExistState(cachesFile); err == nil {
 		TarArgs = append(TarArgs, cachesFile)
 	} else {
-		log.Debug(err)
+		logger.Debug(err)
 	}
 
 	if err := fs.CheckFileExistState(cachePath); err == nil {
 		TarArgs = append(TarArgs, cachePath)
 	} else {
-		log.Debug(err)
+		logger.Debug(err)
 	}
 
 	// 检查目录下是否存在.log文件
@@ -100,7 +106,7 @@ func ArchiveLogAndCache(uuid string) (int64, error) {
 	}
 
 	if len(uuidLogs) == 0 {
-		log.Debugf("%s log file not exist.", uuidDir)
+		logger.Debugf("%s log file not exist.", uuidDir)
 	} else {
 		for _, uuidLog := range uuidLogs {
 			if _, err := LogRemoveSensitiveInformation(uuidLog); err != nil {
@@ -121,7 +127,7 @@ func ArchiveLogAndCache(uuid string) (int64, error) {
 			return ecode.CHK_PROGRAM_ERROR, err
 		}
 	} else {
-		log.Infof("No file to archive.")
+		logger.Infof("No file to archive.")
 	}
 
 	return ecode.CHK_PROGRAM_SUCCESS, nil
@@ -137,7 +143,7 @@ func DeleteUpgradeCacheFile(uuid string) (int64, error) {
 			return ecode.CHK_PROGRAM_SUCCESS, nil
 		}
 	} else {
-		log.Infof("The %s archive file does not exist, and the uuid directory will not be cleaned", archivePath)
+		logger.Infof("The %s archive file does not exist, and the uuid directory will not be cleaned", archivePath)
 		return ecode.CHK_PROGRAM_SUCCESS, nil
 	}
 

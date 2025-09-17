@@ -77,14 +77,13 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	if err != nil {
 		return "", err
 	}
-	job.option[dut.PostCheck.String()] = "--check-succeed" // TODO 还有--check-failed 的情况需要处理
-
-	job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
-
+	if isExist {
+		return job.getPath(), nil
+	}
+	// TODO 还有--check-failed 的情况需要处理
+	job.option[dut.OptionCheckSucceed] = "1"
 	if checkOrder == firstCheck {
-		job.option["--stage1"] = ""
-	} else {
-		job.option["--stage2"] = ""
+		job.option[dut.OptionFirstCheck] = "1"
 	}
 
 	uuid := getRebootCheckJobUUID()
@@ -156,9 +155,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			return nil
 		},
 	})
-	if isExist {
-		return job.getPath(), nil
-	}
 
 	if err = m.jobManager.addJob(job); err != nil {
 		return "", err

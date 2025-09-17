@@ -5,19 +5,15 @@
 package coremodules
 
 import (
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
-	// "fmt"
-
 	"fmt"
 
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
+	"github.com/spf13/cobra"
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/controller/check"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/controller/update"
-
-	"github.com/spf13/cobra"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
 // versionCmd represents the version command
@@ -33,8 +29,8 @@ var updateCmd = &cobra.Command{
 	Short: "Update system",
 	Long:  `Uos Update System Tools.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// log.Debugf("config:%+v", Updatecfg)
-		// log.Debugf("cachecfg:%+v", CacheCfg)
+		// logger.Debugf("config:%+v", Updatecfg)
+		// logger.Debugf("cachecfg:%+v", CacheCfg)
 
 		// cve offline install
 		if cveOfflineInstall {
@@ -63,7 +59,7 @@ var updateCmd = &cobra.Command{
 					pkginfo.InstalledSize = ThisCacheInfo.UpdateMetaInfo.PkgList[idx].InstalledSize
 				}
 				if err := pkginfo.Verify(); err != nil {
-					log.Debugf("update/verify package info failed ,pkginfo:%v,%v", pkginfo, err)
+					logger.Debugf("update/verify package info failed ,pkginfo:%v,%v", pkginfo, err)
 					CheckRetMsg.SetErrorExtMsg(ecode.CHK_INVALID_INPUT, ecode.CHK_METAINFO_FILE_ERROR, fmt.Sprintf("update/verify package info failed ,pkginfo:%v,%v", pkginfo, err))
 					ThisCacheInfo.InternalState.IsCVEOffline = cache.P_Error
 					return
@@ -75,7 +71,7 @@ var updateCmd = &cobra.Command{
 			CheckRetMsg.PushExtMsg("update/verify cve offline finish")
 
 			if err := update.UpdatePackageInstall(&ThisCacheInfo); err != nil {
-				log.Errorf("update/inst failed : %v", err)
+				logger.Errorf("update/inst failed : %v", err)
 				if err2 := fs.CheckFileExistState(ThisCacheInfo.WorkStation + "/dpkg.log"); err2 == nil {
 					CheckRetMsg.LogPath = append(CheckRetMsg.LogPath, ThisCacheInfo.WorkStation+"/dpkg.log")
 				}
@@ -97,7 +93,7 @@ var updateCmd = &cobra.Command{
 		// 		for i := 0; i < cachecfgType.NumField(); i++ {
 		// 			if cachecfgType.Field(i).Tag.Get("cktag") != "" && cachecfgValue.Field(i).Kind() == reflect.Bool {
 		// 				if cachecfgValue.Field(i).Bool() == false {
-		// 					log.Errorf("check rules failed ! %+v : %+v", cachecfgType.Field(i).Tag.Get("cktag"), cachecfgValue.Field(i))
+		// 					logger.Errorf("check rules failed ! %+v : %+v", cachecfgType.Field(i).Tag.Get("cktag"), cachecfgValue.Field(i))
 		// 					CheckRetMsg.SetErrorAndOutput(ecode.CHK_ERROR,
 		// 						ecode.UPDATE_RULES_CHECK_FAILED,
 		// 						fmt.Sprintf("%s :false ", cachecfgType.Field(i).Tag.Get("cktag")), false)
@@ -113,7 +109,7 @@ var updateCmd = &cobra.Command{
 		// 	return
 		// }
 		if !forceIgnoreCheck && !ThisCacheInfo.InternalState.IsPreCheck.IsOk() {
-			log.Errorf("precheck failed ! status:%s", ThisCacheInfo.InternalState.IsPreCheck)
+			logger.Errorf("precheck failed ! status:%s", ThisCacheInfo.InternalState.IsPreCheck)
 			CheckRetMsg.SetErrorAndOutput(ecode.CHK_ERROR,
 				ecode.UPDATE_RULES_CHECK_FAILED,
 				fmt.Sprintf("precheck :%s ", ThisCacheInfo.InternalState.IsPreCheck), false)
@@ -124,7 +120,7 @@ var updateCmd = &cobra.Command{
 
 		// if len(ThisCacheInfo.UpdateMetaInfo.PurgeList) > 0 {
 		// 	if err := update.UpdatePackagePurge(&ThisCacheInfo); err != nil {
-		// 		log.Errorf("purge failed : %v", err)
+		// 		logger.Errorf("purge failed : %v", err)
 		// 		ThisCacheInfo.InternalState.IsPurgeState = "failed"
 		// 		if err2 := fs.CheckFileExistState(ThisCacheInfo.WorkStation + "/purge.log"); err2 == nil {
 		// 			CheckRetMsg.LogPath = append(CheckRetMsg.LogPath, ThisCacheInfo.WorkStation+"/purge.log")
@@ -139,7 +135,7 @@ var updateCmd = &cobra.Command{
 		// FIXME:(heysion) 需要依据pkglist 来生成安装的软件包列表
 
 		if err := update.UpdatePackageInstall(&ThisCacheInfo); err != nil {
-			log.Errorf("update failed : %v", err)
+			logger.Errorf("update failed : %v", err)
 			if err2 := fs.CheckFileExistState(ThisCacheInfo.WorkStation + "/dpkg.log"); err2 == nil {
 				CheckRetMsg.LogPath = append(CheckRetMsg.LogPath, ThisCacheInfo.WorkStation+"/dpkg.log")
 			}
@@ -157,11 +153,4 @@ var updateCmd = &cobra.Command{
 		// reboot
 
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(updateCmd)
-	updateCmd.Flags().BoolVarP(&forceIgnoreCheck, "ignore-check", "", false, "force ignore check")
-	updateCmd.Flags().BoolVarP(&forceIgnoreError, "ignore-error", "", false, "force ignore error")
-	updateCmd.Flags().BoolVarP(&cveOfflineInstall, "cve-offline", "", false, "cve offline install")
 }

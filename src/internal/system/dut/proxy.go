@@ -69,10 +69,17 @@ func (p *DutSystem) OsBackup(jobId string) error {
 	return p.APTSystem.OsBackup(jobId)
 }
 
-func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[string]string, args map[string]string) error {
-	c := newDUTCommand(p, jobId, system.CheckSystemJobType, p.Indicator, OptionToArgs(args))
-	c.SetEnv(environ)
-	return c.Start()
+func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[string]string, options map[string]string) error {
+	// environ parameter is ignored here
+	fn := system.NewFunction(jobId, p.Indicator, func() error {
+		// only postCheck can be handled here, checkType is ignored
+		systemErr := CheckSystem(PostCheck, options)
+		if systemErr != nil {
+			return systemErr
+		}
+		return nil
+	})
+	return fn.Start()
 }
 
 func checkSystemDependsError(indicator system.Indicator) error {

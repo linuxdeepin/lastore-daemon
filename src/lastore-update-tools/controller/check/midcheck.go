@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
@@ -17,13 +16,13 @@ const corePkgListConFilePath = CheckBaseDir + "core-pkg-list.conf"
 func LoadCorePkgList() []string {
 	var pkgs []string
 	if _, err := os.Stat(corePkgListConFilePath); os.IsNotExist(err) {
-		log.Warnf("core pkg list config file %s not found", corePkgListConFilePath)
+		logger.Warningf("core pkg list config file %s not found", corePkgListConFilePath)
 		return pkgs
 	}
 
 	content, err := ioutil.ReadFile(corePkgListConFilePath)
 	if err != nil {
-		log.Warnf("failed to read core pkg list config file :%v", err)
+		logger.Warningf("failed to read core pkg list config file :%v", err)
 		return pkgs
 	}
 
@@ -45,7 +44,7 @@ func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo) (int64, er
 		pkginfo, err := sysCurrPackage[pkgName]
 		if !err || pkginfo == nil || !pkginfo.State.CheckOK() {
 			breakDepends = true
-			log.Debugf("dependency error: %v", pkgName)
+			logger.Debugf("dependency error: %v", pkgName)
 			if breakDependsError != nil {
 				breakDependsError = fmt.Errorf("%v dependency error: %v:%v", breakDependsError, pkgName, pkginfo)
 			} else {
@@ -63,7 +62,7 @@ func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo) (int64, er
 // FIXME:(Dinghao) 使用 CheckCorelistInstallState
 // func CheckPkglistInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo) (int, error) {
 // 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-// 		log.Errorf("pkglist (%s) is missing in system.", pkginfo.Name)
+// 		logger.Errorf("pkglist (%s) is missing in system.", pkginfo.Name)
 // 		return ecode.CHK_PKGLIST_INEXISTENCE, fmt.Errorf("pkglist (%s) is missing in system", pkginfo.Name)
 // 	}
 
@@ -71,14 +70,14 @@ func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo) (int64, er
 
 // 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
 // 		if sysPkginfo.State != cache.Installed && sysPkginfo.State != cache.InstallHolded {
-// 			log.Errorf("pkglist (%s) state is err: %d.", pkginfo.Name, sysPkginfo.State)
+// 			logger.Errorf("pkglist (%s) state is err: %d.", pkginfo.Name, sysPkginfo.State)
 // 			return ecode.CHK_PKGLIST_ERR_STATE, fmt.Errorf("pkglist (%s) state is err: %d", pkginfo.Name, sysPkginfo.State)
 // 		}
 // 	}
 
 // 	if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
 // 		if sysPkginfo.Version != pkginfo.Version {
-// 			log.Errorf("pkglist (%s) version is err: %s.", pkginfo.Name, sysPkginfo.Version)
+// 			logger.Errorf("pkglist (%s) version is err: %s.", pkginfo.Name, sysPkginfo.Version)
 // 			return ecode.CHK_PKGLIST_ERR_VERSION, fmt.Errorf("pkglist (%s) version is err: %s", pkginfo.Name, sysPkginfo.Version)
 // 		}
 // 	}
@@ -101,7 +100,7 @@ func CheckCoreFileExist(coreFilePath string) (int64, error) {
 			continue
 		}
 		if err := fs.CheckFileExistState(path); err != nil {
-			log.Errorf("core file %s not exist:%v", path, err)
+			logger.Errorf("core file %s not exist:%v", path, err)
 			return ecode.CHK_CORE_FILE_MISS, fmt.Errorf("core file %s not exist:%v", path, err)
 		}
 	}
@@ -110,7 +109,7 @@ func CheckCoreFileExist(coreFilePath string) (int64, error) {
 
 // func CheckCorelistInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo) (int, error) {
 // 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-// 		log.Warnf("corelist (%s) is missing in system.", pkginfo.Name)
+// 		logger.Warningf("corelist (%s) is missing in system.", pkginfo.Name)
 // 		return ecode.CHK_CORE_PKG_NOTFOUND, fmt.Errorf("corelist (%s) is missing in system", pkginfo.Name)
 // 	}
 
@@ -118,14 +117,14 @@ func CheckCoreFileExist(coreFilePath string) (int64, error) {
 
 // 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
 // 		if sysPkgInfo.State != cache.Installed && sysPkgInfo.State != cache.InstallHolded {
-// 			log.Warnf("corelist (%s) state is err: %d.", pkginfo.Name, sysPkgInfo.State)
+// 			logger.Warningf("corelist (%s) state is err: %d.", pkginfo.Name, sysPkgInfo.State)
 // 			return ecode.CHK_CORE_PKG_ERR_STATE, fmt.Errorf("corelist (%s) state is err: %d", pkginfo.Name, sysPkgInfo.State)
 // 		}
 // 	}
 
 // 	if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
 // 		if sysPkgInfo.Version != pkginfo.Version {
-// 			log.Warnf("corelist (%s) version is err: %s.", pkginfo.Name, sysPkgInfo.Version)
+// 			logger.Warningf("corelist (%s) version is err: %s.", pkginfo.Name, sysPkgInfo.Version)
 // 			return ecode.CHK_CORE_PKG_ERR_VERSION, fmt.Errorf("corelist (%s) version is err: %s", pkginfo.Name, sysPkgInfo.Version)
 // 		}
 // 	}
@@ -136,21 +135,21 @@ func CheckCoreFileExist(coreFilePath string) (int64, error) {
 // FIXME:(Dinghao) 使用 CheckCorelistInstallState
 // func CheckOptionlistInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo) (int, error) {
 // 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-// 		log.Warnf("optionlist (%s) is missing in system.", pkginfo.Name)
+// 		logger.Warningf("optionlist (%s) is missing in system.", pkginfo.Name)
 // 		return ecode.CHK_OPTION_PKG_NOTFOUND, fmt.Errorf("optionlist (%s) is missing in system", pkginfo.Name)
 // 	}
 // 	sysPkginfo := midpkgs[pkginfo.Name]
 
 // 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
 // 		if sysPkginfo.State != cache.Installed && sysPkginfo.State != cache.InstallHolded {
-// 			log.Warnf("optionlist (%s) state is err: %d.", pkginfo.Name, sysPkginfo.State)
+// 			logger.Warningf("optionlist (%s) state is err: %d.", pkginfo.Name, sysPkginfo.State)
 // 			return ecode.CHK_OPTION_PKG_ERR_STATE, fmt.Errorf("optionlist (%s) state is err: %d", pkginfo.Name, sysPkginfo.State)
 // 		}
 // 	}
 
 // 	if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
 // 		if sysPkginfo.Version != pkginfo.Version {
-// 			log.Warnf("optionlist (%s) version is err: %s.", pkginfo.Name, sysPkginfo.Version)
+// 			logger.Warningf("optionlist (%s) version is err: %s.", pkginfo.Name, sysPkginfo.Version)
 // 			return ecode.CHK_OPTION_PKG_ERR_VERSION, fmt.Errorf("optionlist (%s) version is err: %s", pkginfo.Name, sysPkginfo.Version)
 // 		}
 // 	}
@@ -177,14 +176,14 @@ func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *ca
 	}
 
 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-		log.Warnf("%s (%s) is missing in system.", listType, pkginfo.Name)
+		logger.Warningf("%s (%s) is missing in system.", listType, pkginfo.Name)
 		return PKG_NOT_FOUND, fmt.Errorf("%s (%s) is missing in system", listType, pkginfo.Name)
 	}
 
 	sysPkginfo := midpkgs[pkginfo.Name]
 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
 		if !sysPkginfo.State.CheckOK() {
-			log.Warnf("%s (%s) state is err: %v.", listType, pkginfo.Name, sysPkginfo.State)
+			logger.Warningf("%s (%s) state is err: %v.", listType, pkginfo.Name, sysPkginfo.State)
 			return PKG_ERR_STATE, fmt.Errorf("%s (%s) state is err: %v", listType, pkginfo.Name, sysPkginfo.State)
 		}
 	}
@@ -192,7 +191,7 @@ func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *ca
 	if checkStage != "precheck" {
 		if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
 			if sysPkginfo.Version != pkginfo.Version {
-				log.Warnf("%s (%s) version is err: %s.", listType, pkginfo.Name, sysPkginfo.Version)
+				logger.Warningf("%s (%s) version is err: %s.", listType, pkginfo.Name, sysPkginfo.Version)
 				return PKG_ERR_VERSION, fmt.Errorf("%s (%s) version is err: %s", listType, pkginfo.Name, sysPkginfo.Version)
 			}
 		}
