@@ -8,14 +8,16 @@ import (
 	"strings"
 
 	"github.com/jouyouyun/hardware/utils"
+	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/sysinfo"
 )
 
 const CheckBaseDir = "/var/lib/lastore/check/"
+
+var logger = log.NewLogger("lastore/update-tools/check")
 
 var sysRealArch string
 
@@ -31,7 +33,7 @@ func init() {
 }
 
 // DONE(heysion): 修改错误返回
-func PreCheckLoadSysPkgInfo(pkgs map[string]*cache.AppTinyInfo) (int64, error) {
+func LoadSysPkgInfo(pkgs map[string]*cache.AppTinyInfo) (int64, error) {
 	if err := sysinfo.GetCurrInstPkgStat(pkgs); err != nil {
 		return ecode.CHK_SYS_PKG_INFO_LOAD_ERROR, err
 	}
@@ -81,12 +83,12 @@ func CheckDynHook(cfg *cache.CacheInfo, checkType int8) (int64, error) {
 		//遍历执行脚本
 		for _, hookFile := range hookFiles {
 			hookPath := filepath.Join(hookDir, hookFile)
-			log.Infof("Executing hook: %s", hookPath)
+			logger.Infof("Executing hook: %s", hookPath)
 			output, err := runcmd.RunnerOutput(60, "bash", hookPath)
 			if err != nil {
 				return fmt.Errorf("hook execution failed: %s\nOutput:\n%s", hookPath, output)
 			}
-			log.Infof("Hook executed successfully: %s\nOutput:\n%s", hookPath, output)
+			logger.Infof("Hook executed successfully: %s\nOutput:\n%s", hookPath, output)
 		}
 		return nil
 	}
@@ -117,10 +119,10 @@ func CheckRootDiskFreeSpace(needSpace uint64) (int64, error) {
 		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("check disk free space err: %v", err)
 	}
 	if diskFree < needSpace {
-		log.Warnf("root disk free space is less %dM, is %dM", needSpace/1024, diskFree/1024)
+		logger.Warningf("root disk free space is less %dM, is %dM", needSpace/1024, diskFree/1024)
 		return ecode.CHK_SYS_DISK_OUT_SPACE, fmt.Errorf("root disk free space is less than %dM, is %dM", needSpace/1024, diskFree/1024)
 	}
-	log.Debugf("root disk free space is greater than or equal %dM", needSpace/1024)
+	logger.Debugf("root disk free space is greater than or equal %dM", needSpace/1024)
 	return ecode.CHK_PROGRAM_SUCCESS, nil
 }
 
@@ -131,10 +133,10 @@ func CheckDataDiskFreeSpace(needSpace uint64) (int64, error) {
 		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("check disk free space err: %v", err)
 	}
 	if diskFree < needSpace {
-		log.Warnf("data disk free space is less %dM, is %dM", diskFree/1024, needSpace/1024)
+		logger.Warningf("data disk free space is less %dM, is %dM", diskFree/1024, needSpace/1024)
 		return ecode.CHK_SYS_DISK_OUT_SPACE, fmt.Errorf("data disk free space is less than %dM, is %dM", diskFree/1024, needSpace/1024)
 	}
-	log.Infof("data free space is greater than or equal %dM", needSpace/1024)
+	logger.Infof("data free space is greater than or equal %dM", needSpace/1024)
 	return ecode.CHK_PROGRAM_SUCCESS, nil
 }
 
@@ -153,7 +155,7 @@ func CheckPurgeList(cache *cache.CacheInfo, syspkgs map[string]*cache.AppTinyInf
 
 	for _, pkginfo := range cache.UpdateMetaInfo.PurgeList {
 		if syspkginfo, ok := syspkgs[pkginfo.Name]; ok {
-			//log.Debugf("log:%v", syspkginfo)
+			// logger.Debugf("purge package info:%v", syspkginfo)
 			switch pkginfo.Need {
 			case "exist":
 			case "skipversion":
@@ -164,7 +166,7 @@ func CheckPurgeList(cache *cache.CacheInfo, syspkgs map[string]*cache.AppTinyInf
 				if pkginfo.Version == syspkginfo.Version {
 					continue
 				} else {
-					log.Infof("purge package info %v != %v", pkginfo, syspkginfo)
+					logger.Infof("purge package info %v != %v", pkginfo, syspkginfo)
 					return fmt.Errorf("purge package version not match %s", pkginfo.Name)
 				}
 			default:
@@ -174,7 +176,7 @@ func CheckPurgeList(cache *cache.CacheInfo, syspkgs map[string]*cache.AppTinyInf
 			if cache.InternalState.IsPurgeState.IsFirstRun() {
 				return fmt.Errorf("purge package not found :%s", pkginfo.Name)
 			} else {
-				log.Warnf("purge package skip:%s", pkginfo.Name)
+				logger.Warningf("purge package skip:%s", pkginfo.Name)
 				continue
 			}
 		}

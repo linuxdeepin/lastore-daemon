@@ -5,72 +5,16 @@
 package dut
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"os/exec"
 	"strings"
-	"syscall"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	libCheck "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/cli"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 
 	"github.com/linuxdeepin/go-lib/log"
 )
 
 var logger = log.NewLogger("lastore/dut")
-
-func newDUTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn system.Indicator, cmdArgs []string) *system.Command {
-	cmd := createCommandLine(cmdType, cmdArgs)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	r := &system.Command{
-		JobId:             jobId,
-		CmdSet:            cmdSet,
-		Indicator:         fn,
-		ParseJobError:     parseJobError,
-		ParseProgressInfo: parseProgressInfo,
-		Cmd:               cmd,
-		Cancelable:        true,
-	}
-	cmd.Stdout = &r.Stdout
-	cmd.Stderr = &r.Stderr
-	cmdSet.AddCMD(r)
-	return r
-}
-
-func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
-	bin := "/usr/bin/lastore-update-tools"
-	var args []string
-	logger.Info("cmdArgs is:", cmdArgs)
-	switch cmdType {
-	case system.CheckSystemJobType:
-		args = append(args, "check")
-		args = append(args, cmdArgs...)
-		args = append(args, "--ignore-warning", "--ignore-meta-empty-check")
-	case system.DistUpgradeJobType:
-		args = append(args, "update")
-		args = append(args, cmdArgs...)
-	case system.FixErrorJobType:
-		bin = "deepin-system-fixpkg"
-		args = append(args, "fix")
-	default:
-		panic("invalid cmd type " + cmdType)
-	}
-	args = append(args, "-d")
-	logger.Info("cmd final args is:", bin, args)
-	return exec.Command(bin, args...)
-}
-
-type ErrorContent struct {
-	Code    ErrorCode
-	Msg     []string
-	Ext     DetailErrorMsg
-	LogPath []string
-}
-
-type DetailErrorMsg struct {
-	Code ExtCode
-	Msg  []string
-}
 
 func GetErrorBitMap() map[system.JobErrorType]uint {
 	return map[system.JobErrorType]uint{
@@ -97,120 +41,70 @@ const (
 	ErrorScriptBit        = ChkDynamicScriptErr | ChkPkgConfigError
 )
 
-func parsePkgSystemError(stdErrStr string, stdOutStr string) *system.JobError {
-	err := parseJobError(stdErrStr, stdOutStr)
-	if err != nil {
-		err.IsCheckError = true
-		return err
-	}
-	return nil
-}
+// CheckSystem performs a system check of the specified type with given options
+// and returns a JobError if any issues are found.
+func CheckSystem(typ CheckType, options map[string]string) *system.JobError {
+	logger.Debugf("CheckSystem check type: %s, options: %+v", typ.String(), options)
 
-func parseJobError(stdErrStr string, stdOutStr string) *system.JobError {
-	logger.Info("error message form dut is:", stdErrStr)
-	var content ErrorContent
-	err := json.Unmarshal([]byte(stdErrStr), &content)
-	if err != nil {
-		return &system.JobError{
-			ErrType:   system.ErrorUnknown,
-			ErrDetail: err.Error(),
+	libCheck.UpdateMetaConfigPath = system.DutOnlineMetaConfPath
+	var checkRetMsg ecode.RetMsg
+	switch typ {
+	case PreCheck:
+		checkRetMsg = libCheck.PreCheck()
+	case MidCheck:
+		checkRetMsg = libCheck.MidCheck()
+	case PostCheck:
+		if options[OptionCheckSucceed] == "1" {
+			libCheck.CheckWithSucceed = true
+		} else {
+			libCheck.CheckWithSucceed = false
 		}
+
+		if options[OptionFirstCheck] == "1" {
+			libCheck.PostCheckStage1 = true
+		} else {
+			libCheck.PostCheckStage1 = false
+		}
+
+		checkRetMsg = libCheck.PostCheck()
 	}
-	switch content.Code {
-	case ChkSuccess:
-		logger.Infof("job success output:%v", stdOutStr)
+
+	if checkRetMsg.Code == int64(ChkSuccess) {
 		return nil
-	case ChkNonblockError:
-		logger.Warningf("job error ChkNonblockError:%v", stdErrStr)
-		return nil
-	default:
-		for k, v := range GetErrorBitMap() {
-			if content.Ext.Code&ExtCode(v) != 0 {
-				logger.Warningf("short error msg:%v", strings.Join(content.Ext.Msg, ";"))
-				return &system.JobError{
-					ErrType:   k,
-					ErrDetail: strings.Join(content.Ext.Msg, ";"),
-					ErrorLog:  content.LogPath,
-				}
+	}
+
+	errDetailJSON, err := checkRetMsg.ToJson()
+	if err != nil {
+		logger.Warning("failed to marshal checkRetMsg to json:", err)
+	}
+	if typ == PreCheck {
+		// pre-check only handles hook script errors
+		if checkRetMsg.Code == int64(ChkDynError) {
+			logger.Warningf("hook script check failed: %v", errDetailJSON)
+			return &system.JobError{
+				ErrType:      system.ErrorScript,
+				ErrDetail:    errDetailJSON,
+				IsCheckError: true,
 			}
 		}
-		// 错误未匹配上，应该是调用者程序错误
-		return &system.JobError{
-			ErrType:   system.ErrorProgram,
-			ErrDetail: strings.Join(content.Ext.Msg, ";"),
-		}
-	}
-}
-func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
-	logger.Info("progress message form dut is:", line)
-	var content ErrorContent
-	err := json.Unmarshal([]byte(line), &content)
-	if err != nil {
-		return system.JobProgressInfo{JobId: id}, fmt.Errorf("Invlaid Progress line:%q", line)
-	}
-	if content.Code == ChkSuccess {
-		return system.JobProgressInfo{
-			JobId:       id,
-			Progress:    1,
-			Description: "",
-			Status:      system.SucceedStatus,
-			Cancelable:  false,
-		}, nil
-	} else {
-		return system.JobProgressInfo{
-			JobId:       id,
-			Progress:    1,
-			Description: "",
-			Status:      system.FailedStatus,
-			Cancelable:  false,
-		}, nil
-	}
-}
-
-func CheckSystem(typ CheckType, cmdArgs []string) *system.JobError {
-	bin := "/usr/bin/lastore-update-tools"
-	var args []string
-	args = append(args, "check")
-	args = append(args, typ.String())
-	{
-		args = append(args, "--meta-cfg")
-		args = append(args, system.DutOnlineMetaConfPath)
-	}
-	args = append(args, cmdArgs...)
-	args = append(args, "--ignore-warning", "--ignore-meta-empty-check")
-	cmd := exec.Command(bin, args...)
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	err := cmd.Run()
-	logger.Info("dut run:", cmd.Args)
-	if err != nil {
-		if typ.String() == PreCheck.String() {
-			return parsePreCheckError(errBuf.String())
-		}
-		return parsePkgSystemError(errBuf.String(), "")
-	}
-	return nil
-}
-
-func parsePreCheckError(stdErrStr string) *system.JobError {
-	logger.Info("error message form dut precheck is:", stdErrStr)
-	var content ErrorContent
-	err := json.Unmarshal([]byte(stdErrStr), &content)
-	if err != nil {
 		return nil
 	}
 
-	switch content.Code {
-	case ChkDynError:
-		logger.Warningf("job error ChkNonblockError:%v", stdErrStr)
-		return &system.JobError{
-			ErrType:      system.ErrorScript,
-			ErrDetail:    stdErrStr,
-			IsCheckError: true,
+	for errType, extCode := range GetErrorBitMap() {
+		if checkRetMsg.Ext.Code&int64(extCode) != 0 {
+			logger.Warningf("short error msg:%v", strings.Join(checkRetMsg.Ext.Msg, ";"))
+			return &system.JobError{
+				ErrType:      errType,
+				ErrDetail:    errDetailJSON,
+				ErrorLog:     checkRetMsg.LogPath,
+				IsCheckError: true,
+			}
 		}
-	default:
-		return nil
+	}
+	// error not matched, should be a bug in this program.
+	return &system.JobError{
+		ErrType:      system.ErrorProgram,
+		ErrDetail:    errDetailJSON,
+		IsCheckError: true,
 	}
 }

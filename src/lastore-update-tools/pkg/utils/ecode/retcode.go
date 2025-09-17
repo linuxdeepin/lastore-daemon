@@ -292,3 +292,12 @@ func (ts *RetMsg) RetMsgToJson() {
 	fmt.Fprintf(os.Stderr, "%s\n", output)
 
 }
+
+// ToJson return json string
+func (ts *RetMsg) ToJson() (string, error) {
+	output, err := json.Marshal(ts)
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
