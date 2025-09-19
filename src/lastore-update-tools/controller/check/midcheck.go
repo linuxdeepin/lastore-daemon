@@ -12,7 +12,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
-const corePkgListConFilePath = "/var/lib/deepin-system-update/core-pkg-list.conf"
+const corePkgListConFilePath = CheckBaseDir + "core-pkg-list.conf"
 
 func LoadCorePkgList() []string {
 	var pkgs []string

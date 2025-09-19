@@ -80,10 +80,10 @@ install: gen_mo
 
 	mkdir -p ${DESTDIR}${PREFIX}/var/cache/lastore
 
-	mkdir -p ${DESTDIR}${PREFIX}/var/lib/deepin-system-update/
-	cp -rf configs/config.yaml ${DESTDIR}${PREFIX}/var/lib/deepin-system-update/config.yaml
-	cp -rf configs/caches.yaml ${DESTDIR}${PREFIX}/var/lib/deepin-system-update/caches.yaml
-	cp -rf configs/core-pkg-list.conf ${DESTDIR}${PREFIX}/var/lib/deepin-system-update/core-pkg-list.conf
+	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/check/
+	cp -rf configs/config.yaml ${DESTDIR}${PREFIX}/var/lib/lastore/check/config.yaml
+	cp -rf configs/caches.yaml ${DESTDIR}${PREFIX}/var/lib/lastore/check/caches.yaml
+	cp -rf configs/core-pkg-list.conf ${DESTDIR}${PREFIX}/var/lib/lastore/check/core-pkg-list.conf
 
 
 update_pot:
