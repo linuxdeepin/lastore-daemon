@@ -10,6 +10,7 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/controller/check"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
@@ -138,9 +139,9 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&ConfigCfg, "config", "c", "/var/lib/deepin-system-update/config.yaml", "config file")
+	rootCmd.PersistentFlags().StringVarP(&ConfigCfg, "config", "c", check.CheckBaseDir+"config.yaml", "config file")
 
-	rootCmd.PersistentFlags().StringVarP(&UpdateMetaConfigPath, "meta-cfg", "m", "/var/lib/deepin-system-update/default.json", "update meta info with update platform")
+	rootCmd.PersistentFlags().StringVarP(&UpdateMetaConfigPath, "meta-cfg", "m", check.CheckBaseDir+"default.json", "update meta info with update platform")
 
 	//rootCmd.PersistentFlags().StringVarP(&DataCfgPath, "data", "d", "", "data file")
 	rootCmd.PersistentFlags().BoolVarP(&DebugVerbose, "debug", "d", false, "debug mode")

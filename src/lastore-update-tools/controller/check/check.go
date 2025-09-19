@@ -10,11 +10,13 @@ import (
 	"os"
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/sysinfo"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/sysinfo"
 )
+
+const CheckBaseDir = "/var/lib/lastore/check/"
 
 var sysRealArch string
 

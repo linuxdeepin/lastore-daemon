@@ -66,10 +66,10 @@ func LogRemoveSensitiveInformation(logPath string) (int64, error) {
 }
 
 func ArchiveLogAndCache(uuid string) (int64, error) {
-	uuidDir := "/var/lib/deepin-system-update/" + uuid
+	uuidDir := CheckBaseDir + uuid
 	archivePath := uuidDir + "-archive.tar.gz"
 	cachePath := uuidDir + "/" + "cache"
-	cachesFile := "/var/lib/deepin-system-update/caches.yaml"
+	cachesFile := CheckBaseDir + "caches.yaml"
 	TarArgs := []string{"-czvf", archivePath}
 
 	if err := fs.CheckFileExistState(archivePath); err == nil {
@@ -128,7 +128,7 @@ func ArchiveLogAndCache(uuid string) (int64, error) {
 }
 
 func DeleteUpgradeCacheFile(uuid string) (int64, error) {
-	uuidDir := "/var/lib/deepin-system-update/" + uuid
+	uuidDir := CheckBaseDir + uuid
 	archivePath := uuidDir + "-archive.tar.gz"
 	if err := fs.CheckFileExistState(archivePath); err == nil {
 		if err := os.RemoveAll(uuidDir); err != nil {
