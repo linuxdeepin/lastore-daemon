@@ -1,9 +1,10 @@
 package check
 
 import (
+	"testing"
+
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
-	"testing"
 )
 
 func TestCheckPkgDependency(t *testing.T) {

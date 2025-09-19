@@ -1,7 +1,6 @@
 package check
 
 import (
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	"os"
 	"text/template"
 )
@@ -28,27 +27,27 @@ type EmulationMainShell struct {
 func (ts *EmulationMainShell) RenderMainShell(save string) error {
 	tpl, err := template.New("emumainshell").Parse(emulationMainShell_TMPL)
 	if err != nil {
-		log.Fatalf("parse deb shell template failed! %+v %+v", err, tpl)
+		logger.Fatalf("parse deb shell template failed! %+v %+v", err, tpl)
 		return err
 	}
 
-	log.Debugf("create save file: %s", save)
+	logger.Debugf("create save file: %s", save)
 	savePath, err := os.Create(save)
 	if err != nil {
-		log.Fatalf("save to %s failed!", save)
+		logger.Fatalf("save to %s failed!", save)
 		return err
 	}
 
 	defer savePath.Close()
-	log.Debugf("object: %+v", ts)
+	logger.Debugf("object: %+v", ts)
 
 	if err := tpl.Execute(savePath, ts); err != nil {
-		log.Debugf("tmp failed: %+v", err)
+		logger.Debugf("tmp failed: %+v", err)
 		return err
 	}
 
 	if err := savePath.Chmod(0755); err != nil {
-		log.Debugf("chmod failed: %+v", err)
+		logger.Debugf("chmod failed: %+v", err)
 		return err
 	}
 
@@ -65,27 +64,27 @@ func (ts *EmulationMainShell) RenderMainShell(save string) error {
 func (ts *EmulationMainShell) RenderDebInstallShell(save string) error {
 	tpl, err := template.New("emudebinstallshell").Parse(emulationDebInstallShell_TMPL)
 	if err != nil {
-		log.Fatalf("parse deb shell template failed! %+v %+v", err, tpl)
+		logger.Fatalf("parse deb shell template failed! %+v %+v", err, tpl)
 		return err
 	}
 
-	log.Debugf("create save file: %s", save)
+	logger.Debugf("create save file: %s", save)
 	savePath, err := os.Create(save)
 	if err != nil {
-		log.Fatalf("save to %s failed!", save)
+		logger.Fatalf("save to %s failed!", save)
 		return err
 	}
 
 	defer savePath.Close()
-	log.Debugf("object: %+v", ts)
+	logger.Debugf("object: %+v", ts)
 
 	if err := tpl.Execute(savePath, ts); err != nil {
-		log.Debugf("tmp failed: %+v", err)
+		logger.Debugf("tmp failed: %+v", err)
 		return err
 	}
 
 	if err := savePath.Chmod(0755); err != nil {
-		log.Debugf("chmod failed: %+v", err)
+		logger.Debugf("chmod failed: %+v", err)
 		return err
 	}
 
