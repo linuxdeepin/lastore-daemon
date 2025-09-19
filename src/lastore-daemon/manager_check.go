@@ -80,8 +80,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	if isExist {
 		return job.getPath(), nil
 	}
-	// TODO 还有--check-failed 的情况需要处理
-	job.option[dut.OptionCheckSucceed] = "1"
 	if checkOrder == firstCheck {
 		job.option[dut.OptionFirstCheck] = "1"
 	}

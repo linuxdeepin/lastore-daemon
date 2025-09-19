@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
@@ -32,18 +31,18 @@ func GetCurrInstPkgStat(pkgs map[string]*cache.AppTinyInfo) error {
 	// bash -c "dpkg -l | tail -n +6 | awk '{print $1,$2,$3}'"
 	outputStream, err := runcmd.RunnerOutput(10, "bash", "-c", "dpkg -l | tail -n +6 | awk '{print $1,$2,$3}'")
 	if err != nil {
-		log.Errorln(err)
+		return err
 	}
-	// log.Debugln(outputStream)
+	// logger.Debug(outputStream)
 
 	outputLines := strings.Split(outputStream, "\n")
 
-	// log.Debugf("out:+%v", outputLines)
+	// logger.Debugf("out:+%v", outputLines)
 
 	for _, line := range outputLines {
 		spv := strings.Split(line, " ")
 		if len(spv) != 3 {
-			log.Debugf("skip line: %v", spv)
+			// logger.Debugf("skip line: %v", spv)
 			continue
 		}
 		appInfo := cache.AppTinyInfo{
@@ -51,7 +50,7 @@ func GetCurrInstPkgStat(pkgs map[string]*cache.AppTinyInfo) error {
 			Version: spv[2],
 			State:   cache.PkgState(spv[0]),
 		}
-		// log.Debugf("pkg:%+v", appInfo)
+		// logger.Debugf("pkg:%+v", appInfo)
 
 		pkgs[appInfo.Name] = &appInfo
 		pkgs[fmt.Sprintf("%s#%s", appInfo.Name, appInfo.Version)] = &appInfo
@@ -74,7 +73,7 @@ func GetSysPkgStateAndVersion(pkgname string) (string, string, error) {
 
 	pkgInfo := strings.Split(string(output), " ")
 	if len(pkgInfo) != 3 {
-		log.Debugf("failed format: %s len: %d", pkgInfo, len(pkgInfo))
+		// log.Debugf("failed format: %s len: %d", pkgInfo, len(pkgInfo))
 		return "", "", fmt.Errorf("failed format: %s len: %d", pkgInfo, len(pkgInfo))
 	}
 	return pkgInfo[0], pkgInfo[2], nil

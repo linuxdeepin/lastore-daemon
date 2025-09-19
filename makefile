@@ -21,7 +21,8 @@ TEST = \
 	${GOPKG_PREFIX}/src/lastore-daemon \
 	${GOPKG_PREFIX}/src/lastore-smartmirror \
 	${GOPKG_PREFIX}/src/lastore-tools \
-	${GOPKG_PREFIX}/src/lastore-smartmirror-daemon
+	${GOPKG_PREFIX}/src/lastore-smartmirror-daemon \
+	./src/lastore-update-tools/...
 
 prepare:
 	@mkdir -p out/bin

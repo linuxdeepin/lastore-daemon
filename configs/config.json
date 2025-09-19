@@ -13,12 +13,6 @@
         ]
       }
     ],
-    "applist": [
-      {
-        "name": "systemd",
-        "version": "251.04"
-      }
-    ],
     "corelist": [
       {
         "name": "systemd",
@@ -34,20 +28,6 @@
         "name": "libdtkgui5",
         "version": "5.6.8-1",
         "need": "true"
-      }
-    ],
-    "freezelist": [
-      {
-        "name": "dpkg",
-        "version": "1.19.7.15-1+dde",
-        "need": "true"
-      }
-    ],
-    "optionlist": [
-      {
-        "name": "org.deepin.scanner",
-        "version": "5.5.15-1",
-        "need": "false"
       }
     ]
   },

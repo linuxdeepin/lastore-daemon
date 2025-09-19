@@ -54,12 +54,6 @@ func CheckSystem(typ CheckType, options map[string]string) *system.JobError {
 	case MidCheck:
 		checkRetMsg = libCheck.MidCheck()
 	case PostCheck:
-		if options[OptionCheckSucceed] == "1" {
-			libCheck.CheckWithSucceed = true
-		} else {
-			libCheck.CheckWithSucceed = false
-		}
-
 		if options[OptionFirstCheck] == "1" {
 			libCheck.PostCheckStage1 = true
 		} else {

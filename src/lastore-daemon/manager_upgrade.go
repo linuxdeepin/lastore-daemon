@@ -664,73 +664,6 @@ func (m *Manager) cancelAllUpdateJob() error {
 	return nil
 }
 
-// 生成meta.json和uuid 暂时不使用dut，使用apt
-func (m *Manager) prepareDutUpgrade(job *Job, mode system.UpdateType) (string, error) {
-	// 使用dut更新前的准备
-	var uuid string
-	var err error
-	{
-		job.option["--meta-cfg"] = system.DutOnlineMetaConfPath
-		var pkgMap map[string]system.PackageInfo
-		var removeMap map[string]system.PackageInfo
-		mode &= system.AllInstallUpdate
-		if mode == 0 {
-			return "", errors.New("invalid mode")
-		}
-
-		// m.allUpgradableInfoMu.Lock()
-		// pkgMap = m.mergePackagesByMode(mode, m.allUpgradableInfo)
-		// m.allUpgradableInfoMu.Unlock()
-		// m.allRemovePkgInfoMu.Lock()
-		// removeMap = m.mergePackagesByMode(mode, m.allRemovePkgInfo)
-		// m.allRemovePkgInfoMu.Unlock()
-
-		coreListMap := make(map[string]system.PackageInfo)
-		if m.coreList != nil && len(m.coreList) > 0 {
-			for _, pkgName := range m.coreList {
-				coreListMap[pkgName] = system.PackageInfo{
-					Name:    pkgName,
-					Version: "",
-					Need:    "skipversion",
-				}
-			}
-		} else {
-			loadCoreList := func() map[string]system.PackageInfo {
-				coreListMap := make(map[string]system.PackageInfo)
-				data, err := os.ReadFile(coreListVarPath)
-				if err != nil {
-					return nil
-				}
-				var pkgList PackageList
-				err = json.Unmarshal(data, &pkgList)
-				if err != nil {
-					return nil
-				}
-				for _, pkg := range pkgList.PkgList {
-					coreListMap[pkg.PkgName] = system.PackageInfo{
-						Name:    pkg.PkgName,
-						Version: "",
-						Need:    "skipversion",
-					}
-				}
-				return nil
-			}
-			coreListMap = loadCoreList()
-		}
-		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			system.LocalCachePath,
-			pkgMap,
-			coreListMap, nil, nil, removeMap,
-			m.updatePlatform.GetRules(), genRepoInfo(mode, system.OnlineListPath))
-
-		if err != nil {
-			logger.Warning(err)
-			return "", err
-		}
-	}
-	return uuid, nil
-}
-
 // 生成meta.json和uuid
 func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 	var uuid string
@@ -743,7 +676,7 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 
 	// coreList 生成
 	coreListMap := make(map[string]system.PackageInfo)
-	if m.coreList != nil && len(m.coreList) > 0 {
+	if len(m.coreList) > 0 {
 		for _, pkgName := range m.coreList {
 			coreListMap[pkgName] = system.PackageInfo{
 				Name:    pkgName,
@@ -781,9 +714,7 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 			return "", errors.New("invalid mode")
 		}
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			system.LocalCachePath,
-			pkgMap,
-			coreListMap, nil, nil, nil,
+			system.LocalCachePath, pkgMap, coreListMap,
 			m.updatePlatform.GetRules(), repo)
 		if err != nil {
 			logger.Warning(err)
@@ -791,45 +722,6 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 		}
 	}
 	return uuid, err
-}
-
-func (m *Manager) mergePackagesByMode(mode system.UpdateType, needMergePkgMap map[system.UpdateType]map[string]system.PackageInfo) map[string]system.PackageInfo {
-	typeArray := system.UpdateTypeBitToArray(mode)
-	var res map[string]system.PackageInfo
-	if len(typeArray) == 0 {
-		return nil
-	}
-	jsonStr, err := json.Marshal(needMergePkgMap[typeArray[0]])
-	if err != nil {
-		logger.Warning(err)
-		return nil
-	}
-	err = json.Unmarshal(jsonStr, &res)
-	if err != nil {
-		logger.Warning(err)
-		return nil
-	}
-
-	if len(typeArray) == 1 {
-		return res
-	}
-
-	typeArray = typeArray[1:]
-	for _, typ := range typeArray {
-		for name, newInfo := range needMergePkgMap[typ] {
-			originInfo, ok := res[name]
-			if ok {
-				// 当两个仓库存在相同包，留版本高的包
-				if compareVersionsGe(newInfo.Version, originInfo.Version) {
-					res[name] = newInfo
-				}
-			} else {
-				// 不存在时直接添加
-				res[name] = newInfo
-			}
-		}
-	}
-	return res
 }
 
 // 生成repo信息

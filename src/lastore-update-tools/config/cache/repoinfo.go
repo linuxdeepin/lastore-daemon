@@ -5,7 +5,6 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
@@ -79,15 +78,8 @@ func (ts *RepoInfo) LoaderPackageInfo(current *CacheInfo) error {
 		return fmt.Errorf("%v", err)
 	}
 	for _, p := range pickData {
-		log.Debugf("pakcage:%s", p.Package)
+		logger.Debugf("pakcage:%s", p.Package)
 	}
-
-	// 	// log.Debugf("show : %+v", appByGz)
-
-	// 	appByGz.Url = url + "/" + appByGz.Filename
-
-	// 	appinfoHash[fmt.Sprintf("%s#%s", appByGz.Name, appByGz.Version)] = appByGz
-	// 	// appWithRepo = append(appWithRepo, appByGz)
 
 	return nil
 }

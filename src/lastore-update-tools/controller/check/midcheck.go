@@ -11,16 +11,16 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
-const corePkgListConFilePath = CheckBaseDir + "core-pkg-list.conf"
+const DefaultCorePkgListFilePath = CheckBaseDir + "core-pkg-list.conf"
 
-func LoadCorePkgList() []string {
+func LoadCorePkgList(fileName string) []string {
 	var pkgs []string
-	if _, err := os.Stat(corePkgListConFilePath); os.IsNotExist(err) {
-		logger.Warningf("core pkg list config file %s not found", corePkgListConFilePath)
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		logger.Warningf("core pkg list config file %s not found", fileName)
 		return pkgs
 	}
 
-	content, err := ioutil.ReadFile(corePkgListConFilePath)
+	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		logger.Warningf("failed to read core pkg list config file :%v", err)
 		return pkgs
@@ -36,10 +36,10 @@ func LoadCorePkgList() []string {
 }
 
 // DONE:(heysion) maybe modify check all and return once
-func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo) (int64, error) {
+func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo, corePkgListFilePath string) (int64, error) {
 	breakDepends := false
 	var breakDependsError error
-	corePkgList := LoadCorePkgList()
+	corePkgList := LoadCorePkgList(corePkgListFilePath)
 	for _, pkgName := range corePkgList {
 		pkginfo, err := sysCurrPackage[pkgName]
 		if !err || pkginfo == nil || !pkginfo.State.CheckOK() {
@@ -57,33 +57,6 @@ func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo) (int64, er
 	}
 	return ecode.CHK_PROGRAM_SUCCESS, nil
 }
-
-//TODO:(DingHao) 可后期重构,优化传参
-// FIXME:(Dinghao) 使用 CheckCorelistInstallState
-// func CheckPkglistInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo) (int, error) {
-// 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-// 		logger.Errorf("pkglist (%s) is missing in system.", pkginfo.Name)
-// 		return ecode.CHK_PKGLIST_INEXISTENCE, fmt.Errorf("pkglist (%s) is missing in system", pkginfo.Name)
-// 	}
-
-// 	sysPkginfo := midpkgs[pkginfo.Name]
-
-// 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
-// 		if sysPkginfo.State != cache.Installed && sysPkginfo.State != cache.InstallHolded {
-// 			logger.Errorf("pkglist (%s) state is err: %d.", pkginfo.Name, sysPkginfo.State)
-// 			return ecode.CHK_PKGLIST_ERR_STATE, fmt.Errorf("pkglist (%s) state is err: %d", pkginfo.Name, sysPkginfo.State)
-// 		}
-// 	}
-
-// 	if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
-// 		if sysPkginfo.Version != pkginfo.Version {
-// 			logger.Errorf("pkglist (%s) version is err: %s.", pkginfo.Name, sysPkginfo.Version)
-// 			return ecode.CHK_PKGLIST_ERR_VERSION, fmt.Errorf("pkglist (%s) version is err: %s", pkginfo.Name, sysPkginfo.Version)
-// 		}
-// 	}
-
-// 	return ecode.CHK_PROGRAM_SUCCESS, nil
-// }
 
 func CheckCoreFileExist(coreFilePath string) (int64, error) {
 	if err := fs.CheckFileExistState(coreFilePath); err != nil {
@@ -107,56 +80,6 @@ func CheckCoreFileExist(coreFilePath string) (int64, error) {
 	return ecode.CHK_PROGRAM_SUCCESS, nil
 }
 
-// func CheckCorelistInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo) (int, error) {
-// 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-// 		logger.Warningf("corelist (%s) is missing in system.", pkginfo.Name)
-// 		return ecode.CHK_CORE_PKG_NOTFOUND, fmt.Errorf("corelist (%s) is missing in system", pkginfo.Name)
-// 	}
-
-// 	sysPkgInfo := midpkgs[pkginfo.Name]
-
-// 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
-// 		if sysPkgInfo.State != cache.Installed && sysPkgInfo.State != cache.InstallHolded {
-// 			logger.Warningf("corelist (%s) state is err: %d.", pkginfo.Name, sysPkgInfo.State)
-// 			return ecode.CHK_CORE_PKG_ERR_STATE, fmt.Errorf("corelist (%s) state is err: %d", pkginfo.Name, sysPkgInfo.State)
-// 		}
-// 	}
-
-// 	if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
-// 		if sysPkgInfo.Version != pkginfo.Version {
-// 			logger.Warningf("corelist (%s) version is err: %s.", pkginfo.Name, sysPkgInfo.Version)
-// 			return ecode.CHK_CORE_PKG_ERR_VERSION, fmt.Errorf("corelist (%s) version is err: %s", pkginfo.Name, sysPkgInfo.Version)
-// 		}
-// 	}
-
-// 	return ecode.CHK_PROGRAM_SUCCESS, nil
-// }
-
-// FIXME:(Dinghao) 使用 CheckCorelistInstallState
-// func CheckOptionlistInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo) (int, error) {
-// 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
-// 		logger.Warningf("optionlist (%s) is missing in system.", pkginfo.Name)
-// 		return ecode.CHK_OPTION_PKG_NOTFOUND, fmt.Errorf("optionlist (%s) is missing in system", pkginfo.Name)
-// 	}
-// 	sysPkginfo := midpkgs[pkginfo.Name]
-
-// 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
-// 		if sysPkginfo.State != cache.Installed && sysPkginfo.State != cache.InstallHolded {
-// 			logger.Warningf("optionlist (%s) state is err: %d.", pkginfo.Name, sysPkginfo.State)
-// 			return ecode.CHK_OPTION_PKG_ERR_STATE, fmt.Errorf("optionlist (%s) state is err: %d", pkginfo.Name, sysPkginfo.State)
-// 		}
-// 	}
-
-// 	if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
-// 		if sysPkginfo.Version != pkginfo.Version {
-// 			logger.Warningf("optionlist (%s) version is err: %s.", pkginfo.Name, sysPkginfo.Version)
-// 			return ecode.CHK_OPTION_PKG_ERR_VERSION, fmt.Errorf("optionlist (%s) version is err: %s", pkginfo.Name, sysPkginfo.Version)
-// 		}
-// 	}
-
-// 	return ecode.CHK_PROGRAM_SUCCESS, nil
-// }
-
 func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo, checkStage string, listType string) (int64, error) {
 
 	var PKG_NOT_FOUND, PKG_ERR_STATE, PKG_ERR_VERSION int64
@@ -169,10 +92,6 @@ func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *ca
 		PKG_NOT_FOUND = ecode.CHK_CORE_PKG_NOTFOUND
 		PKG_ERR_STATE = ecode.CHK_CORE_PKG_ERR_STATE
 		PKG_ERR_VERSION = ecode.CHK_CORE_PKG_ERR_VERSION
-	case "optionlist":
-		PKG_NOT_FOUND = ecode.CHK_OPTION_PKG_NOTFOUND
-		PKG_ERR_STATE = ecode.CHK_OPTION_PKG_ERR_STATE
-		PKG_ERR_VERSION = ecode.CHK_OPTION_PKG_ERR_VERSION
 	}
 
 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {

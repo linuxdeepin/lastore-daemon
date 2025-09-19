@@ -9,15 +9,11 @@ import (
 )
 
 func CheckVerifyCacheInfo(cfg *cache.CacheInfo) error {
-	// check update meta info
-
-	// check repo backend list
-	for _, repoBackend := range cfg.UpdateMetaInfo.RepoBackend {
-		if err := repoBackend.CheckRepoFile(); err != nil {
-			logger.Warningf("repoinfo check err: %v", err)
-			return fmt.Errorf("check repo err:%v", err)
-		}
+	// validate update meta info
+	if err := cfg.UpdateMetaInfo.VerifyUpdateInfo(); err != nil {
+		return fmt.Errorf("update meta info verify err: %v", err)
 	}
+
 	return nil
 }
 

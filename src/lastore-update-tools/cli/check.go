@@ -17,7 +17,6 @@ var logger = log.NewLogger("lastore/update-tools")
 
 var (
 	CheckWithEmulation bool
-	CheckWithSucceed   bool
 	PostCheckStage1    bool
 )
 
@@ -31,7 +30,7 @@ func beforeCheck() error {
 	}
 
 	logger.Debug("verifying update metadata")
-	if err := check.CheckVerifyCacheInfo(&ThisCacheInfo); err != nil {
+	if err := check.CheckVerifyCacheInfo(ThisCacheInfo); err != nil {
 		ThisCacheInfo.InternalState.IsMetaInfoFormatCheck = cache.P_Error
 		logger.Errorf("check meta info failed: %+v", err)
 		return &Error{
@@ -66,7 +65,6 @@ func executeCheck(checkFunc func()) ecode.RetMsg {
 	}
 
 	checkFunc()
-	afterCheck()
 	return CheckRetMsg
 }
 
@@ -94,7 +92,7 @@ func preCheck() {
 	ThisCacheInfo.InternalState.IsPreCheck = cache.P_Run
 	CheckRetMsg.PushExtMsg("precheck/dynhook start")
 
-	if extCode, err := check.CheckDynHook(&ThisCacheInfo, cache.PreUpdate); err != nil {
+	if extCode, err := check.CheckDynHook(ThisCacheInfo, cache.PreUpdate); err != nil {
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage0_Failed
 		logger.Errorf("precheck/dynhook failed:%v", err)
 		CheckRetMsg.SetErrorExtMsg(ecode.CHK_DYN_ERROR, extCode, fmt.Sprintf("precheck/dynhook failed: %v", err))
@@ -109,10 +107,10 @@ func preCheck() {
 		return
 	}
 
-	check.AdjustPkgArchWithName(&ThisCacheInfo)
+	check.AdjustPkgArchWithName(ThisCacheInfo)
 	// check repo and load repo metadata
 	for _, repoInfo := range ThisCacheInfo.UpdateMetaInfo.RepoBackend {
-		if err := repoInfo.LoaderPackageInfo(&ThisCacheInfo); err != nil {
+		if err := repoInfo.LoaderPackageInfo(ThisCacheInfo); err != nil {
 			ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage1_Failed
 			CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, ecode.CHK_METAINFO_FILE_ERROR, fmt.Sprintf("precheck/metainfo load failed:%s", err))
 			return
@@ -165,7 +163,7 @@ func preCheck() {
 
 	//检查核心包列表中软件包是否存在依赖错误，阻塞
 	CheckRetMsg.PushExtMsg("precheck/block check package depends")
-	if extCode, err := check.CheckPkgDependency(SysPkgInfo); err != nil {
+	if extCode, err := check.CheckPkgDependency(SysPkgInfo, check.DefaultCorePkgListFilePath); err != nil {
 		ThisCacheInfo.InternalState.IsDependsPreCheck = cache.P_Error
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage2_Failed
 		logger.Errorf("precheck/block check package depends failed:%v", err)
@@ -174,16 +172,6 @@ func preCheck() {
 	}
 
 	ThisCacheInfo.InternalState.IsDependsPreCheck = cache.P_OK
-
-	// 检查purge list中的包是否存在，阻塞
-	if len(ThisCacheInfo.UpdateMetaInfo.PurgeList) > 0 {
-		if err := check.CheckPurgeList(&ThisCacheInfo, SysPkgInfo); err != nil {
-			ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage2_Failed
-			logger.Errorf("precheck/block check purge list failed: %v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, ecode.CHK_METAINFO_FILE_ERROR, fmt.Sprintf("precheck/block check purge list failed: %v", err))
-			return
-		}
-	}
 
 	//检查系统盘剩余可用空间能否满足本次更新，阻塞
 	// TODO:(DingHao)参数换成真实安装包空间大小
@@ -200,15 +188,6 @@ func preCheck() {
 		//TODO:(DingHao)获取系统信息无返回状态码
 		logger.Warningf("precheck/nonblock load system package info failed:%v", err)
 		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("precheck/nonblock load system package info failed:%v", err))
-	}
-
-	//检查系统可选包安装状态
-	for _, pkgInfo := range ThisCacheInfo.UpdateMetaInfo.OptionList {
-		if extCode, err := check.CheckDebListInstallState(SysPkgInfo, &pkgInfo, "precheck", "optionlist"); err != nil {
-			ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage3_Failed
-			logger.Warningf("precheck/nonblock check optionlist failed:%v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("precheck/nonblock check optionlist failed:%v", err))
-		}
 	}
 
 	//检查DPKG是否为公司版本
@@ -262,7 +241,7 @@ func midCheck() {
 	}
 
 	//检查是否存在依赖错误，阻塞
-	if extCode, err := check.CheckPkgDependency(SysPkgInfo); err != nil {
+	if extCode, err := check.CheckPkgDependency(SysPkgInfo, check.DefaultCorePkgListFilePath); err != nil {
 		ThisCacheInfo.InternalState.IsDependsMidCheck = cache.P_Error
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
 		logger.Errorf("midcheck/block check package depends failed:%v", err)
@@ -315,17 +294,8 @@ func midCheck() {
 		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("midcheck/nonblock load system info failed:%v", err))
 	}
 
-	//检查系统可选包安装状态
-	for _, pkgInfo := range ThisCacheInfo.UpdateMetaInfo.OptionList {
-		if extCode, err := check.CheckDebListInstallState(SysPkgInfo, &pkgInfo, "midcheck", "optionlist"); err != nil {
-			ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage1_Failed
-			logger.Warningf("midcheck/nonblock check optionlist install state failed:%v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("midcheck/nonblock check optionlist install state failed:%v", err))
-		}
-	}
-
 	// 动态hook脚本检查，阻塞
-	if extCode, err := check.CheckDynHook(&ThisCacheInfo, cache.UpdateCheck); err != nil {
+	if extCode, err := check.CheckDynHook(ThisCacheInfo, cache.UpdateCheck); err != nil {
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage2_Failed
 		logger.Errorf("midcheck/dynook failed:%v", err)
 		CheckRetMsg.SetErrorExtMsg(ecode.CHK_DYN_ERROR, extCode, fmt.Sprintf("midcheck/dynook failed:%v", err))
@@ -349,19 +319,15 @@ func postCheck() {
 		stage = check.Stage1
 	}
 
-	logger.Debugf("postcheck check-with-succeed:%v %s start", CheckWithSucceed, stage)
-	CheckRetMsg.PushExtMsg(fmt.Sprintf("postcheck check-with-succeed:%v %s start", CheckWithSucceed, stage))
+	logger.Debugf("postcheck %s start", stage)
+	CheckRetMsg.PushExtMsg(fmt.Sprintf("postcheck %s start", stage))
 
 	updatePostCheckStage(cache.P_Run)
 
-	if CheckWithSucceed {
-		postCheckWithSucceed(stage)
-	} else {
-		postCheckWithFailed(stage)
-	}
+	postCheckWithStage(stage)
 }
 
-func postCheckWithSucceed(stage string) {
+func postCheckWithStage(stage string) {
 	//阻塞项检查
 
 	// 检查重要进程是否存在：检查/usr/sbin/lightdm进程是否存在，阻塞
@@ -372,49 +338,9 @@ func postCheckWithSucceed(stage string) {
 		return
 	}
 
-	//非阻塞项检查
-	if extCode, err := check.ArchiveLogAndCache(ThisCacheInfo.UUID); err != nil {
-		updatePostCheckStage(cache.P_Stage1_Failed)
-		logger.Warningf("postcheck/nonblock archive log and cache failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("postcheck/nonblock archive log and cache failed:%v", err))
-	}
-
-	if extCode, err := check.DeleteUpgradeCacheFile(ThisCacheInfo.UUID); err != nil {
-		updatePostCheckStage(cache.P_Stage1_Failed)
-		logger.Warningf("postcheck/nonblock delete upgrade cache file failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("postcheck/nonblock delete upgrade cache file failed:%v", err))
-	}
-
 	// 动态hook脚本检查，阻塞
 	if stage == check.Stage2 {
-		if extCode, err := check.CheckDynHook(&ThisCacheInfo, cache.PostCheck); err != nil {
-			updatePostCheckStage(cache.P_Stage2_Failed)
-			logger.Errorf("postcheck/dynhook failed:%v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_DYN_ERROR, extCode, fmt.Sprintf("postcheck/dynhook failed:%v", err))
-			return
-		}
-	}
-
-	CheckRetMsg.SetError(0, 0)
-	updatePostCheckStage(cache.P_OK)
-}
-
-func postCheckWithFailed(stage string) {
-	if extCode, err := check.ArchiveLogAndCache(ThisCacheInfo.UUID); err != nil {
-		updatePostCheckStage(cache.P_Stage0_Failed)
-		logger.Warningf("postcheck/nonblock archive log and cache failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("postcheck/nonblock archive log and cache failed:%v", err))
-	}
-
-	if extCode, err := check.DeleteUpgradeCacheFile(ThisCacheInfo.UUID); err != nil {
-		updatePostCheckStage(cache.P_Stage0_Failed)
-		logger.Warningf("postcheck/nonblock delete upgrade cache file failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("postcheck/nonblock delete upgrade cache file failed:%v", err))
-	}
-
-	// 动态hook脚本检查，阻塞
-	if stage == check.Stage2 {
-		if extCode, err := check.CheckDynHook(&ThisCacheInfo, cache.PostCheckFailed); err != nil {
+		if extCode, err := check.CheckDynHook(ThisCacheInfo, cache.PostCheck); err != nil {
 			updatePostCheckStage(cache.P_Stage2_Failed)
 			logger.Errorf("postcheck/dynhook failed:%v", err)
 			CheckRetMsg.SetErrorExtMsg(ecode.CHK_DYN_ERROR, extCode, fmt.Sprintf("postcheck/dynhook failed:%v", err))
