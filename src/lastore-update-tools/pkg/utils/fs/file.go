@@ -5,8 +5,10 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func CheckFileExistState(filepath string) error {
@@ -21,4 +23,34 @@ func CheckFileExistState(filepath string) error {
 	} else {
 		return err
 	}
+}
+
+func CreateFile(fileName string) (*os.File, error) {
+	absPath := filepath.Dir(fileName)
+	if absPath == "" {
+		return nil, errors.New("not found base name")
+	}
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		err = os.MkdirAll(absPath, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+	out, err := os.Create(fileName)
+	return out, err
+}
+
+func ReadMode(fileName string) (os.FileMode, error) {
+	info, err := os.Stat(fileName)
+	if err != nil {
+		return 0, err
+	}
+	return info.Mode(), nil
+}
+
+func CreateDirMode(dir string, mode os.FileMode) error {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return os.MkdirAll(dir, mode)
+	}
+	return nil
 }

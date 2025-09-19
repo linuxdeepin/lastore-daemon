@@ -8,19 +8,13 @@ import (
 	"os"
 	"reflect"
 	"strings"
-
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 )
 
 // UpdateInfo 数据结构体
 type UpdateInfo struct {
 	RepoBackend []RepoInfo   `json:"RepoInfo" yaml:"RepoInfo"`                   // repoinfo
 	PkgList     []AppInfo    `json:"PkgList" yaml:"PkgList"`                     // pkglist
-	BaseLine    []AppInfo    `json:"BaseLine" yaml:"BaseLine"`                   // baseline
 	SysCoreList []AppInfo    `json:"CoreList" yaml:"CoreList"`                   // corelist
-	FreezeList  []AppInfo    `json:"FreezeList" yaml:"FreezeList"`               // freezelist
-	PurgeList   []AppInfo    `json:"PurgeList" yaml:"PurgeList"`                 // freezelist
-	OptionList  []AppInfo    `json:"OptionList" yaml:"OptionList"`               // optionlist
 	Rules       []CheckRules `json:"Rules" yaml:"Rules"`                         // rules
 	PkgDebPath  string       `json:"PkgDebPath" yaml:"PkgDebPath"`               // PkgDebPath
 	UUID        string       `json:"UUID" yaml:"UUID"`                           // uuid
@@ -28,38 +22,34 @@ type UpdateInfo struct {
 	ApiVersion  string       `json:"ApiVersion" yaml:"ApiVersion" default:"1.0"` // ApiVersion
 }
 
+// VerifyUpdateInfo checks if UpdateInfo has valid required fields
 func (ts *UpdateInfo) VerifyUpdateInfo() error {
-	// check update meta info
+	if len(ts.PkgDebPath) == 0 {
+		return fmt.Errorf("pkgDebPath is empty")
+	}
+
+	if len(ts.UUID) == 0 {
+		return fmt.Errorf("uuid is empty")
+	}
+
+	if len(ts.RepoBackend) == 0 {
+		return fmt.Errorf("repoBackend is empty")
+	}
 
 	// check repo backend list
 	for _, repoBackend := range ts.RepoBackend {
 		if err := repoBackend.CheckRepoFile(); err != nil {
-			log.Warnf("repoinfo check err: %v", err)
-			return fmt.Errorf("check repo err:%v", err)
+			return fmt.Errorf("check repo info err: %v", err)
 		}
 	}
-	log.Debugf("repoinfo load ok!")
-	return nil
-}
 
-func (ts *UpdateInfo) UpdateInfoFormatVerify() error {
-	// check update meta info
-
-	// check repo backend list
-	for _, repoBackend := range ts.RepoBackend {
-		if err := repoBackend.CheckRepoIndexExist(); err != nil {
-			log.Warnf("repoinfo check err: %v", err)
-			return fmt.Errorf("check repo err:%v", err)
-		}
-	}
 	// check rules format
 	for _, ruleVerify := range ts.Rules {
 		if _, err := ruleVerify.IsEmpty(); err != nil {
-			log.Warnf("rules format check err:%v", err)
-			return fmt.Errorf("rules format check err:%v", err)
+			return fmt.Errorf("rules format check err: %v", err)
 		}
 	}
-	log.Debugf("update info format verify")
+
 	return nil
 }
 
@@ -126,7 +116,7 @@ func (ts *UpdateInfo) MergeConfig(newUpdateInfo UpdateInfo) error {
 			srcField := srcValue.FieldByName(key)
 			if srcField.IsValid() && srcField.Interface() != "" && !reflect.DeepEqual(srcField, destField) {
 				destField.Set(srcField)
-				//log.Debugf("merge key %v", key)
+				//logger.Debugf("merge key %v", key)
 			}
 
 		}
@@ -134,9 +124,8 @@ func (ts *UpdateInfo) MergeConfig(newUpdateInfo UpdateInfo) error {
 
 	OtherMerge([]string{
 		"RepoBackend",
-		"BaseLine", "SysCoreList",
-		"FreezeList", "PurgeList",
-		"OptionList", "Rules",
+		"SysCoreList",
+		"Rules",
 		"PkgDebPath", "Time"})
 
 	return nil
@@ -161,39 +150,4 @@ func (ts *UpdateInfo) RemovedRepoInfo(index int) error {
 	}
 
 	return nil
-}
-
-// check update is empty
-func (ts *UpdateInfo) IsEmpty() (bool, error) {
-
-	if len(ts.PkgList) == 0 {
-		log.Debugf("PkgList is empty")
-		return true, fmt.Errorf("PkgList")
-	}
-
-	if len(ts.PkgDebPath) == 0 {
-		log.Debugf("PkgDebPath is empty")
-		return true, fmt.Errorf("PkgDebPath")
-	}
-
-	if len(ts.UUID) == 0 {
-		log.Debugf("UUID is empty")
-		return true, fmt.Errorf("UUID")
-	}
-
-	// FIXME(heysion) 需要baseline的检查
-	if len(ts.BaseLine) == 0 {
-		log.Warnf("Base line check empty")
-	}
-
-	if len(ts.SysCoreList) == 0 {
-		log.Warnf("Core list check empty")
-	}
-
-	if len(ts.RepoBackend) == 0 {
-		log.Debugf("RepoBackend is empty")
-		return true, fmt.Errorf("RepoBackend")
-	}
-
-	return false, nil
 }

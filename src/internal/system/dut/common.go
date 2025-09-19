@@ -60,6 +60,5 @@ const (
 )
 
 const (
-	OptionCheckSucceed = "checkSucceed"
-	OptionFirstCheck   = "firstCheck"
+	OptionFirstCheck = "firstCheck"
 )

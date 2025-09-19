@@ -5,11 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
+	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 	"gopkg.in/yaml.v2"
 )
 
+var logger = log.NewLogger("lastore/update-tools/config/cache")
+
+// TODO deprecated
 type CacheConfig struct {
 	Cache map[string]CacheInfo `json:"CacheConfig" yaml:"CacheConfig"` // CacheCfg
 }
@@ -70,15 +73,15 @@ func (ts *CacheConfig) UpdateUUID(path, uuid string, cache CacheInfo) error {
 }
 
 func (ts *CacheInfo) ClearUUID(path, uuid string) error {
-	log.Debugf("clear uuid: %s", uuid)
+	logger.Debugf("clear uuid: %s", uuid)
 	archiveFile := fmt.Sprintf("%s/%s-archive.tar.gz", path, uuid)
 	if err := fs.CheckFileExistState(archiveFile); err == nil {
-		log.Debugf("remove archive: %s", archiveFile)
+		logger.Debugf("remove archive: %s", archiveFile)
 		os.RemoveAll(archiveFile)
 	}
 	workUUID := path + "/" + uuid
 	if err := fs.CheckFileExistState(workUUID); err == nil {
-		log.Debugf("remove path: %s", workUUID)
+		logger.Debugf("remove path: %s", workUUID)
 		os.RemoveAll(workUUID)
 	}
 	return nil

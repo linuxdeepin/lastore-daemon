@@ -24,25 +24,6 @@
             "Need": "skipversion"
         }
     ],
-    "OptionList": [
-        {
-            "Name": "wps",
-            "Version": "251.0+dde",
-            "Need": "exist"
-        }
-    ],
-    "BaseLine": [
-        {
-            "Name": "systemd",
-            "Version": "251.0+dde",
-            "Need": "skipversion"
-        },
-        {
-            "Name": "startdde",
-            "Version": "251.0+dde",
-            "Need": "skipversion"
-        }
-    ],
     "Rules": [
         {
             "Name": "00_precheck",

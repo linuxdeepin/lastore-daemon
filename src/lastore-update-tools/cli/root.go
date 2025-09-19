@@ -17,8 +17,7 @@ import (
 var (
 	ConfigCfg            string = check.CheckBaseDir + "config.yaml"
 	RootCoreConfig       config.CoreConfig
-	CacheCfg             cache.CacheConfig
-	ThisCacheInfo        cache.CacheInfo
+	ThisCacheInfo        *cache.CacheInfo
 	UpdateMetaConfigPath string = check.CheckBaseDir + "default.json"
 	CoreProtectPath      string
 	CheckRetMsg          ecode.RetMsg
@@ -44,16 +43,6 @@ func initCheckEnv() error {
 			Code: ecode.CHK_INVALID_INPUT,
 			Ext:  ecode.CHK_METAINFO_FILE_ERROR,
 			Msg:  fmt.Sprintf("load config failed:%v", err),
-		}
-	}
-	// cache list load
-	logger.Debugf("load cache")
-	if err := RootCoreConfig.LoaderCache(&CacheCfg); err != nil {
-		logger.Errorf("load cache failed:%v", err)
-		return &Error{
-			Code: ecode.CHK_INVALID_INPUT,
-			Ext:  ecode.CHK_METAINFO_FILE_ERROR,
-			Msg:  fmt.Sprintf("load cache failed:%v", err),
 		}
 	}
 
@@ -87,55 +76,14 @@ func initCheckEnv() error {
 			}
 		}
 
-		if err := loaderUpdateMeta.UpdateInfoFormatVerify(); err != nil {
-			logger.Errorf("verify update meta json failed %+v", err)
-			return &Error{
-				Code: ecode.CHK_INVALID_INPUT,
-				Ext:  ecode.CHK_METAINFO_FILE_ERROR,
-				Msg:  fmt.Sprintf("verify update meta json failed %v", err),
-			}
-		}
-		if CacheCfg.Cache == nil {
-			CacheCfg.Cache = make(map[string]cache.CacheInfo)
-		}
-		if cacheInfo, ok := CacheCfg.Cache[loaderUpdateMeta.UUID]; ok {
-			cacheInfo.UpdateMetaInfo.MergeConfig(loaderUpdateMeta)
-			CacheCfg.Cache[loaderUpdateMeta.UUID] = cacheInfo
-			ThisCacheInfo = CacheCfg.Cache[loaderUpdateMeta.UUID]
-		} else {
-			logger.Debugf("add update meta to cache")
-			newCacheInfo := cache.CacheInfo{}
-			newCacheInfo.UUID = loaderUpdateMeta.UUID
-			newCacheInfo.UpdateMetaInfo = loaderUpdateMeta
-			newCacheInfo.WorkStation = RootCoreConfig.Base + "/" + loaderUpdateMeta.UUID
-			CacheCfg.Cache[loaderUpdateMeta.UUID] = newCacheInfo
-			ThisCacheInfo = CacheCfg.Cache[loaderUpdateMeta.UUID]
-			logger.Debugf("add cache to cfg with:%v", loaderUpdateMeta.UUID)
-		}
-
-		if err := fs.CreateDirMode(ThisCacheInfo.WorkStation, 0755); err != nil {
-			logger.Warningf("create uuid %v failed: %v", ThisCacheInfo.UUID, err)
-		}
+		newCacheInfo := cache.CacheInfo{}
+		newCacheInfo.UUID = loaderUpdateMeta.UUID
+		newCacheInfo.UpdateMetaInfo = loaderUpdateMeta
+		newCacheInfo.WorkStation = RootCoreConfig.Base + "/" + loaderUpdateMeta.UUID
+		ThisCacheInfo = &newCacheInfo
 	}
 	if SysPkgInfo == nil {
 		SysPkgInfo = make(map[string]*cache.AppTinyInfo)
 	}
 	return nil
-}
-
-func afterCheck() {
-	// flush config to disk
-	logger.Debugf("after check, flush cache")
-	if _, ok := CacheCfg.Cache[ThisCacheInfo.UUID]; ok {
-		CacheCfg.Cache[ThisCacheInfo.UUID] = ThisCacheInfo
-	}
-	if err := RootCoreConfig.UpdateCache(&CacheCfg); err != nil {
-		logger.Errorf("%+v", err)
-		CheckRetMsg.PushExtMsg(fmt.Sprintf("flush cache:%+v", err))
-	} else if err := RootCoreConfig.UpdateCfg(ConfigCfg); err != nil {
-		CheckRetMsg.PushExtMsg(fmt.Sprintf("flush config:%+v", err))
-		logger.Errorf("%+v", err)
-	}
-
-	logger.Debugf("return code: %d", CheckRetMsg.Code)
 }

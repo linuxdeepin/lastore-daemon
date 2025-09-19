@@ -56,8 +56,7 @@ func (ts *CoreConfig) LoaderCache(cachecfg *cache.CacheConfig) error {
 			return err
 		}
 	}
-	cfgRaw, err := ioutil.ReadFile(ts.Base + "/" + ts.CacheList)
-
+	cfgRaw, err := ioutil.ReadFile(cacheFileName)
 	if err != nil {
 		return fmt.Errorf("loader/cache: can not read file: %v", err)
 	}

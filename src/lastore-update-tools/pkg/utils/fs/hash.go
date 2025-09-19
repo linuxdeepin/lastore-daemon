@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
+	"github.com/linuxdeepin/go-lib/log"
 )
+
+var logger = log.NewLogger("lastore/update-tools/utils/fs")
 
 func FileHashSha256(filename string) (string, error) {
 
@@ -82,7 +84,8 @@ func CheckRepoInfoHashSha256(filename string, hash string) error {
 		if sha256 == hash {
 			return nil
 		} else {
-			log.Errorf("error checking repofile hash")
+			// Only log the error, do not return an error
+			logger.Warning("error checking repofile hash")
 			return nil
 		}
 	} else {

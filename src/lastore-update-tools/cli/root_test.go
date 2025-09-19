@@ -5,23 +5,12 @@
 package coremodules
 
 import (
-	"bytes"
 	"os"
-	"strings"
 	"testing"
 
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
-	"github.com/spf13/cobra"
 )
-
-func CobraExeCaller(t *testing.T, root *cobra.Command, args []string) (string, error) {
-	buf := new(bytes.Buffer)
-	root.SetOutput(buf)
-	root.SetArgs(args)
-	_, err := root.ExecuteC()
-	return buf.String(), err
-}
 
 func createTestData() error {
 	// /tmp/metacfg.json
@@ -59,25 +48,6 @@ func createTestData() error {
                 "Need": "skipstate"
             }
     
-        ],
-        "OptionList": [
-            {
-                "Name": "plymouth",
-                "Version": "0.9.4.2-1+dde",
-                "Need": "strict"
-            }
-        ],
-        "BaseLine": [
-            {
-                "Name": "systemd",
-                "Version": "241.34-1+dde",
-                "Need": "skipversion"
-            },
-            {
-                "Name": "startdde",
-                "Version": "5.10.12.4-1",
-                "Need": "skipversion"
-            }
         ],
         "Rules": [
             {
@@ -128,7 +98,7 @@ func createTestData() error {
 	return nil
 }
 
-func TestDeepinSystemUpdate(t *testing.T) {
+func TestSystemUpdate(t *testing.T) {
 
 	os.Setenv("DEEPIN_SYSTEM_UPDATE_TOOLS_DEBUG", "debug")
 	if err := createTestData(); err != nil {
@@ -145,28 +115,4 @@ func TestDeepinSystemUpdate(t *testing.T) {
 
 	defer os.Remove("/tmp/metacfg.json")
 	defer os.Remove("/tmp/Packages.1060_main")
-
-	Caller := func(root *cobra.Command, args ...string) {
-		out, err := CobraExeCaller(t, root, args)
-		t.Log(out)
-		if err != nil {
-			t.Errorf("Calling command without subcommands should not have error: %v", err)
-		}
-	}
-
-	t.Run("lastore-update-tools:check precheck", func(t *testing.T) {
-		Argv := strings.Split("check precheck --ignore-error -m /tmp/metacfg.json -d", " ")
-		Caller(rootCmd, Argv...)
-	})
-
-	t.Run("lastore-update-tools:check midcheck", func(t *testing.T) {
-		Argv := strings.Split("check midcheck -m /tmp/metacfg.json -d", " ")
-		Caller(rootCmd, Argv...)
-	})
-
-	t.Run("lastore-update-tools:check postcheck", func(t *testing.T) {
-		Argv1 := strings.Split("check postcheck -m /tmp/metacfg.json -d", " ")
-		Caller(rootCmd, Argv1...)
-	})
-
 }

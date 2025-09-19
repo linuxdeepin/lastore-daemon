@@ -150,37 +150,3 @@ func AdjustPkgArchWithName(cache *cache.CacheInfo) {
 		}
 	}
 }
-
-func CheckPurgeList(cache *cache.CacheInfo, syspkgs map[string]*cache.AppTinyInfo) error {
-
-	for _, pkginfo := range cache.UpdateMetaInfo.PurgeList {
-		if syspkginfo, ok := syspkgs[pkginfo.Name]; ok {
-			// logger.Debugf("purge package info:%v", syspkginfo)
-			switch pkginfo.Need {
-			case "exist":
-			case "skipversion":
-				continue
-			case "":
-			case "skipstate":
-			case "strict":
-				if pkginfo.Version == syspkginfo.Version {
-					continue
-				} else {
-					logger.Infof("purge package info %v != %v", pkginfo, syspkginfo)
-					return fmt.Errorf("purge package version not match %s", pkginfo.Name)
-				}
-			default:
-				continue
-			}
-		} else {
-			if cache.InternalState.IsPurgeState.IsFirstRun() {
-				return fmt.Errorf("purge package not found :%s", pkginfo.Name)
-			} else {
-				logger.Warningf("purge package skip:%s", pkginfo.Name)
-				continue
-			}
-		}
-	}
-
-	return nil
-}
