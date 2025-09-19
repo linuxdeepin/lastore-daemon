@@ -5,13 +5,14 @@
 # 
 # Translators:
 # Caarmi, 2025
+# Валерий Владимирович, 2025
 # Анатолий Валерианович <ffox909@mail.ru>, 2025
 # gandalfthewhite19890404 <gandalfthewhite@mail.ru>, 2025
-# Валерий Владимирович, 2025
 # Basil Russu <basil_russu@hotmail.com>, 2025
 # deepiner, 2025
 # Okubir Gienum, 2025
 # Владимир Киреев <vovan_kireev@mail.ru>, 2025
+# Михаил Комаров, 2025
 # 
 #, fuzzy
 msgid ""
@@ -20,7 +21,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-05-24 10:32+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Владимир Киреев <vovan_kireev@mail.ru>, 2025\n"
+"Last-Translator: Михаил Комаров, 2025\n"
 "Language-Team: Russian (https://app.transifex.com/linuxdeepin/teams/3617/ru/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -34,7 +35,7 @@ msgstr "Установка обновлений..."
 
 #: ../src/lastore-daemon/inhibitor.go:47
 msgid "Tasks are running..."
-msgstr "Задачи выполняются..."
+msgstr "Операции выполняются..."
 
 #: ../src/lastore-daemon/inhibitor.go:49
 msgid "Preventing from shutting down"
@@ -42,7 +43,7 @@ msgstr "Предотвращение выключения"
 
 #: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
 msgid "Control Center"
-msgstr "Центр Управления"
+msgstr "Центр управления"
 
 #: ../src/lastore-daemon/main.go:172
 msgid "App Store"
@@ -77,6 +78,8 @@ msgstr "Проверка и установка обновлений..."
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr ""
+"Не удалось загрузить обновления. Пожалуйста, освободите %g пространства на "
+"диске."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
@@ -93,7 +96,7 @@ msgstr "Просмотр"
 #: ../src/lastore-daemon/manager_upgrade.go:500
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
-"Обновление не удалось: файлы повреждены. Пожалуйста, обновите еще раз."
+"Обновление не удалось: файлы повреждены. Пожалуйста, попробуйте еще раз."
 
 #: ../src/lastore-daemon/manager_download.go:178
 #: ../src/lastore-daemon/manager_upgrade.go:501
@@ -127,7 +130,7 @@ msgstr "Доступна новая версия!"
 #: ../src/lastore-daemon/manager_update.go:159
 msgid "Failed to check for updates. Please check your network."
 msgstr ""
-"Не удалось проверить наличие обновлений. Проверьте сетевое соединение."
+"Не удалось проверить наличие обновлений. Проверьте интернет соединение."
 
 #: ../src/lastore-daemon/manager_update.go:165
 msgid "Failed to check for updates. Please clean up your disk first."
@@ -142,7 +145,7 @@ msgstr "Резервное копирование и установка обно
 #: ../src/lastore-daemon/manager_upgrade.go:158
 #: ../src/lastore-daemon/manager_upgrade.go:192
 msgid "Backup failed!"
-msgstr "Резервное копирование не выполнено!"
+msgstr "Ошибка при резервном копировании!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:136
 #: ../src/lastore-daemon/manager_upgrade.go:159
@@ -153,15 +156,15 @@ msgstr "Приступить к обновлению"
 #: ../src/lastore-daemon/manager_upgrade.go:159
 #: ../src/lastore-daemon/manager_upgrade.go:193
 msgid "Back Up Again"
-msgstr ""
+msgstr "Создать резервную копию повторно"
 
 #: ../src/lastore-daemon/manager_upgrade.go:415
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
-"Заряд аккумулятора составляет 60%. Для успешного обновления, пожалуйста, "
-"подключите устройство к сети."
+"Заряд аккумулятора составляет меньше 60%. Для успешного обновления, "
+"пожалуйста, подключите устройство к сети."
 
 #: ../src/lastore-daemon/manager_upgrade.go:507
 msgid ""
@@ -188,11 +191,11 @@ msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:525
 msgid "Updates failed."
-msgstr "Ошибка обновления"
+msgstr "Ошибка при обновлении"
 
 #: ../src/lastore-daemon/manager_upgrade.go:589
 msgid "Updates successful"
-msgstr "Обновления успешны"
+msgstr "Обновления завершены успешно"
 
 #: ../src/lastore-daemon/manager_upgrade.go:590
 msgid "Restart the computer to use the system and applications properly."
@@ -205,4 +208,4 @@ msgstr "Перезагрузить позже"
 
 #: ../src/lastore-daemon/manager_upgrade.go:591
 msgid "Reboot Now"
-msgstr "Перезагрузить Сейчас"
+msgstr "Перезагрузить сейчас"
