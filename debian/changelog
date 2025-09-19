@@ -1,3 +1,10 @@
+lastore-daemon (6.2.30) unstable; urgency=medium
+
+  * fix: remove configuration dependency of deepin-system-update
+  * feat: add lastore update tools (#210)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 19 Sep 2025 11:58:15 +0800
+
 lastore-daemon (6.2.29) unstable; urgency=medium
 
   * fix: Use Ouput for quering installed packages (#208)
