@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/controller/check"
 
 	"github.com/godbus/dbus/v5"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
@@ -39,6 +40,11 @@ import (
 
 var logger = log.NewLogger("lastore/messageReport")
 
+type ShellCheck struct {
+	Name  string `json:"name"`  //检查脚本的名字
+	Shell string `json:"shell"` //检查脚本的内容
+}
+
 type UpdatePlatformManager struct {
 	config                            *Config
 	allowPostSystemUpgradeMessageType system.UpdateType
@@ -51,9 +57,9 @@ type UpdatePlatformManager struct {
 	systemTypeFromPlatform string // 从更新平台获取的系统类型,本地os-baseline.b获取
 	requestUrl             string // 更新平台请求地址
 
-	PreCheck       string                        // 更新前检查脚本
-	MidCheck       string                        // 更新中检查脚本
-	PostCheck      string                        // 更新后检查脚本
+	PreCheck       []ShellCheck                  // 更新前检查脚本
+	MidCheck       []ShellCheck                  // 更新后检查脚本
+	PostCheck      []ShellCheck                  // 更新完成重启后检查脚本
 	TargetCorePkgs map[string]system.PackageInfo // 必须安装软件包信息清单  	对应dut的core list
 	BaselinePkgs   map[string]system.PackageInfo // 当前版本的核心软件包清单	对应dut的baseline
 	SelectPkgs     map[string]system.PackageInfo // 可选软件包清单
@@ -85,9 +91,9 @@ type platformCacheContent struct {
 	CoreListPkgs map[string]system.PackageInfo
 	BaselinePkgs map[string]system.PackageInfo
 	SelectPkgs   map[string]system.PackageInfo
-	PreCheck     string
-	MidCheck     string
-	PostCheck    string
+	PreCheck     []ShellCheck
+	MidCheck     []ShellCheck
+	PostCheck    []ShellCheck
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -468,6 +474,7 @@ func (m *UpdatePlatformManager) genTargetPkgListsResponse() (*http.Response, err
 	values := url.Values{}
 	values.Add("baseline", m.targetBaseline)
 	policyUrl = policyUrl + "?" + values.Encode()
+
 	request, err := http.NewRequest(Urls[GetTargetPkgLists].method, policyUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetTargetPkgLists.string(), err.Error())
@@ -767,9 +774,9 @@ type packageLists struct {
 }
 
 type PreInstalledPkgMeta struct {
-	PreCheck  string       `json:"preCheck"`  // "更新前检查脚本"
-	MidCheck  string       `json:"midCheck"`  // "更新中检查"
-	PostCheck string       `json:"postCheck"` // "更新后检查"
+	PreCheck  []ShellCheck `json:"preCheck"`  // "更新前检查脚本"
+	MidCheck  []ShellCheck `json:"midCheck"`  // "更新后检查脚本"
+	PostCheck []ShellCheck `json:"postCheck"` // "更新完成重启后检查脚本"
 	Packages  packageLists `json:"packages"`  // "基线软件包清单"
 }
 
@@ -1520,55 +1527,60 @@ func (m *UpdatePlatformManager) RetryPostHistory() {
 }
 
 func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {
-	defaultCmd := "echo default rules"
 	var rules []dut.RuleInfo
 
-	if len(strings.TrimSpace(m.PreCheck)) == 0 {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "00_precheck",
-			Type:    dut.PreCheck,
-			Command: defaultCmd,
-			Argv:    "",
-		})
-	} else {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "00_precheck",
-			Type:    dut.PreCheck,
-			Command: m.PreCheck,
-			Argv:    "",
-		})
+	preShellPath := filepath.Join(check.CheckBaseDir, "pre_check")
+	midShellPath := filepath.Join(check.CheckBaseDir, "mid_check")
+	postShellPath := filepath.Join(check.CheckBaseDir, "post_check")
+
+	_ = os.RemoveAll(preShellPath)
+	_ = os.RemoveAll(midShellPath)
+	_ = os.RemoveAll(postShellPath)
+
+	err := utils.EnsureDirExist(preShellPath)
+	if err != nil {
+		logger.Warning(err)
 	}
 
-	if len(strings.TrimSpace(m.MidCheck)) == 0 {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "10_midcheck",
-			Type:    dut.MidCheck,
-			Command: defaultCmd,
-			Argv:    "",
-		})
-	} else {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "10_midcheck",
-			Type:    dut.MidCheck,
-			Command: m.MidCheck,
-			Argv:    "",
-		})
+	err = utils.EnsureDirExist(midShellPath)
+	if err != nil {
+		logger.Warning(err)
 	}
 
-	if len(strings.TrimSpace(m.PostCheck)) == 0 {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "20_postcheck",
-			Type:    dut.PostCheck,
-			Command: defaultCmd,
-			Argv:    "",
-		})
-	} else {
-		rules = append(rules, dut.RuleInfo{
-			Name:    "20_postcheck",
-			Type:    dut.PostCheck,
-			Command: m.PostCheck,
-			Argv:    "",
-		})
+	err = utils.EnsureDirExist(postShellPath)
+	if err != nil {
+		logger.Warning(err)
+	}
+
+	checkGroups := []struct {
+		list      []ShellCheck
+		dir       string
+		checkType dut.CheckType
+	}{
+		{m.PreCheck, preShellPath, dut.PreCheck},
+		{m.MidCheck, midShellPath, dut.MidCheck},
+		{m.PostCheck, postShellPath, dut.PostCheck},
+	}
+
+	for _, g := range checkGroups {
+		for _, c := range g.list {
+			filePath := filepath.Join(g.dir, c.Name)
+			content, err := base64.RawStdEncoding.DecodeString(c.Shell)
+			if err != nil {
+				logger.Warningf("decode shell for %s failed: %v", c.Name, err)
+				continue
+			}
+
+			if err := utils.SyncWriteFile(filePath, content, 0755); err != nil {
+				logger.Warningf("write file %s failed: %v", filePath, err)
+				continue
+			}
+
+			rules = append(rules, dut.RuleInfo{
+				Name: filePath,
+				Type: g.checkType,
+			})
+		}
 	}
 	return rules
 }

@@ -167,7 +167,7 @@ func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 	}
 }
 
-func CheckSystem(typ checkType, cmdArgs []string) *system.JobError {
+func CheckSystem(typ CheckType, cmdArgs []string) *system.JobError {
 	bin := "/usr/bin/lastore-update-tools"
 	var args []string
 	args = append(args, "check")

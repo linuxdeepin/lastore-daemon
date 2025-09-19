@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
-	"io/ioutil"
-	"os"
-
+	"github.com/jouyouyun/hardware/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/log"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
@@ -70,34 +69,44 @@ func CheckAPTAndDPKGState() (int64, error) {
 
 // dyn hook
 func CheckDynHook(cfg *cache.CacheInfo, checkType int8) (int64, error) {
-	if len(cfg.UpdateMetaInfo.Rules) > 0 {
-		for _, dynRule := range cfg.UpdateMetaInfo.Rules {
-			if dynRule.Type == checkType {
-				dirDyn, err := ioutil.TempDir("", "dyn_")
-				if err != nil {
-					log.Errorf("create dyn failed:%v", err)
-					// FIXME(dinghao) 内部错误
-					return ecode.CHK_DYNAMIC_SCRIPT_ERROR, fmt.Errorf("dyn save failed :%v", err)
-				}
-				defer os.RemoveAll(dirDyn)
-				dynPreCheck, err := dynRule.SaveCommand(dirDyn)
-				if err != nil {
-					return ecode.CHK_DYNAMIC_SCRIPT_ERROR, fmt.Errorf("dyn save failed :%v", err)
-				}
-				cmdArgv := []string{"-x"}
-				cmdArgv = append(cmdArgv, dynPreCheck)
-				if len(dynRule.Argv) > 0 {
-					cmdArgv = append(cmdArgv, strings.Split(dynRule.Argv, " ")...)
-				}
+	execHooks := func(hookDir string) error {
+		hookFiles, err := utils.ScanDir(hookDir, func(name string) bool {
+			return !strings.HasSuffix(name, "sh")
+		})
 
-				if _, err := runcmd.RunnerOutput(60, "bash", cmdArgv...); err != nil {
-					// log.Debugf("hook output:\n%v", msg)
-					return ecode.CHK_DYNAMIC_SCRIPT_ERROR, fmt.Errorf("dyn runtime error:%v", err)
-				}
-
-			}
+		if err != nil {
+			return fmt.Errorf("scan hook dir error: %v", err)
 		}
+
+		//遍历执行脚本
+		for _, hookFile := range hookFiles {
+			hookPath := filepath.Join(hookDir, hookFile)
+			log.Infof("Executing hook: %s", hookPath)
+			output, err := runcmd.RunnerOutput(60, "bash", hookPath)
+			if err != nil {
+				return fmt.Errorf("hook execution failed: %s\nOutput:\n%s", hookPath, output)
+			}
+			log.Infof("Hook executed successfully: %s\nOutput:\n%s", hookPath, output)
+		}
+		return nil
 	}
+
+	var err error
+	switch checkType {
+	case cache.PreUpdate:
+		err = execHooks(filepath.Join(CheckBaseDir, "pre_check"))
+	case cache.UpdateCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "mid_check"))
+	case cache.PostCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "post_check"))
+	default:
+		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("check type error")
+	}
+
+	if err != nil {
+		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("check hook error: %v", err)
+	}
+
 	return ecode.CHK_PROGRAM_SUCCESS, nil
 }
 

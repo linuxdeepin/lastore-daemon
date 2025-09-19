@@ -6,11 +6,12 @@ package dut
 
 import (
 	"encoding/json"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -94,15 +95,15 @@ func checkSystemDependsError(indicator system.Indicator) error {
 	return nil
 }
 
-type checkType uint
+type CheckType uint
 
 const (
-	PreCheck  checkType = 0
-	MidCheck  checkType = 1
-	PostCheck checkType = 2
+	PreCheck  CheckType = 0
+	MidCheck  CheckType = 1
+	PostCheck CheckType = 2
 )
 
-func (t checkType) String() string {
+func (t CheckType) String() string {
 	switch t {
 	case PreCheck:
 		return "precheck"
@@ -115,10 +116,8 @@ func (t checkType) String() string {
 }
 
 type RuleInfo struct {
-	Name    string
-	Type    checkType
-	Command string
-	Argv    string
+	Name string
+	Type CheckType
 }
 
 type RepoInfo struct {
