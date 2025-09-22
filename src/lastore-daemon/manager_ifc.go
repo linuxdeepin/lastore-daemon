@@ -93,9 +93,13 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 	}
 	if !allowInstallPackageExecPaths.Contains(execPath) &&
 		uid != 0 {
-		err = fmt.Errorf("%q is not allowed to install packages", execPath)
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
+		// 白名单未通过时需要管理员鉴权
+		err = polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		if err != nil {
+			err = fmt.Errorf("%q is not in allowed install package paths.And the caller not pass the authentication, don't allow to install packages %v", execPath, packages)
+			logger.Warning(err)
+			return "/", dbusutil.ToError(err)
+		}
 	}
 
 	jobObj, err := m.installPackage(sender, jobName, packages)

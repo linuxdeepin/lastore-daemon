@@ -68,6 +68,17 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "install-package-support-auth": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "InstallPackageSupportAuth",
+      "description": "",
+      "permissions": "readonly",
+      "visibility": "private"
+    },
     "mirror-source": {
       "value": "default",
       "serial": 0,
