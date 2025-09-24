@@ -356,6 +356,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 		startJob.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				// 防止还在检查更新的时候，就生成了meta文件，此时meta文件可能不准
+				var err error
 				uuid, err = m.prepareAptCheck(mode)
 				if err != nil {
 					logger.Warning(err)
@@ -365,7 +366,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 					}
 					return err
 				}
-				logger.Info(uuid)
+				logger.Info("update UUID:", uuid)
 				m.updatePlatform.CreateJobPostMsgInfo(uuid, job.updateTyp)
 				systemErr := dut.CheckSystem(dut.PreCheck, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
@@ -668,8 +669,7 @@ func (m *Manager) cancelAllUpdateJob() error {
 func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 	var uuid string
 	var err error
-	// pkgMap repo和system.LocalCachePath都是占位用，没有起到真正的作用
-	pkgMap := make(map[string]system.PackageInfo)
+	// repo和system.LocalCachePath都是占位用，没有起到真正的作用
 	var repo []dut.RepoInfo
 
 	repo = genRepoInfo(mode, system.OnlineListPath)
@@ -713,9 +713,9 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 		if mode == 0 {
 			return "", errors.New("invalid mode")
 		}
+		m.updatePlatform.PrepareCheckScripts()
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
-			system.LocalCachePath, pkgMap, coreListMap,
-			m.updatePlatform.GetRules(), repo)
+			system.LocalCachePath, coreListMap, repo)
 		if err != nil {
 			logger.Warning(err)
 			return "", err

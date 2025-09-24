@@ -1524,8 +1524,26 @@ func (m *UpdatePlatformManager) RetryPostHistory() {
 	return
 }
 
-func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {
-	var rules []dut.RuleInfo
+// PrepareCheckScripts decodes and deploys base64-encoded check scripts to the filesystem.
+// It processes three types of check scripts:
+//   - PreCheck: scripts executed before system update
+//   - MidCheck: scripts executed during system update
+//   - PostCheck: scripts executed after system update
+//
+// The function performs the following operations:
+//  1. Cleans up existing script directories
+//  2. Creates fresh directories for each check type
+//  3. Decodes base64-encoded script content from memory
+//  4. Writes executable script files to the filesystem with 0755 permissions
+//
+// Script files are organized under /var/lib/lastore/check/ in subdirectories:
+//   - pre_check/: for pre-update validation scripts
+//   - mid_check/: for mid-update validation scripts
+//   - post_check/: for post-update validation scripts
+//
+// Any decode or file write errors are logged as warnings but do not stop
+// the processing of remaining scripts.
+func (m *UpdatePlatformManager) PrepareCheckScripts() {
 
 	preShellPath := filepath.Join(check.CheckBaseDir, "pre_check")
 	midShellPath := filepath.Join(check.CheckBaseDir, "mid_check")
@@ -1574,13 +1592,8 @@ func (m *UpdatePlatformManager) GetRules() []dut.RuleInfo {
 				continue
 			}
 
-			rules = append(rules, dut.RuleInfo{
-				Name: filePath,
-				Type: g.checkType,
-			})
 		}
 	}
-	return rules
 }
 
 func (m *UpdatePlatformManager) SaveCache(c *Config) {

@@ -266,7 +266,7 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 	args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 	args = append(args, "download")
 	args = append(args, packages...)
-	logger.Debug("downlaod package with args:", args)
+	logger.Debug("download package with args:", args)
 	cmd := exec.Command("apt-get", args...)
 	tmpPath, err := os.MkdirTemp("/tmp", "apt-download-")
 	if err != nil {

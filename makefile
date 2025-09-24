@@ -82,8 +82,6 @@ install: gen_mo
 	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/check/
 	cp -rf configs/config.yaml ${DESTDIR}${PREFIX}/var/lib/lastore/check/config.yaml
 	cp -rf configs/caches.yaml ${DESTDIR}${PREFIX}/var/lib/lastore/check/caches.yaml
-	cp -rf configs/core-pkg-list.conf ${DESTDIR}${PREFIX}/var/lib/lastore/check/core-pkg-list.conf
-
 
 update_pot:
 	deepin-update-pot locale/locale_config.ini

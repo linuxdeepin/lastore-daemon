@@ -1,60 +1,44 @@
 package check
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"os/exec"
 	"strings"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
-const DefaultCorePkgListFilePath = CheckBaseDir + "core-pkg-list.conf"
+// CheckPkgDependency uses apt-get check to verify system package dependencies
+func CheckPkgDependency() (int64, error) {
+	// Use apt-get check with NoLocking option to avoid lock conflicts
+	cmd := exec.Command("apt-get", "check", "-o", "Debug::NoLocking=1")
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
 
-func LoadCorePkgList(fileName string) []string {
-	var pkgs []string
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		logger.Warningf("core pkg list config file %s not found", fileName)
-		return pkgs
-	}
-
-	content, err := ioutil.ReadFile(fileName)
+	err := cmd.Run()
 	if err != nil {
-		logger.Warningf("failed to read core pkg list config file :%v", err)
-		return pkgs
-	}
-
-	for _, line := range strings.Split(string(content), "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "#") {
-			pkgs = append(pkgs, line)
-		}
-	}
-	return pkgs
-}
-
-// DONE:(heysion) maybe modify check all and return once
-func CheckPkgDependency(sysCurrPackage map[string]*cache.AppTinyInfo, corePkgListFilePath string) (int64, error) {
-	breakDepends := false
-	var breakDependsError error
-	corePkgList := LoadCorePkgList(corePkgListFilePath)
-	for _, pkgName := range corePkgList {
-		pkginfo, err := sysCurrPackage[pkgName]
-		if !err || pkginfo == nil || !pkginfo.State.CheckOK() {
-			breakDepends = true
-			logger.Debugf("dependency error: %v", pkgName)
-			if breakDependsError != nil {
-				breakDependsError = fmt.Errorf("%v dependency error: %v:%v", breakDependsError, pkgName, pkginfo)
-			} else {
-				breakDependsError = fmt.Errorf("dependency error: %v:%v", pkgName, pkginfo)
+		// Parse the error using the existing apt error parser
+		parseErr := apt.ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+		var extCode int64 = ecode.CHK_PROGRAM_ERROR
+		if parseErr != nil {
+			if jobErr, ok := parseErr.(*system.JobError); ok {
+				if jobErr.ErrType == system.ErrorDependenciesBroken {
+					extCode = ecode.CHK_PKG_DEPEND_ERROR
+				}
 			}
 		}
+		// If parser didn't catch the error, return generic program error
+		return extCode, fmt.Errorf("apt-get check failed: %v, detail: %s", err, errBuf.String())
 	}
-	if breakDepends {
-		return ecode.CHK_PKG_DEPEND_ERROR, fmt.Errorf("found package state err: %v", breakDependsError)
-	}
+
 	return ecode.CHK_PROGRAM_SUCCESS, nil
 }
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"path"
 	"reflect"
@@ -51,7 +50,6 @@ var (
 	}
 	sysRealArch string
 )
-	
 
 var softwareFieldMap map[string]int
 
@@ -189,87 +187,6 @@ func (sw *Software) DependsList() ([][2]string, error) {
 	return result, nil
 }
 
-// DecodePackages 解析软件仓库中的软件索引文件信息
-func DecodePackages(fp string) ([]*Software, error) {
-	fs, err := os.Open(fp)
-	if err != nil {
-		return nil, err
-	}
-	defer fs.Close()
-	return DecodePackagesReader(fs)
-}
-
-func DecodePackagesWithList(fp string, t []string) ([]*Software, error) {
-	fs, err := os.Open(fp)
-	if err != nil {
-		return nil, err
-	}
-	defer fs.Close()
-	return DecodePackagesReaderWithList(fs, t)
-}
-
-func DecodePackagesWithCacheInfo(fp string, t *CacheInfo) ([]*Software, error) {
-	fs, err := os.Open(fp)
-	if err != nil {
-		return nil, err
-	}
-	defer fs.Close()
-	return DecodePackagesReaderWithCacheInfo(fs, t)
-}
-
-func DecodePackagesReaderWithCacheInfo(reader io.Reader, t *CacheInfo) ([]*Software, error) {
-	values, err := DecodeStanzaByCacheInfo(reader, func(stanza map[string]string) (interface{}, error) {
-		binary := &Software{}
-		binary.Stanza(stanza)
-		return binary, nil
-	}, t)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*Software, len(values))
-	for i := range values {
-		result[i] = values[i].(*Software)
-	}
-	return result, nil
-}
-
-// DecodePackagesReader 解析软件仓库中的软件索引文件信息
-func DecodePackagesReaderWithList(reader io.Reader, t []string) ([]*Software, error) {
-	values, err := DecodeStanzaByList(reader, func(stanza map[string]string) (interface{}, error) {
-		binary := &Software{}
-		binary.Stanza(stanza)
-		return binary, nil
-	}, t)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*Software, len(values))
-	for i := range values {
-		result[i] = values[i].(*Software)
-	}
-	return result, nil
-}
-
-// DecodePackagesReader 解析软件仓库中的软件索引文件信息
-func DecodePackagesReader(reader io.Reader) ([]*Software, error) {
-	values, err := DecodeStanza(reader, func(stanza map[string]string) (interface{}, error) {
-		binary := &Software{}
-		binary.Stanza(stanza)
-		return binary, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*Software, len(values))
-	for i := range values {
-		result[i] = values[i].(*Software)
-	}
-	return result, nil
-}
-
 // MergePackagesSoftware 合并软件集合(不同仓库源或同源下重复信息)
 func MergePackagesSoftware(instrict bool, sws ...[]*Software) ([]*Software, error) {
 	r, _, e := mergePackagesSoftware(instrict, sws...)
@@ -362,46 +279,6 @@ func makeStanzaAppInfo(stanza Stanza) (bool, AppInfo) {
 }
 func DecodeStanzaByCacheInfo(reader io.Reader, transform func(map[string]string) (interface{}, error), t *CacheInfo) ([]interface{}, error) {
 	result := make([]interface{}, 0)
-	sreader := NewControlFileReader(reader, false, false)
-
-	for {
-		stanza, err := sreader.ReadStanza()
-		if err != nil {
-			return nil, err
-		}
-		if stanza == nil {
-			break
-		}
-		if transform != nil {
-			item, err := transform(stanza)
-			if err != nil {
-				return nil, err
-			}
-			if ok, stanzaInfo := makeStanzaAppInfo(stanza); ok {
-				for idx, pkg := range t.UpdateMetaInfo.PkgList {
-					if pkg.HashSha256 != "" {
-						continue
-					}
-					if pkg.Name == stanzaInfo.Name && pkg.Version == stanzaInfo.Version {
-						compareArch := sysRealArch
-						if pkg.Arch != "" {
-							compareArch = pkg.Arch
-						}
-						if compareArch == stanzaInfo.Arch || (compareArch == sysRealArch && stanzaInfo.Arch == "all") {
-							t.UpdateMetaInfo.PkgList[idx] = stanzaInfo
-							t.UpdateMetaInfo.PkgList[idx].FilePath = t.UpdateMetaInfo.PkgDebPath + "/" + stanzaInfo.Filename
-							result = append(result, item)
-						}
-					} else {
-						continue
-					}
-				}
-			} else {
-				break
-			}
-
-		}
-	}
 	return result, nil
 }
 
