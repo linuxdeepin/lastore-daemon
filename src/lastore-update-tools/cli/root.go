@@ -19,7 +19,6 @@ var (
 	RootCoreConfig       config.CoreConfig
 	ThisCacheInfo        *cache.CacheInfo
 	UpdateMetaConfigPath string = check.CheckBaseDir + "default.json"
-	CoreProtectPath      string
 	CheckRetMsg          ecode.RetMsg
 )
 
@@ -64,7 +63,6 @@ func initCheckEnv() error {
 	}
 
 	logger.Debugf("load update metadata")
-
 	if UpdateMetaConfigPath != "" {
 		var loaderUpdateMeta cache.UpdateInfo
 		if err := loaderUpdateMeta.LoaderJson(UpdateMetaConfigPath); err != nil {
@@ -82,6 +80,7 @@ func initCheckEnv() error {
 		newCacheInfo.WorkStation = RootCoreConfig.Base + "/" + loaderUpdateMeta.UUID
 		ThisCacheInfo = &newCacheInfo
 	}
+
 	if SysPkgInfo == nil {
 		SysPkgInfo = make(map[string]*cache.AppTinyInfo)
 	}

@@ -7,7 +7,6 @@ package dut
 import (
 	"encoding/json"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
@@ -111,11 +110,6 @@ func (t CheckType) String() string {
 	return ""
 }
 
-type RuleInfo struct {
-	Name string
-	Type CheckType
-}
-
 type RepoInfo struct {
 	Name       string
 	FilePath   string
@@ -124,9 +118,7 @@ type RepoInfo struct {
 
 type metaInfo struct {
 	PkgDebPath string
-	PkgList    []system.PackageInfo
 	CoreList   []system.PackageInfo
-	Rules      []RuleInfo
 	ReposInfo  []RepoInfo `json:"RepoInfo"`
 	UUID       string
 	Time       string
@@ -140,31 +132,15 @@ const (
 )
 
 // GenDutMetaFile metaPath为DutOnlineMetaConfPath或DutOfflineMetaConfPath
-func GenDutMetaFile(metaPath, debPath string, pkgMap,
-	coreMap map[string]system.PackageInfo, rules []RuleInfo,
-	repoInfo []RepoInfo) (string, error) {
+func GenDutMetaFile(metaPath, debPath string,
+	coreMap map[string]system.PackageInfo, repoInfo []RepoInfo) (string, error) {
 	meta := metaInfo{
 		PkgDebPath: debPath,
 		UUID:       utils.GenUuid(),
 		Time:       time.Now().String(),
-		Rules:      rules,
 		ReposInfo:  repoInfo,
+		CoreList:   genPkgList(coreMap),
 	}
-	var pkgList []system.PackageInfo
-	var coreList []system.PackageInfo
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		pkgList = genPkgList(pkgMap)
-		wg.Done()
-	}()
-	go func() {
-		coreList = genPkgList(coreMap)
-		wg.Done()
-	}()
-	wg.Wait()
-	meta.PkgList = pkgList
-	meta.CoreList = coreList
 	content, err := json.Marshal(meta)
 	if err != nil {
 		return "", err

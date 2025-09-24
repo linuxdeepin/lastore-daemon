@@ -13,14 +13,11 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 )
 
-var logger = log.NewLogger("lastore/update-tools")
-
 var (
-	CheckWithEmulation bool
-	PostCheckStage1    bool
+	logger          = log.NewLogger("lastore/update-tools")
+	PostCheckStage1 bool
+	SysPkgInfo      map[string]*cache.AppTinyInfo
 )
-
-var SysPkgInfo map[string]*cache.AppTinyInfo
 
 func beforeCheck() error {
 	err := initCheckEnv()
@@ -107,7 +104,6 @@ func preCheck() {
 		return
 	}
 
-	check.AdjustPkgArchWithName(ThisCacheInfo)
 	// check repo and load repo metadata
 	for _, repoInfo := range ThisCacheInfo.UpdateMetaInfo.RepoBackend {
 		if err := repoInfo.LoaderPackageInfo(ThisCacheInfo); err != nil {
@@ -116,38 +112,6 @@ func preCheck() {
 			return
 		}
 	}
-	InstalledSizeSum := 0
-	DebSizeSum := 0
-	for idx, pkgInfo := range ThisCacheInfo.UpdateMetaInfo.PkgList {
-		if pkgInfo.InstalledSize <= 0 {
-			if pkgInfo.DebSize >= 0 {
-				ThisCacheInfo.UpdateMetaInfo.PkgList[idx].InstalledSize = pkgInfo.DebSize / 1024
-			} else {
-				ThisCacheInfo.UpdateMetaInfo.PkgList[idx].InstalledSize = 0
-				ThisCacheInfo.UpdateMetaInfo.PkgList[idx].DebSize = 0
-			}
-			pkgInfo.DebSize = ThisCacheInfo.UpdateMetaInfo.PkgList[idx].DebSize
-			pkgInfo.InstalledSize = ThisCacheInfo.UpdateMetaInfo.PkgList[idx].InstalledSize
-		}
-		if err := pkgInfo.Verify(); err != nil {
-			ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage1_Failed
-			logger.Debugf("precheck/pkginfo check pkginfo info failed ,pkglist: %v,%v", pkgInfo, err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, ecode.CHK_METAINFO_FILE_ERROR, fmt.Sprintf("precheck/pkginfo check pkginfo info failed ,pkglist: %v,%v", pkgInfo, err))
-			return
-		}
-		if sPkgInfo, ok := SysPkgInfo[pkgInfo.Name]; ok {
-			if sPkgInfo.State == cache.HoldInstalled {
-				ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage1_Failed
-				logger.Warningf("precheck/pkginfo %s with hold system", pkgInfo.Name)
-				CheckRetMsg.SetErrorExtMsg(ecode.CHK_INVALID_INPUT, ecode.CHK_METAINFO_FILE_ERROR, fmt.Sprintf("precheck/pkginfo %s with hold system", pkgInfo.Name))
-				return
-			}
-		}
-		InstalledSizeSum += pkgInfo.InstalledSize
-		DebSizeSum += pkgInfo.DebSize
-	}
-
-	// logger.Debugf("sum size:%d,deb:%d", InstalledSizeSum, DebSizeSum)
 
 	CheckRetMsg.PushExtMsg("precheck/block start")
 	//检查apt和dpkg安装状态，阻塞
@@ -160,27 +124,6 @@ func preCheck() {
 	}
 
 	ThisCacheInfo.InternalState.IsDpkgAptPreCheck = cache.P_OK
-
-	//检查核心包列表中软件包是否存在依赖错误，阻塞
-	CheckRetMsg.PushExtMsg("precheck/block check package depends")
-	if extCode, err := check.CheckPkgDependency(SysPkgInfo, check.DefaultCorePkgListFilePath); err != nil {
-		ThisCacheInfo.InternalState.IsDependsPreCheck = cache.P_Error
-		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage2_Failed
-		logger.Errorf("precheck/block check package depends failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, extCode, fmt.Sprintf("precheck/block check package depends failed:%v", err))
-		return
-	}
-
-	ThisCacheInfo.InternalState.IsDependsPreCheck = cache.P_OK
-
-	//检查系统盘剩余可用空间能否满足本次更新，阻塞
-	// TODO:(DingHao)参数换成真实安装包空间大小
-	if extCode, err := check.CheckRootDiskFreeSpace(uint64(InstalledSizeSum)); err != nil {
-		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage2_Failed
-		logger.Errorf("precheck/block check root disk free space failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, extCode, fmt.Sprintf("precheck/block check root disk free space failed:%v", err))
-		return
-	}
 
 	CheckRetMsg.PushExtMsg("precheck/nonblock start")
 	if extCode, err := check.LoadSysPkgInfo(SysPkgInfo); err != nil {
@@ -222,26 +165,8 @@ func midCheck() {
 
 	ThisCacheInfo.InternalState.IsDpkgAptMidCheck = cache.P_OK
 
-	//获取当前系统信息，阻塞
-	if extCode, err := check.LoadSysPkgInfo(SysPkgInfo); err != nil { //TODO:(DingHao)获取系统信息无返回状态码
-		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-		logger.Errorf("midcheck/block load system info failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, extCode, fmt.Sprintf("midcheck/block load system info failed:%v", err))
-		return
-	}
-
-	//检查系统核心包安装状态，阻塞
-	for _, pkgInfo := range ThisCacheInfo.UpdateMetaInfo.SysCoreList {
-		if extCode, err := check.CheckDebListInstallState(SysPkgInfo, &pkgInfo, "midcheck", "corelist"); err != nil {
-			ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-			logger.Errorf("midcheck/block corelist check failed:%v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, extCode, fmt.Sprintf("midcheck/block corelist check failed:%v", err))
-			return
-		}
-	}
-
 	//检查是否存在依赖错误，阻塞
-	if extCode, err := check.CheckPkgDependency(SysPkgInfo, check.DefaultCorePkgListFilePath); err != nil {
+	if extCode, err := check.CheckPkgDependency(); err != nil {
 		ThisCacheInfo.InternalState.IsDependsMidCheck = cache.P_Error
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
 		logger.Errorf("midcheck/block check package depends failed:%v", err)
@@ -259,43 +184,15 @@ func midCheck() {
 		return
 	}
 
-	//检查系统核心文件是否存在，阻塞
-	if len(CoreProtectPath) != 0 {
-		if extCode, err := check.CheckCoreFileExist(CoreProtectPath); err != nil { //DONE:(DingHao)待指定系统核心文件参数
-			ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-			logger.Errorf("midcheck/block check core file exist failed:%v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, extCode, fmt.Sprintf("midcheck/block: check core file exist failed:%v", err))
-			return
-		}
-	}
-
-	//检查pkglist中包的安装状态，阻塞
-	for _, pkgInfo := range ThisCacheInfo.UpdateMetaInfo.PkgList {
-		if extCode, err := check.CheckDebListInstallState(SysPkgInfo, &pkgInfo, "midcheck", "pkglist"); err != nil {
-			ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-			logger.Errorf("midcheck/block check pkglist install state failed:%v", err)
-			CheckRetMsg.SetErrorExtMsg(ecode.CHK_BLOCK_ERROR, extCode, fmt.Sprintf("midcheck/block check package depends failed:%v", err))
-			return
-		}
-	}
-
-	// 非阻塞项检查
-	// 检查系统盘剩余可用空间是不小于50M
+	// 检查系统盘剩余可用空间是不小于50M, 非阻塞
 	if extCode, err := check.CheckRootDiskFreeSpace(50 * 1024); err != nil {
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage1_Failed
 		logger.Warningf("midcheck/nonblock check root disk free space failed:%v", err)
 		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("midcheck/nonblock check root disk free space failed:%v", err))
 	}
 
-	//获取系统当前信息
-	if extCode, err := check.LoadSysPkgInfo(SysPkgInfo); err != nil {
-		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage1_Failed
-		logger.Warningf("midcheck/nonblock load system info failed:%v", err)
-		CheckRetMsg.SetErrorExtMsg(ecode.CHK_NONBLOCK_ERROR, extCode, fmt.Sprintf("midcheck/nonblock load system info failed:%v", err))
-	}
-
 	// 动态hook脚本检查，阻塞
-	if extCode, err := check.CheckDynHook(ThisCacheInfo, cache.UpdateCheck); err != nil {
+	if extCode, err := check.CheckDynHook(ThisCacheInfo, cache.MidCheck); err != nil {
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage2_Failed
 		logger.Errorf("midcheck/dynook failed:%v", err)
 		CheckRetMsg.SetErrorExtMsg(ecode.CHK_DYN_ERROR, extCode, fmt.Sprintf("midcheck/dynook failed:%v", err))

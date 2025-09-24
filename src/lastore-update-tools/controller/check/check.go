@@ -97,7 +97,7 @@ func CheckDynHook(cfg *cache.CacheInfo, checkType int8) (int64, error) {
 	switch checkType {
 	case cache.PreUpdate:
 		err = execHooks(filepath.Join(CheckBaseDir, "pre_check"))
-	case cache.UpdateCheck:
+	case cache.MidCheck:
 		err = execHooks(filepath.Join(CheckBaseDir, "mid_check"))
 	case cache.PostCheck:
 		err = execHooks(filepath.Join(CheckBaseDir, "post_check"))
@@ -138,15 +138,4 @@ func CheckDataDiskFreeSpace(needSpace uint64) (int64, error) {
 	}
 	logger.Infof("data free space is greater than or equal %dM", needSpace/1024)
 	return ecode.CHK_PROGRAM_SUCCESS, nil
-}
-
-func AdjustPkgArchWithName(cache *cache.CacheInfo) {
-	// reset arch with package name
-	for idx, pkginfo := range cache.UpdateMetaInfo.PkgList {
-		archIdex := strings.Index(pkginfo.Name, ":")
-		if archIdex > 0 {
-			cache.UpdateMetaInfo.PkgList[idx].Name = pkginfo.Name[:archIdex]
-			cache.UpdateMetaInfo.PkgList[idx].Arch = strings.TrimSpace(pkginfo.Name[archIdex+1:])
-		}
-	}
 }

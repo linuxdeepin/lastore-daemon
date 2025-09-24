@@ -125,6 +125,11 @@ func WaitDpkgLockRelease() {
 	}
 }
 
+// ParsePkgSystemError is a wrapper for parsePkgSystemError
+func ParsePkgSystemError(out, err []byte) error {
+	return parsePkgSystemError(out, err)
+}
+
 func parsePkgSystemError(out, err []byte) error {
 	if len(err) == 0 {
 		return nil

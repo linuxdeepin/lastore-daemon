@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-	"time"
-
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
 func TestDiff(t *testing.T) {
@@ -63,18 +60,4 @@ func TestDependsList(t *testing.T) {
 		{"cockpit-ws", "295-1"},
 		{"cockpit-system", "295-1"},
 	})
-}
-
-func TestDecode(t *testing.T) {
-	start := time.Now()
-	plist := []string{"2vcard", "a2ps"}
-	if err := fs.CheckFileExistState("/tmp/deb/Packages"); err != nil {
-		t.SkipNow()
-	}
-	pkgList, err := DecodePackagesWithList("/tmp/deb/Packages", plist)
-	for _, pkg := range pkgList {
-		t.Logf("%+v", pkg)
-	}
-	t.Log(err)
-	t.Log(time.Now().Sub(start))
 }

@@ -73,13 +73,5 @@ func (ts *RepoInfo) LoaderPackageInfo(current *CacheInfo) error {
 		return fmt.Errorf("file %s not found", ts.FilePath)
 	}
 
-	pickData, err := DecodePackagesWithCacheInfo(ts.FilePath, current)
-	if err != nil {
-		return fmt.Errorf("%v", err)
-	}
-	for _, p := range pickData {
-		logger.Debugf("pakcage:%s", p.Package)
-	}
-
 	return nil
 }
