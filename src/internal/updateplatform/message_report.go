@@ -1516,8 +1516,6 @@ func (m *UpdatePlatformManager) PostSystemUpgradeMessage(uuid string) {
 }
 
 func (m *UpdatePlatformManager) RetryPostHistory() {
-	m.jobPostMsgMapMu.Lock()
-	defer m.jobPostMsgMapMu.Unlock()
 	for _, v := range m.jobPostMsgMap {
 		if v.PostStatus == WaitPost || v.PostStatus == PostFailure {
 			m.PostSystemUpgradeMessage(v.Uuid)
