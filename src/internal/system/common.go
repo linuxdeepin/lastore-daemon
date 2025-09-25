@@ -128,6 +128,22 @@ const (
 	ErrorScript        JobErrorType = "scriptError"
 	ErrorProgressCheck JobErrorType = "progressCheckError"
 
+	ErrorCheckMetaInfoFile       JobErrorType = "ErrorCheckMetaInfoFile"
+	ErrorPreCheckScriptsFailed   JobErrorType = "ErrorPreCheckScriptsFailed"
+	ErrorMidCheckScriptsFailed   JobErrorType = "ErrorMidCheckScriptsFailed"
+	ErrorPostCheckScriptsFailed  JobErrorType = "ErrorPostCheckScriptsFailed"
+	ErrorSysPkgInfoLoad          JobErrorType = "ErrorSysPkgInfoLoad"
+	ErrorCheckToolsDependFailed  JobErrorType = "ErrorCheckToolsDependFailed"
+	ErrorMetaInfoFile            JobErrorType = "ErrorMetaInfoFile"
+	ErrorDpkgVersion             JobErrorType = "ErrorDpkgVersion"
+	ErrorDpkgNotFound            JobErrorType = "ErrorDpkgNotFound"
+	ErrorCheckProgramFailed     JobErrorType = "ErrorCheckProgramFailed"
+	ErrorCheckSysDiskOutSpace    JobErrorType = "ErrorCheckSysDiskOutSpace"
+	ErrorCheckProcessNotRunning JobErrorType = "ErrorCheckProcessNotRunning"
+	ErrorCheckPkgNotFound        JobErrorType = "ErrorCheckPkgNotFound"
+	ErrorCheckPkgState           JobErrorType = "ErrorCheckPkgState"
+	ErrorCheckPkgVersion         JobErrorType = "ErrorCheckPkgVersion"
+
 	// running状态
 	ErrorNeedCheck JobErrorType = "needCheck"
 )

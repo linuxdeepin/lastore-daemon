@@ -11,7 +11,8 @@ import (
 )
 
 func TestCheckDynHook(t *testing.T) {
-	CheckDynHook(nil, cache.PreUpdate)
+	err := CheckDynHook(nil, cache.PreUpdate)
+	logger.Infof("err: %v", err)
 	CheckDynHook(nil, cache.MidCheck)
 	CheckDynHook(nil, cache.PostCheck)
 }

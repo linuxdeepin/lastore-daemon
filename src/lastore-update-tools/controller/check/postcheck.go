@@ -3,8 +3,8 @@ package check
 import (
 	"fmt"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 )
 
 const (
@@ -25,19 +25,31 @@ var programCheckMap = map[string][]string{
 	},
 }
 
-func CheckImportantProgress(stage string) (int64, error) {
+func CheckImportantProcess(stage string) error {
 	if programCheckList, ok := programCheckMap[stage]; ok {
 		for _, program := range programCheckList {
 			programPid, err := runcmd.RunnerOutput(10, "pidof", program)
 			if err != nil {
-				return ecode.CHK_PROGRAM_ERROR, err
+				return &system.JobError{
+					ErrType:      system.ErrorCheckProgramFailed,
+					ErrDetail:    fmt.Sprintf("check important progress error: %v", err),
+					IsCheckError: true,
+				}
 			}
 			if len(programPid) == 0 {
-				return ecode.CHK_IMPORTANT_PROGRESS_NOT_RUNNING, fmt.Errorf("%s not running", program)
+				return &system.JobError{
+					ErrType:      system.ErrorCheckProcessNotRunning,
+					ErrDetail:    fmt.Sprintf("%s not running", program),
+					IsCheckError: true,
+				}
 			}
 		}
 	} else {
-		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("%s is error postcheck stage parameter", stage)
+		return &system.JobError{
+			ErrType:      system.ErrorCheckProgramFailed,
+			ErrDetail:    fmt.Sprintf("%s is error postcheck stage parameter", stage),
+			IsCheckError: true,
+		}
 	}
-	return ecode.CHK_PROGRAM_SUCCESS, nil
+	return nil
 }

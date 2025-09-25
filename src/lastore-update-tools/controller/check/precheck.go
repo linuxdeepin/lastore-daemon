@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 )
 
 func CheckVerifyCacheInfo(cfg *cache.CacheInfo) error {
@@ -17,14 +17,22 @@ func CheckVerifyCacheInfo(cfg *cache.CacheInfo) error {
 	return nil
 }
 
-func CheckDPKGVersionSupport(sysCurrPackage map[string]*cache.AppTinyInfo) (int64, error) {
+func CheckDPKGVersionSupport(sysCurrPackage map[string]*cache.AppTinyInfo) error {
 	if dpkgInfo, ok := sysCurrPackage["dpkg"]; ok {
 		if !strings.Contains(dpkgInfo.Version, "deepin") && !strings.Contains(dpkgInfo.Version, "dde") {
 			logger.Debugf("dpkg not support version:%s", dpkgInfo.Version)
-			return ecode.CHK_DPKG_VERSION_NOT_SUPPORTED, fmt.Errorf("dpkg not support version:%s", dpkgInfo.Version)
+			return &system.JobError{
+				ErrType:      system.ErrorDpkgVersion,
+				ErrDetail:    fmt.Sprintf("dpkg not support version:%s", dpkgInfo.Version),
+				IsCheckError: true,
+			}
 		}
-		return ecode.CHK_PROGRAM_SUCCESS, nil
+		return nil
 	} else {
-		return ecode.CHK_TOOLS_DEPEND_ERROR, fmt.Errorf("dpkg not found in system")
+		return &system.JobError{
+			ErrType:      system.ErrorDpkgNotFound,
+			ErrDetail:    fmt.Sprintf("dpkg not found in system"),
+			IsCheckError: true,
+		}
 	}
 }
