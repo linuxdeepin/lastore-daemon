@@ -1,3 +1,17 @@
+lastore-daemon (6.2.31) unstable; urgency=medium
+
+  * fix: Record detailed errors in the check script (#222)
+  * feat: Modify the format of the data sent to the update platform (#221)
+  * i18n: Updates for project Deepin Desktop Environment (#213)
+  * refactor: simplify update check process
+  * fix: Solve deadlock problem caused by retry posting logs (#219)
+  * refactor: Remove unnecessary features from lastore-update-tools
+  * feat: Adding authentication to the lastore-daemon installation interface (#217)
+  * refactor: Remove the binary `lastore-update-tools` and merge the relevant code into the `lastore-daemon` binary
+  * feat: Added the ability to execute check scripts (#216)
+
+ -- electricface <songwentai@uniontech.com>  Fri, 26 Sep 2025 17:18:51 +0800
+
 lastore-daemon (6.2.30) unstable; urgency=medium
 
   * fix: remove configuration dependency of deepin-system-update
