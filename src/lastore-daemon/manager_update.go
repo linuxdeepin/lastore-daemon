@@ -150,7 +150,10 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
-					m.updatePlatform.PostStatusMessage("update source success")
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:   "info",
+						Detail: "update source success",
+					})
 				}()
 				m.updatePlatform.SaveCache(m.config)
 				job.setPropProgress(1.0)
@@ -177,7 +180,12 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					m.reportLog(updateStatusReport, false, job.Description)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("apt-get update failed, detail is %v , option is %+v", job.Description, job.option))
+
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:           "error",
+						JobDescription: job.Description,
+						Detail:         fmt.Sprintf("apt-get update failed, detail is %v , option is %+v", job.Description, job.option),
+					})
 				}()
 				return nil
 			},
@@ -472,7 +480,10 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.PostStatusMessage(fmt.Sprintf("generate package list error, detail is %v:", e))
+				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+					Type:   "error",
+					Detail: fmt.Sprintf("generate package list error, detail is %v:", e),
+				})
 			}()
 			logger.Warning(e)
 		}
@@ -488,7 +499,12 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 					go func() {
 						m.inhibitAutoQuitCountAdd()
 						defer m.inhibitAutoQuitCountSub()
-						m.updatePlatform.PostStatusMessage(fmt.Sprintf("generate package list error, detail is %v:", e))
+
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:   "error",
+							Detail: fmt.Sprintf("generate package list error, detail is %v:", e),
+						})
+
 					}()
 					logger.Warning(e)
 				}
