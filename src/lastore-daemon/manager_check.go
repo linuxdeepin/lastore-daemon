@@ -114,7 +114,14 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
-				m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description))
+
+				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+					Type:           "error",
+					UpdateType:     checkOrder.JobType(),
+					JobDescription: job.Description,
+					Detail:         fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description),
+				})
+
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)

@@ -187,7 +187,13 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					m.reportLog(downloadStatusReport, false, j.Description)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package failed, detail is %v", mode.JobType(), job.Description)) // 上报下载失败状态
+					// 上报下载失败状态
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:           "error",
+						UpdateType:     mode.JobType(),
+						JobDescription: job.Description,
+						Detail:         fmt.Sprintf("download %v package failed, detail is %v", mode.JobType(), job.Description),
+					})
 				}()
 				return nil
 			},
@@ -220,7 +226,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						m.inhibitAutoQuitCountSub()
 					}
 				}
-				m.updatePlatform.PostStatusMessage(fmt.Sprintf("download %v package success", j.updateTyp.JobType())) // 上报下载成功状态
+
+				// 上报下载成功状态
+				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+					Type:           "info",
+					UpdateType:     j.updateTyp.JobType(),
+					JobDescription: j.Description,
+					Detail:         fmt.Sprintf("download %v package success", j.updateTyp.JobType()),
+				})
 				return nil
 			},
 			string(system.EndStatus): func() error {

@@ -162,7 +162,12 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	if c.UpgradeStatus.Status == system.UpgradeRunning {
 		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
 			// 启动后600s如果没有触发检查，那么上报更新失败
-			m.updatePlatform.PostStatusMessage(fmt.Sprintf("the check has not been triggered after reboot for 600 seconds"))
+
+			m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+				Type:   "error",
+				Detail: "the check has not been triggered after reboot for 600 seconds",
+			})
+
 			err = m.delRebootCheckOption(all)
 			if err != nil {
 				logger.Warning(err)
@@ -895,6 +900,7 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 			cmdArgs := []string{
 				"-u", username, "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/" + strconv.Itoa(int(uid)) + "/bus",
 			}
+			// 安全地添加参数，避免命令注入
 			cmdArgs = append(cmdArgs, args...)
 			cmd := exec.Command("sudo", cmdArgs...)
 			logger.Info(cmd.String())
@@ -909,7 +915,9 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 			} else {
 				str := outBuffer.String()
 				if len(str) >= 12 {
-					num, err := strconv.ParseUint(str[8:len(str)-3], 10, 0)
+					// 确保解析的字符串是有效的数字
+					numStr := str[8 : len(str)-3]
+					num, err := strconv.ParseUint(numStr, 10, 32)
 					if err != nil {
 						logger.Warning(err)
 					} else {
@@ -949,6 +957,7 @@ func (m *Manager) closeNotify(id uint32) error {
 			cmdArgs := []string{
 				"-u", username, "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/" + strconv.Itoa(int(uid)) + "/bus",
 			}
+			// 安全地添加参数，避免命令注入
 			cmdArgs = append(cmdArgs, args...)
 			cmd := exec.Command("sudo", cmdArgs...)
 			logger.Info(cmd.String())

@@ -45,6 +45,14 @@ type ShellCheck struct {
 	Shell string `json:"shell"` //检查脚本的内容
 }
 
+// 发送给更新平台的状态信息
+type StatusMessage struct {
+	Type           string `json:"type"`           //消息类型，info,warning,error
+	UpdateType     string `json:"updateType"`     //system.UpdateType类型
+	JobDescription string `json:"jobDescription"` //job.Description
+	Detail         string `json:"detail"`         //消息详情
+}
+
 type UpdatePlatformManager struct {
 	config                            *Config
 	allowPostSystemUpgradeMessageType system.UpdateType
@@ -1316,12 +1324,19 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 }
 
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
-func (m *UpdatePlatformManager) PostStatusMessage(body string) {
-	logger.Debug("post status msg:", body)
+func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage) {
+	logger.Debugf("post status msg, type:%v, detail:%v", message.Type, message.Detail)
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		return
 	}
-	buf := bytes.NewBufferString(body)
+
+	msg, err := json.Marshal(message)
+	if err != nil {
+		logger.Warningf("marshal status message failed:%v", err)
+		return
+	}
+
+	buf := bytes.NewBufferString(string(msg))
 	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
 	response, err := m.genPostProcessResponse(buf, filePath)
 	if err != nil {

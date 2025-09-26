@@ -360,7 +360,13 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				uuid, err = m.prepareAptCheck(mode)
 				if err != nil {
 					logger.Warning(err)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error()))
+
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:       "error",
+						UpdateType: mode.JobType(),
+						Detail:     fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error()),
+					})
+
 					if unref != nil {
 						unref()
 					}
@@ -371,7 +377,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				systemErr := dut.CheckSystem(dut.PreCheck, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
 					logger.Info(systemErr)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
+
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:       "error",
+						UpdateType: mode.JobType(),
+						Detail:     fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()),
+					})
 					return systemErr
 				}
 				if !system.CheckInstallAddSize(mode) {
@@ -395,7 +406,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				systemErr := dut.CheckSystem(dut.MidCheck, nil)
 				if systemErr != nil {
 					logger.Info(systemErr)
-					m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()))
+
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:       "error",
+						UpdateType: mode.JobType(),
+						Detail:     fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()),
+					})
 					return systemErr
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
@@ -592,7 +608,12 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 				allErrMsg = append(allErrMsg, string(msg))
 			}
 		}
-		m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v upgrade failed, detail is: %v; all error message is %v", mode.JobType(), job.Description, strings.Join(allErrMsg, "\n")))
+
+		m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+			Type:       "error",
+			UpdateType: mode.JobType(),
+			Detail:     fmt.Sprintf("%v upgrade failed, detail is: %v; all error message is %v", mode.JobType(), job.Description, strings.Join(allErrMsg, "\n")),
+		})
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
 	// 如果安装失败，那么需要将version文件一直缓存，防止下次检查更新时version版本变高
@@ -612,7 +633,11 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	}
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
-	m.updatePlatform.PostStatusMessage(fmt.Sprintf("%v install package success，need reboot and check", mode))
+
+	m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+		Type:   "info",
+		Detail: fmt.Sprintf("%v install package success, need reboot and check", mode.JobType()),
+	})
 	return nil
 }
 
