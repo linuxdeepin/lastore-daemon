@@ -86,7 +86,7 @@ func CheckDynHook(cfg *cache.CacheInfo, checkType int8) (int64, error) {
 			logger.Infof("Executing hook: %s", hookPath)
 			output, err := runcmd.RunnerOutput(60, "bash", hookPath)
 			if err != nil {
-				return fmt.Errorf("hook execution failed: %s\nOutput:\n%s", hookPath, output)
+				return fmt.Errorf("hook execution failed: %s\nOutput:\n%s\nError:%s", hookPath, output, err.Error())
 			}
 			logger.Infof("Hook executed successfully: %s\nOutput:\n%s", hookPath, output)
 		}
