@@ -1,0 +1,3 @@
+#!/bin/sh
+# Compatible with upgrade from lastore-daemon 6.2.30
+echo '{"Code":0}'
