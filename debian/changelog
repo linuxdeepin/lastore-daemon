@@ -1,3 +1,9 @@
+lastore-daemon (6.2.32) unstable; urgency=medium
+
+ * fix: Upgrade failed due to missing lastore-update-tools executable
+
+ -- electricface <songwentai@uniontech.com>  Sun, 28 Sep 2025 16:46:43 +0800
+
 lastore-daemon (6.2.31) unstable; urgency=medium
 
   * fix: Record detailed errors in the check script (#222)
