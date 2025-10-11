@@ -9,6 +9,7 @@ import (
 
 	"github.com/jouyouyun/hardware/utils"
 	"github.com/linuxdeepin/go-lib/log"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
@@ -72,6 +73,12 @@ func CheckAPTAndDPKGState() (int64, error) {
 // dyn hook
 func CheckDynHook(cfg *cache.CacheInfo, checkType int8) (int64, error) {
 	execHooks := func(hookDir string) error {
+		// 检查hook目录是否存在
+		if !utils2.IsFileExist(hookDir) {
+			logger.Warningf("hook dir %s not exist", hookDir)
+			return nil
+		}
+
 		hookFiles, err := utils.ScanDir(hookDir, func(name string) bool {
 			return !strings.HasSuffix(name, "sh")
 		})
