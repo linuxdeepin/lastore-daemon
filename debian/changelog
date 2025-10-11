@@ -1,3 +1,12 @@
+lastore-daemon (6.2.33) unstable; urgency=medium
+
+  * fix: No value assigned to IncrementalUpdate in APTSystem
+  * reactor: Optimize error codes (#227)
+  * feat: Adapt to incremental update functionality.
+  * fix: The upgrade failed because the post_check directory did not exist (#226)
+
+ -- guonafu <guonafu@uniontech.com>  Sat, 11 Oct 2025 17:13:16 +0800
+
 lastore-daemon (6.2.32) unstable; urgency=medium
 
  * fix: Upgrade failed due to missing lastore-update-tools executable
