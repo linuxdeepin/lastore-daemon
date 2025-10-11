@@ -59,6 +59,7 @@ type Config struct {
 	CleanInterval         time.Duration
 	UpdateMode            system.UpdateType
 	CheckUpdateMode       system.UpdateType
+	IncrementalUpdate     bool
 
 	// 缓存大小超出限制时的清理时间间隔
 	CleanIntervalCacheOverLimit    time.Duration
@@ -195,6 +196,7 @@ const (
 	dSettingsKeySystemRepoType                       = "system-repo-type"
 	dSettingsKeySecurityRepoType                     = "security-repo-type"
 	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
+	dSettingsKeyIncrementalUpdate                    = "incremental-update"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -260,6 +262,13 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.AutoClean = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncrementalUpdate)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.IncrementalUpdate = v.Value().(bool)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyMirrorSource)
@@ -721,6 +730,11 @@ func (c *Config) SetAutoDownloadUpdates(enable bool) error {
 func (c *Config) SetAutoClean(enable bool) error {
 	c.AutoClean = enable
 	return c.save(dSettingsKeyAutoClean, enable)
+}
+
+func (c *Config) SetIncrementalUpdate(enable bool) error {
+	c.IncrementalUpdate = enable
+	return c.save(dSettingsKeyIncrementalUpdate, enable)
 }
 
 func (c *Config) SetMirrorSource(id string) error {

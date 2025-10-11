@@ -48,7 +48,9 @@ const (
 	OtherUpgradeJobType           = "other_system_update"
 	AppendUpgradeJobTye           = "append_upgrade"
 
-	BackupJobType = "backup"
+	BackupJobType              = "backup"
+	IncrementalDownloadJobType = "incremental_download"
+	IncrementalUpdateJobType   = "incremental_update"
 )
 
 const (

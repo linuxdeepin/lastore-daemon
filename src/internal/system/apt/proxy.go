@@ -22,17 +22,18 @@ import (
 )
 
 type APTSystem struct {
-	CmdSet    map[string]*system.Command
-	Indicator system.Indicator
+	CmdSet            map[string]*system.Command
+	Indicator         system.Indicator
+	IncrementalUpdate bool
 }
 
-func NewSystem(nonUnknownList []string, otherList []string) system.System {
+func NewSystem(nonUnknownList []string, otherList []string, incrementalUpdate bool) system.System {
 	logger.Info("using apt for update...")
-	apt := New(nonUnknownList, otherList)
+	apt := New(nonUnknownList, otherList, incrementalUpdate)
 	return &apt
 }
 
-func New(nonUnknownList []string, otherList []string) APTSystem {
+func New(nonUnknownList []string, otherList []string, incrementalUpdate bool) APTSystem {
 	p := APTSystem{
 		CmdSet: make(map[string]*system.Command),
 	}
@@ -272,6 +273,11 @@ func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[
 		}
 	*/
 
+	if p.IncrementalUpdate {
+		c := newAPTCommand(p, jobId, system.IncrementalDownloadJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+		c.SetEnv(environ)
+		return c.Start()
+	}
 	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, append(packages, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	return c.Start()
@@ -313,6 +319,14 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 			return err
 		}
 	}
+
+	if p.IncrementalUpdate {
+		logger.Info("incremental update")
+		c := newAPTCommand(p, jobId, system.IncrementalUpdateJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+		c.SetEnv(environ)
+		return c.Start()
+	}
+
 	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, append(OptionToArgs(args), packages...))
 	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
