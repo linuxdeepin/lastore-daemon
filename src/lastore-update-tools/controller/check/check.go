@@ -9,8 +9,8 @@ import (
 
 	"github.com/jouyouyun/hardware/utils"
 	"github.com/linuxdeepin/go-lib/log"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	utils2 "github.com/linuxdeepin/go-lib/utils
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/sysinfo"

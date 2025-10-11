@@ -35,7 +35,8 @@ func NewSystem(nonUnknownList []string, otherList []string, incrementalUpdate bo
 
 func New(nonUnknownList []string, otherList []string, incrementalUpdate bool) APTSystem {
 	p := APTSystem{
-		CmdSet: make(map[string]*system.Command),
+		CmdSet:            make(map[string]*system.Command),
+		IncrementalUpdate: incrementalUpdate,
 	}
 	//WaitDpkgLockRelease()
 	//_ = exec.Command("/var/lib/lastore/scripts/build_safecache.sh").Run() // TODO
