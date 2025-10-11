@@ -574,6 +574,17 @@
       "description[zh_CN]": "支持设置仓库",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "incremental-update": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "IncrementalUpdate",
+      "description": "Enable incremental update",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }

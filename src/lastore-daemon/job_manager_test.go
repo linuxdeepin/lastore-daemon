@@ -5,15 +5,16 @@
 package main
 
 import (
+	"testing"
+
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestJobManager(t *testing.T) {
-	jm := NewJobManager(nil, apt.NewSystem(nil, nil), nil, nil)
+	jm := NewJobManager(nil, apt.NewSystem(nil, nil, false), nil, nil)
 	option := map[string]interface{}{
 		"UpdateMode":              system.SystemUpdate, // 原始mode
 		"WrapperModePath":         "",

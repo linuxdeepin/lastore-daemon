@@ -86,6 +86,10 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		return exec.Command("/usr/bin/lastore-apt-clean")
 	case system.BackupJobType:
 		return exec.Command(system.DeepinImmutableCtlPath, "admin", "deploy", "--backup", "-j")
+	case system.IncrementalDownloadJobType:
+		return exec.Command(system.DeepinImmutableCtlPath, "upgrade", "--download-only", "--status-fd", "3")
+	case system.IncrementalUpdateJobType:
+		return exec.Command(system.DeepinImmutableCtlPath, "upgrade", "--status-fd", "3")
 	case system.FixErrorJobType:
 		var errType system.JobErrorType
 		if len(cmdArgs) >= 1 {

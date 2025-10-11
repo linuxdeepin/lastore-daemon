@@ -1,1 +1,16 @@
 .idea
+bin/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/lastore-daemon-dev.debhelper.log
+debian/lastore-daemon-dev.substvars
+debian/lastore-daemon-dev/
+debian/lastore-daemon.debhelper.log
+debian/lastore-daemon.postrm.debhelper
+debian/lastore-daemon.substvars
+debian/lastore-daemon/
+debian/tmp/
+gopath/
+locale/mo/
+locale_categories/mo/
