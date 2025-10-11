@@ -1325,7 +1325,6 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
 func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage) {
-	logger.Debugf("post status msg, type:%v, detail:%v", message.Type, message.Detail)
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		return
 	}
@@ -1335,6 +1334,8 @@ func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage) {
 		logger.Warningf("marshal status message failed:%v", err)
 		return
 	}
+
+	logger.Infof("post status msg:%s", string(msg))
 
 	buf := bytes.NewBufferString(string(msg))
 	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))

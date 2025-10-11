@@ -10,12 +10,11 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
 // CheckPkgDependency uses apt-get check to verify system package dependencies
-func CheckPkgDependency() (int64, error) {
+func CheckPkgDependency() error {
 	// Use apt-get check with NoLocking option to avoid lock conflicts
 	cmd := exec.Command("apt-get", "check", "-o", "Debug::NoLocking=1")
 	var outBuf bytes.Buffer
@@ -27,28 +26,19 @@ func CheckPkgDependency() (int64, error) {
 	if err != nil {
 		// Parse the error using the existing apt error parser
 		parseErr := apt.ParsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
-		var extCode int64 = ecode.CHK_PROGRAM_ERROR
-		if parseErr != nil {
-			if jobErr, ok := parseErr.(*system.JobError); ok {
-				if jobErr.ErrType == system.ErrorDependenciesBroken {
-					extCode = ecode.CHK_PKG_DEPEND_ERROR
-				}
-			}
-		}
-		// If parser didn't catch the error, return generic program error
-		return extCode, fmt.Errorf("apt-get check failed: %v, detail: %s", err, errBuf.String())
+		return parseErr
 	}
 
-	return ecode.CHK_PROGRAM_SUCCESS, nil
+	return nil
 }
 
-func CheckCoreFileExist(coreFilePath string) (int64, error) {
+func CheckCoreFileExist(coreFilePath string) error {
 	if err := fs.CheckFileExistState(coreFilePath); err != nil {
-		return ecode.CHK_PROGRAM_ERROR, err
+		return err
 	}
 	coreFile, err := ioutil.ReadFile(coreFilePath)
 	if err != nil {
-		return ecode.CHK_PROGRAM_ERROR, fmt.Errorf("unable to read coreFilePath:%s file: %v", coreFilePath, err)
+		return fmt.Errorf("unable to read coreFilePath:%s file: %v", coreFilePath, err)
 	}
 	coreFileList := strings.Split(string(coreFile), "\n")
 	for _, path := range coreFileList {
@@ -58,36 +48,32 @@ func CheckCoreFileExist(coreFilePath string) (int64, error) {
 		}
 		if err := fs.CheckFileExistState(path); err != nil {
 			logger.Errorf("core file %s not exist:%v", path, err)
-			return ecode.CHK_CORE_FILE_MISS, fmt.Errorf("core file %s not exist:%v", path, err)
+			return fmt.Errorf("core file %s not exist:%v", path, err)
 		}
 	}
-	return ecode.CHK_PROGRAM_SUCCESS, nil
+	return nil
 }
 
-func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo, checkStage string, listType string) (int64, error) {
-
-	var PKG_NOT_FOUND, PKG_ERR_STATE, PKG_ERR_VERSION int64
-	switch listType {
-	case "pkglist":
-		PKG_NOT_FOUND = ecode.CHK_PKGLIST_INEXISTENCE
-		PKG_ERR_STATE = ecode.CHK_PKGLIST_ERR_STATE
-		PKG_ERR_VERSION = ecode.CHK_PKGLIST_ERR_VERSION
-	case "corelist":
-		PKG_NOT_FOUND = ecode.CHK_CORE_PKG_NOTFOUND
-		PKG_ERR_STATE = ecode.CHK_CORE_PKG_ERR_STATE
-		PKG_ERR_VERSION = ecode.CHK_CORE_PKG_ERR_VERSION
-	}
+func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *cache.AppInfo, checkStage string, listType string) error {
 
 	if _, pkgexist := midpkgs[pkginfo.Name]; !pkgexist {
 		logger.Warningf("%s (%s) is missing in system.", listType, pkginfo.Name)
-		return PKG_NOT_FOUND, fmt.Errorf("%s (%s) is missing in system", listType, pkginfo.Name)
+		return &system.JobError{
+			ErrType:      system.ErrorCheckPkgNotFound,
+			ErrDetail:    fmt.Sprintf("%s (%s) is missing in system", listType, pkginfo.Name),
+			IsCheckError: true,
+		}
 	}
 
 	sysPkginfo := midpkgs[pkginfo.Name]
 	if pkginfo.Need != "skipstate" && pkginfo.Need != "exist" {
 		if !sysPkginfo.State.CheckOK() {
 			logger.Warningf("%s (%s) state is err: %v.", listType, pkginfo.Name, sysPkginfo.State)
-			return PKG_ERR_STATE, fmt.Errorf("%s (%s) state is err: %v", listType, pkginfo.Name, sysPkginfo.State)
+			return &system.JobError{
+				ErrType:      system.ErrorCheckPkgState,
+				ErrDetail:    fmt.Sprintf("%s (%s) state is err: %v", listType, pkginfo.Name, sysPkginfo.State),
+				IsCheckError: true,
+			}
 		}
 	}
 
@@ -95,10 +81,14 @@ func CheckDebListInstallState(midpkgs map[string]*cache.AppTinyInfo, pkginfo *ca
 		if pkginfo.Need != "skipversion" && pkginfo.Need != "exist" {
 			if sysPkginfo.Version != pkginfo.Version {
 				logger.Warningf("%s (%s) version is err: %s.", listType, pkginfo.Name, sysPkginfo.Version)
-				return PKG_ERR_VERSION, fmt.Errorf("%s (%s) version is err: %s", listType, pkginfo.Name, sysPkginfo.Version)
+				return &system.JobError{
+					ErrType:      system.ErrorCheckPkgVersion,
+					ErrDetail:    fmt.Sprintf("%s (%s) version is err: %s", listType, pkginfo.Name, sysPkginfo.Version),
+					IsCheckError: true,
+				}
 			}
 		}
 	}
 
-	return ecode.CHK_PROGRAM_SUCCESS, nil
+	return nil
 }

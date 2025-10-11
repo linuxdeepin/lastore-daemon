@@ -7,10 +7,10 @@ package coremodules
 import (
 	"fmt"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/controller/check"
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/ecode"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 )
 
@@ -19,7 +19,6 @@ var (
 	RootCoreConfig       config.CoreConfig
 	ThisCacheInfo        *cache.CacheInfo
 	UpdateMetaConfigPath string = check.CheckBaseDir + "default.json"
-	CheckRetMsg          ecode.RetMsg
 )
 
 // Error represents an error that occurred during the execution of the program.
@@ -38,27 +37,27 @@ func initCheckEnv() error {
 	logger.Debugf("load config")
 	if err := RootCoreConfig.LoaderCfg(ConfigCfg); err != nil {
 		logger.Errorf("load config failed:%v", err)
-		return &Error{
-			Code: ecode.CHK_INVALID_INPUT,
-			Ext:  ecode.CHK_METAINFO_FILE_ERROR,
-			Msg:  fmt.Sprintf("load config failed:%v", err),
+		return &system.JobError{
+			ErrType:      system.ErrorCheckMetaInfoFile,
+			ErrDetail:    fmt.Sprintf("load config failed:%v", err),
+			IsCheckError: true,
 		}
 	}
 
 	if UpdateMetaConfigPath == "" {
 		logger.Errorf("update meta config path is empty")
-		return &Error{
-			Code: ecode.CHK_INVALID_INPUT,
-			Ext:  ecode.CHK_METAINFO_FILE_ERROR,
-			Msg:  "update meta config path is empty",
+		return &system.JobError{
+			ErrType:      system.ErrorCheckMetaInfoFile,
+			ErrDetail:    fmt.Sprintf("update meta config path is empty"),
+			IsCheckError: true,
 		}
 	}
 	if err := fs.CheckFileExistState(UpdateMetaConfigPath); err != nil {
 		logger.Errorf("update meta config path: %v", err)
-		return &Error{
-			Code: ecode.CHK_INVALID_INPUT,
-			Ext:  ecode.CHK_METAINFO_FILE_ERROR,
-			Msg:  fmt.Sprintf("update meta config path: %v", err),
+		return &system.JobError{
+			ErrType:      system.ErrorCheckMetaInfoFile,
+			ErrDetail:    fmt.Sprintf("update meta config path: %v", err),
+			IsCheckError: true,
 		}
 	}
 
@@ -67,10 +66,10 @@ func initCheckEnv() error {
 		var loaderUpdateMeta cache.UpdateInfo
 		if err := loaderUpdateMeta.LoaderJson(UpdateMetaConfigPath); err != nil {
 			logger.Errorf("load meta config failed: %+v", err)
-			return &Error{
-				Code: ecode.CHK_INVALID_INPUT,
-				Ext:  ecode.CHK_METAINFO_FILE_ERROR,
-				Msg:  fmt.Sprintf("load meta config failed: %v", err),
+			return &system.JobError{
+				ErrType:      system.ErrorCheckMetaInfoFile,
+				ErrDetail:    fmt.Sprintf("load meta config failed: %v", err),
+				IsCheckError: true,
 			}
 		}
 
