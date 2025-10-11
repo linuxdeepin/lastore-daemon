@@ -19,9 +19,9 @@ type DutSystem struct {
 	apt.APTSystem
 }
 
-func NewSystem(nonUnknownList []string, otherList []string) system.System {
+func NewSystem(nonUnknownList []string, otherList []string, incrementalUpdate bool) system.System {
 	logger.Info("using dut for update...")
-	aptImpl := apt.New(nonUnknownList, otherList)
+	aptImpl := apt.New(nonUnknownList, otherList, incrementalUpdate)
 	if !utils.IsFileExist(system.PlatFormSourceFile) {
 		file, err := os.Create(system.PlatFormSourceFile)
 		if err != nil {
