@@ -1,3 +1,9 @@
+lastore-daemon (6.2.33) UNRELEASED; urgency=medium
+
+  * Update to 6.2.33.
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Sat, 11 Oct 2025 17:28:43 +0800
+
 lastore-daemon (6.2.32) unstable; urgency=medium
 
  * fix: Upgrade failed due to missing lastore-update-tools executable
