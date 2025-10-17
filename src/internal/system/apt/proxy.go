@@ -335,6 +335,12 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 }
 
 func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args map[string]string) error {
+	if p.IncrementalUpdate {
+		cmd := exec.Command(system.DeepinImmutableCtlPath, "upgrade", "update-remote")
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, OptionToArgs(args))
 	c.AtExitFn = func() bool {
 		// 无网络时检查更新失败,exitCode为0,空间不足(不确定exit code)导致需要特殊处理
