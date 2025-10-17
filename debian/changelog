@@ -1,3 +1,11 @@
+lastore-daemon (6.2.34) unstable; urgency=medium
+
+  * feat: Check if all packages are cached in incremental update mode.
+  * chore: print post message when debug (#233)
+  * feat: Add support for immutable update-remote command invocation.
+
+ -- electricface <songwentai@uniontech.com>  Fri, 17 Oct 2025 18:17:36 +0800
+
 lastore-daemon (6.2.33) unstable; urgency=medium
 
   * fix: No value assigned to IncrementalUpdate in APTSystem
