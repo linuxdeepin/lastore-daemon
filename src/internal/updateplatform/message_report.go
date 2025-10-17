@@ -1335,7 +1335,7 @@ func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage) {
 		return
 	}
 
-	logger.Infof("post status msg:%s", string(msg))
+	logger.Debugf("post status msg:%s", msg)
 
 	buf := bytes.NewBufferString(string(msg))
 	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
