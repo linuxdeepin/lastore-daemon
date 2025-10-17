@@ -11,6 +11,7 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 )
 
 type UpdateModeStatusManager struct {
@@ -430,6 +431,10 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 					changed = true
 				}
 			} else {
+				if m.lsConfig.IncrementalUpdate && needDownloadSize > 0 && apt.IsIncrementalUpdateCached() {
+					needDownloadSize = 0.0
+				}
+
 				m.updateModeDownloadSizeMapLock.Lock()
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
 				m.updateModeDownloadSizeMapLock.Unlock()

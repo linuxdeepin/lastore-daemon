@@ -26,6 +26,7 @@ import (
 	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 )
 
 /*
@@ -211,6 +212,10 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	}
 	if err != nil || size == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
+	}
+
+	if m.config.IncrementalUpdate && size > 0 && apt.IsIncrementalUpdateCached() {
+		size = 0.0
 	}
 
 	return int64(size), dbusutil.ToError(err)
