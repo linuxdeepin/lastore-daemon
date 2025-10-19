@@ -70,6 +70,8 @@ msgstr "Po kontrollohet për përditësime dhe po instalohen…"
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr ""
+"Shkarkimi i përditësimeve dështoi. Ju lutemi, së pari, lironi %g GB hapësirë"
+" në disk."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
