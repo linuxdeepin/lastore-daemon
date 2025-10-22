@@ -536,7 +536,7 @@ func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 		string(system.EndStatus): func() error {
 			// 清理完成的通知
 			msg := gettext.Tr("Package cache wiped")
-			go m.sendNotify(updateNotifyShow, 0, "deepin-appstore", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+			go m.sendNotify(updateNotifyShow, 0, "", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 			return nil
 		},
 	})
