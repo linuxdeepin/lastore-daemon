@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -39,6 +40,79 @@ func (p *APTSystem) RemoveCMD(id string) {
 }
 func (p *APTSystem) FindCMD(id string) *system.Command {
 	return p.CmdSet[id]
+}
+
+// extractDownloadLimit extracts the value of Acquire::http::Dl-Limit from the command arguments.
+// Example input: []string{"package1", "package2", "-o", "Acquire::http::Dl-Limit=300", "-o", "Dir::Etc::SourceList=/dev/null"}
+// Returns: The extracted limit (KB/s), or 0 if not found.
+func extractDownloadLimit(cmdArgs []string) int {
+	// Use a regular expression to match Acquire::http::Dl-Limit=<number>
+	dlLimitRegex := regexp.MustCompile(`^Acquire::http::Dl-Limit=(\d+)$`)
+
+	for i, arg := range cmdArgs {
+		// Look for the "-o" option
+		if arg == "-o" && i+1 < len(cmdArgs) {
+			nextArg := cmdArgs[i+1]
+			// Check if the next argument matches the Dl-Limit pattern
+			if matches := dlLimitRegex.FindStringSubmatch(nextArg); len(matches) > 1 {
+				if limit, err := strconv.Atoi(matches[1]); err == nil {
+					return limit
+				}
+			}
+		}
+	}
+
+	return 0
+}
+
+// createIncrementalCommandLine creates the command line for incremental update/download operations.
+// It supports extracting download limit from cmdArgs and uses the trickle tool for bandwidth control if possible.
+func createIncrementalCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
+	// Extract download limit setting
+	downloadLimit := extractDownloadLimit(cmdArgs)
+	logger.Debugf("Download limit extracted: %d KB/s", downloadLimit)
+
+	// Build base command arguments
+	baseArgs := []string{"upgrade", "--status-fd", "3"}
+	if cmdType == system.IncrementalDownloadJobType {
+		baseArgs = append(baseArgs, "--download-only")
+	}
+
+	// Apply download limit with trickle if set and available
+	if downloadLimit > 0 {
+		if cmd := buildTrickleCommand(downloadLimit, system.DeepinImmutableCtlPath, baseArgs); cmd != nil {
+			return cmd
+		}
+	}
+
+	// Default command (no bandwidth restriction)
+	return exec.Command(system.DeepinImmutableCtlPath, baseArgs...)
+}
+
+// buildTrickleCommand constructs a command using trickle for bandwidth control.
+// Returns nil if trickle is unavailable, so that the caller can fall back to the default command.
+func buildTrickleCommand(downloadLimit int, targetCmd string, targetArgs []string) *exec.Cmd {
+	tricklePath, err := exec.LookPath("trickle")
+	if err != nil {
+		logger.Warningf("trickle binary not found, will not apply download limit: %v", err)
+		return nil
+	}
+
+	// Run a small test: trickle -s -d 100 echo.
+	testCmd := exec.Command(tricklePath, "-s", "-d", "100", "echo")
+	err = testCmd.Run()
+	if err != nil {
+		logger.Warningf("trickle test failed, will not apply download limit: %v", err)
+		return nil
+	}
+
+	// Build the trickle command: trickle -s -d <limit> <target_cmd> <target_args...>
+	trickleArgs := []string{"-s", "-d", strconv.Itoa(downloadLimit), targetCmd}
+	trickleArgs = append(trickleArgs, targetArgs...)
+	trickleArgs = append(trickleArgs, "--limit")
+
+	logger.Debugf("Applying download limit with trickle: %d KB/s", downloadLimit)
+	return exec.Command(tricklePath, trickleArgs...)
 }
 
 func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
@@ -87,10 +161,8 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		return exec.Command("/usr/bin/lastore-apt-clean")
 	case system.BackupJobType:
 		return exec.Command(system.DeepinImmutableCtlPath, "admin", "deploy", "--backup", "-j")
-	case system.IncrementalDownloadJobType:
-		return exec.Command(system.DeepinImmutableCtlPath, "upgrade", "--download-only", "--status-fd", "3")
-	case system.IncrementalUpdateJobType:
-		return exec.Command(system.DeepinImmutableCtlPath, "upgrade", "--status-fd", "3")
+	case system.IncrementalDownloadJobType, system.IncrementalUpdateJobType:
+		return createIncrementalCommandLine(cmdType, cmdArgs)
 	case system.FixErrorJobType:
 		var errType system.JobErrorType
 		if len(cmdArgs) >= 1 {
