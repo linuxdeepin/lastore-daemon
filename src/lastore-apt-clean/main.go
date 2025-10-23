@@ -14,10 +14,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"syscall"
 	"time"
 
+	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	"github.com/linuxdeepin/go-lib/log"
@@ -71,6 +73,15 @@ func main() {
 		logger.RemoveBackendConsole()
 	}
 	findBins()
+
+	// 如果是增量更新，则调用deepin-immutable-ctl upgrade cleanup命令清理immutable系统的缓存deb包和ostree包分支
+	config := NewConfig(path.Join("/var/lib/lastore", "config.json"))
+	if config.IncrementalUpdate {
+		cmd := exec.Command("deepin-immutable-ctl", "upgrade", "clean")
+		if err := cmd.Run(); err != nil {
+			logger.Warninf("failed to clean upgrade cache: %v", err)
+		}
+	}
 
 	appendArchivesDirInfos(system.LastoreAptV2CommonConfPath) // 将lastore缓存路径/var/cache/lastore/archives添加
 	appendArchivesDirInfos(system.LastoreAptOrgConfPath)      // 将默认缓存路径/var/cache/apt/archives添加
