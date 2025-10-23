@@ -79,7 +79,7 @@ func main() {
 	if config.IncrementalUpdate {
 		cmd := exec.Command("deepin-immutable-ctl", "upgrade", "clean")
 		if err := cmd.Run(); err != nil {
-			logger.Warninf("failed to clean upgrade cache: %v", err)
+			logger.Warningf("failed to clean upgrade cache: %v", err)
 		}
 	}
 
