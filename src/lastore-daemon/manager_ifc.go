@@ -490,11 +490,6 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 		logger.Infof("%v size is:%v M", strings.Join(sourcePathList, " and "), int64(allSize/(1000*1000)))
 	}
 
-	// TODO: Currently, just use half of the original size. This needs to be improved in the future.
-	if m.config.IncrementalUpdate {
-		allSize = allSize / 2
-	}
-
 	return int64(allSize), dbusutil.ToError(err)
 }
 
