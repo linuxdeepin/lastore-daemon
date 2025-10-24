@@ -1,3 +1,12 @@
+lastore-daemon (6.2.35) unstable; urgency=medium
+
+  * Fix compilation error
+  * feat: Add the upgrade clean command to clear incremental update cache files. (#240)
+  * fix: send notifications without specifying an appIcon (#237)
+  * i18n: Translate locale/lastore-daemon.pot in sq
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 24 Oct 2025 08:54:35 +0800
+
 lastore-daemon (6.2.34) unstable; urgency=medium
 
   * feat: Check if all packages are cached in incremental update mode.
