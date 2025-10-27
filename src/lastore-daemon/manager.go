@@ -463,17 +463,6 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	if len(pkgs) == 1 {
-		desktopFiles := listPackageDesktopFiles(pkgs[0])
-		if len(desktopFiles) > 0 {
-			err = m.apps.LaunchedRecorder().UninstallHints(0, desktopFiles)
-			if err != nil {
-				logger.Warningf("call UninstallHints(desktopFiles: %v) error: %v",
-					desktopFiles, err)
-			}
-		}
-	}
-
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
