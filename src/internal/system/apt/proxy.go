@@ -21,6 +21,8 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
+const aptLimitKey = "Acquire::http::Dl-Limit"
+
 type APTSystem struct {
 	CmdSet            map[string]*system.Command
 	Indicator         system.Indicator
@@ -275,7 +277,12 @@ func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[
 	*/
 
 	if p.IncrementalUpdate {
-		c := newAPTCommand(p, jobId, system.IncrementalDownloadJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+		var cmdArgs []string
+		speedLimit, ok := args[aptLimitKey]
+		if ok {
+			cmdArgs = append(cmdArgs, "--max-recv-speed", speedLimit)
+		}
+		c := newAPTCommand(p, jobId, system.IncrementalDownloadJobType, p.Indicator, cmdArgs)
 		c.SetEnv(environ)
 		return c.Start()
 	}
@@ -323,7 +330,12 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 
 	if p.IncrementalUpdate {
 		logger.Info("incremental update")
-		c := newAPTCommand(p, jobId, system.IncrementalUpdateJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+		var cmdArgs []string
+		speedLimit, ok := args[aptLimitKey]
+		if ok {
+			cmdArgs = append(cmdArgs, "--max-recv-speed", speedLimit)
+		}
+		c := newAPTCommand(p, jobId, system.IncrementalUpdateJobType, p.Indicator, cmdArgs)
 		c.SetEnv(environ)
 		return c.Start()
 	}
