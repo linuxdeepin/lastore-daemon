@@ -337,8 +337,9 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args map[string]string) error {
 	if p.IncrementalUpdate {
 		cmd := exec.Command(system.DeepinImmutableCtlPath, "upgrade", "update-remote")
-		if err := cmd.Run(); err != nil {
-			return err
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to update remotes: %w, %s", err, string(output))
 		}
 	}
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, OptionToArgs(args))
