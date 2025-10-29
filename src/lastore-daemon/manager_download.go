@@ -82,7 +82,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			IsCheckError: true,
 		}
 		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), needDownloadSize/(1000*1000*1000))
-		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 		logger.Warning(dbusError.Error())
 		errStr, _ := json.Marshal(dbusError)
 		m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
