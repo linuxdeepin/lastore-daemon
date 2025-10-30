@@ -29,6 +29,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
+	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -193,7 +194,12 @@ func listPackageDesktopFiles(pkg string) []string {
 }
 
 func getArchiveInfo() (string, error) {
-	out, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
+	config := NewConfig(path.Join("/var/lib/lastore", "config.json"))
+	isIncrementalUpdate := ""
+	if config.IncrementalUpdate {
+		isIncrementalUpdate = "--incremental-update"
+	}
+	out, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json", isIncrementalUpdate).Output()
 	if err != nil {
 		return "", err
 	}
@@ -201,7 +207,12 @@ func getArchiveInfo() (string, error) {
 }
 
 func getNeedCleanCacheSize() (float64, error) {
-	output, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
+	config := NewConfig(path.Join("/var/lib/lastore", "config.json"))
+	isIncrementalUpdate := ""
+	if config.IncrementalUpdate {
+		isIncrementalUpdate = "--incremental-update"
+	}
+	output, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json", isIncrementalUpdate).Output()
 	if err != nil {
 		return 0, err
 	}
