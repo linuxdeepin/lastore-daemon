@@ -1,3 +1,14 @@
+lastore-daemon (6.2.36) unstable; urgency=medium
+
+  * fix: Solve the issue where "lastore-apt-clean" outputs warning messages
+  * feat: Incremental update supports updates from third-party sources.
+  * fix: prevent persistent notification when update download fails due to full disk (#247)
+  * fix: Adapt the maximum speed limit logic for incremental updates.
+  * chore: improve error reporting for update-remote command (#245)
+  * fix: Remove deprecated app uninstall tracking functionality (#244) 
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Fri, 31 Oct 2025 13:34:27 +0800
+
 lastore-daemon (6.2.35) unstable; urgency=medium
 
   * Fix compilation error
