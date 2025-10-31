@@ -25,7 +25,6 @@ import (
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	abrecovery "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.abrecovery"
 	accounts "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.accounts1"
-	apps "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.apps1"
 	power "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.power1"
 	ofdbus "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.dbus"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
@@ -71,7 +70,6 @@ type Manager struct {
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
 
-	apps       apps.Apps
 	sysPower   power.Power
 	signalLoop *dbusutil.SignalLoop
 
@@ -137,7 +135,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		loginManager:         login1.NewManager(service.Conn()),
 		sysDBusDaemon:        ofdbus.NewDBus(service.Conn()),
 		signalLoop:           dbusutil.NewSignalLoop(service.Conn(), 10),
-		apps:                 apps.NewApps(service.Conn()),
 		systemd:              systemd1.NewManager(service.Conn()),
 		sysPower:             power.NewPower(service.Conn()),
 		abObj:                abrecovery.NewABRecovery(service.Conn()),
