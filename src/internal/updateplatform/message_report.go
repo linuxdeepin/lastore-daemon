@@ -358,7 +358,7 @@ func isUnstable() int {
 		return ReleaseVersion
 	} else {
 		value := v.Value().(string)
-		if value == "Enable" {
+		if value == "Enabled" {
 			return UnstableVersion
 		} else {
 			return ReleaseVersion
