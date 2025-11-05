@@ -2,7 +2,7 @@
 
 export GOCACHE := /tmp/gocache
 export GOPATH := /usr/share/gocode
-export SECURITY_BUILD_OPTIONS = -fstack-protector-strong -D_FORTITY_SOURCE=1 -z noexecstack -pie -fPIC -z lazy
+export SECURITY_BUILD_OPTIONS = -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -z noexecstack -pie -fPIC -z now -ftrapv
 
 SYSTYPE=$(shell grep Type= /etc/deepin-version|cut -d= -f 2)
 
@@ -13,7 +13,8 @@ ifdef depend_ostree
 endif
 
 ifneq ($(DEB_BUILD_ARCH), mips64el)
-    export GOBUILD_OPTIONS=-ldflags '-linkmode=external -extldflags "-pie"'
+    export GOBUILD_OPTIONS= -ldflags '-linkmode=external -extldflags "-Wl,-z,noexecstack,-z,relro,-z,now,-pie"'
+    export GOBUILD_CGO_FLAGS= CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -ftrapv"
 endif
 
 %:
