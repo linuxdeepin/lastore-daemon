@@ -1,3 +1,12 @@
+lastore-daemon (6.2.37) unstable; urgency=medium
+
+* fix: disable incremental update for profressional version (#254)
+* fix: add build options for system security baseline (#253)
+* fix: check correct unstable config value checking from "Enable" to "Enabled" (#252)
+* fix: Fix compilation failure issues
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 7 Nov 2025 15:05:23 +0800
+
 lastore-daemon (6.2.36) unstable; urgency=medium
 
   * fix: Solve the issue where "lastore-apt-clean" outputs warning messages
