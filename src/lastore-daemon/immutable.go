@@ -72,7 +72,7 @@ func newImmutableManager(indicator system.Indicator) *immutableManager {
 }
 
 func (i *immutableManager) osTreeRefresh() error {
-	_, err := i.osTreeCmd([]string{"admin", "deploy", "--refresh"})
+	_, err := i.osTreeCmd([]string{"admin", "deploy", "--refresh", "-w"})
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (i *immutableManager) osTreeRefresh() error {
 }
 
 func (i *immutableManager) osTreeFinalize() error {
-	_, err := i.osTreeCmd([]string{"admin", "deploy", "--finalize"})
+	_, err := i.osTreeCmd([]string{"admin", "deploy", "--finalize", "-w"})
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (i *immutableManager) osTreeFinalize() error {
 }
 
 func (i *immutableManager) osTreeRollback() error {
-	_, err := i.osTreeCmd([]string{"admin", "rollback"})
+	_, err := i.osTreeCmd([]string{"admin", "rollback", "-w"})
 	if err != nil {
 		return err
 	}
