@@ -1,9 +1,15 @@
+lastore-daemon (6.2.38) unstable; urgency=medium
+
+  * feat: Add the wait-for-lock flag -w to the arguments of the deepin-immutable-ctl command (#257)
+
+ -- electricface <songwentai@uniontech.com>  Fri, 21 Nov 2025 16:39:22 +0800
+
 lastore-daemon (6.2.37) unstable; urgency=medium
 
-* fix: disable incremental update for profressional version (#254)
-* fix: add build options for system security baseline (#253)
-* fix: check correct unstable config value checking from "Enable" to "Enabled" (#252)
-* fix: Fix compilation failure issues
+  * fix: disable incremental update for profressional version (#254)
+  * fix: add build options for system security baseline (#253)
+  * fix: check correct unstable config value checking from "Enable" to "Enabled" (#252)
+  * fix: Fix compilation failure issues
 
  -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 7 Nov 2025 15:05:23 +0800
 
