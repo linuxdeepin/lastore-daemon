@@ -377,7 +377,7 @@ func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args m
 		cmd := exec.Command(system.DeepinImmutableCtlPath, "upgrade", "update-remote")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("failed to update remotes: %w, %s", err, string(output))
+			logger.Warningf("Failed to update remotes: %v, %s", err, string(output))
 		}
 	}
 	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, OptionToArgs(args))
