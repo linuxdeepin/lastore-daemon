@@ -1,3 +1,10 @@
+lastore-daemon (6.2.39) unstable; urgency=medium
+
+  * i18n: Translate locale/lastore-daemon.pot in tr
+  * fix: Ignore errors from deepin-immutable-ctl upgrade update-remote.
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 28 Nov 2025 14:13:52 +0800
+
 lastore-daemon (6.2.38) unstable; urgency=medium
 
   * feat: Add the wait-for-lock flag -w to the arguments of the deepin-immutable-ctl command (#257)
