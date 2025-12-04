@@ -103,9 +103,11 @@ func (m *Manager) updatableApps(apps []string) {
 	}
 	if changed {
 		m.UpgradableApps = apps
-		err := m.emitPropChangedUpgradableApps(apps)
-		if err != nil {
-			logger.Warning(err)
+		if m.service.IsExported(m) {
+			err := m.emitPropChangedUpgradableApps(apps)
+			if err != nil {
+				logger.Warning(err)
+			}
 		}
 	}
 }

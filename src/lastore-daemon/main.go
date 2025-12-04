@@ -135,7 +135,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("systemd-notify --ready")
+		logger.Debug("Notifying systemd that service is ready")
 		cmd := exec.Command("systemd-notify", "--ready")
 		cmd.Run()
 	}()
@@ -157,7 +157,7 @@ func main() {
 	if err != nil {
 		logger.Warning("failed to apply idle download config at startup:", err)
 	}
-	logger.Info("Started service at system bus")
+	logger.Debug("Started service at system bus")
 	autoQuitTime := 60 * time.Second
 	if logger.GetLogLevel() == log.LevelDebug {
 		autoQuitTime = 6000 * time.Second
