@@ -67,12 +67,16 @@ func GetOemRepoInfo(dir string) (*OemRepoConfig, *OemRepoConfig) {
 	}
 	infos, err := os.ReadDir(dir)
 	if err != nil {
-		logger.Warningf("failed to read %v,error is %v", dir, err)
+		if os.IsNotExist(err) {
+			logger.Debugf("failed to read dir %v, error is %v", dir, err)
+		} else {
+			logger.Warningf("failed to read dir %v, error is %v", dir, err)
+		}
 		return nil, nil
 	}
 	for _, info := range infos {
 		if info.IsDir() || !strings.HasSuffix(info.Name(), "json") {
-			logger.Infof("skip file %v", info.Name())
+			logger.Debugf("skip file %v", info.Name())
 			continue
 		}
 		content, err := os.ReadFile(filepath.Join(dir, info.Name()))
@@ -137,12 +141,12 @@ func (c *Config) recoveryAndApplyOemFlag(typ system.UpdateType) error {
 		return fmt.Errorf("invalid oem update type: %v", typ)
 	}
 	if !utils2.IsFileExist(flagFilePath) {
-		logger.Infof("flag: %v not exist, don't need to apply oem setting", flagFilePath)
+		logger.Debugf("flag: %v not exist, don't need to apply oem setting", flagFilePath)
 		return nil
 	}
 
 	if !utils2.IsFileExist(backupListPath) {
-		logger.Infof("backup file :%v not exist, don't need to recovery source list", backupListPath)
+		logger.Debugf("backup file :%v not exist, don't need to recovery source list", backupListPath)
 	} else {
 		err := utils2.MoveFile(backupListPath, recoveryListPath)
 		if err != nil {
@@ -176,14 +180,14 @@ func (c *Config) ReloadSourcesDir() {
 	} else {
 		c.SystemRepoType = RepoType(v.Value().(string))
 	}
-	logger.Info("reload sources using config:", c.SystemRepoType)
+	logger.Debug("reload sources using config:", c.SystemRepoType)
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityRepoType)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.SecurityRepoType = RepoType(v.Value().(string))
 	}
-	logger.Info("reload security using config:", c.SecurityRepoType)
+	logger.Debug("reload security using config:", c.SecurityRepoType)
 	switch c.SystemRepoType {
 	case OSDefaultRepo:
 		err = system.UpdateSystemDefaultSourceDir(c.SystemSourceList)

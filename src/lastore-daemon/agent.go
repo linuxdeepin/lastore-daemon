@@ -49,7 +49,7 @@ func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNe
 		logger.Warning(err)
 		return
 	}
-	logger.Infof("record agent info: %+v", infoMap)
+	logger.Debugf("record agent info: %+v", infoMap)
 	login1Obj := login1.NewManager(service.Conn())
 	sessionInfos, err := login1Obj.ListSessions(0)
 	if err != nil {
@@ -96,7 +96,7 @@ func (m *userAgentMap) recoverLastoreAgents(service *dbusutil.Service, sessionNe
 	}
 	lang := m.getActiveLastoreAgentLang()
 	if len(lang) != 0 {
-		logger.Info("SetLocale", lang)
+		logger.Debug("SetLocale", lang)
 		gettext.SetLocale(gettext.LcAll, lang)
 	}
 }
@@ -140,8 +140,8 @@ func (m *userAgentMap) removeAgent(uid string, agentPath dbus.ObjectPath) error 
 	return nil
 }
 
-func (m *userAgentMap) setActiveUid(uid string) {
-	logger.Info("active user's uid is", uid)
+func (m *userAgentMap) setActiveUID(uid string) {
+	logger.Debug("active user's uid is", uid)
 	m.mu.Lock()
 	m.activeUid = uid
 	m.mu.Unlock()
@@ -202,7 +202,7 @@ func (m *userAgentMap) addSession(uid string, session login1.Session) bool {
 
 	item, ok := m.uidItemMap[uid]
 	if !ok {
-		logger.Infof("not uid:%v item", uid)
+		logger.Debugf("create new item for uid: %v", uid)
 		m.uidItemMap[uid] = &sessionAgentMapItem{
 			sessions: make(map[dbus.ObjectPath]login1.Session),
 			agents:   make(map[dbus.ObjectPath]lastoreAgent.Agent),
@@ -212,11 +212,11 @@ func (m *userAgentMap) addSession(uid string, session login1.Session) bool {
 
 	_, ok = item.sessions[session.Path_()]
 	if ok {
-		logger.Infof("session exit:%v", session.Path_())
+		logger.Debugf("session exists: %v", session.Path_())
 		return false
 	}
 	item.sessions[session.Path_()] = session
-	logger.Infof("add session %v", session.Path_())
+	logger.Debugf("add session %v", session.Path_())
 	return true
 }
 
@@ -306,7 +306,7 @@ func (m *userAgentMap) getAgentsInfo() *userAgentInfoMap {
 	for uid, item := range m.uidItemMap {
 		var sessions []dbus.ObjectPath
 		agentsMap := make(map[dbus.ObjectPath]string)
-		logger.Infof("sessions is %+v", item.sessions)
+		logger.Debugf("sessions is %+v", item.sessions)
 		for sessionPath := range item.sessions {
 			sessions = append(sessions, sessionPath)
 		}

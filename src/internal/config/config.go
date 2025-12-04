@@ -633,7 +633,9 @@ func getConfigFromDSettings() *Config {
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
 	content, err := os.ReadFile(classifiedCachePath)
 	if err != nil {
-		logger.Warning(err)
+		if !os.IsNotExist(err) {
+			logger.Warning(err)
+		}
 	} else {
 		c.ClassifiedUpdatablePackages = make(map[string][]string)
 		err = json.Unmarshal(content, &c.ClassifiedUpdatablePackages)
@@ -644,7 +646,9 @@ func getConfigFromDSettings() *Config {
 
 	content, err = os.ReadFile(onlineCachePath)
 	if err != nil {
-		logger.Warning(err)
+		if !os.IsNotExist(err) {
+			logger.Warning(err)
+		}
 	} else {
 		c.OnlineCache = string(content)
 	}

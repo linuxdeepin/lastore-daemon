@@ -170,7 +170,7 @@ func (m *UpdateModeStatusManager) RegisterChangedHandler(key string, handler fun
 	case handlerKeyUnKnownStatus:
 		m.handleUnKnownStatusChangedCallback = handler
 	default:
-		logger.Info("invalid key")
+		logger.Warning("invalid key", key)
 	}
 }
 
@@ -240,7 +240,7 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 		if mode&typ != 0 && m.checkMode&typ != 0 {
 			oldStatus := m.updateModeStatusObj[typ.JobType()]
 			if !canTransition(oldStatus, newStatus) {
-				logger.Infof("inhibit %v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
+				logger.Warningf("inhibit %v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
 				continue
 			}
 			if oldStatus != newStatus {
@@ -438,7 +438,9 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 				m.updateModeDownloadSizeMapLock.Lock()
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
 				m.updateModeDownloadSizeMapLock.Unlock()
-				logger.Infof("currentMode:%v,needDownloadSize:%v,allPackageSize:%v,oldStatus:%v.", currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
+				logger.Infof("currentMode: %v, needDownloadSize: %v,"+
+					" allPackageSize: %v, oldStatus: %v",
+					currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {
 					if oldStatus != system.Upgraded {

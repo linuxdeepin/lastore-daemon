@@ -140,9 +140,11 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		token = UpdateTokenConfigFile(c.IncludeDiskInfo) // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
 	}
 	cache := platformCacheContent{}
-	err = json.Unmarshal([]byte(c.OnlineCache), &cache)
-	if err != nil {
-		logger.Warning(err)
+	if strings.TrimSpace(c.OnlineCache) != "" {
+		err = json.Unmarshal([]byte(c.OnlineCache), &cache)
+		if err != nil {
+			logger.Warning(err)
+		}
 	}
 
 	return &UpdatePlatformManager{
@@ -600,7 +602,7 @@ func getResponseData(response *http.Response, reqType requestType) (json.RawMess
 		if err != nil {
 			return nil, fmt.Errorf("%v failed to read response body: %v ", response.Request.RequestURI, err.Error())
 		}
-		logger.Infof("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
+		logger.Debugf("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 		msg := &tokenMessage{}
 		err = json.Unmarshal(respData, msg)
 		if err != nil {
