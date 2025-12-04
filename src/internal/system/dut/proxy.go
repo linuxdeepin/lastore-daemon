@@ -20,7 +20,7 @@ type DutSystem struct {
 }
 
 func NewSystem(nonUnknownList []string, otherList []string, incrementalUpdate bool) system.System {
-	logger.Info("using dut for update...")
+	logger.Debug("using dut for update...")
 	aptImpl := apt.New(nonUnknownList, otherList, incrementalUpdate)
 	if !utils.IsFileExist(system.PlatFormSourceFile) {
 		file, err := os.Create(system.PlatFormSourceFile)

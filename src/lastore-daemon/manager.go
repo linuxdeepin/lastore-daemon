@@ -231,7 +231,7 @@ func (m *Manager) initStatusManager() {
 		m.PropsMu.Unlock()
 	})
 	m.statusManager.InitModifyData()
-	logger.Info("initStatusManager cost:", time.Since(startTime))
+	logger.Debug("initStatusManager cost:", time.Since(startTime))
 }
 
 func (m *Manager) initAgent() {
@@ -610,7 +610,7 @@ func (m *Manager) syncThirdPartyDconfig() {
 		logger.Warning(err)
 		return
 	}
-	logger.Info("updateThirdPartySource is ", v.Value().(string))
+	logger.Debug("updateThirdPartySource is ", v.Value().(string))
 
 	syncUpdateMode := func(enable string) {
 		if enable == "Hidden" {
@@ -725,18 +725,18 @@ func (m *Manager) handleAutoCleanEvent() error {
 }
 
 func (m *Manager) watchSession(uid string, session login1.Session) {
-	logger.Infof("watching '%s session:%s", uid, session.ServiceName_())
+	logger.Debugf("watching '%s session:%s", uid, session.ServiceName_())
 	session.InitSignalExt(m.signalLoop, true)
 	err := session.Active().ConnectChanged(func(hasValue bool, active bool) {
 		if !hasValue {
 			return
 		}
 		if active {
-			m.userAgents.setActiveUid(uid)
+			m.userAgents.setActiveUID(uid)
 			lang := m.userAgents.getActiveLastoreAgentLang()
 			if len(lang) != 0 {
 				// Active的用户切换后,语言环境切换至对应用户的语言环境,用于发通知
-				logger.Info("SetLocale", lang)
+				logger.Debug("SetLocale", lang)
 				gettext.SetLocale(gettext.LcAll, lang)
 			} else {
 				m.updateLocaleByUser(uid)
@@ -754,10 +754,10 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 		return
 	}
 	if active {
-		m.userAgents.setActiveUid(uid)
+		m.userAgents.setActiveUID(uid)
 		lang := m.userAgents.getActiveLastoreAgentLang()
 		if len(lang) != 0 {
-			logger.Info("SetLocale", lang)
+			logger.Debug("SetLocale", lang)
 			gettext.SetLocale(gettext.LcAll, lang)
 		} else {
 			m.updateLocaleByUser(uid)
@@ -766,7 +766,7 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 }
 
 func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath) {
-	logger.Infof("session added %v %v", sessionId, sessionPath)
+	logger.Debugf("session added %v %v", sessionId, sessionPath)
 	sysBus := m.service.Conn()
 	session, err := login1.NewSession(sysBus, sessionPath)
 	if err != nil {
@@ -779,7 +779,7 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 		return
 	}
 	if sessionType == "tty" {
-		logger.Infof("%v session is tty", sessionPath)
+		logger.Debugf("session %v is tty", sessionPath)
 		return
 	}
 
@@ -799,12 +799,12 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 }
 
 func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.ObjectPath) {
-	logger.Info("session removed", sessionId, sessionPath)
+	logger.Debug("session removed", sessionId, sessionPath)
 	m.userAgents.removeSession(sessionPath)
 }
 
 func (m *Manager) updateLocaleByUser(uid string) {
-	logger.Info("update locale by user", uid)
+	logger.Debug("update locale by user", uid)
 	obj := accounts.NewAccounts(m.service.Conn())
 	path, err := obj.FindUserById(0, uid)
 	if err != nil {
@@ -821,12 +821,12 @@ func (m *Manager) updateLocaleByUser(uid string) {
 		logger.Warning(err)
 		return
 	}
-	logger.Info("SetLocale", locale)
+	logger.Debug("SetLocale", locale)
 	gettext.SetLocale(gettext.LcAll, locale)
 }
 
 func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
-	logger.Info("user removed", uid, userPath)
+	logger.Debug("user removed", uid, userPath)
 	uidStr := strconv.Itoa(int(uid))
 	m.userAgents.removeUser(uidStr)
 }
@@ -889,7 +889,7 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 			// 安全地添加参数，避免命令注入
 			cmdArgs = append(cmdArgs, args...)
 			cmd := exec.Command("sudo", cmdArgs...)
-			logger.Info(cmd.String())
+			logger.Debug("run command", cmd.String())
 			var outBuffer bytes.Buffer
 			var errBuffer bytes.Buffer
 			cmd.Stderr = &errBuffer
@@ -946,7 +946,7 @@ func (m *Manager) closeNotify(id uint32) error {
 			// 安全地添加参数，避免命令注入
 			cmdArgs = append(cmdArgs, args...)
 			cmd := exec.Command("sudo", cmdArgs...)
-			logger.Info(cmd.String())
+			logger.Debug("run command", cmd.String())
 			var errBuffer bytes.Buffer
 			cmd.Stderr = &errBuffer
 			err = cmd.Run()
@@ -961,7 +961,7 @@ func (m *Manager) closeNotify(id uint32) error {
 
 // ChangePrepareDistUpgradeJobOption 当下载job的配置需要修改,通过该接口触发
 func (m *Manager) ChangePrepareDistUpgradeJobOption() {
-	logger.Info("start changed download job option by ForceAbortAndRetry")
+	logger.Debug("start changed download job option by ForceAbortAndRetry")
 	prepareUpgradeTypeList := []string{
 		system.PrepareDistUpgradeJobType,
 		system.PrepareSystemUpgradeJobType,
@@ -1110,7 +1110,11 @@ func (m *Manager) updateAutoRecoveryStatus() {
 	bootedFile := "/run/deepin-immutable-writable/booted"
 	bootedContent, err := os.ReadFile(bootedFile)
 	if err != nil {
-		logger.Warning(err)
+		if os.IsNotExist(err) {
+			logger.Debug(err)
+		} else {
+			logger.Warning(err)
+		}
 		return
 	}
 

@@ -108,7 +108,11 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	}
 	state, err := u.systemdManager.GetUnitFileState(0, p2pService)
 	if err != nil {
-		logger.Warning("get p2p service state err:", err)
+		if strings.Contains(err.Error(), "No such file or directory") {
+			logger.Debug("p2p service not exist")
+		} else {
+			logger.Warning("get p2p service state err:", err)
+		}
 		u.p2PUpdateEnable = false
 		u.p2PUpdateSupport = false
 	} else {

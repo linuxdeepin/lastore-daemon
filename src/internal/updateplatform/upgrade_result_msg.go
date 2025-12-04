@@ -117,7 +117,11 @@ func getLocalJobPostMsg() (jobPostMsgMap map[string]*UpgradePostMsg) {
 	jobPostMsgMap = make(map[string]*UpgradePostMsg)
 	infos, err := os.ReadDir(postContentCacheDir)
 	if err != nil {
-		logger.Warning(err)
+		if os.IsNotExist(err) {
+			logger.Debug(err)
+		} else {
+			logger.Warning(err)
+		}
 		return
 	}
 	for _, info := range infos {

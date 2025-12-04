@@ -170,7 +170,7 @@ func (m *UpdateModeStatusManager) RegisterChangedHandler(key string, handler fun
 	case handlerKeyUnKnownStatus:
 		m.handleUnKnownStatusChangedCallback = handler
 	default:
-		logger.Info("invalid key")
+		logger.Warning("invalid key", key)
 	}
 }
 
@@ -240,11 +240,11 @@ func (m *UpdateModeStatusManager) SetUpdateStatus(mode system.UpdateType, newSta
 		if mode&typ != 0 && m.checkMode&typ != 0 {
 			oldStatus := m.updateModeStatusObj[typ.JobType()]
 			if !canTransition(oldStatus, newStatus) {
-				logger.Infof("inhibit %v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
+				logger.Debugf("inhibit %v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
 				continue
 			}
 			if oldStatus != newStatus {
-				logger.Infof("%v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
+				logger.Debugf("%v transition state from %v to %v", typ.JobType(), oldStatus, newStatus)
 				m.updateModeStatusObj[typ.JobType()] = newStatus
 				changed = true
 			}
@@ -320,7 +320,7 @@ func (m *UpdateModeStatusManager) syncUpdateStatusNoLock() {
 		logger.Warning(err)
 		return
 	}
-	logger.Infof("sync new status %v to config", string(content))
+	logger.Debugf("sync new status %v to config", string(content))
 	if m.handleStatusChangedCallback != nil {
 		m.handleStatusChangedCallback(string(content))
 	}
@@ -438,7 +438,9 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 				m.updateModeDownloadSizeMapLock.Lock()
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
 				m.updateModeDownloadSizeMapLock.Unlock()
-				logger.Infof("currentMode:%v,needDownloadSize:%v,allPackageSize:%v,oldStatus:%v.", currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
+				logger.Debugf("currentMode: %v, needDownloadSize: %v,"+
+					" allPackageSize: %v, oldStatus: %v",
+					currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {
 					if oldStatus != system.Upgraded {
@@ -528,7 +530,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 	if changed {
 		m.syncUpdateStatusNoLock()
 	}
-	logger.Infof("status:%+v", m.updateModeStatusObj)
+	logger.Debugf("status:%+v", m.updateModeStatusObj)
 }
 
 func (m *UpdateModeStatusManager) updateCanUpgradeStatus(can bool) {
@@ -536,7 +538,7 @@ func (m *UpdateModeStatusManager) updateCanUpgradeStatus(can bool) {
 	if oldCanUpgrade == can {
 		return
 	}
-	logger.Infof("CanUpgradeStatus transition state from %v to %v", oldCanUpgrade, can)
+	logger.Debugf("CanUpgradeStatus transition state from %v to %v", oldCanUpgrade, can)
 	err := m.lsConfig.UpdateLastoreDaemonStatus(config.CanUpgrade, can)
 	if err != nil {
 		logger.Warning(err)
@@ -653,7 +655,7 @@ func (m *UpdateModeStatusManager) SetFrontForceUpdate(force bool) {
 	if oldForceUpdate == force {
 		return
 	}
-	logger.Infof("ForceUpdateStatus transition state from %v to %v", oldForceUpdate, force)
+	logger.Debugf("ForceUpdateStatus transition state from %v to %v", oldForceUpdate, force)
 	err := m.lsConfig.UpdateLastoreDaemonStatus(config.ForceUpdate, force)
 	if err != nil {
 		logger.Warning(err)

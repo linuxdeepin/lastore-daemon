@@ -225,7 +225,7 @@ func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, 
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}, pkgList...)...)
 		}
-		logger.Infof("%v download size cmd: %v", updateType.JobType(), cmd.String())
+		logger.Debugf("%v download size cmd: %v", updateType.JobType(), cmd.String())
 		lines, err := utils.FilterExecOutput(cmd, time.Second*120, func(line string) bool {
 			_, _, _err := parsePackageSize(line)
 			return _err == nil
