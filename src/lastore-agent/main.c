@@ -4,16 +4,13 @@
 
 #include "agent.h"
 #include "log.h"
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <systemd/sd-bus.h>
 
 #define PROG_NAME "lastore-agent"
 
-int main(int argc, char *argv[]) {
+int main(void) {
   // 初始化日志系统，指定程序名称和选项
   openlog(PROG_NAME, LOG_PID, LOG_USER);
 

@@ -47,6 +47,7 @@ sd_bus_method bus_methods[BUS_METHOD_MAX] = {
         BUS_DAEMON_NETWORK_PATH,
         BUS_DAEMON_NETWORK_IF_NAME,
         "GetProxyMethod",
+        .in_args = NULL,
     },
     {
         BUS_METHOD_NETWORK_GET_PROXY,
@@ -70,6 +71,7 @@ sd_bus_method bus_methods[BUS_METHOD_MAX] = {
         BUS_DAEMON_WM_PATH,
         BUS_DAEMON_WM_IF_NAME,
         "ActiveWindow",
+        .in_args = NULL,
     },
     {
         BUS_METHOD_NOTIFY_NOTIFY,
@@ -496,7 +498,7 @@ int check_caller_auth(sd_bus_message *m, lastore_agent *agent) {
 }
 
 int CloseNotification(sd_bus_message *m, void *userdata,
-                      sd_bus_error *ret_error) {
+                      sd_bus_error *ret_error AGENT_UNUSED) {
   _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
   _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
   lastore_agent *agent = NULL;
@@ -546,7 +548,7 @@ void destroy_kv(gpointer value) {
     g_free(value);
 }
 
-int GetManualProxy(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+int GetManualProxy(sd_bus_message *m, void *userdata, sd_bus_error *ret_error AGENT_UNUSED) {
   _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
   _cleanup_(sd_bus_message_unrefp)  sd_bus_message *reply = NULL;
   lastore_agent *agent = NULL;
@@ -607,7 +609,7 @@ int GetManualProxy(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     goto finish;
   }
 
-  for (int i = 0; i < sizeof(proxy_types) / sizeof(proxy_types[0]); i++) {
+  for (size_t i = 0; i < sizeof(proxy_types) / sizeof(proxy_types[0]); i++) {
     // dbus调用network getproxy
     r = bus_call_method(agent->session_bus,
                         &bus_methods[BUS_METHOD_NETWORK_GET_PROXY], &reply,
@@ -689,7 +691,7 @@ finish:
   return r;
 }
 
-int ReportLog(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+int ReportLog(sd_bus_message *m, void *userdata, sd_bus_error *ret_error AGENT_UNUSED) {
   _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
   _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
   lastore_agent *agent = NULL;
@@ -736,7 +738,7 @@ finish:
   return r;
 }
 
-int SendNotify(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+int SendNotify(sd_bus_message *m, void *userdata, sd_bus_error *ret_error AGENT_UNUSED) {
   _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
   _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
   lastore_agent *agent = NULL;
@@ -799,7 +801,7 @@ int SendNotify(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
       char win_path[128] = {0};
       sprintf(win_path, "%s_%d", BUS_DAEMON_WM_WININFO_PATH, win_id);
       sd_bus_method bus_method = {-1, BUS_DAEMON_WM_NAME, win_path,
-                                  BUS_DAEMON_WM_WININFO_IF_NAME, "AppId"};
+                                  BUS_DAEMON_WM_WININFO_IF_NAME, "AppId", .in_args = NULL};
       r = bus_call_method(agent->session_bus, &bus_method, &reply);
       if (r < 0) {
         sd_bus_error_setf(&error, SD_BUS_ERROR_FAILED,

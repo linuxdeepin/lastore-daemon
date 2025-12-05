@@ -5,19 +5,18 @@
 #ifndef __LASTORE_AGENT_H__
 #define __LASTORE_AGENT_H__
 
-#include "log.h"
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <syslog.h>
 #include <systemd/sd-bus.h>
 
+#define AGENT_UNUSED __attribute__((unused))
+
 struct lastore_agent
 {
-  sd_bus *session_bus;
-  sd_bus *sys_bus;
-  sd_bus_slot *slot;
-  bool is_wayland_session;
+    sd_bus *session_bus;
+    sd_bus *sys_bus;
+    sd_bus_slot *slot;
+    bool is_wayland_session;
 };
 
 typedef struct lastore_agent lastore_agent;
