@@ -441,6 +441,10 @@ func parsePackageSize(line string) (float64, float64, error) {
 var __InstallAddSize__ = regexp.MustCompile("After this operation, ([0-9,.]+) ([kMGTPEZY]?)B")
 
 func parseInstallAddSize(line string) (float64, error) {
+	// For example, line is "After this operation, 200GB disk space will be freed."
+	if strings.Contains(line, "freed") {
+		return 0, nil
+	}
 	ms := __InstallAddSize__.FindSubmatch(([]byte)(line))
 	switch len(ms) {
 	case 3:
