@@ -23,6 +23,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/go-lib/strv"
 )
 
 const (
@@ -419,7 +420,27 @@ func (u *Updater) getUpdatablePackagesByType(updateType system.UpdateType) []str
 			}
 		}
 	}
+	updatableApps = strv.Strv(updatableApps).Uniq()
 	return updatableApps
+}
+
+func (u *Updater) getUpdatablePackagesWithClassification(updateType system.UpdateType) ([]string, map[system.UpdateType][]string) {
+	u.PropsMu.RLock()
+	defer u.PropsMu.RUnlock()
+
+	var updatablePkgs []string
+	var updatablePkgsMap = make(map[system.UpdateType][]string)
+	for _, t := range system.AllInstallUpdateType() {
+		if updateType&t != 0 {
+			packages := u.ClassifiedUpdatablePackages[t.JobType()]
+			if len(packages) > 0 {
+				updatablePkgs = append(updatablePkgs, packages...)
+				updatablePkgsMap[t] = packages
+			}
+		}
+	}
+	updatablePkgs = strv.Strv(updatablePkgs).Uniq()
+	return updatablePkgs, updatablePkgsMap
 }
 
 func (u *Updater) GetLimitConfig() (bool, string) {
