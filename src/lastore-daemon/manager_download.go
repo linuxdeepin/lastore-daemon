@@ -21,6 +21,24 @@ import (
 	"github.com/linuxdeepin/go-lib/gettext"
 )
 
+// calculateTotalDownloadSize calculates the total download size for all packages under the specified update mode
+func calculateTotalDownloadSize(mode system.UpdateType, updatablePkgsMap map[system.UpdateType][]string) (float64, []error) {
+	totalNeedDownloadSize := 0.0
+	var errs []error
+	for _, updateType := range system.AllUpdateType() {
+		if mode&updateType == 0 {
+			continue
+		}
+		updatablePkgs := updatablePkgsMap[updateType]
+		if needDownloadSize, _, err := system.QuerySourceDownloadSize(updateType, updatablePkgs); err == nil {
+			totalNeedDownloadSize += needDownloadSize
+		} else {
+			errs = append(errs, err)
+		}
+	}
+	return totalNeedDownloadSize, errs
+}
+
 func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateType, initiator Initiator) (*Job, error) {
 	if m.ImmutableAutoRecovery {
 		logger.Info("immutable auto recovery is enabled, don't allow to exec prepareDistUpgrade")
@@ -46,16 +64,17 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		}
 	}
 
-	packages := m.updater.getUpdatablePackagesByType(mode)
+	packages, updatablePkgsMap := m.updater.getUpdatablePackagesWithClassification(mode)
 	if len(packages) == 0 {
 		return nil, system.NotFoundError("empty UpgradableApps")
 	}
-	var needDownloadSize float64
-	needDownloadSize, _, _ = system.QueryPackageDownloadSize(mode, packages...)
+
+	// Calculate the total download size required
+	totalNeedDownloadSize, _ := calculateTotalDownloadSize(mode, updatablePkgsMap)
 	// 不再处理needDownloadSize == 0的情况,因为有可能是其他仓库包含了该仓库的包,导致该仓库无需下载,可以直接继续后续流程,用来切换该仓库的状态
 	// 下载前检查/var分区的磁盘空间是否足够下载,
 	isInsufficientSpace := false
-	if needDownloadSize > 0 {
+	if totalNeedDownloadSize > 0 {
 		content, err := exec.Command("/bin/sh", []string{
 			"-c",
 			"df -BK --output='avail' /var|awk 'NR==2'",
@@ -70,7 +89,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				logger.Warning(err)
 			} else {
 				spaceNum = spaceNum * 1000
-				isInsufficientSpace = spaceNum < int(needDownloadSize)
+				isInsufficientSpace = spaceNum < int(totalNeedDownloadSize)
 			}
 		}
 	}
@@ -81,7 +100,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			ErrDetail:    "You don't have enough free space to download",
 			IsCheckError: true,
 		}
-		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), needDownloadSize/(1000*1000*1000))
+		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), totalNeedDownloadSize/(1000*1000*1000))
 		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 		logger.Warning(dbusError.Error())
 		errStr, _ := json.Marshal(dbusError)
@@ -150,9 +169,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.FailedStatus): func() error {
-				m.PropsMu.Lock()
-				packages := m.UpgradableApps
-				m.PropsMu.Unlock()
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
 				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
@@ -160,14 +176,15 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				err = json.Unmarshal([]byte(j.Description), &errorContent)
 				if err == nil {
 					if strings.Contains(errorContent.ErrType.String(), system.ErrorInsufficientSpace.String()) {
-						var msg string
-						size, _, err := system.QueryPackageDownloadSize(mode, packages...)
-						if err != nil {
-							logger.Warning(err)
-							size = needDownloadSize
+						_, updatablePkgsMap := m.updater.getUpdatablePackagesWithClassification(mode)
+						size, errs := calculateTotalDownloadSize(mode, updatablePkgsMap)
+						if size == 0 && len(errs) > 0 {
+							size = totalNeedDownloadSize
 						}
-						msg = fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), size/(1000*1000*1000))
-						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+						if size > 0 {
+							msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), size/(1000*1000*1000))
+							go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+						}
 					} else if strings.Contains(errorContent.ErrType.String(), system.ErrorDamagePackage.String()) {
 						// 下载更新失败，需要apt-get clean后重新下载
 						cleanAllCache()
