@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
@@ -431,7 +432,16 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 					changed = true
 				}
 			} else {
-				if m.lsConfig.IncrementalUpdate && needDownloadSize > 0 && apt.IsIncrementalUpdateCached() {
+				sourceList, ok := system.GetCategorySourceMap()[typ]
+				sourceArgs := ""
+				if ok && sourceList != "" {
+					if utils.IsDir(sourceList) {
+						sourceArgs = "-o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::SourceParts=" + sourceList
+					} else {
+						sourceArgs = "-o Dir::Etc::sourcelist=" + sourceList + " -o Dir::Etc::SourceParts=/dev/null"
+					}
+				}
+				if m.lsConfig.IncrementalUpdate && needDownloadSize > 0 && apt.IsIncrementalUpdateCached(sourceArgs) {
 					needDownloadSize = 0.0
 				}
 

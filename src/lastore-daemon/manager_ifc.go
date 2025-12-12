@@ -214,7 +214,7 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
 	}
 
-	if m.config.IncrementalUpdate && size > 0 && apt.IsIncrementalUpdateCached() {
+	if m.config.IncrementalUpdate && size > 0 && apt.IsIncrementalUpdateCached("") {
 		size = 0.0
 	}
 

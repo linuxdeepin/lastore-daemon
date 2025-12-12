@@ -294,8 +294,11 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 }
 
 // In incremental update mode, returns true if all packages are cached, otherwise returns false.
-func IsIncrementalUpdateCached() bool {
+func IsIncrementalUpdateCached(sourceArgs string) bool {
 	cmd := exec.Command("/usr/sbin/deepin-immutable-ctl", "upgrade", "check")
+	if sourceArgs != "" {
+		cmd.Env = append(os.Environ(), "DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION="+sourceArgs)
+	}
 	// Need download count: xxx
 	output, err := cmd.Output()
 	if err == nil {
