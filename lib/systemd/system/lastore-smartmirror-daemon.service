@@ -5,35 +5,31 @@ Wants=dbus.socket
 After=dbus.socket
 
 [Service]
-Type=dbus
+# Cannot set PrivateNetwork=yes because network access is required.
+# Cannot set MemoryDenyWriteExecute=yes because this is a Go program compiled with -pie option, which would prevent the process from starting.
 BusName=org.deepin.dde.Lastore1.Smartmirror
-User=deepin-daemon
+CapabilityBoundingSet=
 ExecStart=/usr/libexec/lastore-daemon/lastore-smartmirror-daemon
-StandardOutput=null
-StandardError=journal
-
-ProtectSystem=strict
-StateDirectory=lastore
-InaccessiblePaths=/etc/shadow
-InaccessiblePaths=-/etc/NetworkManager/system-connections
-InaccessiblePaths=-/etc/pam.d
-InaccessiblePaths=-/usr/share/uadp/
-
+InaccessiblePaths=-/etc/shadow -/etc/pam.d/ -/etc/NetworkManager/system-connections/ -/etc/security/ -/etc/selinux/ -/etc/deepin-elf-verify/ -/etc/filearmor.d/ -/etc/crypttab -/etc/fstab -/sysroot/ostree/repo/ -/persistent/ostree/repo/
+LockPersonality=yes
 NoNewPrivileges=yes
-ProtectHome=yes
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-ProtectControlGroups=yes
+PrivateDevices=yes
+PrivateIPC=true
 PrivateMounts=yes
 PrivateTmp=yes
-PrivateDevices=yes
-# 需要联网
-#PrivateNetwork=yes
 PrivateUsers=yes
-RestrictNamespaces=yes
-LockPersonality=yes
-RestrictRealtime=yes
+ProtectClock=true
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
 RemoveIPC=yes
-# 和golang -pie参数冲突，导致进程无法启动
-#MemoryDenyWriteExecute=yes
-#MemoryLimit=100M
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=true
+StandardError=journal
+StandardOutput=null
+StateDirectory=lastore
+Type=dbus
+User=deepin-daemon

@@ -3,12 +3,28 @@ Description=Deepin Lastore Daemon
 After=display-manager.service
 
 [Service]
-Type=dbus
+
+# CapabilityBoundingSet= is not set because it would cause apt execution errors, such as setegid and other operations failing due to insufficient permissions.
+# InaccessiblePaths is not set because dpkg needs to be called to upgrade the system.
+# MemoryDenyWriteExecute=yes is not set because this is a Go program compiled with -pie option, which would prevent the process from starting.
+# PrivateDevices=true is not set because grub-mkconfig is executed when creating backup deployment.
+# PrivateTmp=true is not set because it relies on /tmp to record state.
+# ProtectHome=true is not set because sudo is needed to connect to the user Session Bus and send DDE message notifications.
+# ProtectKernelModules=true is not set because kernel packages need to be installed
+# ProtectProc=true is not set because it needs to access caller process environment variables.
+# ProtectSystem=strict is not set because dpkg needs to be called to upgrade the system.
+# RestrictSUIDSGID=true is not set because some packages may need to set SUID and SGID during installation.
+# StateDirectory=lastore is not set because it would conflict with the ownership of smartmirror-daemon and build-system-info services, which need to be owned by deepin-daemon, and enabling this would set the owner to root.
+
 BusName=org.deepin.dde.Lastore1
-ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
-StandardOutput=null
-StandardError=null
-StateDirectory=lastore
 CacheDirectory=lastore
+ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
+NoNewPrivileges=true
+PrivateIPC=true
+ProtectClock=true
+ProtectKernelTunables=true
 RuntimeDirectory=lastore
 RuntimeDirectoryMode=0750
+StandardError=null
+StandardOutput=null
+Type=dbus

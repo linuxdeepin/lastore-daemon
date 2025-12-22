@@ -10,7 +10,6 @@ case "$1" in
             [ -e /lib/systemd/dbus-org.deepin.dde.Lastore1.service ] && rm /lib/systemd/system/dbus-org.deepin.dde.Lastore1.service || true
         fi
         systemctl daemon-reload || true
-        /var/lib/lastore/scripts/update_metadata_info || true
         /var/lib/lastore/scripts/build_system_info || true
         # Fix the problem that the machine id is the same after the system is installed.
         if [ -f /etc/machine-id ] && grep -q "a5fa4f1b04514009830c73f3b1f1dd4c" /etc/machine-id; then

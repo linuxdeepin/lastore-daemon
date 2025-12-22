@@ -67,11 +67,19 @@ func GetDesktopFiles(dirs []string) []string {
 // 2. desktop --> exec
 // 3. desktop --> package
 func GenerateDesktopIndexes(baseDir string) error {
-	// #nosec G301
-	_ = os.MkdirAll(baseDir, 0755)
+	err := os.MkdirAll(baseDir, 0755)
+	if err != nil {
+		return err
+	}
 
 	packageIndex, installTimeIndex := ParsePackageInfos()
-	if err := writeData(path.Join(baseDir, "pacakge_installedTime.json"), installTimeIndex); err != nil {
+	installTimeFile := path.Join(baseDir, "pacakge_installedTime.json")
+
+	// Remove the file first to avoid write failures due to insufficient permissions
+	if err := os.Remove(installTimeFile); err != nil && !os.IsNotExist(err) {
+		logger.Warningf("Remove %s failed: %v\n", installTimeFile, err)
+	}
+	if err := writeData(installTimeFile, installTimeIndex); err != nil {
 		return err
 	}
 
