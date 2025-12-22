@@ -18,11 +18,12 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
-var (
+const (
 	qualityDataFilepath = "smartmirror_quality.json"
 	configDataFilepath  = "smartmirror_config.json"
 )
 
+// The STATE_DIRECTORY environment variable is set by systemd when starting this service.
 var stateDirectory = os.Getenv("STATE_DIRECTORY")
 
 // SmartMirror handle core smart mirror data
@@ -78,7 +79,13 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 				s.mirrorQuality.updateQuality(r)
 				s.taskCount--
 			}
-			_ = utils.WriteData(path.Join(stateDirectory, qualityDataFilepath), s.mirrorQuality.QualityMap)
+			filePath := path.Join(stateDirectory, qualityDataFilepath)
+			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+				logger.Warning("remove quality data file failed:", err)
+			}
+			if err := utils.WriteData(filePath, s.mirrorQuality.QualityMap); err != nil {
+				logger.Warning("write quality data file failed:", err)
+			}
 		}
 	}()
 	return s
@@ -86,6 +93,7 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 
 // SetEnable the best source
 func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
+	s.service.DelayAutoQuit()
 	changed := s.Enable != enable
 
 	s.Enable = enable
@@ -106,6 +114,7 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 
 // Query the best source
 func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (url string, busErr *dbus.Error) {
+	s.service.DelayAutoQuit()
 	if !s.Enable {
 		source := strings.Replace(original, officialMirror, mirrorHost, 1)
 		if utils.ValidURL(source) {

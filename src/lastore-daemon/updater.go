@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -131,14 +130,6 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		}
 	}
 	return u
-}
-
-func startUpdateMetadataInfoService() {
-	logger.Info("start update metadata info service")
-	err := exec.Command("systemctl", "start", "lastore-update-metadata-info.service").Run()
-	if err != nil {
-		logger.Warningf("AutoCheck Update failed: %v", err)
-	}
 }
 
 func SetAPTSmartMirror(url string) error {

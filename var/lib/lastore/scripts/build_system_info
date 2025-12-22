@@ -12,7 +12,7 @@ function prepare()
     #        exit 1;
     #    fi
 
-    if /usr/bin/pgrep build_system_info > /dev/null; then
+    if /usr/bin/pgrep --ignore-ancestors -f "/var/lib/lastore/scripts/build_system_info" > /dev/null; then
         echo "build_system_info is running, please try it later"
         exit 1;
     fi

@@ -5,6 +5,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
@@ -33,5 +35,8 @@ func (c *config) setEnable(enable bool) error {
 }
 
 func (c *config) save() error {
+	if err := os.Remove(c.filePath); err != nil && !os.IsNotExist(err) {
+		logger.Warning("remove config file failed:", err)
+	}
 	return system.EncodeJson(c.filePath, c)
 }

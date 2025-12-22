@@ -662,9 +662,6 @@ func (m *Manager) handleAutoCheckEvent() error {
 			return err
 		}
 	}
-	if !m.config.DisableUpdateMetadata && !m.ImmutableAutoRecovery {
-		startUpdateMetadataInfoService()
-	}
 	return nil
 }
 

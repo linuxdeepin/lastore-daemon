@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/rand"
 	"os/exec"
+	"os/user"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +28,7 @@ const (
 	lastoreUnitCache = "/tmp/lastoreUnitCache"
 	run              = "systemd-run"
 	lastoreDBusCmd   = "dbus-send --system --print-reply --dest=org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager.HandleSystemEvent"
+	deepinDaemonUser = "deepin-daemon"
 )
 
 // isFirstBoot startOfflineTask执行前执行有效
@@ -38,7 +41,6 @@ type systemdEventType string
 const (
 	AutoCheck              systemdEventType = "AutoCheck"
 	AutoClean              systemdEventType = "AutoClean"
-	UpdateInfosChanged     systemdEventType = "UpdateInfosChanged"
 	OsVersionChanged       systemdEventType = "OsVersionChanged"
 	InitIdleDownload       systemdEventType = "InitIdleDownload"
 	AutoDownload           systemdEventType = "AutoDownload"
@@ -334,20 +336,45 @@ func (m *Manager) getNextUpdateDelay() time.Duration {
 	return remained + _minDelayTime
 }
 
+// isAllowedToTriggerSystemEvent checks if the uid is allowed to trigger system events
+func isAllowedToTriggerSystemEvent(uid uint32, eventType systemdEventType) bool {
+	// Allow regular users to trigger OsVersionChanged event
+	// TODO: This should be fixed in the future to only allow restricted users to trigger this event.
+	if eventType == OsVersionChanged {
+		return true
+	}
+
+	// Allow root user for all operations
+	if uid == 0 {
+		return true
+	}
+
+	// Allow deepin-daemon user for all operations
+	if u, err := user.Lookup(deepinDaemonUser); err == nil {
+		if daemonUID, err := strconv.ParseUint(u.Uid, 10, 32); err == nil && uid == uint32(daemonUID) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) error {
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	if uid != 0 && systemdEventType(eventType) != OsVersionChanged {
-		err = fmt.Errorf("%q is not allowed to trigger system event", uid)
+
+	evType := systemdEventType(eventType)
+	if !isAllowedToTriggerSystemEvent(uid, evType) {
+		err = fmt.Errorf("uid %d is not allowed to trigger system event %v", uid, evType)
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
+
 	m.service.DelayAutoQuit()
-	typ := systemdEventType(eventType)
-	switch typ {
+	switch evType {
 	case AutoCheck:
 		go func() {
 			err := m.handleAutoCheckEvent()
@@ -363,9 +390,6 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 				logger.Warning(err)
 			}
 		}()
-	// case UpdateInfosChanged:
-	// 	logger.Info("UpdateInfos Changed")
-	// 	m.handleUpdateInfosChanged()
 	case OsVersionChanged:
 		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
 	case InitIdleDownload:

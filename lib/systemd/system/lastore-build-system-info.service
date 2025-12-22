@@ -2,9 +2,28 @@
 Description=Build system info
 
 [Service]
-Type=idle
-StartLimitInterval=10s
-StartLimitBurst=20
-RestartSec=5s
-Restart=on-failure
+
+# MemoryDenyWriteExecute=true is not set because the script calls lastore-tools (a Go program compiled with -pie option) which would fail.
+# ProtectProc=invisible is not set because the script uses pgrep to check if processes are running
+
+CapabilityBoundingSet=
 ExecStart=/var/lib/lastore/scripts/build_system_info -now
+InaccessiblePaths=-/etc/shadow -/etc/pam.d/ -/etc/NetworkManager/system-connections/ -/etc/security/ -/etc/selinux/ -/etc/deepin-elf-verify/ -/etc/filearmor.d/ -/etc/crypttab -/etc/fstab -/sysroot/ostree/repo/ -/persistent/ostree/repo/
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateIPC=true
+PrivateTmp=true
+ProtectClock=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/
+Restart=on-failure
+RestartSec=5s
+RestrictSUIDSGID=true
+StartLimitBurst=20
+StartLimitInterval=10s
+StateDirectory=lastore
+Type=idle
+User=deepin-daemon
