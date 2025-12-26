@@ -1,3 +1,9 @@
+lastore-daemon (6.2.42) unstable; urgency=medium
+
+  * feat: Add security restriction configurations to all service files
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 26 Dec 2025 16:20:59 +0800
+
 lastore-daemon (6.2.41) unstable; urgency=medium
 
   * fix: Add source list parameter for upgrade check
