@@ -213,7 +213,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 							ErrDetail: "failed to get update policy by token" + err.Error(),
 						}
 					} else {
-						logger.Warning("updatePlatform gen token failed", err)
+						logger.Warningf("updatePlatform gen token failed: %v", err)
 						return nil
 					}
 				}
