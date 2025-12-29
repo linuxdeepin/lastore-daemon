@@ -6,6 +6,7 @@ package sysinfo
 
 import (
 	// "os/exec"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -37,23 +38,22 @@ import (
 // 	return freeSpace, nil
 // }
 
+func parseDfAvailOuput(output string) (uint64, error) {
+	fields := strings.Fields(output)
+	if len(fields) == 0 {
+		return 0, fmt.Errorf("unexpected df output: %q", output)
+	}
+	return strconv.ParseUint(fields[len(fields)-1], 10, 64)
+}
+
 // TODO:(DingHao) fix to udisksctl
 func GetRootDiskFreeSpace() (uint64, error) {
-	freeSpace, err := runcmd.RunnerOutput(10, "bash", "-c", "df -l --output=avail / | tail -n 1")
+	freeSpace, err := runcmd.RunnerOutput(10, "df", "-l", "--output=avail", "/")
 	if err != nil {
 		return 0, err
 	}
 
-	// 将输出结果转换为字符串并去除空格
-	freeSpaceStr := strings.TrimSpace(string(freeSpace))
-
-	// 将字符串转换为uint64类型的整数
-	freeSpaceInt, err := strconv.ParseUint(freeSpaceStr, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return freeSpaceInt, nil
+	return parseDfAvailOuput(freeSpace)
 }
 
 // TODO:(DingHao) fix to udisksctl
@@ -66,19 +66,10 @@ func GetDataDiskFreeSpace() (uint64, error) {
 		return sysSpace, nil
 	}
 
-	freeSpace, err := runcmd.RunnerOutput(10, "bash", "-c", "df -l --output=avail /data | tail -n 1")
+	freeSpace, err := runcmd.RunnerOutput(10, "df", "-l", "--output=avail", "/data")
 	if err != nil {
 		return 0, err
 	}
 
-	// 将输出结果转换为字符串并去除空格
-	freeSpaceStr := strings.TrimSpace(string(freeSpace))
-
-	// 将字符串转换为uint64类型的整数
-	freeSpaceInt, err := strconv.ParseUint(freeSpaceStr, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return freeSpaceInt, nil
+	return parseDfAvailOuput(freeSpace)
 }

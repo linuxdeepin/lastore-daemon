@@ -1599,7 +1599,9 @@ func (m *UpdatePlatformManager) PrepareCheckScripts() {
 	for _, g := range checkGroups {
 		for _, c := range g.list {
 			filePath := filepath.Join(g.dir, c.Name)
-			content, err := base64.RawStdEncoding.DecodeString(c.Shell)
+			// Remove padding for StdEncoding, "IyEvYmluL2Jhc2gKCmVjaG8gImhlbGxvIGRlZXBpbiI="
+			shell := strings.TrimRight(c.Shell, "=")
+			content, err := base64.RawStdEncoding.DecodeString(shell)
 			if err != nil {
 				logger.Warningf("decode shell for %s failed: %v", c.Name, err)
 				continue
