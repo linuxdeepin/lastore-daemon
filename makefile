@@ -33,7 +33,11 @@ bin/lastore-agent:src/lastore-agent/*.c
 	@mkdir -p bin
 	gcc ${SECURITY_BUILD_OPTIONS} -W -Wall -D_GNU_SOURCE -o $@ $^ $(shell pkg-config --cflags --libs glib-2.0 libsystemd)
 
-build: prepare bin/lastore-agent
+bin/lastore-upgrade-query: src/lastore-upgrade-query/*.cc
+	@mkdir -p bin
+	g++ ${SECURITY_BUILD_OPTIONS} -W -Wall -o $@ $^ $(shell pkg-config --cflags --libs apt-pkg) $(shell pkg-config --cflags --libs nlohmann_json)
+
+build: prepare bin/lastore-agent bin/lastore-upgrade-query
 	${GoPath} ${GOBUILD_CGO_FLAGS} ${GOBUILD} -o bin/lastore-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-daemon
 	${GoPath} ${GOBUILD_CGO_FLAGS} ${GOBUILD} -o bin/lastore-tools ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-tools
 	${GoPath} ${GOBUILD_CGO_FLAGS} ${GOBUILD} -o bin/lastore-smartmirror ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror || echo "build failed, disable smartmirror support "
@@ -67,6 +71,7 @@ install: gen_mo
 	cp bin/lastore-tools ${DESTDIR}${PREFIX}/usr/bin/
 	cp bin/lastore-smartmirror ${DESTDIR}${PREFIX}/usr/bin/
 	cp bin/lastore-agent ${DESTDIR}${PREFIX}/usr/bin/
+	cp bin/lastore-upgrade-query ${DESTDIR}${PREFIX}/usr/bin/
 	mkdir -p ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon && cp bin/lastore-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 	cp bin/lastore-smartmirror-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 
