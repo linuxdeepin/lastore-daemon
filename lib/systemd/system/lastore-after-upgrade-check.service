@@ -22,7 +22,6 @@ ProtectSystem=strict
 ReadWritePaths=/tmp/
 RestrictSUIDSGID=true
 Type=oneshot
-User=deepin-daemon
 
 [Install]
 WantedBy=multi-user.target
