@@ -144,10 +144,12 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				if err != nil {
 					logger.Warning(err)
 				}
-			case secondCheck:
+				// Doing finalize after first check is done, because user may choose to reboot again
+				// before login.
 				if err = m.immutableManager.osTreeFinalize(); err != nil {
 					logger.Warning(err)
 				}
+			case secondCheck:
 				// ps: 登录后检查无异常，去掉第二次检查，上报更新成功，更新baseline信息，还原grub配置
 				err = m.delRebootCheckOption(secondCheck)
 				if err != nil {
