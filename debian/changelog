@@ -1,3 +1,13 @@
+lastore-daemon (6.2.43) unstable; urgency=medium
+
+  * feat: finalize deployment during first check (#277)
+  * fix: remove User=deepin-daemon from lastore-after-upgrade-check (#276)
+  * fix: remove "bash -c" in command (#275)
+  * feat: Add lastore-upgrade-query tool
+  * feat: Allow lastore-daemon.service to configure kernel parameters
+
+ -- electricface <songwentai@uniontech.com>  Sun, 04 Jan 2026 18:05:51 +0800
+
 lastore-daemon (6.2.42) unstable; urgency=medium
 
   * feat: Add security restriction configurations to all service files
