@@ -187,6 +187,10 @@ func CheckPkgSystemError(lock bool, indicator system.Indicator) error {
 	}
 
 	cmd := exec.Command("apt-get", args...)
+	if lock {
+		// Need remount to write data in /usr directory.
+		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
+	}
 	var outBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	var errBuf bytes.Buffer
