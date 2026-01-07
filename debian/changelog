@@ -1,3 +1,11 @@
+lastore-daemon (6.2.44) unstable; urgency=medium
+
+  * fix(smartmirror): correct apt smart mirror source configuration
+  * fix: The component field can be empty
+  * fix: Notification warning "lastore-daemon is modifying the system read-only directory"
+
+ -- electricface <songwentai@uniontech.com>  Wed, 07 Jan 2026 17:00:40 +0800
+
 lastore-daemon (6.2.43) unstable; urgency=medium
 
   * feat: finalize deployment during first check (#277)
