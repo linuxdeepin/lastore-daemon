@@ -97,10 +97,14 @@ func buildRequest(header map[string]string, method string, url string) *http.Req
 }
 
 // handleRequest wait request reply and close connection quickly
-func handleRequest(r *http.Request) (string, int) {
+func handleRequest(r *http.Request) (resultURL string, statusCode int) {
 	if r == nil {
 		return "", -1
 	}
+	defer func() {
+		logger.Debugf("handleRequest: r.Url=%s, return url=%s, statusCode=%v", r.URL, resultURL, statusCode)
+	}()
+
 	resp, err := httpClient.Do(r)
 	if err != nil {
 		return "", -2

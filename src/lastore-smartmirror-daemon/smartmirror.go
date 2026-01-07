@@ -114,6 +114,7 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 
 // Query the best source
 func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (url string, busErr *dbus.Error) {
+	logger.Debug("Query", original, officialMirror, mirrorHost)
 	s.service.DelayAutoQuit()
 	if !s.Enable {
 		source := strings.Replace(original, officialMirror, mirrorHost, 1)
