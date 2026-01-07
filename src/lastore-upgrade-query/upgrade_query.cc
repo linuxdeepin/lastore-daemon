@@ -26,7 +26,6 @@ bool UpgradePackage::Valid() const {
         CandidateVersion.empty() ||
         Architecture.empty() ||
         Codename.empty() ||
-        Component.empty() ||
         Site.empty() ||
         Filename.empty() ||
         Hash.empty()) {
@@ -131,7 +130,7 @@ std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist, co
     for (pkgCache::PkgIterator pkg = Cache->PkgBegin(); !pkg.end(); ++pkg) {
         const pkgDepCache::StateCache& state = (*Cache)[pkg];
 
-        if (state.NewInstall() || state.Upgrade()) {
+        if (state.NewInstall() || state.Upgrade() || state.Downgrade()) {
             result.emplace_back(GetUpgradePackage(Cache, Recs, pkg));
         }
     }
