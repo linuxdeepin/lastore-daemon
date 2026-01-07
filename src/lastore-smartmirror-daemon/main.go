@@ -67,7 +67,7 @@ func main() {
 	logger.Debug("Started service at system bus")
 
 	if *runDaemon {
-		logger.Debug("Run as daemon and not exist")
+		logger.Debug("Run as daemon and not auto exit")
 		service.SetAutoQuitHandler(time.Second*5, func() bool {
 			return false
 		})
