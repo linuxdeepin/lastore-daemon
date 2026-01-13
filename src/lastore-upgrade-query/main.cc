@@ -4,7 +4,8 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     std::string sourcelist = "";
     std::string sourcepart = "";
     bool outputJson = false;
@@ -33,9 +34,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    std::vector<UpgradePackage> packages = GetUpgradePackages(sourcelist, sourcepart, allowDowngrades);
+    std::vector<UpgradePackage> packages =
+            GetUpgradePackages(sourcelist, sourcepart, allowDowngrades);
 
-    for (const auto& pkgItem : packages) {
+    for (const auto &pkgItem : packages) {
         if (!pkgItem.Valid()) {
             std::cerr << "Invalid package: " << pkgItem.Name << std::endl;
             return 1;
@@ -44,36 +46,35 @@ int main(int argc, char **argv) {
 
     if (outputJson) {
         nlohmann::json json_array = nlohmann::json::array();
-        
-        for (const auto& pkg : packages) {
-            json_array.push_back({
-                {"name", pkg.Name},
-                {"installed_version", pkg.InstalledVersion},
-                {"candidate_version", pkg.CandidateVersion},
-                {"architecture", pkg.Architecture},
-                {"codename", pkg.Codename},
-                {"component", pkg.Component},
-                {"site", pkg.Site},
-                {"filename", pkg.Filename},
-                {"size", pkg.Size},
-                {"installed_size", pkg.InstalledSize},
-                {"hash", pkg.Hash}
-            });
+
+        for (const auto &pkg : packages) {
+            json_array.push_back({ { "name", pkg.Name },
+                                   { "installed_version", pkg.InstalledVersion },
+                                   { "candidate_version", pkg.CandidateVersion },
+                                   { "architecture", pkg.Architecture },
+                                   { "codename", pkg.Codename },
+                                   { "component", pkg.Component },
+                                   { "site", pkg.Site },
+                                   { "filename", pkg.Filename },
+                                   { "size", pkg.Size },
+                                   { "installed_size", pkg.InstalledSize },
+                                   { "hash", pkg.Hash },
+                                   { "uri", pkg.Uri } });
         }
-        
+
         std::cout << json_array.dump() << '\n';
     } else {
         std::cout << "\n=== Retrieved Package Information ===\n"
                   << "Total " << packages.size() << " packages found\n";
 
-        for (const auto& pkg : packages) {
+        for (const auto &pkg : packages) {
             std::cout << "\nname: " << pkg.Name << "\n"
                       << "candidate_version: " << pkg.CandidateVersion << "\n";
-            
+
             if (!pkg.InstalledVersion.empty()) {
                 std::cout << "installed_version: " << pkg.InstalledVersion << "\n";
             }
-            
+
             std::cout << "architecture: " << pkg.Architecture << "\n"
                       << "codename: " << pkg.Codename << "\n"
                       << "component: " << pkg.Component << "\n"
@@ -83,7 +84,8 @@ int main(int argc, char **argv) {
                       << pkg.Size / 1024.0 / 1024.0 << " MB\n"
                       << "installed_size: " << std::fixed << std::setprecision(2)
                       << pkg.InstalledSize / 1024.0 / 1024.0 << " MB\n"
-                      << "hash: " << pkg.Hash << "\n";
+                      << "hash: " << pkg.Hash << "\n"
+                      << "uri: " << pkg.Uri << "\n";
         }
     }
 

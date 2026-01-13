@@ -4,7 +4,8 @@
 #include <string>
 #include <cstdint>
 
-class UpgradePackage {
+class UpgradePackage
+{
 public:
     std::string Name;
     std::string InstalledVersion;
@@ -17,8 +18,11 @@ public:
     uint64_t Size = 0;
     uint64_t InstalledSize = 0;
     std::string Hash;
+    std::string Uri;
 
     bool Valid() const;
 };
 
-std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist, const std::string &sourceparts, bool allow_downgrades = false);
+std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist,
+                                               const std::string &sourceparts,
+                                               bool allow_downgrades = false);
