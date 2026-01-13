@@ -9,6 +9,7 @@
 #include <apt-pkg/upgrade.h>
 #include <apt-pkg/depcache.h>
 #include <apt-pkg/sourcelist.h>
+#include <apt-pkg/indexfile.h>
 #include <apt-pkg/policy.h>
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/hashes.h>
@@ -21,26 +22,24 @@
 
 #include "upgrade_query.h"
 
-bool UpgradePackage::Valid() const {
-    if (Name.empty() ||
-        CandidateVersion.empty() ||
-        Architecture.empty() ||
-        Codename.empty() ||
-        Site.empty() ||
-        Filename.empty() ||
-        Hash.empty()) {
+bool UpgradePackage::Valid() const
+{
+    if (Name.empty() || CandidateVersion.empty() || Architecture.empty() || Codename.empty()
+        || Filename.empty() || Hash.empty()) {
         return false;
     }
-    
+
     // Check uint64_t fields - they should not be 0
     if (Size == 0) {
         return false;
     }
-    
+
     return true;
 }
 
-UpgradePackage GetUpgradePackage(pkgCacheFile &Cache, pkgRecords &Recs, const pkgCache::PkgIterator &pkg) {
+UpgradePackage GetUpgradePackage(pkgCacheFile &Cache, pkgRecords &Recs,
+                                 const pkgSourceList *srcList, const pkgCache::PkgIterator &pkg)
+{
     UpgradePackage result;
     pkgCache::VerIterator candVer = Cache->GetCandidateVersion(pkg);
 
@@ -71,8 +70,16 @@ UpgradePackage GetUpgradePackage(pkgCacheFile &Cache, pkgRecords &Recs, const pk
             }
 
             // Use pkgRecords to get detailed download information
-            pkgRecords::Parser& parser = Recs.Lookup(vf);
+            pkgRecords::Parser &parser = Recs.Lookup(vf);
             result.Filename = parser.FileName();
+
+            // Construct URI using pkgIndexFile
+            if (srcList) {
+                pkgIndexFile *index;
+                if (srcList->FindIndex(pf, index) && index) {
+                    result.Uri = index->ArchiveURI(parser.FileName());
+                }
+            }
 
             // Get hash information
             HashStringList hashes = parser.Hashes();
@@ -88,7 +95,10 @@ UpgradePackage GetUpgradePackage(pkgCacheFile &Cache, pkgRecords &Recs, const pk
     return result;
 }
 
-std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist, const std::string &sourceparts, bool allow_downgrades) {
+std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist,
+                                               const std::string &sourceparts,
+                                               bool allow_downgrades)
+{
     std::vector<UpgradePackage> result;
     if (!pkgInitConfig(*_config)) {
         std::cerr << "Failed to initialize APT config" << std::endl;
@@ -125,15 +135,16 @@ std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist, co
     Cache->MarkAndSweep();
 
     pkgRecords Recs(Cache);
+    pkgSourceList *srcList = Cache.GetSourceList();
     result.reserve(Cache->Head().PackageCount / 4); // Reserve approximate space
 
     for (pkgCache::PkgIterator pkg = Cache->PkgBegin(); !pkg.end(); ++pkg) {
-        const pkgDepCache::StateCache& state = (*Cache)[pkg];
+        const pkgDepCache::StateCache &state = (*Cache)[pkg];
 
         if (state.NewInstall() || state.Upgrade() || state.Downgrade()) {
-            result.emplace_back(GetUpgradePackage(Cache, Recs, pkg));
+            result.emplace_back(GetUpgradePackage(Cache, Recs, srcList, pkg));
         }
     }
-    
+
     return result;
 }
