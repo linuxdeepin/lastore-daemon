@@ -585,6 +585,19 @@
       "description": "Enable incremental update",
       "permissions": "readwrite",
       "visibility": "private"
+    },
+    "intranet-update": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "IntranetUpdate",
+      "name[zh_CN]": "内网升级",
+      "description[zh_CN]": "从内网升级平台获取更新",
+      "description": "update from intranet update platform",
+      "permissions": "readonly",
+      "visibility": "private"
     }
   }
 }
