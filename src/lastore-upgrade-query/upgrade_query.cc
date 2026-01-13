@@ -33,7 +33,7 @@ bool UpgradePackage::Valid() const {
     }
     
     // Check uint64_t fields - they should not be 0
-    if (Size == 0 || InstalledSize == 0) {
+    if (Size == 0) {
         return false;
     }
     
