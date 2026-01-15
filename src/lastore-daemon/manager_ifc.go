@@ -460,13 +460,13 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		}
 	}
 
-	// 如果上述方法出错，需要采用重启lightdm方案，此时所有图形session也都会退出
-	_, err := m.systemd.RestartUnit(0, "lightdm.service", "replace")
+	// 如果上述方法出错，需要采用重启display-manager方案，此时所有图形session也都会退出
+	_, err := m.systemd.RestartUnit(0, "display-manager.service", "replace")
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	logger.Info("RestartUnit lightdm")
+	logger.Info("RestartUnit display-manager")
 	return nil
 }
 
