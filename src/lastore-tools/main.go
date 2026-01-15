@@ -115,7 +115,17 @@ func main() {
 			Value: "",
 		},
 	}
-	app.Commands = []cli.Command{CMDUpdater, CMDTester, CMDSmartMirror, CMDMetadata, CMDQueryDesktop, CMDCheckPolicy, CMDPostUpgrade}
+	app.Commands = []cli.Command{
+		CMDUpdater,
+		CMDTester,
+		CMDSmartMirror,
+		CMDMetadata,
+		CMDQueryDesktop,
+		CMDCheckPolicy,
+		CMDPostUpgrade,
+		CMDPostHardwareInfo,
+		CMDGatherInfo,
+	}
 
 	err := app.Run(os.Args)
 	if err != nil {
