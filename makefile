@@ -8,21 +8,12 @@ pwd := ${shell pwd}
 GoPath := GOPATH=${pwd}:${pwd}/vendor:${CURDIR}/${GOPATH_DIR}:${GOPATH}
 
 GOBUILD = go build
-GOTEST = go test -v
+GOTEST = go test
 export GO111MODULE=off
 
 all:  build
 
-TEST = \
-	${GOPKG_PREFIX}/src/internal/system \
-	${GOPKG_PREFIX}/src/internal/system/apt \
-	${GOPKG_PREFIX}/src/internal/utils \
-	${GOPKG_PREFIX}/src/internal/querydesktop \
-	${GOPKG_PREFIX}/src/lastore-daemon \
-	${GOPKG_PREFIX}/src/lastore-smartmirror \
-	${GOPKG_PREFIX}/src/lastore-tools \
-	${GOPKG_PREFIX}/src/lastore-smartmirror-daemon \
-	./src/lastore-update-tools/...
+TEST = $(shell find src -name '*_test.go' -exec dirname {} \; | sort -u | sed 's|^|${GOPKG_PREFIX}/|')
 
 prepare:
 	@mkdir -p out/bin

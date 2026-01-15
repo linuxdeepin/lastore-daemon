@@ -222,10 +222,10 @@ func postCheck() error {
 func postCheckWithStage(stage string) error {
 	//阻塞项检查
 
-	// 检查重要进程是否存在：检查/usr/sbin/lightdm进程是否存在，阻塞
-	if err := check.CheckImportantProcess(stage); err != nil {
+	// 检查重要服务是否存在：检查display-manager.service服务是否存在，阻塞
+	if err := check.CheckImportantService(stage); err != nil {
 		updatePostCheckStage(cache.P_Stage0_Failed)
-		logger.Errorf("postcheck/block check important progress failed:%v", err)
+		logger.Errorf("postcheck/block check important service failed:%v", err)
 		return err
 	}
 
