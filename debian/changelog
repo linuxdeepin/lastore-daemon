@@ -1,3 +1,12 @@
+lastore-daemon (6.2.45) unstable; urgency=medium
+
+  * fix: check display-manager.service instead of lightdm (#286)
+  * feat(lastore-upgrade-query): Add package download URI information
+  * fix: The InstalledSize field can be empty
+  * feat: add “intranet-update” indicates whether the current mode is updating from intranet update platform. (#280)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Thu, 15 Jan 2026 14:16:35 +0800
+
 lastore-daemon (6.2.44) unstable; urgency=medium
 
   * fix(smartmirror): correct apt smart mirror source configuration
