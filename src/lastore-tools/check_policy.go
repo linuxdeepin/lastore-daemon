@@ -39,7 +39,7 @@ func genVersionResponse(c *Config) (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", "/api/v1/version", err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateplatform.UpdateTokenConfigFile(c.IncludeDiskInfo))))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateplatform.UpdateTokenConfigFile(c.IncludeDiskInfo, c.GetHardwareIdByHelper))))
 	return client.Do(request)
 }
 

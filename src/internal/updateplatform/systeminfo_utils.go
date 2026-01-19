@@ -45,6 +45,12 @@ const (
 	customInfoPath = "/usr/share/deepin/custom-note/info.json"
 )
 
+const (
+	helperDBusName      = "com.deepin.sync.Helper"
+	helperDBusPath      = "/com/deepin/sync/Helper"
+	helperDBusInterface = helperDBusName
+)
+
 type SystemInfo struct {
 	SystemName      string
 	ProductType     string
@@ -69,7 +75,7 @@ const (
 	OemCustomState    = "1"
 )
 
-func getSystemInfo(includeDiskInfo bool) SystemInfo {
+func getSystemInfo(includeDiskInfo bool, getHardwareIdByHelper bool) SystemInfo {
 	systemInfo := SystemInfo{
 		Custom: OemNotCustomState,
 	}
@@ -88,7 +94,7 @@ func getSystemInfo(includeDiskInfo bool) SystemInfo {
 			".")
 	}
 
-	systemInfo.HardwareId = GetHardwareId(includeDiskInfo)
+	systemInfo.HardwareId = GetHardwareId(includeDiskInfo, getHardwareIdByHelper)
 	if err != nil {
 		logger.Warning("failed to get hardwareId:", err)
 	}
@@ -187,7 +193,10 @@ func GetOSVersionInfo(filePath string) (map[string]string, error) {
 	return osVersionInfoMap, nil
 }
 
-func GetHardwareId(includeDiskInfo bool) string {
+func GetHardwareId(includeDiskInfo bool, getByHelper bool) string {
+	if getByHelper {
+		return getHardwareIdByHelper()
+	}
 	hhardware.IncludeDiskInfo = includeDiskInfo
 	machineID, err := hhardware.GenMachineID()
 	if err != nil {
@@ -195,6 +204,55 @@ func GetHardwareId(includeDiskInfo bool) string {
 		return ""
 	}
 	return machineID
+}
+
+type Hardware struct {
+	ID              string `json:"id"`
+	Hostname        string `json:"hostname"`
+	Username        string `json:"username"`
+	OS              string `json:"os"`
+	CPU             string `json:"cpu"`
+	Laptop          bool   `json:"laptop"`
+	Memory          int64  `json:"memory"`
+	DiskTotal       int64  `json:"disk_total"`
+	NetworkCardList string `json:"network_cards"`
+	DiskList        string `json:"disk_list"`
+	DMI             DMI    `json:"dmi"`
+}
+
+type DMI struct {
+	BiosVendor     string `json:"bios_vendor"`
+	BiosVersion    string `json:"bios_version"`
+	BiosDate       string `json:"bios_date"`
+	BoardName      string `json:"board_name"`
+	BoardSerial    string `json:"board_serial"`
+	BoardVendor    string `json:"board_vendor"`
+	BoardVersion   string `json:"board_version"`
+	ProductName    string `json:"product_name"`
+	ProductFamily  string `json:"product_family"`
+	ProductSerial  string `json:"product_serial"`
+	ProductUUID    string `json:"product_uuid"`
+	ProductVersion string `json:"product_version"`
+}
+
+func getHardwareIdByHelper() string {
+	logger.Info("start get hardware id by helper")
+	systemBus, err := dbus.SystemBus()
+	if err != nil {
+		logger.Warning("failed to get system bus:", err)
+		return ""
+	}
+	var hw = Hardware{
+		DMI: DMI{},
+	}
+	helperObj := systemBus.Object(helperDBusName, helperDBusPath)
+	err = helperObj.Call(helperDBusInterface+".GetHardware", 0).Store(&hw)
+	if err != nil {
+		logger.Warning("failed to get hardware info by helper:", err)
+		return ""
+	}
+	logger.Info("hardwareId is:", hw.ID)
+	return hw.ID
 }
 
 func getProcessorModelName() (string, error) {
@@ -458,12 +516,13 @@ func getMachineType() string {
 var _tokenUpdateMu sync.Mutex
 
 // UpdateTokenConfigFile 更新 99lastore-token.conf 文件的内容
-func UpdateTokenConfigFile(includeDiskInfo bool) string {
+func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) string {
+	logger.Debugf("UpdateTokenConfigFile includeDiskInfo: %v, getHardwareIdByHelper: %v", includeDiskInfo, getHardwareIdByHelper)
 	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
 	logger.Debug("start getSystemInfo")
-	systemInfo := getSystemInfo(includeDiskInfo)
+	systemInfo := getSystemInfo(includeDiskInfo, getHardwareIdByHelper)
 	logger.Debug("end getSystemInfo")
 	tokenPath := "/etc/apt/apt.conf.d/99lastore-token.conf"
 	var tokenSlice []string
@@ -486,6 +545,7 @@ func UpdateTokenConfigFile(includeDiskInfo bool) string {
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
+	// TODO: may need to use chattr command to set tokenPath as immutable
 	err := os.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
 	if err != nil {
 		logger.Warning(err)
