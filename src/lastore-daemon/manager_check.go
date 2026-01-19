@@ -120,7 +120,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					UpdateType:     checkOrder.JobType(),
 					JobDescription: job.Description,
 					Detail:         fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description),
-				})
+				}, false)
 
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()

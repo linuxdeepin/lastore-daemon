@@ -43,6 +43,7 @@ type UpgradePostMsg struct {
 
 	UpgradeStartTime int64 `json:"updateStartAt"`
 	UpgradeEndTime   int64 `json:"updateFinishAt"`
+	TaskId           int
 
 	Uuid           string
 	PostStatus     MsgPostStatus
