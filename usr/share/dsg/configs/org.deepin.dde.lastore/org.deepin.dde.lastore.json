@@ -575,6 +575,19 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "hardware-id-from-helper": {
+      "value": false,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "GetHardwareIdByHelper",
+      "name[zh_CN]": "从helper获取机器码",
+      "description": "get hardware id by helper",
+      "description[zh_CN]": "从helper获取机器码",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "incremental-update": {
       "value": false,
       "serial": 0,

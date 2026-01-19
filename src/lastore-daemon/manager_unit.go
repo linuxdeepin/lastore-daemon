@@ -391,7 +391,7 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 			}
 		}()
 	case OsVersionChanged:
-		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
+		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 	case InitIdleDownload:
 		m.updater.initIdleDownloadConfig()
 	case AutoDownload:

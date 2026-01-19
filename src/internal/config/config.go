@@ -92,6 +92,8 @@ type Config struct {
 	PlatformUrl            string // 更新接口地址
 	CheckPolicyCron        string // 策略检查间隔
 	StartCheckRange        []int  // 开机检查更新区间
+	CheckPolicyInterval    int    // 策略检查时间间隔(单位：秒)
+	GetHardwareIdByHelper  bool   // machineID是否直接从sync helper获取
 	IncludeDiskInfo        bool   // machineID是否包含硬盘信息
 	PostUpgradeCron        string // 更新上报间隔
 	UpdateTime             string // 定时更新
@@ -197,6 +199,8 @@ const (
 	dSettingsKeySecurityRepoType                     = "security-repo-type"
 	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
 	dSettingsKeyIncrementalUpdate                    = "incremental-update"
+	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
+	dSettingsKeyCheckPolicyInterval                  = "check-policy-interval"
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
@@ -620,6 +624,13 @@ func getConfigFromDSettings() *Config {
 		c.SecurityRepoType = RepoType(v.Value().(string))
 	}
 
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyGetHardwareIdByHelper)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.GetHardwareIdByHelper = v.Value().(bool)
+	}
+
 	err = c.recoveryAndApplyOemFlag(system.SystemUpdate)
 	if err != nil {
 		logger.Warning(err)
@@ -895,6 +906,16 @@ func (c *Config) SetSystemRepoType(typ RepoType) error {
 func (c *Config) SetSecurityRepoType(typ RepoType) error {
 	c.SecurityRepoType = typ
 	return c.save(dSettingsKeySecurityRepoType, typ)
+}
+
+func (c *Config) SetCheckPolicyInterval(interval int) error {
+	c.CheckPolicyInterval = interval
+	return c.save(dSettingsKeyCheckPolicyInterval, interval)
+}
+
+func (c *Config) SetStartCheckRange(checkRange []int) error {
+	c.StartCheckRange = checkRange
+	return c.save(dSettingsKeyStartCheckRange, checkRange)
 }
 
 const (

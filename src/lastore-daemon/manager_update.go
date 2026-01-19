@@ -78,7 +78,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	}
 	prepareUpdateSource()
 	m.reloadOemConfig(true)
-	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
+	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job
 	var isExist bool
@@ -153,7 +153,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:   "info",
 						Detail: "update source success",
-					})
+					}, false)
 				}()
 				m.updatePlatform.SaveCache(m.config)
 				job.setPropProgress(1.0)
@@ -185,7 +185,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						Type:           "error",
 						JobDescription: job.Description,
 						Detail:         fmt.Sprintf("apt-get update failed, detail is %v , option is %+v", job.Description, job.option),
-					})
+					}, false)
 				}()
 				return nil
 			},
@@ -483,7 +483,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 					Type:   "error",
 					Detail: fmt.Sprintf("generate package list error, detail is %v:", e),
-				})
+				}, false)
 			}()
 			logger.Warning(e)
 		}
@@ -503,7 +503,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 							Type:   "error",
 							Detail: fmt.Sprintf("generate package list error, detail is %v:", e),
-						})
+						}, false)
 
 					}()
 					logger.Warning(e)

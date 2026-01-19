@@ -11,6 +11,6 @@ import (
 )
 
 func TestSystemInfoUtil(t *testing.T) {
-	sys := getSystemInfo(true)
+	sys := getSystemInfo(true, true)
 	assert.NotEmpty(t, sys)
 }
