@@ -12,6 +12,9 @@ import (
 
 const VarLibDir = "/var/lib/lastore"
 
+// TODO: Assign value later
+var IsPrivateLastore bool
+
 type Status string
 
 const (

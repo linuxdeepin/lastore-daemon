@@ -365,7 +365,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 						Type:       "error",
 						UpdateType: mode.JobType(),
 						Detail:     fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error()),
-					})
+					}, true)
 
 					if unref != nil {
 						unref()
@@ -382,7 +382,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 						Type:       "error",
 						UpdateType: mode.JobType(),
 						Detail:     fmt.Sprintf("CheckSystem failed, detail is: %v", systemErr.Error()),
-					})
+					}, true)
 					return systemErr
 				}
 				if !system.CheckInstallAddSize(mode) {
@@ -411,7 +411,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 						Type:       "error",
 						UpdateType: mode.JobType(),
 						Detail:     fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()),
-					})
+					}, true)
 					return systemErr
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
@@ -611,7 +611,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 				Type:       "error",
 				UpdateType: mode.JobType(),
 				Detail:     fmt.Sprintf("upgrade failed, detail is: %v; all error message is %v", job.Description, strings.Join(allErrMsg, "\n")),
-			})
+			}, true)
 		}
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
@@ -636,7 +636,7 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 		Type:   "info",
 		Detail: fmt.Sprintf("%v install package success, need reboot and check", mode.JobType()),
-	})
+	}, false)
 	return nil
 }
 

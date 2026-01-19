@@ -149,7 +149,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.initStatusManager()
-	m.HardwareId = updateplatform.GetHardwareId(m.config.IncludeDiskInfo)
+	m.HardwareId = updateplatform.GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
@@ -163,7 +163,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 			m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 				Type:   "error",
 				Detail: "the check has not been triggered after reboot for 600 seconds",
-			})
+			}, true)
 
 			err = m.delRebootCheckOption(all)
 			if err != nil {

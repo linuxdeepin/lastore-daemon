@@ -264,7 +264,7 @@ func getWhetherGatherInfo(c *config.Config) (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", "/api/v1/terminal/info/check", err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateplatform.UpdateTokenConfigFile(c.IncludeDiskInfo))))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateplatform.UpdateTokenConfigFile(c.IncludeDiskInfo, c.GetHardwareIdByHelper))))
 	return client.Do(request)
 }
 
@@ -309,7 +309,7 @@ func postHardwareInfo(c *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("%v new request failed: %v ", "/api/v1/terminal/hardware", err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateplatform.UpdateTokenConfigFile(c.IncludeDiskInfo))))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(updateplatform.UpdateTokenConfigFile(c.IncludeDiskInfo, c.GetHardwareIdByHelper))))
 
 	resp, err := client.Do(request)
 	if err != nil {

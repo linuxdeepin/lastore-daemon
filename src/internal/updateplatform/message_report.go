@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -40,6 +41,23 @@ import (
 
 var logger = log.NewLogger("lastore/messageReport")
 
+type ProcessEvent struct {
+	TaskID       int    `json:"taskID"`
+	EventType    int    `json:"eventType"`
+	EventStatus  bool   `json:"eventStatus"`
+	EventContent string `json:"eventContent"`
+}
+
+const (
+	CheckEnv         int = 1
+	GetUpdateEvent   int = 2
+	StartDownload    int = 3
+	DownloadComplete int = 4
+	StartBackUp      int = 5
+	BackUpComplete   int = 6
+	StartInstall     int = 7
+)
+
 type ShellCheck struct {
 	Name  string `json:"name"`  //检查脚本的名字
 	Shell string `json:"shell"` //检查脚本的内容
@@ -64,6 +82,7 @@ type UpdatePlatformManager struct {
 	checkTime              string // 基线检查时间
 	systemTypeFromPlatform string // 从更新平台获取的系统类型,本地os-baseline.b获取
 	requestUrl             string // 更新平台请求地址
+	taskID                 int
 
 	PreCheck       []ShellCheck                  // 更新前检查脚本
 	MidCheck       []ShellCheck                  // 更新后检查脚本
@@ -91,6 +110,7 @@ type UpdatePlatformManager struct {
 
 	jobPostMsgMap     map[string]*UpgradePostMsg
 	jobPostMsgMapMu   sync.Mutex
+	TimerHasChanged   bool
 	inhibitAutoQuit   func()
 	UnInhibitAutoQuit func()
 }
@@ -110,6 +130,7 @@ const (
 	cacheBaseline = "/var/lib/lastore/os-baseline.b"
 	realBaseline  = "/etc/os-baseline"
 	realVersion   = "/etc/os-version"
+	cacheTaskInfo = "/var/lib/lastore/os-task-info"
 
 	KeyNow      string = "now"      // 立即更新
 	KeyShutdown string = "shutdown" // 关机更新
@@ -137,7 +158,7 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 	}
 	var token string
 	if updateToken {
-		token = UpdateTokenConfigFile(c.IncludeDiskInfo) // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
+		token = UpdateTokenConfigFile(c.IncludeDiskInfo, c.GetHardwareIdByHelper) // update source时生成即可,初始化时由于授权服务返回SN非常慢(超过25s),因此不在初始化时生成
 	}
 	cache := platformCacheContent{}
 	if strings.TrimSpace(c.OnlineCache) != "" {
@@ -154,6 +175,7 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		preBaseline:                       getCurrentBaseline(),
 		targetVersion:                     getTargetVersion(),
 		targetBaseline:                    getTargetBaseline(),
+		taskID:                            getTaskId(),
 		requestUrl:                        platformUrl,
 		cvePkgs:                           make(map[string][]string),
 		Token:                             token,
@@ -270,11 +292,15 @@ func getGeneralValueFromKeyFile(path, key string) string {
 
 // UpdateBaseline 更新安装并检查成功后，同步baseline文件
 func (m *UpdatePlatformManager) UpdateBaseline() {
+	// 更新成功后,使用内存中的信息更新baseline,防止其他渠道更新了baseline.b影响了系统的baseline
+	updateBaseline(cacheBaseline, m.targetBaseline)
+	updateSystemType(cacheBaseline, m.systemTypeFromPlatform)
+	updateVersion(cacheBaseline, m.targetVersion)
 	copyFile(cacheBaseline, realBaseline)
 	m.preBaseline = getCurrentBaseline()
 }
 
-// 进行安装更新前，需要复制文件替换软连接
+// ReplaceVersionCache 进行安装更新前，需要复制文件替换软连接
 func (m *UpdatePlatformManager) ReplaceVersionCache() {
 	if utils.IsSymlink(CacheVersion) {
 		// 如果cacheVersion已经是文件了，那么不再用源文件替换
@@ -283,6 +309,26 @@ func (m *UpdatePlatformManager) ReplaceVersionCache() {
 			logger.Warning(err)
 		}
 		copyFile(realVersion, CacheVersion)
+	}
+}
+
+func (m *UpdatePlatformManager) UpdateSourceList() {
+	if !system.IsPrivateLastore || !m.config.PlatformUpdate {
+		return
+	}
+
+	var toWriteContent string
+	for _, repo := range m.repoInfos {
+		if len(repo.Source) != 0 {
+			toWriteContent += repo.Source
+			toWriteContent += "\n"
+		}
+	}
+	if len(toWriteContent) != 0 {
+		err := ioutil.WriteFile(system.OriginSourceFile, []byte(toWriteContent), 0644)
+		if err != nil {
+			logger.Warning(err)
+		}
 	}
 }
 
@@ -371,6 +417,7 @@ func isUnstable() int {
 type Version struct {
 	Version  string `json:"version"`
 	Baseline string `json:"baseline"`
+	TaskID   int    `json:"taskID"`
 }
 
 type Policy struct {
@@ -388,13 +435,20 @@ type repoInfo struct {
 	Cdn      string `json:"cdn"`
 	CodeName string `json:"codename"`
 	Version  string `json:"version"`
+	Source   string `json:"source"`
+}
+
+type ClientPollSetting struct {
+	CheckPolicyInterval int   `json:"checkPolicyInterval"`
+	StartCheckRange     []int `json:"startCheckRange"`
 }
 
 type updateMessage struct {
-	SystemType string     `json:"systemType"`
-	Version    Version    `json:"version"`
-	Policy     Policy     `json:"policy"`
-	RepoInfos  []repoInfo `json:"repoInfos"`
+	SystemType        string            `json:"systemType"`
+	Version           Version           `json:"version"`
+	Policy            Policy            `json:"policy"`
+	RepoInfos         []repoInfo        `json:"repoInfos"`
+	ClientPollSetting ClientPollSetting `json:"clientPollSetting"`
 }
 
 type tokenMessage struct {
@@ -417,6 +471,7 @@ const (
 	GetCurrentPkgLists
 	GetPkgCVEs // CVE 信息
 	PostProcess
+	PostProcessEvent
 	PostResult
 )
 
@@ -452,6 +507,10 @@ var Urls = map[requestType]requestContent{
 	},
 	PostProcess: {
 		"/api/v1/process",
+		"POST",
+	},
+	PostProcessEvent: {
+		"/api/v1/process/events",
 		"POST",
 	},
 	PostResult: {
@@ -584,7 +643,7 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", PostProcess.string(), err.Error())
 	}
-	hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
+	hardwareId := GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 
 	request.Header.Set("X-MachineID", hardwareId)
 	request.Header.Set("X-CurrentBaseline", m.preBaseline)
@@ -708,14 +767,27 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) err
 	m.targetVersion = msg.Version.Version
 	m.systemTypeFromPlatform = msg.SystemType
 	m.repoInfos = msg.RepoInfos
+	m.taskID = msg.Version.TaskID
+	logger.Infof("current policy task id: %v", m.taskID)
 	m.checkTime = time.Now().String()
 	// 更新策略处理
 	m.Tp = msg.Policy.Tp
 	if m.Tp == UpdateRegularly {
 		m.UpdateTime, _ = time.Parse(time.RFC3339, msg.Policy.Data.UpdateTime)
 	}
+	m.TimerHasChanged = false
+	if !utils.IsElementEqual(m.config.CheckPolicyInterval, msg.ClientPollSetting.CheckPolicyInterval) && msg.ClientPollSetting.CheckPolicyInterval > 0 {
+		m.config.SetCheckPolicyInterval(msg.ClientPollSetting.CheckPolicyInterval)
+		m.TimerHasChanged = true
+	}
+	if !utils.IsElementEqual(m.config.StartCheckRange, msg.ClientPollSetting.StartCheckRange) && msg.ClientPollSetting.StartCheckRange != nil {
+		m.TimerHasChanged = true
+		m.config.SetStartCheckRange(msg.ClientPollSetting.StartCheckRange)
+	}
 
+	m.UpdateSourceList()
 	m.UpdateBaselineCache()
+	m.saveTaskId()
 	// 生成仓库和InRelease
 	if updateInRelease {
 		m.genDepositoryFromPlatform()
@@ -1325,9 +1397,62 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	return nil
 }
 
-// PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
-func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage) {
+func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
+	logger.Debug("post process event msg:", body)
+	body.TaskID = m.taskID
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+		logger.Warning("platform is disabled")
+		return
+	}
+	if len(body.EventContent) >= 950 {
+		body.EventContent = body.EventContent[:950]
+	}
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		logger.Warning("JSON marshaling error:", err)
+		return
+	}
+	policyUrl := m.requestUrl + Urls[PostProcessEvent].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+
+	logger.Debugf("upgrade post process event msg is %v", string(jsonData))
+	encryptMsg, err := EncryptMsg(jsonData)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	request, err := http.NewRequest(Urls[PostProcessEvent].method, policyUrl, strings.NewReader(base64.StdEncoding.EncodeToString(encryptMsg)))
+	if err != nil {
+		logger.Warningf("%v new request failed: %v ", PostProcessEvent.string(), err.Error())
+		return
+	}
+	hardwareId := GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
+
+	request.Header.Set("X-MachineID", hardwareId)
+	request.Header.Set("X-CurrentBaseline", m.preBaseline)
+	request.Header.Set("X-Baseline", m.targetBaseline)
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Warningf("post process event msg failed:%v", err)
+		return
+	}
+	_, err = getResponseData(response, PostProcessEvent)
+	if err != nil {
+		logger.Warningf("get post process event msg response failed:%v", err)
+	}
+	return
+}
+
+// PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
+func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUpload bool) {
+	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+		return
+	}
+
+	if system.IsPrivateLastore && !forceUpload {
 		return
 	}
 
@@ -1409,7 +1534,7 @@ func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		return
 	}
-	hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
+	hardwareId := GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 
 	outFilename := fmt.Sprintf("/tmp/%s_%s_%s_%s.tar", "update", hardwareId, utils.GenUuid(), time.Now().Format("20231019102233444"))
 	err := tarFiles(files, outFilename)
@@ -1456,6 +1581,7 @@ func (m *UpdatePlatformManager) CreateJobPostMsgInfo(uuid string, updateType sys
 		Uuid:             uuid,
 		UpgradeStartTime: time.Now().Unix(),
 		PostStatus:       NotReady,
+		TaskId:           m.taskID,
 	}
 	info.save()
 	m.jobPostMsgMapMu.Lock()
@@ -1473,7 +1599,7 @@ func (m *UpdatePlatformManager) SaveJobPostMsgByUUID(uuid string, upgradeStatus 
 		if upgradeStatus == UpgradeFailed || upgradeStatus == CheckFailed {
 			upgradeErrorMsg = Description
 		}
-		hardwareId := GetHardwareId(m.config.IncludeDiskInfo)
+		hardwareId := GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 		msg.MachineID = hardwareId
 		msg.UpgradeStatus = upgradeStatus
 		msg.UpgradeErrorMsg = upgradeErrorMsg
@@ -1648,4 +1774,36 @@ func (m *UpdatePlatformManager) PostUpgradeStatus(uuid string, upgradeStatus Upg
 
 func (m *UpdatePlatformManager) SetInhibitAutoQuit() {
 
+}
+
+func (m *UpdatePlatformManager) saveTaskId() {
+	kf := keyfile.NewKeyFile()
+	if system.NormalFileExists(cacheTaskInfo) {
+		err := kf.LoadFromFile(cacheTaskInfo)
+		if err != nil {
+			logger.Warning(err)
+			return
+		}
+	}
+	kf.SetInt("General", "TaskID", m.taskID)
+	err := kf.SaveToFile(cacheTaskInfo)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+}
+
+func getTaskId() int {
+	kf := keyfile.NewKeyFile()
+	err := kf.LoadFromFile(cacheTaskInfo)
+	if err != nil {
+		logger.Warning(err)
+		return 0
+	}
+	content, err := kf.GetInt("General", "TaskID")
+	if err != nil {
+		logger.Warning(err)
+		return 0
+	}
+	return content
 }
