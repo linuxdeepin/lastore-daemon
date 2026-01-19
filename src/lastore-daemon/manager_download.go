@@ -210,7 +210,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						UpdateType:     mode.JobType(),
 						JobDescription: job.Description,
 						Detail:         fmt.Sprintf("download %v package failed, detail is %v", mode.JobType(), job.Description),
-					})
+					}, true)
 				}()
 				return nil
 			},
@@ -250,7 +250,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					UpdateType:     j.updateTyp.JobType(),
 					JobDescription: j.Description,
 					Detail:         fmt.Sprintf("download %v package success", j.updateTyp.JobType()),
-				})
+				}, false)
 				return nil
 			},
 			string(system.EndStatus): func() error {

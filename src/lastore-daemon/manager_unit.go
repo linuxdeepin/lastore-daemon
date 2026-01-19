@@ -267,16 +267,18 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 }
 
 func (m *Manager) startCheckPolicyTask() {
-	if len(m.config.CheckPolicyCron) == 0 {
-		logger.Info("config: not CheckPolicyCron")
+	if m.config.CheckPolicyInterval == 0 {
+		logger.Info("config: not CheckPolicyInterval")
 		return
 	}
+
 	args := []string{
 		fmt.Sprintf("--unit=%s", lastoreCronCheck),
-		fmt.Sprintf(`--on-calendar=%v`, m.config.CheckPolicyCron),
-		"/bin/bash",
-		"-c",
-		"lastore-tools checkpolicy", // 定时检查policy变化
+		fmt.Sprintf("--on-active=%d", m.config.CheckPolicyInterval),
+		fmt.Sprintf(`--on-unit-active=%d`, m.config.CheckPolicyInterval),
+		"--uid=root",
+		"/usr/bin/lastore-tools",
+		"checkpolicy",
 	}
 	cmd := exec.Command(run, args...)
 	logger.Info(cmd.String())
@@ -391,7 +393,7 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 			}
 		}()
 	case OsVersionChanged:
-		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo)
+		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 	case InitIdleDownload:
 		m.updater.initIdleDownloadConfig()
 	case AutoDownload:
