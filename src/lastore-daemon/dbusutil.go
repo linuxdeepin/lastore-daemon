@@ -243,6 +243,10 @@ func (v *Job) emitPropChangedDownloadSize(value int64) error {
 	return v.service.EmitPropertyChanged(v, "DownloadSize", value)
 }
 
+func (v *Job) emitPropChangedUpdatePolicy(value int) error {
+	return v.service.EmitPropertyChanged(v, "PolicyTyp", value)
+}
+
 func (v *Job) setPropType(value string) (changed bool) {
 	if v.Type != value {
 		v.Type = value

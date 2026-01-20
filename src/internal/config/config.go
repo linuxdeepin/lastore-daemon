@@ -60,6 +60,7 @@ type Config struct {
 	UpdateMode            system.UpdateType
 	CheckUpdateMode       system.UpdateType
 	IncrementalUpdate     bool
+	IntranetUpdate        bool
 
 	// 缓存大小超出限制时的清理时间间隔
 	CleanIntervalCacheOverLimit    time.Duration
@@ -199,6 +200,7 @@ const (
 	dSettingsKeySecurityRepoType                     = "security-repo-type"
 	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
 	dSettingsKeyIncrementalUpdate                    = "incremental-update"
+	dSettingsKeyIntranetUpdate                       = "intranet-update"
 	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
 	dSettingsKeyCheckPolicyInterval                  = "check-policy-interval"
 )
@@ -273,6 +275,13 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.IncrementalUpdate = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIntranetUpdate)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.IntranetUpdate = v.Value().(bool)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyMirrorSource)
