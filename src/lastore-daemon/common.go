@@ -26,10 +26,10 @@ import (
 	"github.com/linuxdeepin/dde-api/polkit"
 	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
-	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -38,6 +38,8 @@ import (
 )
 
 var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file|p2p)://[^ ]+)`)
+
+const lastoreGatherInfo = "lastoreGatherInfo"
 
 // 获取list文件或list.d文件夹中所有list文件的未被屏蔽的仓库地址
 func getUpgradeUrls(path string) []string {

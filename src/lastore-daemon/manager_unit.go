@@ -47,6 +47,7 @@ const (
 	AbortAutoDownload      systemdEventType = "AbortAutoDownload"
 	UpdateTimer            systemdEventType = "UpdateTimer"
 	RetryPostUpgradeResult systemdEventType = "RetryPostUpgradeResult"
+	AutoCheckRegularly     systemdEventType = "AutoCheckRegularly"
 )
 
 type UnitName string
@@ -126,11 +127,28 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 			updateTime = updateTime.Add(time.Duration(24) * time.Hour)
 		}
 		// 提前60s触发
-		unitMap[lastoreRegularlyUpdate] = []string{
-			fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60)),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck),
+		if system.IsPrivateLastore {
+			unitMap[lastoreRegularlyUpdate] = []string{
+				fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60)),
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheckRegularly),
+			}
+		} else {
+			unitMap[lastoreRegularlyUpdate] = []string{
+				fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60)),
+				"/bin/bash",
+				"-c",
+				fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck),
+			}
+		}
+	}
+	if system.IsPrivateLastore {
+		unitMap[lastoreGatherInfo] = []string{
+			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(600)+60),
+			"--uid=root",
+			"/usr/bin/lastore-tools",
+			"posthardware",
 		}
 	}
 
@@ -377,6 +395,13 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 
 	m.service.DelayAutoQuit()
 	switch evType {
+	case AutoCheckRegularly:
+		go func() {
+			err := m.handleAutoCheckRegularlyEvent()
+			if err != nil {
+				logger.Warning(err)
+			}
+		}()
 	case AutoCheck:
 		go func() {
 			err := m.handleAutoCheckEvent()
@@ -393,7 +418,12 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 			}
 		}()
 	case OsVersionChanged:
-		go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
+		logger.Info("enter update token from OsVersionChanged")
+		if system.IsPrivateLastore {
+			updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
+		} else {
+			go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
+		}
 	case InitIdleDownload:
 		m.updater.initIdleDownloadConfig()
 	case AutoDownload:

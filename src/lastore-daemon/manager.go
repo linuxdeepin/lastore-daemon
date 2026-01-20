@@ -108,6 +108,9 @@ type Manager struct {
 	checkDpkgCapabilityOnce sync.Once
 	supportDpkgScriptIgnore bool
 
+	envIsValid     bool
+	preBackUpCheck bool
+
 	logFds     []*os.File
 	logFdsMu   sync.Mutex
 	logTmpFile *os.File
@@ -140,6 +143,8 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		abObj:                abrecovery.NewABRecovery(service.Conn()),
 		securitySourceConfig: make(UpdateSourceConfig),
 		systemSourceConfig:   make(UpdateSourceConfig),
+		envIsValid:           true,
+		preBackUpCheck:       true,
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
@@ -149,8 +154,9 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	go m.handleOSSignal()
 	m.updateJobList()
 	m.initStatusManager()
-	m.HardwareId = updateplatform.GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
-
+	go func() {
+		m.setPropHardwareId(updateplatform.GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper))
+	}()
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
 	m.syncThirdPartyDconfig()
@@ -160,10 +166,18 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		m.rebootTimeoutTimer = time.AfterFunc(600*time.Second, func() {
 			// 启动后600s如果没有触发检查，那么上报更新失败
 
+			msg := "the check has not been triggered after reboot for 600 seconds"
 			m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 				Type:   "error",
-				Detail: "the check has not been triggered after reboot for 600 seconds",
+				Detail: msg,
 			}, true)
+			procEvent := updateplatform.ProcessEvent{
+				TaskID:       1,
+				EventType:    updateplatform.GetUpdateEvent,
+				EventStatus:  false,
+				EventContent: msg,
+			}
+			m.updatePlatform.PostProcessEventMessage(procEvent)
 
 			err = m.delRebootCheckOption(all)
 			if err != nil {
@@ -249,7 +263,8 @@ func (m *Manager) initAgent() {
 
 func (m *Manager) initPlatformManager() {
 	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config, false)
-	if isFirstBoot() {
+	// TODO: 可能缺少 m.loadPlatformCache()
+	if isFirstBoot() || system.IsPrivateLastore {
 		// 不能阻塞初始化流程,防止dbus服务激活超时
 		go m.updatePlatform.RetryPostHistory() // 此处调用还没有export以及dispatch job,因此可以判断是否需要check.
 	}
@@ -654,6 +669,23 @@ func (m *Manager) categorySupportAutoInstall(category system.UpdateType) bool {
 	return autoInstallUpdates && (autoInstallUpdateType&category != 0)
 }
 
+// handleAutoCheckRegularlyEvent handles the regular automatic update check event.
+// It triggers a partial system upgrade when the system is in CanUpgrade state or
+// when local cache exists. The update platform type is set to UpdateRegularly
+// to indicate this is a scheduled regular update rather than a user-initiated one.
+func (m *Manager) handleAutoCheckRegularlyEvent() error {
+	if m.statusManager.updateModeStatusObj[system.SystemUpgradeJobType] == system.CanUpgrade ||
+		utils.IsFileExist(system.LocalCachePath) {
+		m.updatePlatform.Tp = updateplatform.UpdateRegularly
+		_, err := m.distUpgradePartly(dbus.Sender(m.service.Conn().Names()[0]), system.SystemUpdate, true)
+		if err != nil {
+			logger.Warning(err)
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *Manager) handleAutoCheckEvent() error {
 	if m.config.AutoCheckUpdates && !m.ImmutableAutoRecovery {
 		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
@@ -835,7 +867,11 @@ const (
 
 func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
 	if !m.updater.UpdateNotify {
+		logger.Info("UpdateNotify is false")
 		return 0
+	}
+	if system.IsPrivateLastore {
+		appIcon = "intranet-update-platform-notification"
 	}
 	agent := m.userAgents.getActiveLastoreAgent()
 	if agent != nil {

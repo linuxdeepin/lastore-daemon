@@ -73,8 +73,18 @@ func main() {
 	if os.Getenv("DBUS_STARTER_BUS_TYPE") != "" {
 		_ = os.Setenv("PATH", os.Getenv("PATH")+":/bin:/sbin:/usr/bin:/usr/sbin")
 	}
-
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
+	logger.Info("intranet update:", config.IntranetUpdate)
+	system.IsPrivateLastore = config.IntranetUpdate
+	if system.IsPrivateLastore {
+		go func() {
+			out, err := exec.Command("/usr/bin/lastore-tools", "gatherinfo", "-type=post").CombinedOutput()
+			if err != nil {
+				logger.Warning(string(out))
+			}
+		}()
+	}
+
 	aptImpl := dut.NewSystem(config.NonUnknownList, config.OtherSourceList, config.IncrementalUpdate)
 	system.SetSystemUpdate(config.PlatformUpdate) // 设置是否通过平台更新
 	allowInstallPackageExecPaths = append(allowInstallPackageExecPaths, config.AllowInstallRemovePkgExecPaths...)

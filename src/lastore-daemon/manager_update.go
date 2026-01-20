@@ -10,14 +10,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/gettext"
+	"github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
@@ -44,6 +47,62 @@ func prepareUpdateSource() {
 		}
 	}
 
+}
+
+func (m *Manager) beforeUpdateSourceEnvCheck() bool {
+	preCheckFilePath := filepath.Join(system.IupPath, "ext/iup-check.sh")
+	var flag bool
+	var errMsg string
+	if !utils.IsFileExist(preCheckFilePath) {
+		flag = false
+		errMsg = fmt.Sprintf("%s does not exist", preCheckFilePath)
+		logger.Warning(errMsg)
+		procEvent := updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.CheckEnv,
+			EventStatus:  flag,
+			EventContent: errMsg,
+		}
+		m.updatePlatform.PostProcessEventMessage(procEvent)
+		return flag
+	}
+	cmd := exec.Command("/bin/bash", preCheckFilePath)
+	var outBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	if err != nil {
+		flag = false
+		errMsg = errBuf.String()
+		logger.Warningf("Error executing command: %v, output: %v", err, errMsg)
+	} else {
+		flag = true
+	}
+	procEvent := updateplatform.ProcessEvent{
+		TaskID:       1,
+		EventType:    updateplatform.CheckEnv,
+		EventStatus:  flag,
+		EventContent: errMsg,
+	}
+	m.updatePlatform.PostProcessEventMessage(procEvent)
+	return flag
+}
+
+func (m *Manager) preCheckBackUp() {
+	canBackup, abErr := m.abObj.CanBackup(0)
+	if abErr != nil || !canBackup {
+		logger.Info("can not backup,", abErr)
+		m.preBackUpCheck = false
+	}
+	hasBackedUp, err := m.abObj.HasBackedUp().Get(0)
+	if err != nil && !hasBackedUp {
+		abErr = m.abObj.StartBackup(0)
+		if abErr != nil {
+			logger.Info("can not backup,", abErr)
+			m.preBackUpCheck = false
+		}
+	}
 }
 
 // updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
@@ -76,6 +135,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
+	m.preCheckBackUp()
 	prepareUpdateSource()
 	m.reloadOemConfig(true)
 	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
@@ -129,11 +189,19 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
+				job.setUpdatePolicy(m.updatePlatform.Tp)
 				m.refreshUpdateInfos(true)
 				m.PropsMu.Lock()
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
+					if !m.envIsValid {
+						job.retry = 0
+						return &system.JobError{
+							ErrType:   system.ErrorDpkgError,
+							ErrDetail: "before update env check failed",
+						}
+					}
 					go m.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
@@ -141,8 +209,17 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						// msg := gettext.Tr("New system edition available")
 						msg := gettext.Tr("New version available!")
 						action := []string{"view", gettext.Tr("View")}
-						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
-						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						var hints map[string]dbus.Variant
+						if system.IsPrivateLastore {
+							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
+							if m.updatePlatform.Tp == updateplatform.NormalUpdate {
+								msg = gettext.Tr("New version available! Plesse go to control-center to check")
+								go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutPrivate)
+							}
+						} else {
+							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
+							go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+						}
 					}
 				} else {
 					go m.reportLog(updateStatusReport, false, "")
@@ -161,6 +238,10 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			},
 			string(system.FailedStatus): func() error {
 				// 网络问题检查更新失败和空间不足下载索引失败,需要发通知
+				if system.IsPrivateLastore {
+					cacheFile := "/tmp/checkpolicy.cache"
+					_ = os.RemoveAll(cacheFile)
+				}
 				var errorContent system.JobError
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
@@ -180,12 +261,19 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
 					m.reportLog(updateStatusReport, false, job.Description)
-
+					msg := fmt.Sprintf("apt-get update failed, detail is %v , option is %+v", job.Description, job.option)
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:           "error",
 						JobDescription: job.Description,
-						Detail:         fmt.Sprintf("apt-get update failed, detail is %v , option is %+v", job.Description, job.option),
+						Detail:         msg,
 					}, false)
+					procEvent := updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.GetUpdateEvent,
+						EventStatus:  false,
+						EventContent: msg,
+					}
+					m.updatePlatform.PostProcessEventMessage(procEvent)
 				}()
 				return nil
 			},
@@ -200,6 +288,10 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 		job.setAfterHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				job.setPropProgress(0.01)
+				if system.IsPrivateLastore {
+					// 独立客户端为了减少更新平台的瞬时负载，采取0-58秒内随机开始检查更新任务
+					time.Sleep(time.Duration(rand.Intn(59)) * time.Second)
+				}
 				_ = os.Setenv("http_proxy", environ["http_proxy"])
 				_ = os.Setenv("https_proxy", environ["https_proxy"])
 				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
@@ -216,6 +308,10 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						logger.Warningf("updatePlatform gen token failed: %v", err)
 						return nil
 					}
+				}
+				if m.updatePlatform.TimerHasChanged {
+					msg := gettext.Tr("timer has changed. Please reboot to take effect")
+					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
 				}
 
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
@@ -473,6 +569,13 @@ const TimeOnly = "15:04:05"
 func (m *Manager) refreshUpdateInfos(sync bool) {
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
+		// TODO 是否有必要？
+		if system.IsPrivateLastore {
+			err := exec.Command("/var/lib/lastore/scripts/build_system_info", "-now").Run()
+			if err != nil {
+				logger.Warning(err)
+			}
+		}
 		// 检查更新后，先下载解析coreList，获取必装清单
 		m.coreList = m.getCoreList(true)
 		logger.Debug("generateUpdateInfo get coreList:", m.coreList)
@@ -480,10 +583,18 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
+				msg := fmt.Sprintf("generate package list error, detail is %v:", e)
 				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 					Type:   "error",
-					Detail: fmt.Sprintf("generate package list error, detail is %v:", e),
+					Detail: msg,
 				}, false)
+				procEvent := updateplatform.ProcessEvent{
+					TaskID:       1,
+					EventType:    updateplatform.GetUpdateEvent,
+					EventStatus:  false,
+					EventContent: msg,
+				}
+				m.updatePlatform.PostProcessEventMessage(procEvent)
 			}()
 			logger.Warning(e)
 		}
@@ -499,12 +610,18 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 					go func() {
 						m.inhibitAutoQuitCountAdd()
 						defer m.inhibitAutoQuitCountSub()
-
+						msg := fmt.Sprintf("generate package list error, detail is %v:", e)
 						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 							Type:   "error",
-							Detail: fmt.Sprintf("generate package list error, detail is %v:", e),
+							Detail: msg,
 						}, false)
-
+						procEvent := updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.GetUpdateEvent,
+							EventStatus:  false,
+							EventContent: msg,
+						}
+						m.updatePlatform.PostProcessEventMessage(procEvent)
 					}()
 					logger.Warning(e)
 				}
@@ -515,6 +632,21 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 	}
 	m.updateUpdatableProp(m.updater.ClassifiedUpdatablePackages)
 	m.statusManager.SetFrontForceUpdate(m.updatePlatform.Tp == updateplatform.UpdateShutdown)
+	if len(m.UpgradableApps) > 0 {
+		if !m.beforeUpdateSourceEnvCheck() {
+			logger.Warning("before update env check failed")
+			m.envIsValid = false
+			return
+		}
+		m.envIsValid = true
+		procEvent := updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.GetUpdateEvent,
+			EventStatus:  true,
+			EventContent: "update source success",
+		}
+		m.updatePlatform.PostProcessEventMessage(procEvent)
+	}
 	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
 		go func() {
 			m.inhibitAutoQuitCountAdd()
