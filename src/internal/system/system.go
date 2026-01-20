@@ -11,8 +11,8 @@ import (
 )
 
 const VarLibDir = "/var/lib/lastore"
+const IupPath = "/usr/lib/iup-daemon"
 
-// TODO: Assign value later
 var IsPrivateLastore bool
 
 type Status string
@@ -57,8 +57,10 @@ const (
 )
 
 const (
-	NotifyExpireTimeoutDefault = -1
-	NotifyExpireTimeoutNoHide  = 0
+	NotifyExpireTimeoutDefault     = -1
+	NotifyExpireTimeoutNoHide      = 0
+	NotifyExpireTimeoutPrivate     = 10000
+	NotifyExpireTimeoutPrivateLong = 600000
 )
 
 type JobProgressInfo struct {

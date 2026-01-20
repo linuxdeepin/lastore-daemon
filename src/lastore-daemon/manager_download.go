@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -118,6 +119,17 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	if isExist {
 		return job, nil
 	}
+	if system.IsPrivateLastore {
+		msg := gettext.Tr("New version available! The download of the update package will begin shortly")
+		go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+		procEvent := updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.StartDownload,
+			EventStatus:  true,
+			EventContent: msg,
+		}
+		m.updatePlatform.PostProcessEventMessage(procEvent)
+	}
 	job.initiator = initiator
 	currentJob := job
 	var sendDownloadingOnce sync.Once
@@ -133,19 +145,24 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			// 下载限速的配置修改需要在job失败重试的时候修改配置(此处失败为手动终止设置的失败状态)
 			m.handleDownloadLimitChanged(job)
 		}
+		// TODO: 可能丢失 j.initDownloadSize(totalNeedDownloadSize)
 		j.realRunningHookFn = func() {
 			m.PropsMu.Lock()
 			m.PropsMu.Unlock()
 			m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
-			if !m.updatePlatform.UpdateNowForce { // 立即更新则不发通知
+			if !m.updatePlatform.UpdateNowForce || system.IsPrivateLastore { // 立即更新则不发通知
 				sendDownloadingOnce.Do(func() {
 					msg := gettext.Tr("New version available! Downloading...")
 					action := []string{
 						"view",
 						gettext.Tr("View"),
 					}
-					hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
-					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					if system.IsPrivateLastore {
+						go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+					} else {
+						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
+						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+					}
 				})
 			}
 			return
@@ -156,6 +173,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.FailedStatus): func() error {
+				if system.IsPrivateLastore {
+					cacheFile := "/tmp/checkpolicy.cache"
+					_ = os.RemoveAll(cacheFile)
+				}
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)
 				m.statusManager.SetUpdateStatus(mode, system.NotDownload)
@@ -177,7 +198,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						cleanAllCache()
 						msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 						action := []string{"retry", gettext.Tr("Try Again")}
-						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
+						var hints map[string]dbus.Variant
+						if system.IsPrivateLastore {
+							hints = map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
+						} else {
+							hints = map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
+						}
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					} else if strings.Contains(errorContent.ErrType.String(), system.ErrorFetchFailed.String()) {
 						// 网络原因下载更新失败
@@ -192,16 +218,39 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					defer m.inhibitAutoQuitCountSub()
 					m.reportLog(downloadStatusReport, false, j.Description)
 					// 上报下载失败状态
+					msg := fmt.Sprintf("download %v package failed, detail is %v", mode.JobType(), job.Description)
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:           "error",
 						UpdateType:     mode.JobType(),
 						JobDescription: job.Description,
-						Detail:         fmt.Sprintf("download %v package failed, detail is %v", mode.JobType(), job.Description),
+						Detail:         msg,
 					}, true)
+					procEvent := updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.StartDownload,
+						EventStatus:  false,
+						EventContent: msg,
+					}
+					m.updatePlatform.PostProcessEventMessage(procEvent)
 				}()
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
+				msg := fmt.Sprintf("download %v package success", j.updateTyp.JobType())
+				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+					Type:           "info",
+					UpdateType:     mode.JobType(),
+					JobDescription: j.Description,
+					Detail:         msg,
+				}, false) // 上报下载成功状态
+				procEvent := updateplatform.ProcessEvent{
+					TaskID:       1,
+					EventType:    updateplatform.DownloadComplete,
+					EventStatus:  true,
+					EventContent: msg,
+				}
+				m.updatePlatform.PostProcessEventMessage(procEvent) // 上报下载成功状态
+				logger.Infof("enter download job succeed callback, UpdateNowForce: %v", m.updatePlatform.UpdateNowForce)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.CanUpgrade)
 				if j.next == nil {
 					go func() {
@@ -215,8 +264,24 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 								"ignore",
 								gettext.Tr("Dismiss"),
 							}
-							hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-control-center,-m,update")}
-							m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+							if system.IsPrivateLastore {
+								if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
+									timeStr := m.updatePlatform.UpdateTime.Format("15:04:05")
+									if timeStr != m.updateTime {
+										m.updateTime = timeStr
+									}
+									msg = fmt.Sprintf(gettext.Tr("Downloading completed. The computer will be updated at %s"), m.updateTime)
+									go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+								}
+								if m.updatePlatform.Tp == updateplatform.UpdateShutdown {
+									m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+								}
+							} else {
+								hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-control-center,-m,update")}
+
+								m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+							}
+
 						}
 						m.reportLog(downloadStatusReport, true, "")
 					}()
@@ -229,6 +294,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						}
 						m.inhibitAutoQuitCountSub()
 					}
+				} else {
+					logger.Infof("job next is not empty, job id: %v", job.next.Id)
 				}
 
 				// 上报下载成功状态

@@ -73,6 +73,7 @@ func (m *Manager) retryDistUpgrade(upgradeJob *Job, needBackup bool) error {
 
 func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
 	// 创建job，但是不添加到任务队列中
+	logger.Infof("enter distUpgradePartly, policy tp: %v, origin: %v", m.updatePlatform.Tp, origin)
 	var upgradeJob *Job
 	var createJobErr error
 	var startJobErr error
@@ -130,6 +131,19 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		m.inhibitAutoQuitCountSub()
 		m.do.Lock()
 		defer m.do.Unlock()
+		msg := fmt.Sprintf("start install package, update mode: %v", mode)
+		m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+			Type:       "info",
+			UpdateType: mode.JobType(),
+			Detail:     msg,
+		}, true)
+		procEvent := updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.StartInstall,
+			EventStatus:  true,
+			EventContent: msg,
+		}
+		m.updatePlatform.PostProcessEventMessage(procEvent)
 		return m.jobManager.MarkStart(upgradeJob.Id)
 	}
 
@@ -186,15 +200,41 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
 				// 设置UpdateStatus为WaitRunUpgrade，隐藏更新并关机/重启按钮
 				m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
+				if system.IsPrivateLastore {
+					msg := gettext.Tr("Start to update.Please dont shutdown")
+					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+				}
+
+				procEvent := updateplatform.ProcessEvent{
+					TaskID:       1,
+					EventType:    updateplatform.StartBackUp,
+					EventStatus:  true,
+					EventContent: "start backup",
+				}
+				m.updatePlatform.PostProcessEventMessage(procEvent)
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
+				procEvent := updateplatform.ProcessEvent{
+					TaskID:       1,
+					EventType:    updateplatform.BackUpComplete,
+					EventStatus:  true,
+					EventContent: "backup successfully completed",
+				}
+				m.updatePlatform.PostProcessEventMessage(procEvent)
 				inhibit(false)
 				return nil
 			},
 			string(system.FailedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
+				procEvent := updateplatform.ProcessEvent{
+					TaskID:       1,
+					EventType:    updateplatform.BackUpComplete,
+					EventStatus:  false,
+					EventContent: "backup failed",
+				}
+				m.updatePlatform.PostProcessEventMessage(procEvent)
 				// 备份失败时重置UpdateStatus为CanUpgrade，让用户可以重新操作
 				m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
 				inhibit(false)
@@ -361,11 +401,19 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				if err != nil {
 					logger.Warning(err)
 
+					msg := fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error())
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:       "error",
 						UpdateType: mode.JobType(),
-						Detail:     fmt.Sprintf("%v gen dut meta failed, detail is: %v", mode.JobType(), err.Error()),
+						Detail:     msg,
 					}, true)
+					procEvent := updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.StartInstall,
+						EventStatus:  false,
+						EventContent: msg,
+					}
+					m.updatePlatform.PostProcessEventMessage(procEvent)
 
 					if unref != nil {
 						unref()
@@ -377,12 +425,20 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				systemErr := dut.CheckSystem(dut.PreCheck, nil) // 只是为了执行precheck的hook脚本
 				if systemErr != nil {
 					logger.Info(systemErr)
-
+					msg := fmt.Sprintf("%v CheckSystem pre-check failed, detail is: %v", mode.JobType(),
+						systemErr.Error())
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:       "error",
 						UpdateType: mode.JobType(),
-						Detail:     fmt.Sprintf("CheckSystem failed, detail is: %v", systemErr.Error()),
+						Detail:     msg,
 					}, true)
+					procEvent := updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.StartInstall,
+						EventStatus:  false,
+						EventContent: msg,
+					}
+					m.updatePlatform.PostProcessEventMessage(procEvent)
 					return systemErr
 				}
 				if !system.CheckInstallAddSize(mode) {
@@ -407,11 +463,19 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				if systemErr != nil {
 					logger.Info(systemErr)
 
+					msg := fmt.Sprintf("%v CheckSystem mid-check failed, detail is: %v", mode.JobType(), systemErr.Error())
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:       "error",
 						UpdateType: mode.JobType(),
-						Detail:     fmt.Sprintf("%v CheckSystem failed, detail is: %v", mode.JobType(), systemErr.Error()),
+						Detail:     msg,
 					}, true)
+					procEvent := updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.StartInstall,
+						EventStatus:  false,
+						EventContent: msg,
+					}
+					m.updatePlatform.PostProcessEventMessage(procEvent)
 					return systemErr
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
@@ -566,16 +630,28 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			cleanAllCache()
 			msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 			action := []string{"retry", gettext.Tr("Try Again")}
-			hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			if system.IsPrivateLastore {
+				go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivateLong)
+			} else {
+				hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+			}
 		} else if strings.Contains(errType, system.ErrorInsufficientSpace.String()) {
 			msg := gettext.Tr("Updates failed: insufficient disk space.")
 			action := []string{}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
+			if system.IsPrivateLastore {
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutPrivateLong)
+			} else {
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
+			}
 		} else {
 			msg := gettext.Tr("Updates failed.")
 			action := []string{}
-			go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
+			if system.IsPrivateLastore {
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutPrivateLong)
+			} else {
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
+			}
 		}
 	}
 	if errorContent.IsCheckError {
@@ -607,11 +683,19 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 				allErrMsg = append(allErrMsg, fmt.Sprintf("upgrade failed time is %v \n", time.Now()))
 				allErrMsg = append(allErrMsg, string(msg))
 			}
+			detailMsg := fmt.Sprintf("%v upgrade failed, detail is: %v; all error message is %v", mode.JobType(), job.Description, strings.Join(allErrMsg, "\n"))
 			m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 				Type:       "error",
 				UpdateType: mode.JobType(),
-				Detail:     fmt.Sprintf("upgrade failed, detail is: %v; all error message is %v", job.Description, strings.Join(allErrMsg, "\n")),
+				Detail:     detailMsg,
 			}, true)
+			procEvent := updateplatform.ProcessEvent{
+				TaskID:       1,
+				EventType:    updateplatform.StartInstall,
+				EventStatus:  false,
+				EventContent: detailMsg,
+			}
+			m.updatePlatform.PostProcessEventMessage(procEvent)
 		}
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)
@@ -632,6 +716,9 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	}
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
+	if system.IsPrivateLastore {
+		m.cleanArchives(false)
+	}
 
 	m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 		Type:   "info",

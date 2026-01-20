@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/linuxdeepin/go-lib/dbusutil"
 )
@@ -29,7 +30,8 @@ type Job struct {
 	CreateTime   int64
 	DownloadSize int64
 
-	Type string
+	Type      string
+	PolicyTyp int
 
 	Status system.Status
 	caller methodCaller
@@ -116,6 +118,16 @@ func (j *Job) initDownloadSize() {
 		_ = j.emitPropChangedDownloadSize(size)
 	}
 	j.speedMeter.SetDownloadSize(size)
+	j.PropsMu.Unlock()
+}
+
+func (j *Job) setUpdatePolicy(policyTyp updateplatform.UpdateTp) {
+	j.PropsMu.Lock()
+	policy := int(policyTyp)
+	if j.PolicyTyp != policy {
+		j.PolicyTyp = policy
+		_ = j.emitPropChangedUpdatePolicy(policy)
+	}
 	j.PropsMu.Unlock()
 }
 
