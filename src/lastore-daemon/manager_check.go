@@ -111,17 +111,27 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 		},
 		string(system.FailedStatus): func() error {
 			m.updatePlatform.PostUpgradeStatus(uuid, updateplatform.UpgradeFailed, job.Description)
+			// TODO 可能丢失调用 m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.UpgradeFailed, job.Description)
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
 
+				msg := fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description)
 				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 					Type:           "error",
 					UpdateType:     checkOrder.JobType(),
 					JobDescription: job.Description,
-					Detail:         fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description),
+					Detail:         msg,
 				}, false)
 
+				procEvent := updateplatform.ProcessEvent{
+					TaskID:       1,
+					EventType:    updateplatform.CheckEnv,
+					EventStatus:  false,
+					EventContent: msg,
+				}
+				m.updatePlatform.PostProcessEventMessage(procEvent)
+				// TODO: 可能丢失调用 m.updatePlatform.PostSystemUpgradeMessage(uuid)
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)
