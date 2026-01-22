@@ -23,7 +23,6 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/dde-api/polkit"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
-	abrecovery "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.abrecovery"
 	accounts "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.accounts1"
 	power "github.com/linuxdeepin/go-dbus-factory/system/org.deepin.dde.power1"
 	ofdbus "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.dbus"
@@ -92,7 +91,6 @@ type Manager struct {
 	loginManager  login1.Manager
 	sysDBusDaemon ofdbus.DBus
 	systemd       systemd1.Manager
-	abObj         abrecovery.ABRecovery
 
 	grub             *grubManager
 	userAgents       *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
@@ -108,8 +106,7 @@ type Manager struct {
 	checkDpkgCapabilityOnce sync.Once
 	supportDpkgScriptIgnore bool
 
-	envIsValid     bool
-	preBackUpCheck bool
+	envIsValid bool
 
 	logFds     []*os.File
 	logFdsMu   sync.Mutex
@@ -140,11 +137,9 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		signalLoop:           dbusutil.NewSignalLoop(service.Conn(), 10),
 		systemd:              systemd1.NewManager(service.Conn()),
 		sysPower:             power.NewPower(service.Conn()),
-		abObj:                abrecovery.NewABRecovery(service.Conn()),
 		securitySourceConfig: make(UpdateSourceConfig),
 		systemSourceConfig:   make(UpdateSourceConfig),
 		envIsValid:           true,
-		preBackUpCheck:       true,
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()

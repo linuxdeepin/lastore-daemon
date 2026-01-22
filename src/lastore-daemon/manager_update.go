@@ -89,22 +89,6 @@ func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 	return flag
 }
 
-func (m *Manager) preCheckBackUp() {
-	canBackup, abErr := m.abObj.CanBackup(0)
-	if abErr != nil || !canBackup {
-		logger.Info("can not backup,", abErr)
-		m.preBackUpCheck = false
-	}
-	hasBackedUp, err := m.abObj.HasBackedUp().Get(0)
-	if err != nil && !hasBackedUp {
-		abErr = m.abObj.StartBackup(0)
-		if abErr != nil {
-			logger.Info("can not backup,", abErr)
-			m.preBackUpCheck = false
-		}
-	}
-}
-
 // updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
 // 任务进度划分: 0-10%-80%-90%-100%
 func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
@@ -135,7 +119,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	m.preCheckBackUp()
 	prepareUpdateSource()
 	m.reloadOemConfig(true)
 	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
@@ -238,10 +221,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			},
 			string(system.FailedStatus): func() error {
 				// 网络问题检查更新失败和空间不足下载索引失败,需要发通知
-				if system.IsPrivateLastore {
-					cacheFile := "/tmp/checkpolicy.cache"
-					_ = os.RemoveAll(cacheFile)
-				}
 				var errorContent system.JobError
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
