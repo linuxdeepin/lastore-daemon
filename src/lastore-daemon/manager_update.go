@@ -178,13 +178,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					if !m.envIsValid {
-						job.retry = 0
-						return &system.JobError{
-							ErrType:   system.ErrorDpkgError,
-							ErrDetail: "before update env check failed",
-						}
-					}
 					go m.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
@@ -604,21 +597,6 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 	}
 	m.updateUpdatableProp(m.updater.ClassifiedUpdatablePackages)
 	m.statusManager.SetFrontForceUpdate(m.updatePlatform.Tp == updateplatform.UpdateShutdown)
-	if len(m.UpgradableApps) > 0 {
-		if !m.beforeUpdateSourceEnvCheck() {
-			logger.Warning("before update env check failed")
-			m.envIsValid = false
-			return
-		}
-		m.envIsValid = true
-		procEvent := updateplatform.ProcessEvent{
-			TaskID:       1,
-			EventType:    updateplatform.GetUpdateEvent,
-			EventStatus:  true,
-			EventContent: "update source success",
-		}
-		m.updatePlatform.PostProcessEventMessage(procEvent)
-	}
 	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
 		go func() {
 			m.inhibitAutoQuitCountAdd()
