@@ -690,7 +690,18 @@ func getVersionData(data json.RawMessage) *updateMessage {
 		logger.Warningf("%v failed to Unmarshal msg.Data to updateMessage: %v ", GetVersion.string(), err.Error())
 		return nil
 	}
+	// TODO hack begin
+	hackVersionResponse(tmp)
+	// hack end
 	return tmp
+}
+
+// hackVersionResponse TODO: hack version response
+func hackVersionResponse(versionResp *updateMessage) {
+	for idx, repoInfo := range versionResp.RepoInfos {
+		versionResp.RepoInfos[idx].Uri = strings.ReplaceAll(repoInfo.Uri, "p2p://", "https://")
+		versionResp.RepoInfos[idx].Source = strings.ReplaceAll(repoInfo.Source, "p2p://", "https://")
+	}
 }
 
 func getTargetPkgListData(data json.RawMessage) *PreInstalledPkgMeta {
