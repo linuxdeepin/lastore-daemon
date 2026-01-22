@@ -221,10 +221,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			},
 			string(system.FailedStatus): func() error {
 				// 网络问题检查更新失败和空间不足下载索引失败,需要发通知
-				if system.IsPrivateLastore {
-					cacheFile := "/tmp/checkpolicy.cache"
-					_ = os.RemoveAll(cacheFile)
-				}
 				var errorContent system.JobError
 				err = json.Unmarshal([]byte(job.Description), &errorContent)
 				if err == nil {
@@ -552,13 +548,6 @@ const TimeOnly = "15:04:05"
 func (m *Manager) refreshUpdateInfos(sync bool) {
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
-		// TODO 是否有必要？
-		if system.IsPrivateLastore {
-			err := exec.Command("/var/lib/lastore/scripts/build_system_info", "-now").Run()
-			if err != nil {
-				logger.Warning(err)
-			}
-		}
 		// 检查更新后，先下载解析coreList，获取必装清单
 		m.coreList = m.getCoreList(true)
 		logger.Debug("generateUpdateInfo get coreList:", m.coreList)
