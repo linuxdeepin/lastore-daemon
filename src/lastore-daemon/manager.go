@@ -106,8 +106,6 @@ type Manager struct {
 	checkDpkgCapabilityOnce sync.Once
 	supportDpkgScriptIgnore bool
 
-	envIsValid bool
-
 	logFds     []*os.File
 	logFdsMu   sync.Mutex
 	logTmpFile *os.File
@@ -139,7 +137,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		sysPower:             power.NewPower(service.Conn()),
 		securitySourceConfig: make(UpdateSourceConfig),
 		systemSourceConfig:   make(UpdateSourceConfig),
-		envIsValid:           true,
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
