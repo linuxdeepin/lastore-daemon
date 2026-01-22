@@ -35,6 +35,9 @@ build: prepare bin/lastore-agent bin/lastore-upgrade-query
 	${GoPath} ${GOBUILD_CGO_FLAGS} ${GOBUILD} -o bin/lastore-smartmirror-daemon ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-smartmirror-daemon || echo "build failed, disable smartmirror support "
 	${GoPath} ${GOBUILD_CGO_FLAGS} ${GOBUILD} -o bin/lastore-apt-clean ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/lastore-apt-clean
 
+bin/iup-tool:
+	${GoPath} ${GOBUILD_CGO_FLAGS} ${GOBUILD} -o bin/iup-tool ${GOBUILD_OPTIONS} ${GOPKG_PREFIX}/src/local_cmd/iup-tool
+
 fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j applications -o var/lib/lastore/applications.json
 	./bin/lastore-tools update -r desktop -j categories -o var/lib/lastore/categories.json
@@ -106,3 +109,5 @@ clean:
 
 check_code_quality:
 	${GoPath} go vet ./src/...
+
+.PHONY: bin/iup-tool
