@@ -1398,6 +1398,9 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 }
 
 func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
+	if !system.IsPrivateLastore {
+		return
+	}
 	logger.Debug("post process event msg:", body)
 	body.TaskID = m.taskID
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
