@@ -203,10 +203,18 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
+					msgContent := "update source success"
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:   "info",
-						Detail: "update source success",
+						Detail: msgContent,
 					}, false)
+
+					m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.GetUpdateEvent,
+						EventStatus:  true,
+						EventContent: msgContent,
+					})
 				}()
 				m.updatePlatform.SaveCache(m.config)
 				job.setPropProgress(1.0)
