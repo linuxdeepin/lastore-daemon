@@ -1199,21 +1199,25 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 }
 
 func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
-	prefix := "deb"
-	// v25上应该是这个
-	suffix := "main community commercial"
-	if m.config.PlatformRepoComponents != "" {
-		suffix = m.config.PlatformRepoComponents
-	}
 	var repos []string
 	for _, repo := range m.repoInfos {
-		codeName := repo.CodeName
-		// 如果有cdn，则使用cdn，效率更高
-		var uri = repo.Uri
-		// if repo.Cdn != "" {
-		// 	uri = repo.Cdn
-		// }
-		repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, suffix))
+		if strings.HasPrefix(repo.Source, "deb ") {
+			repos = append(repos, repo.Source)
+		} else {
+			prefix := "deb"
+			// v25上应该是这个
+			suffix := "main community commercial"
+			if m.config.PlatformRepoComponents != "" {
+				suffix = m.config.PlatformRepoComponents
+			}
+			codeName := repo.CodeName
+			// 如果有cdn，则使用cdn，效率更高
+			var uri = repo.Uri
+			// if repo.Cdn != "" {
+			// 	uri = repo.Cdn
+			// }
+			repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, suffix))
+		}
 	}
 	err := os.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
 	if err != nil {
@@ -1401,6 +1405,10 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	if !system.IsPrivateLastore {
 		return
 	}
+	if m.targetBaseline == "" {
+		logger.Warning("target baseline is empty")
+		return
+	}
 	logger.Debug("post process event msg:", body)
 	body.TaskID = m.taskID
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
@@ -1456,6 +1464,11 @@ func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUp
 	}
 
 	if system.IsPrivateLastore && !forceUpload {
+		return
+	}
+
+	if m.targetBaseline == "" {
+		logger.Warning("target baseline is empty")
 		return
 	}
 
