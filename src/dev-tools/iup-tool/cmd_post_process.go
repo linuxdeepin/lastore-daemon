@@ -167,9 +167,7 @@ func uploadLogFiles(files []string) {
 
 func genPostProcessResponse(requestURL, token string, buf io.Reader, filePath string) (*http.Response, error) {
 	policyURL := requestURL + Urls[PostProcess].path
-	client := &http.Client{
-		Timeout: time.Duration(globalTimeout) * time.Second,
-	}
+	client := newHTTPClient()
 
 	// Clean up xz file if not in debug mode
 	if !globalDebug {

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -64,9 +63,7 @@ func runGetCVEInfo(cmd *cobra.Command, args []string) {
 
 func genCVEInfoResponse(requestUrl, token, syncTime string) (*http.Response, error) {
 	policyUrl := requestUrl + Urls[GetPkgCVEs].path
-	client := &http.Client{
-		Timeout: 40 * time.Second,
-	}
+	client := newHTTPClient()
 	values := url.Values{}
 	values.Add("synctime", syncTime)
 	policyUrl = policyUrl + "?" + values.Encode()
