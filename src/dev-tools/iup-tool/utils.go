@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
@@ -34,6 +35,13 @@ const (
 	dSettingsLastoreName    = "org.deepin.dde.lastore"
 	dSettingsKeyPlatformUrl = "platform-url"
 )
+
+// newHTTPClient creates a new HTTP client with the global timeout setting
+func newHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: time.Duration(globalTimeout) * time.Second,
+	}
+}
 
 // getTokenFromAptConfig 从 apt-config 获取 Token
 func getTokenFromAptConfig() string {

@@ -97,9 +97,7 @@ func runPostResult(cmd *cobra.Command, args []string) {
 // 相关函数 UpdatePlatformManager.PostSystemUpgradeMessage
 func genPostResultResponse(requestURL, token string, result *UpgradePostMsg) (*http.Response, error) {
 	policyURL := requestURL + Urls[PostResult].path
-	client := &http.Client{
-		Timeout: 4 * time.Second,
-	}
+	client := newHTTPClient()
 
 	resultData, err := json.Marshal(result)
 	if err != nil {
