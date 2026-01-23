@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
@@ -26,9 +25,7 @@ func getVersionData(data json.RawMessage) *updateMessage {
 // genVersionResponse 生成版本请求
 func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
 	policyURL := m.requestURL + Urls[GetVersion].path
-	client := &http.Client{
-		Timeout: 40 * time.Second,
-	}
+	client := newHTTPClient()
 	request, err := http.NewRequest(Urls[GetVersion].method, policyURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetVersion.string(), err.Error())

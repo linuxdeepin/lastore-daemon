@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
@@ -107,9 +106,7 @@ func runPostProcessEvent(cmd *cobra.Command, args []string) {
 
 func genPostProcessEventResponse(requestUrl, token string, event *ProcessEvent) (*http.Response, error) {
 	policyUrl := requestUrl + Urls[PostProcessEvent].path
-	client := &http.Client{
-		Timeout: 40 * time.Second,
-	}
+	client := newHTTPClient()
 
 	// Marshal event to JSON
 	eventData, err := json.Marshal(event)

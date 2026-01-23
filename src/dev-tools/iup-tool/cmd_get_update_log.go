@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
@@ -60,9 +59,7 @@ func runGetUpdateLog(cmd *cobra.Command, args []string) {
 
 func genUpdateLogResponse(requestUrl, token, baseline string, isUnstable int) (*http.Response, error) {
 	policyUrl := requestUrl + Urls[GetUpdateLog].path
-	client := &http.Client{
-		Timeout: 40 * time.Second,
-	}
+	client := newHTTPClient()
 	values := url.Values{}
 	values.Add("baseline", baseline)
 	values.Add("isUnstable", fmt.Sprintf("%d", isUnstable))
