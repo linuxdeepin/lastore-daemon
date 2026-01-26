@@ -168,6 +168,11 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		}
 	}
 
+	systemType := getTargetSystemType()
+	if systemType == "" {
+		systemType = getCurrentSystemType()
+	}
+
 	return &UpdatePlatformManager{
 		config:                            c,
 		allowPostSystemUpgradeMessageType: system.SystemUpdate,
@@ -175,6 +180,7 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		preBaseline:                       getCurrentBaseline(),
 		targetVersion:                     getTargetVersion(),
 		targetBaseline:                    getTargetBaseline(),
+		systemTypeFromPlatform:            systemType,
 		taskID:                            getTaskId(),
 		requestUrl:                        platformUrl,
 		cvePkgs:                           make(map[string][]string),
