@@ -428,6 +428,15 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	if system.JobErrorType(errType) == system.ErrorDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
 		return safeStart(c)
 	}
+
+	if system.ErrorDpkgInterrupted == system.JobErrorType(errType) {
+		cmd := exec.Command("/usr/bin/dpkg", "--force-confold", "--configure", "-a")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("run dpkg --configure -a err: %v", string(out))
+		}
+	}
+
 	return c.Start()
 }
 

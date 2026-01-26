@@ -6,7 +6,6 @@ package apt
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -80,9 +79,8 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		args = append(args, cmdArgs...)
 	case system.UpdateSourceJobType:
 		args = append(args, cmdArgs...)
-		argString := strings.Join(args, " ")
-		sh := fmt.Sprintf("apt-get %s -o APT::Status-Fd=3 update --fix-missing && /var/lib/lastore/scripts/build_system_info -now", argString)
-		return exec.Command("/bin/sh", "-c", sh)
+		args = append(args, "-o", "APT::Status-Fd=3", "update", "--fix-missing")
+		return exec.Command("/usr/bin/apt-get", args...)
 	case system.CleanJobType:
 		return exec.Command("/usr/bin/lastore-apt-clean")
 	case system.BackupJobType:
@@ -109,9 +107,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		}
 		switch errType {
 		case system.ErrorDpkgInterrupted:
-			sh := "dpkg --force-confold --configure -a;" +
-				fmt.Sprintf("apt-get -y -c %s -f install %s;", system.LastoreAptV2CommonConfPath, aptOptionString)
-			return exec.Command("/bin/sh", "-c", sh) // #nosec G204
+			return exec.Command("/usr/bin/apt-get", "-y", "-c", system.LastoreAptV2CommonConfPath, "-f", "install", aptOptionString) // #nosec G204
 		case system.ErrorDependenciesBroken:
 			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 			args = append(args, "-f", "install")

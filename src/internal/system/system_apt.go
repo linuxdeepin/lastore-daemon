@@ -474,22 +474,11 @@ func CheckInstallAddSize(updateType UpdateType) bool {
 		logger.Warning(err)
 	}
 	logger.Debugf("add size is %v", addSize)
-	content, err := exec.Command("/bin/sh", []string{
-		"-c",
-		"df -BK --output='avail' /usr|awk 'NR==2'",
-	}...).CombinedOutput()
+	spaceNum, err := GetFreeSpace("/usr")
 	if err != nil {
-		logger.Warning(string(content))
+		logger.Warning(err)
 	} else {
-		spaceStr := strings.Replace(string(content), "K", "", -1)
-		spaceStr = strings.TrimSpace(spaceStr)
-		spaceNum, err := strconv.Atoi(spaceStr)
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			spaceNum = spaceNum * 1000
-			isSatisfied = spaceNum > int(addSize)
-		}
+		isSatisfied = spaceNum > int(addSize)
 	}
 	return isSatisfied
 }
