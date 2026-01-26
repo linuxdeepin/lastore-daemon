@@ -67,56 +67,38 @@ type lastoreUnitMap map[UnitName][]string
 
 // 定时任务和文件监听map
 func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
+	handleEventCmdArgs := []string{
+		"/usr/bin/dbus-send", "--system", "--print-reply", "--dest=org.deepin.dde.Lastore1", "/org/deepin/dde/Lastore1", "org.deepin.dde.Lastore1.Manager.HandleSystemEvent",
+	}
+	genHandleEventCmdArgs := func(prop []string, eventKey systemdEventType) []string {
+		return append(append(prop, handleEventCmdArgs...), fmt.Sprintf("string:%s", eventKey))
+	}
 	unitMap := make(lastoreUnitMap)
 	if (m.config.GetLastoreDaemonStatus()&config.DisableUpdate) == 0 && !m.ImmutableAutoRecovery { // 更新禁用未开启且无忧还原未开启时
-		unitMap[lastoreAutoCheck] = []string{
+		unitMap[lastoreAutoCheck] = genHandleEventCmdArgs([]string{
 			// 随机数范围1800-21600，时间为0.5~6小时
-			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0]),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck), // 根据上次检查时间,设置下一次自动检查时间
-		}
+			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0])}, AutoCheck) // 根据上次检查时间,设置下一次自动检查时间
 	}
-	unitMap[lastoreAutoClean] = []string{
-		"--on-active=600",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoClean), // 10分钟后自动检查是否需要清理
-	}
-	unitMap[lastoreAutoUpdateToken] = []string{
-		"--on-active=60",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, OsVersionChanged), // 60s后更新token文件
-	}
-	unitMap[watchOsVersion] = []string{
-		"--path-property=PathModified=/etc/os-version",
-		"/bin/bash",
-		"-c",
-		fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, OsVersionChanged), // 监听os-version文件，更新token
-	}
+	unitMap[lastoreAutoClean] = genHandleEventCmdArgs([]string{
+		"--on-active=600"}, AutoClean) // 10分钟后自动检查是否需要清理
+	unitMap[lastoreAutoUpdateToken] = genHandleEventCmdArgs([]string{
+		"--on-active=60"}, OsVersionChanged) // 60s后更新token文件
+	unitMap[watchOsVersion] = genHandleEventCmdArgs([]string{
+		"--path-property=PathModified=/etc/os-version"}, OsVersionChanged) // 监听os-version文件，更新token
 
 	// Start processing idle downloads 11 minutes after the system boots up
 	// Delayed to 11min to avoid affecting boot performance. AutoClean task runs at 10min,
 	// so this task executes one minute after that.
 	if !m.ImmutableAutoRecovery && m.updater.getIdleDownloadEnabled() {
-		unitMap[lastoreInitIdleDownload] = []string{
-			"--on-active=660",
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, InitIdleDownload),
-		}
+		unitMap[lastoreInitIdleDownload] = genHandleEventCmdArgs([]string{
+			"--on-active=660"}, InitIdleDownload)
 	}
 
 	// PostUpgradeCron 可以配置为*:0/30,每小时的0分和30分触发一次
 	if len(strings.TrimSpace(m.config.PostUpgradeCron)) > 0 {
-		unitMap[lastoreRetryPostMsg] = []string{
+		unitMap[lastoreRetryPostMsg] = genHandleEventCmdArgs([]string{
 			fmt.Sprintf("--unit=%s", lastoreRetryPostMsg),
-			fmt.Sprintf(`--on-calendar=%v`, m.config.PostUpgradeCron),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, RetryPostUpgradeResult), // 定时上报更新结果
-		}
+			fmt.Sprintf(`--on-calendar=%v`, m.config.PostUpgradeCron)}, RetryPostUpgradeResult) // 定时上报更新结果
 	}
 	updateTime, err := time.Parse(time.RFC3339, m.config.UpdateTime)
 	if err == nil {
@@ -126,12 +108,8 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 			updateTime = updateTime.Add(time.Duration(24) * time.Hour)
 		}
 		// 提前60s触发
-		unitMap[lastoreRegularlyUpdate] = []string{
-			fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60)),
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf(`%s string:"%s"`, lastoreDBusCmd, AutoCheck),
-		}
+		unitMap[lastoreRegularlyUpdate] = genHandleEventCmdArgs([]string{
+			fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60))}, AutoCheck)
 	}
 
 	return unitMap
@@ -274,8 +252,6 @@ func (m *Manager) startCheckPolicyTask() {
 	args := []string{
 		fmt.Sprintf("--unit=%s", lastoreCronCheck),
 		fmt.Sprintf(`--on-calendar=%v`, m.config.CheckPolicyCron),
-		"/bin/bash",
-		"-c",
 		"lastore-tools checkpolicy", // 定时检查policy变化
 	}
 	cmd := exec.Command(run, args...)

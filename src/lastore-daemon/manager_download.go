@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -75,22 +73,11 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	// 下载前检查/var分区的磁盘空间是否足够下载,
 	isInsufficientSpace := false
 	if totalNeedDownloadSize > 0 {
-		content, err := exec.Command("/bin/sh", []string{
-			"-c",
-			"df -BK --output='avail' /var|awk 'NR==2'",
-		}...).CombinedOutput()
+		spaceNum, err := system.GetFreeSpace("/var")
 		if err != nil {
-			logger.Warning(string(content))
+			logger.Warning(err)
 		} else {
-			spaceStr := strings.Replace(string(content), "K", "", -1)
-			spaceStr = strings.TrimSpace(spaceStr)
-			spaceNum, err := strconv.Atoi(spaceStr)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				spaceNum = spaceNum * 1000
-				isInsufficientSpace = spaceNum < int(totalNeedDownloadSize)
-			}
+			isInsufficientSpace = spaceNum < int(totalNeedDownloadSize)
 		}
 	}
 

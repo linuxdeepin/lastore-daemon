@@ -366,23 +366,6 @@ func getUnknownUpgradablePackageList(coreList []string) ([]string, error) {
 	return apt.ListDistUpgradePackages(system.GetCategorySourceMap()[system.UnknownUpdate], coreList)
 }
 
-// 判断包对应版本是否存在
-func checkDebExistWithVersion(pkgList []string) bool {
-	args := strings.Join(pkgList, " ")
-	args = "apt show " + args
-	cmd := exec.Command("/bin/sh", "-c", args)
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	err := cmd.Run()
-	if err != nil {
-		logger.Warning(outBuf.String())
-		logger.Warning(errBuf.String())
-	}
-	return err == nil
-}
-
 type statusVersion struct {
 	status  string
 	version string
@@ -473,6 +456,11 @@ const TimeOnly = "15:04:05"
 func (m *Manager) refreshUpdateInfos(sync bool) {
 	// 检查更新时,同步修改canUpgrade状态;检查更新时需要同步操作
 	if sync {
+		err := exec.Command("/var/lib/lastore/scripts/build_system_info", "-now").Run()
+		if err != nil {
+			logger.Warning(err)
+		}
+
 		// 检查更新后，先下载解析coreList，获取必装清单
 		m.coreList = m.getCoreList(true)
 		logger.Debug("generateUpdateInfo get coreList:", m.coreList)

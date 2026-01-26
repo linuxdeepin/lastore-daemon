@@ -7,10 +7,12 @@ package system
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"unicode"
@@ -377,4 +379,31 @@ func getEditionName() (string, error) {
 		return "", err
 	}
 	return editionName, nil
+}
+
+// 单位是K
+func GetFreeSpace(diskPath string) (int, error) {
+	content, err := exec.Command("/usr/bin/df", "-BK", "--output=avail", diskPath).CombinedOutput()
+	if err == nil {
+		var contentKb string
+		scanner := bufio.NewScanner(strings.NewReader(string(content)))
+		lineCount := 1
+		for scanner.Scan() {
+			if lineCount == 2 {
+				contentKb = scanner.Text()
+				break
+			}
+			lineCount++
+		}
+		spaceStr := strings.Replace(contentKb, "K", "", -1)
+		spaceStr = strings.TrimSpace(spaceStr)
+		spaceNum, err := strconv.Atoi(spaceStr)
+		if err == nil {
+			spaceNum = spaceNum * 1000
+			return spaceNum, nil
+		} else {
+			return 0, err
+		}
+	}
+	return 0, fmt.Errorf("run /usr/bin/df -BK --output=avail %v err: %v", diskPath, string(content))
 }
