@@ -1,8 +1,9 @@
-#include "upgrade_query.h"
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <vector>
 #include <nlohmann/json.hpp>
+#include "upgrade_query.h"
 
 int main(int argc, char **argv)
 {
@@ -37,9 +38,10 @@ int main(int argc, char **argv)
     std::vector<UpgradePackage> packages =
             GetUpgradePackages(sourcelist, sourcepart, allowDowngrades);
 
+    std::string reason;
     for (const auto &pkgItem : packages) {
-        if (!pkgItem.Valid()) {
-            std::cerr << "Invalid package: " << pkgItem.Name << std::endl;
+        if (!pkgItem.Valid(reason)) {
+            std::cerr << "Invalid package: " << pkgItem.Name << " (" << reason << ")" << std::endl;
             return 1;
         }
     }

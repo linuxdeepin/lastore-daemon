@@ -20,7 +20,7 @@ public:
     std::string Hash;
     std::string Uri;
 
-    bool Valid() const;
+    bool Valid(std::string &reason) const;
 };
 
 std::vector<UpgradePackage> GetUpgradePackages(const std::string &sourcelist,

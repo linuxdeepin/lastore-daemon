@@ -22,15 +22,32 @@
 
 #include "upgrade_query.h"
 
-bool UpgradePackage::Valid() const
+bool UpgradePackage::Valid(std::string &reason) const
 {
-    if (Name.empty() || CandidateVersion.empty() || Architecture.empty() || Codename.empty()
-        || Filename.empty() || Hash.empty()) {
+    if (Name.empty()) {
+        reason = "Name is empty";
+        return false;
+    }
+    if (CandidateVersion.empty()) {
+        reason = "CandidateVersion is empty";
+        return false;
+    }
+    if (Architecture.empty()) {
+        reason = "Architecture is empty";
+        return false;
+    }
+    if (Filename.empty()) {
+        reason = "Filename is empty";
+        return false;
+    }
+    if (Hash.empty()) {
+        reason = "Hash is empty";
         return false;
     }
 
     // Check uint64_t fields - they should not be 0
     if (Size == 0) {
+        reason = "Size is 0";
         return false;
     }
 
