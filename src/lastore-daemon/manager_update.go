@@ -189,7 +189,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						if system.IsPrivateLastore {
 							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
 							if m.updatePlatform.Tp == updateplatform.NormalUpdate {
-								msg = gettext.Tr("New version available! Plesse go to control-center to check")
+								msg = gettext.Tr("New version available! Please go to control-center to check")
 								go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutPrivate)
 							}
 						} else {
