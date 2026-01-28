@@ -16,7 +16,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/sysinfo"
 )
 
-const CheckBaseDir = "/var/lib/lastore/check/"
+var CheckBaseDir = "/var/lib/lastore/check/"
 
 var logger = log.NewLogger("lastore/update-tools/check")
 
@@ -52,14 +52,14 @@ func CheckAPTAndDPKGState() error {
 	if flags, _ := sysinfo.CheckAppIsExist("/usr/bin/apt"); !flags {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckToolsDependFailed,
-			ErrDetail:    fmt.Sprintf("/usr/bin/apt not found"),
+			ErrDetail:    "/usr/bin/apt not found",
 			IsCheckError: true,
 		}
 	}
 	if flags, _ := sysinfo.CheckAppIsExist("/usr/bin/dpkg"); !flags {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckToolsDependFailed,
-			ErrDetail:    fmt.Sprintf("/usr/bin/dpkg not found"),
+			ErrDetail:    "/usr/bin/dpkg not found",
 			IsCheckError: true,
 		}
 	}
@@ -99,11 +99,11 @@ func CheckAPTAndDPKGState() error {
 }
 
 // dyn hook
-func CheckDynHook(cfg *cache.CacheInfo, checkType int8) error {
+func CheckDynHook(checkType int8) error {
 	execHooks := func(hookDir string) error {
 		// 检查hook目录是否存在
 		if !utils2.IsFileExist(hookDir) {
-			logger.Warningf("hook dir %s not exist", hookDir)
+			logger.Debugf("hook dir %s not exist", hookDir)
 			return nil
 		}
 
@@ -130,12 +130,24 @@ func CheckDynHook(cfg *cache.CacheInfo, checkType int8) error {
 
 	var err error
 	switch checkType {
-	case cache.PreUpdate:
-		err = execHooks(filepath.Join(CheckBaseDir, "pre_check"))
-	case cache.MidCheck:
-		err = execHooks(filepath.Join(CheckBaseDir, "mid_check"))
-	case cache.PostCheck:
-		err = execHooks(filepath.Join(CheckBaseDir, "post_check"))
+	case cache.PreUpdateCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "pre_update_check"))
+	case cache.PostUpdateCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "post_update_check"))
+	case cache.PreDownloadCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "pre_download_check"))
+	case cache.PostDownloadCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "post_download_check"))
+	case cache.PreBackupCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "pre_backup_check"))
+	case cache.PostBackupCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "post_backup_check"))
+	case cache.PreUpgradeCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "pre_upgrade_check"))
+	case cache.MidUpgradeCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "mid_upgrade_check"))
+	case cache.PostUpgradeCheck:
+		err = execHooks(filepath.Join(CheckBaseDir, "post_upgrade_check"))
 	default:
 		return fmt.Errorf("check type error")
 	}

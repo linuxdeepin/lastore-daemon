@@ -18,7 +18,7 @@ var (
 	ConfigCfg            string = check.CheckBaseDir + "config.yaml"
 	RootCoreConfig       config.CoreConfig
 	ThisCacheInfo        *cache.CacheInfo
-	UpdateMetaConfigPath string = check.CheckBaseDir + "default.json"
+	UpdateMetaConfigPath string // set by dut.CheckSystem
 )
 
 // Error represents an error that occurred during the execution of the program.
@@ -48,10 +48,11 @@ func initCheckEnv() error {
 		logger.Errorf("update meta config path is empty")
 		return &system.JobError{
 			ErrType:      system.ErrorCheckMetaInfoFile,
-			ErrDetail:    fmt.Sprintf("update meta config path is empty"),
+			ErrDetail:    "update meta config path is empty",
 			IsCheckError: true,
 		}
 	}
+
 	if err := fs.CheckFileExistState(UpdateMetaConfigPath); err != nil {
 		logger.Errorf("update meta config path: %v", err)
 		return &system.JobError{

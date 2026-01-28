@@ -212,6 +212,19 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 					EventContent: "start backup",
 				}
 				m.updatePlatform.PostProcessEventMessage(procEvent)
+
+				systemErr := dut.CheckSystem(dut.PreBackupCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
@@ -224,6 +237,19 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				}
 				m.updatePlatform.PostProcessEventMessage(procEvent)
 				inhibit(false)
+
+				systemErr := dut.CheckSystem(dut.PostBackupCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
 				return nil
 			},
 			string(system.FailedStatus): func() error {
@@ -248,6 +274,19 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 					"x-deepin-action-continue": dbus.MakeVariant(
 						buildDistUpgradePartlyCommand(mode, false))}
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
+
+				systemErr := dut.CheckSystem(dut.PostBackupCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
 				return nil
 			},
 		})
@@ -422,23 +461,24 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				}
 				logger.Info("update UUID:", uuid)
 				m.updatePlatform.CreateJobPostMsgInfo(uuid, job.updateTyp)
-				systemErr := dut.CheckSystem(dut.PreCheck, nil) // 只是为了执行precheck的hook脚本
+				systemErr := dut.CheckSystem(dut.PreUpgradeCheck, nil)
 				if systemErr != nil {
-					logger.Info(systemErr)
-					msg := fmt.Sprintf("%v CheckSystem pre-check failed, detail is: %v", mode.JobType(),
-						systemErr.Error())
-					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-						Type:       "error",
-						UpdateType: mode.JobType(),
-						Detail:     msg,
-					}, true)
-					procEvent := updateplatform.ProcessEvent{
-						TaskID:       1,
-						EventType:    updateplatform.StartInstall,
-						EventStatus:  false,
-						EventContent: msg,
-					}
-					m.updatePlatform.PostProcessEventMessage(procEvent)
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+						procEvent := updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.StartInstall,
+							EventStatus:  false,
+							EventContent: err.Error(),
+						}
+						m.updatePlatform.PostProcessEventMessage(procEvent)
+					}(systemErr)
+
 					return systemErr
 				}
 				if !system.CheckInstallAddSize(mode) {
@@ -459,23 +499,24 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				systemErr := dut.CheckSystem(dut.MidCheck, nil)
+				systemErr := dut.CheckSystem(dut.MidUpgradeCheck, nil)
 				if systemErr != nil {
-					logger.Info(systemErr)
+					logger.Warning(systemErr)
 
-					msg := fmt.Sprintf("%v CheckSystem mid-check failed, detail is: %v", mode.JobType(), systemErr.Error())
-					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-						Type:       "error",
-						UpdateType: mode.JobType(),
-						Detail:     msg,
-					}, true)
-					procEvent := updateplatform.ProcessEvent{
-						TaskID:       1,
-						EventType:    updateplatform.StartInstall,
-						EventStatus:  false,
-						EventContent: msg,
-					}
-					m.updatePlatform.PostProcessEventMessage(procEvent)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+						procEvent := updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.StartInstall,
+							EventStatus:  false,
+							EventContent: err.Error(),
+						}
+						m.updatePlatform.PostProcessEventMessage(procEvent)
+					}(systemErr)
 					return systemErr
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
@@ -824,7 +865,7 @@ func (m *Manager) prepareAptCheck(mode system.UpdateType) (string, error) {
 		if mode == 0 {
 			return "", errors.New("invalid mode")
 		}
-		m.updatePlatform.PrepareCheckScripts()
+
 		uuid, err = dut.GenDutMetaFile(system.DutOnlineMetaConfPath,
 			system.LocalCachePath, coreListMap, repo)
 		if err != nil {

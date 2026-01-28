@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/godbus/dbus/v5"
@@ -147,8 +148,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		}
 		j.initDownloadSize(totalNeedDownloadSize)
 		j.realRunningHookFn = func() {
-			m.PropsMu.Lock()
-			m.PropsMu.Unlock()
 			m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
 			if !m.updatePlatform.UpdateNowForce || m.config.IntranetUpdate { // 立即更新则不发通知
 				sendDownloadingOnce.Do(func() {
@@ -165,9 +164,23 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}
 				})
 			}
-			return
 		}
 		j.setPreHooks(map[string]func() error{
+			string(system.RunningStatus): func() error {
+				systemErr := dut.CheckSystem(dut.PreDownloadCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
+				return nil
+			},
 			string(system.PausedStatus): func() error {
 				m.statusManager.SetUpdateStatus(mode, system.DownloadPause)
 				return nil
@@ -213,6 +226,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				}
+
 				go func() {
 					m.inhibitAutoQuitCountAdd()
 					defer m.inhibitAutoQuitCountSub()
@@ -233,6 +247,19 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}
 					m.updatePlatform.PostProcessEventMessage(procEvent)
 				}()
+
+				systemErr := dut.CheckSystem(dut.PostDownloadCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
@@ -285,6 +312,18 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						}
 						m.reportLog(downloadStatusReport, true, "")
 					}()
+
+					systemErr := dut.CheckSystem(dut.PostDownloadCheck, nil)
+					if systemErr != nil {
+						logger.Warning(systemErr)
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							}, true)
+						}(systemErr)
+					}
 
 					if m.updatePlatform.UpdateNowForce {
 						m.inhibitAutoQuitCountAdd()

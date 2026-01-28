@@ -32,18 +32,30 @@ func CheckSystem(typ CheckType, options map[string]string) *system.JobError {
 	libCheck.UpdateMetaConfigPath = system.DutOnlineMetaConfPath
 	var checkError error
 	switch typ {
-	case PreCheck:
-		checkError = libCheck.PreCheck()
-	case MidCheck:
-		checkError = libCheck.MidCheck()
-	case PostCheck:
+	case PreUpdateCheck:
+		checkError = libCheck.PreUpdateCheck()
+	case PostUpdateCheck:
+		checkError = libCheck.PostUpdateCheck()
+	case PreDownloadCheck:
+		checkError = libCheck.PreDownloadCheck()
+	case PostDownloadCheck:
+		checkError = libCheck.PostDownloadCheck()
+	case PreBackupCheck:
+		checkError = libCheck.PreBackupCheck()
+	case PostBackupCheck:
+		checkError = libCheck.PostBackupCheck()
+	case PreUpgradeCheck:
+		checkError = libCheck.PreUpgradeCheck()
+	case MidUpgradeCheck:
+		checkError = libCheck.MidUpgradeCheck()
+	case PostUpgradeCheck:
 		if options[OptionFirstCheck] == "1" {
 			libCheck.PostCheckStage1 = true
 		} else {
 			libCheck.PostCheckStage1 = false
 		}
 
-		checkError = libCheck.PostCheck()
+		checkError = libCheck.PostUpgradeCheck()
 	default:
 		logger.Errorf("Unknown check type: %s", typ.String())
 		checkError = &system.JobError{

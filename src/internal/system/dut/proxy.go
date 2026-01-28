@@ -72,7 +72,7 @@ func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[stri
 	// environ parameter is ignored here
 	fn := system.NewFunction(jobId, p.Indicator, func() error {
 		// only postCheck can be handled here, checkType is ignored
-		systemErr := CheckSystem(PostCheck, options)
+		systemErr := CheckSystem(PostUpgradeCheck, options)
 		if systemErr != nil {
 			return systemErr
 		}
@@ -93,19 +93,37 @@ func checkSystemDependsError(indicator system.Indicator) error {
 type CheckType uint
 
 const (
-	PreCheck  CheckType = 0
-	MidCheck  CheckType = 1
-	PostCheck CheckType = 2
+	PreUpdateCheck    CheckType = iota // check before update source
+	PostUpdateCheck                    // check after update source
+	PreDownloadCheck                   // check before download package
+	PostDownloadCheck                  // check after download package
+	PreBackupCheck                     // check before backup
+	PostBackupCheck                    // check after backup
+	PreUpgradeCheck                    // check before upgrade
+	MidUpgradeCheck                    // check after upgrade
+	PostUpgradeCheck                   // check after marchine restart
 )
 
 func (t CheckType) String() string {
 	switch t {
-	case PreCheck:
-		return "precheck"
-	case MidCheck:
-		return "midcheck"
-	case PostCheck:
-		return "postcheck"
+	case PreUpdateCheck:
+		return "pre_update_check"
+	case PostUpdateCheck:
+		return "post_update_check"
+	case PreDownloadCheck:
+		return "pre_download_check"
+	case PostDownloadCheck:
+		return "post_download_check"
+	case PreBackupCheck:
+		return "pre_backup_check"
+	case PostBackupCheck:
+		return "post_backup_check"
+	case PreUpgradeCheck:
+		return "pre_upgrade_check"
+	case MidUpgradeCheck:
+		return "mid_upgrade_check"
+	case PostUpgradeCheck:
+		return "post_upgrade_check"
 	}
 	return ""
 }

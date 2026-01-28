@@ -46,7 +46,7 @@ func executeCheck(checkFunc func() error) error {
 		logger.Debug("check function is nil")
 		return &system.JobError{
 			ErrType:      system.ErrorCheckMetaInfoFile,
-			ErrDetail:    fmt.Sprintf("check function is nil"),
+			ErrDetail:    "check function is nil",
 			IsCheckError: true,
 		}
 	}
@@ -59,44 +59,108 @@ func executeCheck(checkFunc func() error) error {
 	return checkFunc()
 }
 
-// PreCheck do pre-check
-func PreCheck() error {
-	return executeCheck(preCheck)
+func PreUpdateCheck() error {
+	if err := check.CheckDynHook(cache.PreUpdateCheck); err != nil {
+		return &system.JobError{
+			ErrType:      system.ErrorPreUpdateCheckScriptsFailed,
+			ErrDetail:    fmt.Sprintf("pre_update_check/dynook failed: %v", err),
+			IsCheckError: true,
+		}
+	}
+	return nil
+}
+
+func PostUpdateCheck() error {
+	if err := check.CheckDynHook(cache.PostUpdateCheck); err != nil {
+		return &system.JobError{
+			ErrType:      system.ErrorPostUpdateCheckScriptsFailed,
+			ErrDetail:    fmt.Sprintf("post_update_check/dynook failed: %v", err),
+			IsCheckError: true,
+		}
+	}
+	return nil
+}
+
+func PreDownloadCheck() error {
+	if err := check.CheckDynHook(cache.PreDownloadCheck); err != nil {
+		return &system.JobError{
+			ErrType:      system.ErrorPreDownloadCheckScriptsFailed,
+			ErrDetail:    fmt.Sprintf("pre_download_check/dynook failed: %v", err),
+			IsCheckError: true,
+		}
+	}
+	return nil
+}
+
+func PostDownloadCheck() error {
+	if err := check.CheckDynHook(cache.PostDownloadCheck); err != nil {
+		return &system.JobError{
+			ErrType:      system.ErrorPostDownloadCheckScriptsFailed,
+			ErrDetail:    fmt.Sprintf("post_download_check/dynook failed: %v", err),
+			IsCheckError: true,
+		}
+	}
+	return nil
+}
+
+func PreBackupCheck() error {
+	if err := check.CheckDynHook(cache.PreBackupCheck); err != nil {
+		return &system.JobError{
+			ErrType:      system.ErrorPreBackupCheckScriptsFailed,
+			ErrDetail:    fmt.Sprintf("pre_backup_check/dynook failed: %v", err),
+			IsCheckError: true,
+		}
+	}
+	return nil
+}
+
+func PostBackupCheck() error {
+	if err := check.CheckDynHook(cache.PostBackupCheck); err != nil {
+		return &system.JobError{
+			ErrType:      system.ErrorPostBackupCheckScriptsFailed,
+			ErrDetail:    fmt.Sprintf("post_backup_check/dynook failed: %v", err),
+			IsCheckError: true,
+		}
+	}
+	return nil
+}
+
+// PreUpgradeCheck do pre-check
+func PreUpgradeCheck() error {
+	return executeCheck(preUpgradeCheck)
 }
 
 // MidCheck do mid-check
-func MidCheck() error {
-	return executeCheck(midCheck)
+func MidUpgradeCheck() error {
+	return executeCheck(midUpgradeCheck)
 }
 
 // PostCheck do post-check
-func PostCheck() error {
-	return executeCheck(postCheck)
+func PostUpgradeCheck() error {
+	return executeCheck(postUpgradeCheck)
 }
 
-func preCheck() error {
-	logger.Info("precheck start")
-
+func preUpgradeCheck() error {
 	// 动态检查 DONE:(DingHao)待修改返回值结构体
 	// 动态hook 脚本检查，阻塞
 	ThisCacheInfo.InternalState.IsPreCheck = cache.P_Run
 
-	logger.Info("precheck/dynhook start")
+	logger.Info("pre_upgrade_check/dynhook start")
 
-	if err := check.CheckDynHook(ThisCacheInfo, cache.PreUpdate); err != nil {
+	if err := check.CheckDynHook(cache.PreUpgradeCheck); err != nil {
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage0_Failed
 		return &system.JobError{
 			ErrType:      system.ErrorPreCheckScriptsFailed,
-			ErrDetail:    fmt.Sprintf("precheck/dynook failed: %v", err),
+			ErrDetail:    fmt.Sprintf("pre_upgrade_check/dynook failed: %v", err),
 			IsCheckError: true,
 		}
 	}
 
-	logger.Info("precheck/syspkginfo start")
+	logger.Info("pre_upgrade_check/syspkginfo start")
 	//加载系统软件包信息
 	if err := check.LoadSysPkgInfo(SysPkgInfo); err != nil { //DONE:(DingHao)获取系统信息无返回状态码
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage1_Failed
-		logger.Warningf("precheck/syspkginfo load failed: %v", err)
+		logger.Warningf("pre_upgrade_check/syspkginfo load failed: %v", err)
 		return err
 	}
 
@@ -106,56 +170,56 @@ func preCheck() error {
 			ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage1_Failed
 			return &system.JobError{
 				ErrType:      system.ErrorMetaInfoFile,
-				ErrDetail:    fmt.Sprintf("precheck/repo load failed: %v", err),
+				ErrDetail:    fmt.Sprintf("pre_upgrade_check/repo load failed: %v", err),
 				IsCheckError: true,
 			}
 		}
 	}
 
-	logger.Info("precheck/block start")
+	logger.Info("pre_upgrade_check/block start")
 
 	//检查apt和dpkg安装状态，阻塞
 	if err := check.CheckAPTAndDPKGState(); err != nil {
 		ThisCacheInfo.InternalState.IsDpkgAptPreCheck = cache.P_Error
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage2_Failed
-		logger.Errorf("precheck/tool: check apt/dpkg failed:%v", err)
+		logger.Errorf("pre_upgrade_check/tool: check apt/dpkg failed:%v", err)
 		return err
 	}
 
 	ThisCacheInfo.InternalState.IsDpkgAptPreCheck = cache.P_OK
 
-	logger.Info("precheck/nonblock start")
+	logger.Info("pre_upgrade_check/nonblock start")
 
 	if err := check.LoadSysPkgInfo(SysPkgInfo); err != nil {
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage3_Failed
 		//TODO:(DingHao)获取系统信息无返回状态码
-		logger.Warningf("precheck/nonblock load system package info failed:%v", err)
+		logger.Warningf("pre_upgrade_check/nonblock load system package info failed:%v", err)
 	}
 
 	//检查DPKG是否为公司版本
 	if err := check.CheckDPKGVersionSupport(SysPkgInfo); err != nil {
 		ThisCacheInfo.InternalState.IsPreCheck = cache.P_Stage3_Failed
-		logger.Warningf("precheck/nonblock check dpkg version failed:%v", err)
+		logger.Warningf("pre_upgrade_check/nonblock check dpkg version failed:%v", err)
 	}
 
 	ThisCacheInfo.InternalState.IsPreCheck = cache.P_OK
-	logger.Info("precheck finish")
+	logger.Info("pre_upgrade_check finish")
 	return nil
 }
 
-func midCheck() error {
-	logger.Debug("midcheck start")
+func midUpgradeCheck() error {
+	logger.Debug("mid_upgrade_check start")
 
 	ThisCacheInfo.InternalState.IsMidCheck = cache.P_Run
 
 	// 阻塞项检查
-	logger.Debug("midcheck/block start")
+	logger.Debug("mid_upgrade_check/block start")
 
 	//检查apt和dpkg安装状态，阻塞
 	if err := check.CheckAPTAndDPKGState(); err != nil {
 		ThisCacheInfo.InternalState.IsDpkgAptMidCheck = cache.P_Error
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-		logger.Errorf("midcheck/block check apt/dpkg failed:%v", err)
+		logger.Errorf("mid_upgrade_check/block check apt/dpkg failed:%v", err)
 		return err
 	}
 
@@ -165,7 +229,7 @@ func midCheck() error {
 	if err := check.CheckPkgDependency(); err != nil {
 		ThisCacheInfo.InternalState.IsDependsMidCheck = cache.P_Error
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-		logger.Errorf("midcheck/block check package depends failed:%v", err)
+		logger.Errorf("mid_upgrade_check/block check package depends failed:%v", err)
 		return err
 	}
 
@@ -174,23 +238,23 @@ func midCheck() error {
 	//检查系统盘剩余可用空间是否不小于2M，阻塞
 	if err := check.CheckRootDiskFreeSpace(2 * 1024); err != nil {
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage0_Failed
-		logger.Errorf("midcheck/block: check root disk free space failed:%v", err)
+		logger.Errorf("mid_upgrade_check/block: check root disk free space failed:%v", err)
 		return err
 	}
 
 	// 检查系统盘剩余可用空间是不小于50M, 非阻塞
 	if err := check.CheckRootDiskFreeSpace(50 * 1024); err != nil {
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage1_Failed
-		logger.Warningf("midcheck/nonblock check root disk free space failed:%v", err)
+		logger.Warningf("mid_upgrade_check/nonblock check root disk free space failed:%v", err)
 	}
 
 	// 动态hook脚本检查，阻塞
-	if err := check.CheckDynHook(ThisCacheInfo, cache.MidCheck); err != nil {
+	if err := check.CheckDynHook(cache.MidUpgradeCheck); err != nil {
 		ThisCacheInfo.InternalState.IsMidCheck = cache.P_Stage2_Failed
-		logger.Errorf("midcheck/dynook failed:%v", err)
+		logger.Errorf("mid_upgrade_check/dynook failed:%v", err)
 		return &system.JobError{
 			ErrType:      system.ErrorMidCheckScriptsFailed,
-			ErrDetail:    fmt.Sprintf("midcheck/dynook failed:%v", err),
+			ErrDetail:    fmt.Sprintf("mid_upgrade_check/dynook failed:%v", err),
 			IsCheckError: true,
 		}
 	}
@@ -206,13 +270,13 @@ func updatePostCheckStage(state cache.PState) {
 	}
 }
 
-func postCheck() error {
+func postUpgradeCheck() error {
 	stage := check.Stage2
 	if PostCheckStage1 {
 		stage = check.Stage1
 	}
 
-	logger.Debugf("postcheck %s start", stage)
+	logger.Debugf("post_upgrade_check %s start", stage)
 
 	updatePostCheckStage(cache.P_Run)
 
@@ -225,23 +289,23 @@ func postCheckWithStage(stage string) error {
 	// 检查重要服务是否存在：检查display-manager.service服务是否存在，阻塞
 	if err := check.CheckImportantService(stage); err != nil {
 		updatePostCheckStage(cache.P_Stage0_Failed)
-		logger.Errorf("postcheck/block check important service failed:%v", err)
+		logger.Errorf("post_upgrade_check/block check important service failed:%v", err)
 		return err
 	}
 
 	// 动态hook脚本检查，阻塞
 	if stage == check.Stage2 {
-		if err := check.CheckDynHook(ThisCacheInfo, cache.PostCheck); err != nil {
+		if err := check.CheckDynHook(cache.PostUpgradeCheck); err != nil {
 			updatePostCheckStage(cache.P_Stage2_Failed)
-			logger.Errorf("postcheck/dynhook failed:%v", err)
+			logger.Errorf("post_upgrade_check/dynhook failed:%v", err)
 			return &system.JobError{
 				ErrType:      system.ErrorPostCheckScriptsFailed,
-				ErrDetail:    fmt.Sprintf("postcheck/dynhook failed:%v", err),
+				ErrDetail:    fmt.Sprintf("post_upgrade_check/dynhook failed:%v", err),
 				IsCheckError: true,
 			}
 		}
 	}
 	updatePostCheckStage(cache.P_OK)
-	logger.Debugf("postcheck %s finish", stage)
+	logger.Debugf("post_upgrade_check %s finish", stage)
 	return nil
 }

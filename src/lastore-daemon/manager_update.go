@@ -24,6 +24,7 @@ import (
 	"github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 	debVersion "pault.ag/go/debian/version"
 )
@@ -262,6 +263,19 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				}()
 				m.updatePlatform.SaveCache(m.config)
 				job.setPropProgress(1.0)
+
+				systemErr := dut.CheckSystem(dut.PostUpdateCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
 				return nil
 			},
 			string(system.FailedStatus): func() error {
@@ -299,6 +313,19 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					}
 					m.updatePlatform.PostProcessEventMessage(procEvent)
 				}()
+
+				systemErr := dut.CheckSystem(dut.PostUpdateCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
+
 				return nil
 			},
 			string(system.EndStatus): func() error {
@@ -351,7 +378,20 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						return nil
 					}
 				}
+				m.updatePlatform.PrepareCheckScripts()
 				m.updater.setPropUpdateTarget(m.updatePlatform.GetUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
+
+				systemErr := dut.CheckSystem(dut.PreUpdateCheck, nil)
+				if systemErr != nil {
+					logger.Warning(systemErr)
+					go func(err *system.JobError) {
+						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+							Type:           "error",
+							JobDescription: err.ErrType.String(),
+							Detail:         err.ErrDetail,
+						}, true)
+					}(systemErr)
+				}
 
 				// 从更新平台获取数据并处理完成后,进度更新到10%
 				job.setPropProgress(0.10)
