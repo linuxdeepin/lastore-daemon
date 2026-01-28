@@ -349,9 +349,6 @@ func getExecutablePathAndCmdline(service *dbusutil.Service, sender dbus.Sender) 
 	}
 
 	proc := procfs.Process(pid)
-	if !checkSenderNsMntValid(pid) {
-		return "", "", errors.New("due to the difference between the current process's ns mnt and the init process's ns mnt, the exe field is not reliable")
-	}
 	execPath, err := proc.Exe()
 	if err != nil {
 		// 当调用者在使用过程中发生了更新,则在获取该进程的exe时,会出现lstat xxx (deleted)此类的error,如果发生的是覆盖,则该路径依旧存在,因此增加以下判断
