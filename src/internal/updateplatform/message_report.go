@@ -772,7 +772,15 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) err
 	m.targetBaseline = msg.Version.Baseline
 	m.targetVersion = msg.Version.Version
 	m.systemTypeFromPlatform = msg.SystemType
-	m.repoInfos = msg.RepoInfos
+	for _, repo := range msg.RepoInfos {
+		m.repoInfos = append(m.repoInfos, repoInfo{
+			Cdn:      strings.ReplaceAll(repo.Cdn, "p2p://", "https://"),
+			CodeName: repo.CodeName,
+			Source:   strings.ReplaceAll(repo.Source, "p2p://", "https://"),
+			Uri:      strings.ReplaceAll(repo.Uri, "p2p://", "https://"),
+			Version:  repo.Version,
+		})
+	}
 	m.taskID = msg.Version.TaskID
 	logger.Infof("current policy task id: %v", m.taskID)
 	m.checkTime = time.Now().String()
