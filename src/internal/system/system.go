@@ -11,7 +11,6 @@ import (
 )
 
 const VarLibDir = "/var/lib/lastore"
-const IupPath = "/usr/lib/iup-daemon"
 
 var IsPrivateLastore bool
 
