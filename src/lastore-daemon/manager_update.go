@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -50,43 +51,78 @@ func prepareUpdateSource() {
 }
 
 func (m *Manager) beforeUpdateSourceEnvCheck() bool {
-	preCheckFilePath := filepath.Join(system.IupPath, "ext/iup-check.sh")
-	var flag bool
-	var errMsg string
-	if !utils.IsFileExist(preCheckFilePath) {
-		flag = false
-		errMsg = fmt.Sprintf("%s does not exist", preCheckFilePath)
-		logger.Warning(errMsg)
+	supportArchs, err := system.SystemArchitectures()
+	if err != nil {
 		procEvent := updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.CheckEnv,
-			EventStatus:  flag,
-			EventContent: errMsg,
+			EventStatus:  false,
+			EventContent: err.Error(),
 		}
 		m.updatePlatform.PostProcessEventMessage(procEvent)
-		return flag
+		return false
 	}
-	cmd := exec.Command("/bin/bash", preCheckFilePath)
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	err := cmd.Run()
+	installedMap, err := loadPkgStatusVersion()
 	if err != nil {
-		flag = false
-		errMsg = errBuf.String()
-		logger.Warningf("Error executing command: %v, output: %v", err, errMsg)
-	} else {
-		flag = true
+		procEvent := updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.CheckEnv,
+			EventStatus:  false,
+			EventContent: err.Error(),
+		}
+		m.updatePlatform.PostProcessEventMessage(procEvent)
+		return false
+	}
+
+	cmd := exec.Command("dpkg", "--audit")
+	if err := cmd.Run(); err != nil {
+		procEvent := updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.CheckEnv,
+			EventStatus:  false,
+			EventContent: err.Error(),
+		}
+		m.updatePlatform.PostProcessEventMessage(procEvent)
+		return false
+	}
+
+	var errMsgBuilder strings.Builder
+	for pkgName, installedPkg := range installedMap {
+		if installedPkg.status != "ii" {
+			errMsgBuilder.WriteString(fmt.Sprintf("package %s is not installed\n", pkgName))
+			continue
+		}
+
+		if installedPkg.architecture != "all" && !slices.ContainsFunc(supportArchs, func(arch system.Architecture) bool {
+			return installedPkg.architecture == string(arch)
+		}) {
+			errMsgBuilder.WriteString(fmt.Sprintf("%s architecture %s is not supported\n", pkgName, installedPkg.architecture))
+		}
+	}
+
+	coreFiles := []string{
+		"/etc/os-version",
+	}
+
+	for _, coreFile := range coreFiles {
+		if !utils.IsFileExist(coreFile) {
+			errMsgBuilder.WriteString(fmt.Sprintf("file %s does not exist\n", coreFile))
+		}
+	}
+	errMsg := errMsgBuilder.String()
+
+	status := true
+	if len(errMsg) > 0 {
+		status = false
 	}
 	procEvent := updateplatform.ProcessEvent{
 		TaskID:       1,
 		EventType:    updateplatform.CheckEnv,
-		EventStatus:  flag,
+		EventStatus:  status,
 		EventContent: errMsg,
 	}
 	m.updatePlatform.PostProcessEventMessage(procEvent)
-	return flag
+	return status
 }
 
 // updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
@@ -178,6 +214,14 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
+					if m.config.IntranetUpdate && !m.beforeUpdateSourceEnvCheck() {
+						job.retry = 0
+						return &system.JobError{
+							ErrType:   system.ErrorDpkgError,
+							ErrDetail: "before update env check failed",
+						}
+					}
+
 					go m.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
@@ -460,12 +504,13 @@ func checkDebExistWithVersion(pkgList []string) bool {
 }
 
 type statusVersion struct {
-	status  string
-	version string
+	status       string
+	version      string
+	architecture string
 }
 
 func loadPkgStatusVersion() (map[string]statusVersion, error) {
-	out, err := exec.Command("dpkg-query", "-f", "${Package} ${db:Status-Abbrev} ${Version}\n", "-W").Output() // #nosec G204
+	out, err := exec.Command("dpkg-query", "-f", "${Package} ${db:Status-Abbrev} ${Version} ${Architecture}\n", "-W").Output() // #nosec G204
 	if err != nil {
 		return nil, err
 	}
@@ -475,15 +520,17 @@ func loadPkgStatusVersion() (map[string]statusVersion, error) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		fields := bytes.Fields(line)
-		if len(fields) != 3 {
+		if len(fields) != 4 {
 			continue
 		}
 		pkg := string(fields[0])
 		status := string(fields[1])
 		version := string(fields[2])
+		architecture := string(fields[3])
 		result[pkg] = statusVersion{
-			status:  status,
-			version: version,
+			status:       status,
+			version:      version,
+			architecture: architecture,
 		}
 	}
 	err = scanner.Err()
