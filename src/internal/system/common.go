@@ -297,6 +297,10 @@ const (
 )
 
 func IsAuthorized() bool {
+	// TODO: only for test
+	if IsPrivateLastore {
+		return true
+	}
 	edition, err := getEditionName()
 	if err != nil {
 		return false
