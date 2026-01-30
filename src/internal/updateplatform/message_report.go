@@ -319,7 +319,7 @@ func (m *UpdatePlatformManager) ReplaceVersionCache() {
 }
 
 func (m *UpdatePlatformManager) UpdateSourceList() {
-	if !system.IsPrivateLastore || !m.config.PlatformUpdate {
+	if !m.config.IntranetUpdate || !m.config.PlatformUpdate {
 		return
 	}
 
@@ -1408,12 +1408,11 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 }
 
 func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
-	if !system.IsPrivateLastore {
+	if !m.config.IntranetUpdate {
 		return
 	}
 	if m.targetBaseline == "" {
 		logger.Warning("target baseline is empty")
-		return
 	}
 	logger.Debug("post process event msg:", body)
 	body.TaskID = m.taskID
@@ -1469,7 +1468,7 @@ func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUp
 		return
 	}
 
-	if system.IsPrivateLastore && !forceUpload {
+	if !m.config.UpdateProcessUpload && m.config.IntranetUpdate && !forceUpload {
 		return
 	}
 

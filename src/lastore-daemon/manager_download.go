@@ -119,7 +119,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	if isExist {
 		return job, nil
 	}
-	if system.IsPrivateLastore {
+	if m.config.IntranetUpdate {
 		msg := gettext.Tr("New version available! The download of the update package will begin shortly")
 		go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
 		procEvent := updateplatform.ProcessEvent{
@@ -145,19 +145,19 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			// 下载限速的配置修改需要在job失败重试的时候修改配置(此处失败为手动终止设置的失败状态)
 			m.handleDownloadLimitChanged(job)
 		}
-		// TODO: 可能丢失 j.initDownloadSize(totalNeedDownloadSize)
+		j.initDownloadSize(totalNeedDownloadSize)
 		j.realRunningHookFn = func() {
 			m.PropsMu.Lock()
 			m.PropsMu.Unlock()
 			m.statusManager.SetUpdateStatus(mode, system.IsDownloading)
-			if !m.updatePlatform.UpdateNowForce || system.IsPrivateLastore { // 立即更新则不发通知
+			if !m.updatePlatform.UpdateNowForce || m.config.IntranetUpdate { // 立即更新则不发通知
 				sendDownloadingOnce.Do(func() {
 					msg := gettext.Tr("New version available! Downloading...")
 					action := []string{
 						"view",
 						gettext.Tr("View"),
 					}
-					if system.IsPrivateLastore {
+					if m.config.IntranetUpdate {
 						go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
 					} else {
 						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
@@ -173,7 +173,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.FailedStatus): func() error {
-				if system.IsPrivateLastore {
+				if m.config.IntranetUpdate {
 					cacheFile := "/tmp/checkpolicy.cache"
 					_ = os.RemoveAll(cacheFile)
 				}
@@ -199,7 +199,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 						action := []string{"retry", gettext.Tr("Try Again")}
 						var hints map[string]dbus.Variant
-						if system.IsPrivateLastore {
+						if m.config.IntranetUpdate {
 							hints = map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
 						} else {
 							hints = map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
@@ -264,7 +264,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 								"ignore",
 								gettext.Tr("Dismiss"),
 							}
-							if system.IsPrivateLastore {
+							if m.config.IntranetUpdate {
 								if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
 									timeStr := m.updatePlatform.UpdateTime.Format("15:04:05")
 									if timeStr != m.updateTime {

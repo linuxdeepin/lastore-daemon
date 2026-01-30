@@ -200,7 +200,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				m.statusManager.SetABStatus(mode, system.BackingUp, system.NoABError)
 				// 设置UpdateStatus为WaitRunUpgrade，隐藏更新并关机/重启按钮
 				m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
-				if system.IsPrivateLastore {
+				if m.config.IntranetUpdate {
 					msg := gettext.Tr("Start to update. Please do not shutdown")
 					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
@@ -630,7 +630,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			cleanAllCache()
 			msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 			action := []string{"retry", gettext.Tr("Try Again")}
-			if system.IsPrivateLastore {
+			if m.config.IntranetUpdate {
 				go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivateLong)
 			} else {
 				hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
@@ -639,7 +639,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 		} else if strings.Contains(errType, system.ErrorInsufficientSpace.String()) {
 			msg := gettext.Tr("Updates failed: insufficient disk space.")
 			action := []string{}
-			if system.IsPrivateLastore {
+			if m.config.IntranetUpdate {
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutPrivateLong)
 			} else {
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
@@ -647,7 +647,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 		} else {
 			msg := gettext.Tr("Updates failed.")
 			action := []string{}
-			if system.IsPrivateLastore {
+			if m.config.IntranetUpdate {
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutPrivateLong)
 			} else {
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
@@ -716,7 +716,7 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	}
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
-	if system.IsPrivateLastore {
+	if m.config.IntranetUpdate {
 		m.cleanArchives(false)
 	}
 

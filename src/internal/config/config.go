@@ -100,6 +100,7 @@ type Config struct {
 	UpdateTime             string // 定时更新
 	PlatformDisabled       DisabledStatus
 	EnableVersionCheck     bool
+	UpdateProcessUpload    bool
 	PlatformRepoComponents string // 更新平台仓库组件
 
 	ClassifiedUpdatablePackages map[string][]string
@@ -192,6 +193,7 @@ const (
 	dSettingsKeyUpdateTime                           = "update-time"
 	dSettingsKeyPlatformDisabled                     = "platform-disabled"
 	dSettingsKeyEnableVersionCheck                   = "enable-version-check"
+	dSettingsKeyUpdateProcessUpload                  = "update-process-upload"
 	dSettingsKeyEnableCoreList                       = "enable-core-list"
 	dSettingsKeyClientPackageName                    = "client-package-name"
 	dSettingsKeySystemCustomSource                   = "system-custom-source"
@@ -586,6 +588,13 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.EnableVersionCheck = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateProcessUpload)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.UpdateProcessUpload = v.Value().(bool)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableCoreList)

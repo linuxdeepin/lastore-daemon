@@ -256,7 +256,7 @@ func (m *Manager) initAgent() {
 func (m *Manager) initPlatformManager() {
 	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config, false)
 	// TODO: 可能缺少 m.loadPlatformCache()
-	if isFirstBoot() || system.IsPrivateLastore {
+	if isFirstBoot() || m.config.IntranetUpdate {
 		// 不能阻塞初始化流程,防止dbus服务激活超时
 		go m.updatePlatform.RetryPostHistory() // 此处调用还没有export以及dispatch job,因此可以判断是否需要check.
 	}
@@ -862,7 +862,7 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 		logger.Info("UpdateNotify is false")
 		return 0
 	}
-	if system.IsPrivateLastore {
+	if m.config.IntranetUpdate {
 		appIcon = "intranet-update-platform-notification"
 	}
 	agent := m.userAgents.getActiveLastoreAgent()

@@ -230,7 +230,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						msg := gettext.Tr("New version available!")
 						action := []string{"view", gettext.Tr("View")}
 						var hints map[string]dbus.Variant
-						if system.IsPrivateLastore {
+						if m.config.IntranetUpdate {
 							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
 							if m.updatePlatform.Tp == updateplatform.NormalUpdate {
 								msg = gettext.Tr("New version available! Please go to control-center to check")
@@ -312,7 +312,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 		job.setAfterHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				job.setPropProgress(0.01)
-				if system.IsPrivateLastore {
+				if m.config.IntranetUpdate {
 					// 独立客户端为了减少更新平台的瞬时负载，采取0-58秒内随机开始检查更新任务
 					time.Sleep(time.Duration(rand.Intn(59)) * time.Second)
 				}

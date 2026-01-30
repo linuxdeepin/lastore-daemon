@@ -75,8 +75,8 @@ func main() {
 	}
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 	logger.Info("intranet update:", config.IntranetUpdate)
-	system.IsPrivateLastore = config.IntranetUpdate
-	if system.IsPrivateLastore {
+	system.IntranetUpdate = config.IntranetUpdate
+	if config.IntranetUpdate {
 		go func() {
 			out, err := exec.Command("/usr/bin/lastore-tools", "gatherinfo", "-type=post").CombinedOutput()
 			if err != nil {
