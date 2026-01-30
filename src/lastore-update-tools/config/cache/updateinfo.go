@@ -9,9 +9,15 @@ import (
 )
 
 const (
-	PreUpdate = iota // pre
-	MidCheck         // mid
-	PostCheck        // post
+	PreUpdateCheck    = iota // check before update source
+	PostUpdateCheck          // check after update source
+	PreDownloadCheck         // check before download package
+	PostDownloadCheck        // check after download package
+	PreBackupCheck           // check before backup
+	PostBackupCheck          // check after backup
+	PreUpgradeCheck          // check before upgrade
+	MidUpgradeCheck          // check after upgrade
+	PostUpgradeCheck         // check after marchine restart
 	bottomCheck
 )
 

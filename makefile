@@ -53,7 +53,7 @@ test:
 			echo 1; \
 		fi; \
 	fi) \
-	${GoPath} ${GOTEST} ${TEST}
+	${GoPath} ${GOTEST} ${TEST} -count=1 -v
 
 test-coverage:
 	env ${GoPath} go test -cover -v ./src/... | awk '$$1 ~ "^(ok|\\?)" {print $$2","$$5}' | sed "s:${CURDIR}::g" | sed 's/files\]/0\.0%/g' > coverage.csv

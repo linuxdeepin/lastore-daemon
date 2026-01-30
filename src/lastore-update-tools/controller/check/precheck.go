@@ -31,7 +31,7 @@ func CheckDPKGVersionSupport(sysCurrPackage map[string]*cache.AppTinyInfo) error
 	} else {
 		return &system.JobError{
 			ErrType:      system.ErrorDpkgNotFound,
-			ErrDetail:    fmt.Sprintf("dpkg not found in system"),
+			ErrDetail:    "dpkg not found in system",
 			IsCheckError: true,
 		}
 	}

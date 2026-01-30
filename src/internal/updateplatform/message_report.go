@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/controller/check"
 
 	"github.com/godbus/dbus/v5"
@@ -84,14 +83,20 @@ type UpdatePlatformManager struct {
 	requestUrl             string // 更新平台请求地址
 	taskID                 int
 
-	PreCheck       []ShellCheck                  // 更新前检查脚本
-	MidCheck       []ShellCheck                  // 更新后检查脚本
-	PostCheck      []ShellCheck                  // 更新完成重启后检查脚本
-	TargetCorePkgs map[string]system.PackageInfo // 必须安装软件包信息清单  	对应dut的core list
-	BaselinePkgs   map[string]system.PackageInfo // 当前版本的核心软件包清单	对应dut的baseline
-	SelectPkgs     map[string]system.PackageInfo // 可选软件包清单
-	FreezePkgs     map[string]system.PackageInfo // 禁止升级包清单
-	PurgePkgs      map[string]system.PackageInfo // 删除软件包清单
+	PreUpgradeCheck   []ShellCheck                  // 更新前检查脚本
+	MidUpgradeCheck   []ShellCheck                  // 更新后检查脚本
+	PostUpgradeCheck  []ShellCheck                  // 更新完成重启后检查脚本
+	PreUpdateCheck    []ShellCheck                  // 检查更新前检查脚本
+	PostUpdateCheck   []ShellCheck                  // 检查更新后检查脚本
+	PreDownloadCheck  []ShellCheck                  // 下载更新前检查脚本
+	PostDownloadCheck []ShellCheck                  // 下载更新后检查脚本
+	PreBackupCheck    []ShellCheck                  // 备份前检查脚本
+	PostBackupCheck   []ShellCheck                  // 备份后检查脚本
+	TargetCorePkgs    map[string]system.PackageInfo // 必须安装软件包信息清单  	对应dut的core list
+	BaselinePkgs      map[string]system.PackageInfo // 当前版本的核心软件包清单	对应dut的baseline
+	SelectPkgs        map[string]system.PackageInfo // 可选软件包清单
+	FreezePkgs        map[string]system.PackageInfo // 禁止升级包清单
+	PurgePkgs         map[string]system.PackageInfo // 删除软件包清单
 
 	repoInfos        []repoInfo      // 从更新平台获取的仓库信息
 	SystemUpdateLogs []UpdateLogMeta // 更新注记
@@ -116,12 +121,18 @@ type UpdatePlatformManager struct {
 }
 
 type platformCacheContent struct {
-	CoreListPkgs map[string]system.PackageInfo
-	BaselinePkgs map[string]system.PackageInfo
-	SelectPkgs   map[string]system.PackageInfo
-	PreCheck     []ShellCheck
-	MidCheck     []ShellCheck
-	PostCheck    []ShellCheck
+	CoreListPkgs      map[string]system.PackageInfo
+	BaselinePkgs      map[string]system.PackageInfo
+	SelectPkgs        map[string]system.PackageInfo
+	PreUpgradeCheck   []ShellCheck
+	MidUpgradeCheck   []ShellCheck
+	PostUpgradeCheck  []ShellCheck
+	PreUpdateCheck    []ShellCheck
+	PostUpdateCheck   []ShellCheck
+	PreDownloadCheck  []ShellCheck
+	PostDownloadCheck []ShellCheck
+	PreBackupCheck    []ShellCheck
+	PostBackupCheck   []ShellCheck
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
@@ -192,9 +203,15 @@ func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManage
 		TargetCorePkgs:                    cache.CoreListPkgs,
 		BaselinePkgs:                      cache.BaselinePkgs,
 		SelectPkgs:                        cache.SelectPkgs,
-		PreCheck:                          cache.PreCheck,
-		MidCheck:                          cache.MidCheck,
-		PostCheck:                         cache.PostCheck,
+		PreUpgradeCheck:                   cache.PreUpgradeCheck,
+		MidUpgradeCheck:                   cache.MidUpgradeCheck,
+		PostUpgradeCheck:                  cache.PostUpgradeCheck,
+		PreUpdateCheck:                    cache.PreUpdateCheck,
+		PostUpdateCheck:                   cache.PostUpdateCheck,
+		PreDownloadCheck:                  cache.PreDownloadCheck,
+		PostDownloadCheck:                 cache.PostDownloadCheck,
+		PreBackupCheck:                    cache.PreBackupCheck,
+		PostBackupCheck:                   cache.PostBackupCheck,
 	}
 }
 
@@ -862,10 +879,16 @@ type packageLists struct {
 }
 
 type PreInstalledPkgMeta struct {
-	PreCheck  []ShellCheck `json:"preCheck"`  // "更新前检查脚本"
-	MidCheck  []ShellCheck `json:"midCheck"`  // "更新后检查脚本"
-	PostCheck []ShellCheck `json:"postCheck"` // "更新完成重启后检查脚本"
-	Packages  packageLists `json:"packages"`  // "基线软件包清单"
+	PreCheck          []ShellCheck `json:"preCheck"`          // "更新前检查脚本"
+	MidCheck          []ShellCheck `json:"midCheck"`          // "更新后检查脚本"
+	PostCheck         []ShellCheck `json:"postCheck"`         // "更新完成重启后检查脚本"
+	PreUpdateCheck    []ShellCheck `json:"preUpdateCheck"`    // "检查更新前检查脚本"
+	PostUpdateCheck   []ShellCheck `json:"postUpdateCheck"`   // "检查更新后检查脚本"
+	PreDownloadCheck  []ShellCheck `json:"preDownloadCheck"`  // "下载更新前检查脚本"
+	PostDownloadCheck []ShellCheck `json:"postDownloadCheck"` // "下载更新后检查脚本"
+	PreBackupCheck    []ShellCheck `json:"preBackupCheck"`    // "备份前检查脚本"
+	PostBackupCheck   []ShellCheck `json:"postBackupCheck"`   // "备份后检查脚本"
+	Packages          packageLists `json:"packages"`          // "基线软件包清单"
 }
 
 // 从更新平台获取升级目标版本的软件包清单
@@ -883,9 +906,15 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	if pkgs == nil {
 		return errors.New("failed get target pkg list data")
 	}
-	m.PreCheck = pkgs.PreCheck
-	m.MidCheck = pkgs.MidCheck
-	m.PostCheck = pkgs.PostCheck
+	m.PreUpgradeCheck = pkgs.PreCheck
+	m.MidUpgradeCheck = pkgs.MidCheck
+	m.PostUpgradeCheck = pkgs.PostCheck
+	m.PreUpdateCheck = pkgs.PreUpdateCheck
+	m.PostUpdateCheck = pkgs.PostUpdateCheck
+	m.PreDownloadCheck = pkgs.PreDownloadCheck
+	m.PostDownloadCheck = pkgs.PostDownloadCheck
+	m.PreBackupCheck = pkgs.PreBackupCheck
+	m.PostBackupCheck = pkgs.PostBackupCheck
 
 	for _, pkg := range pkgs.Packages.Core {
 		version := ""
@@ -1690,60 +1719,63 @@ func (m *UpdatePlatformManager) RetryPostHistory() {
 }
 
 // PrepareCheckScripts decodes and deploys base64-encoded check scripts to the filesystem.
-// It processes three types of check scripts:
-//   - PreCheck: scripts executed before system update
-//   - MidCheck: scripts executed during system update
-//   - PostCheck: scripts executed after system update
+// It processes multiple types of check scripts, including:
+//   - PreCheck/MidCheck/PostCheck: system update checks
+//   - preUpdateCheck/postUpdateCheck: before/after checking updates
+//   - preDownloadCheck/postDownloadCheck: before/after downloading updates
+//   - preBackupCheck/postBackupCheck: before/after backup
 //
 // The function performs the following operations:
-//  1. Cleans up existing script directories
-//  2. Creates fresh directories for each check type
+//  1. Cleans up existing script directories to remove stale scripts
+//  2. Creates fresh directories only when scripts exist for a stage
 //  3. Decodes base64-encoded script content from memory
 //  4. Writes executable script files to the filesystem with 0755 permissions
 //
 // Script files are organized under /var/lib/lastore/check/ in subdirectories:
-//   - pre_check/: for pre-update validation scripts
-//   - mid_check/: for mid-update validation scripts
-//   - post_check/: for post-update validation scripts
+//   - pre_check/: for pre-update validation scripts (created when present)
+//   - mid_check/: for mid-update validation scripts (created when present)
+//   - post_check/: for post-update validation scripts (created when present)
+//   - pre_update_check/: for pre-update-check validation scripts (created when present)
+//   - post_update_check/: for post-update-check validation scripts (created when present)
+//   - pre_download_check/: for pre-download validation scripts (created when present)
+//   - post_download_check/: for post-download validation scripts (created when present)
+//   - pre_backup_check/: for pre-backup validation scripts (created when present)
+//   - post_backup_check/: for post-backup validation scripts (created when present)
 //
 // Any decode or file write errors are logged as warnings but do not stop
 // the processing of remaining scripts.
 func (m *UpdatePlatformManager) PrepareCheckScripts() {
-
-	preShellPath := filepath.Join(check.CheckBaseDir, "pre_check")
-	midShellPath := filepath.Join(check.CheckBaseDir, "mid_check")
-	postShellPath := filepath.Join(check.CheckBaseDir, "post_check")
-
-	_ = os.RemoveAll(preShellPath)
-	_ = os.RemoveAll(midShellPath)
-	_ = os.RemoveAll(postShellPath)
-
-	err := utils.EnsureDirExist(preShellPath)
-	if err != nil {
-		logger.Warning(err)
+	type checkGroup struct {
+		list []ShellCheck
+		dir  string
 	}
 
-	err = utils.EnsureDirExist(midShellPath)
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	err = utils.EnsureDirExist(postShellPath)
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	checkGroups := []struct {
-		list      []ShellCheck
-		dir       string
-		checkType dut.CheckType
-	}{
-		{m.PreCheck, preShellPath, dut.PreCheck},
-		{m.MidCheck, midShellPath, dut.MidCheck},
-		{m.PostCheck, postShellPath, dut.PostCheck},
+	checkGroups := []checkGroup{
+		{list: m.PreUpgradeCheck, dir: filepath.Join(check.CheckBaseDir, "pre_upgrade_check")},
+		{list: m.MidUpgradeCheck, dir: filepath.Join(check.CheckBaseDir, "mid_upgrade_check")},
+		{list: m.PostUpgradeCheck, dir: filepath.Join(check.CheckBaseDir, "post_upgrade_check")},
+		{list: m.PreUpdateCheck, dir: filepath.Join(check.CheckBaseDir, "pre_update_check")},
+		{list: m.PostUpdateCheck, dir: filepath.Join(check.CheckBaseDir, "post_update_check")},
+		{list: m.PreDownloadCheck, dir: filepath.Join(check.CheckBaseDir, "pre_download_check")},
+		{list: m.PostDownloadCheck, dir: filepath.Join(check.CheckBaseDir, "post_download_check")},
+		{list: m.PreBackupCheck, dir: filepath.Join(check.CheckBaseDir, "pre_backup_check")},
+		{list: m.PostBackupCheck, dir: filepath.Join(check.CheckBaseDir, "post_backup_check")},
 	}
 
 	for _, g := range checkGroups {
+		_ = os.RemoveAll(g.dir)
+
+		if len(g.list) == 0 {
+			continue
+		}
+
+		logger.Info("Preparing check scripts in directory:", g.dir)
+
+		if err := utils.EnsureDirExist(g.dir); err != nil {
+			logger.Warning(err)
+			continue
+		}
+
 		for _, c := range g.list {
 			filePath := filepath.Join(g.dir, c.Name)
 			// Remove padding for StdEncoding, "IyEvYmluL2Jhc2gKCmVjaG8gImhlbGxvIGRlZXBpbiI="
@@ -1753,12 +1785,10 @@ func (m *UpdatePlatformManager) PrepareCheckScripts() {
 				logger.Warningf("decode shell for %s failed: %v", c.Name, err)
 				continue
 			}
-
 			if err := utils.SyncWriteFile(filePath, content, 0755); err != nil {
 				logger.Warningf("write file %s failed: %v", filePath, err)
 				continue
 			}
-
 		}
 	}
 }
@@ -1768,9 +1798,15 @@ func (m *UpdatePlatformManager) SaveCache(c *Config) {
 	cache.CoreListPkgs = m.TargetCorePkgs
 	cache.BaselinePkgs = m.BaselinePkgs
 	cache.SelectPkgs = m.SelectPkgs
-	cache.PreCheck = m.PreCheck
-	cache.MidCheck = m.MidCheck
-	cache.PostCheck = m.PostCheck
+	cache.PreUpgradeCheck = m.PreUpgradeCheck
+	cache.MidUpgradeCheck = m.MidUpgradeCheck
+	cache.PostUpgradeCheck = m.PostUpgradeCheck
+	cache.PreUpdateCheck = m.PreUpdateCheck
+	cache.PostUpdateCheck = m.PostUpdateCheck
+	cache.PreDownloadCheck = m.PreDownloadCheck
+	cache.PostDownloadCheck = m.PostDownloadCheck
+	cache.PreBackupCheck = m.PreBackupCheck
+	cache.PostBackupCheck = m.PostBackupCheck
 	content, err := json.Marshal(cache)
 	if err != nil {
 		logger.Warning("marshal cache failed:", err)

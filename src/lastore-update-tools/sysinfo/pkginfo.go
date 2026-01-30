@@ -41,7 +41,7 @@ func GetCurrInstPkgStat(pkgs map[string]*cache.AppTinyInfo) error {
 		return fmt.Errorf("failed to run dpkg-query: %w", err)
 	}
 
-	logger.Debugf("dpkg-query output: %s", outputStream)
+	// logger.Debugf("dpkg-query output: %s", outputStream)
 	outputLines := strings.Split(outputStream, "\n")
 
 	for _, line := range outputLines {
@@ -55,7 +55,7 @@ func GetCurrInstPkgStat(pkgs map[string]*cache.AppTinyInfo) error {
 			Version: spv[2],
 			State:   cache.PkgState(spv[0]),
 		}
-		logger.Debugf("pkg:%+v", appInfo)
+		// logger.Debugf("pkg:%+v", appInfo)
 
 		pkgs[appInfo.Name] = &appInfo
 		pkgs[fmt.Sprintf("%s#%s", appInfo.Name, appInfo.Version)] = &appInfo
