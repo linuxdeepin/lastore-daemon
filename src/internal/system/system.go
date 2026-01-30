@@ -12,7 +12,7 @@ import (
 
 const VarLibDir = "/var/lib/lastore"
 
-var IsPrivateLastore bool
+var IntranetUpdate bool
 
 type Status string
 

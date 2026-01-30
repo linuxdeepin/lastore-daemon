@@ -109,7 +109,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 			updateTime = updateTime.Add(time.Duration(24) * time.Hour)
 		}
 		// 提前60s触发
-		if system.IsPrivateLastore {
+		if m.config.IntranetUpdate {
 			unitMap[lastoreRegularlyUpdate] = genHandleEventCmdArgs([]string{
 				fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60))}, AutoCheckRegularly)
 		} else {
@@ -117,7 +117,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 				fmt.Sprintf("--on-active=%d", int(updateTime.Sub(nowTime)/time.Second-60))}, AutoCheck)
 		}
 	}
-	if system.IsPrivateLastore {
+	if m.config.IntranetUpdate {
 		unitMap[lastoreGatherInfo] = []string{
 			fmt.Sprintf("--on-active=%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(600)+60),
 			"--uid=root",
@@ -393,7 +393,7 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 		}()
 	case OsVersionChanged:
 		logger.Info("enter update token from OsVersionChanged")
-		if system.IsPrivateLastore {
+		if m.config.IntranetUpdate {
 			updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 		} else {
 			go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)

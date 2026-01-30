@@ -298,7 +298,7 @@ const (
 
 func IsAuthorized() bool {
 	// TODO: only for test
-	if IsPrivateLastore {
+	if IntranetUpdate {
 		return true
 	}
 	edition, err := getEditionName()

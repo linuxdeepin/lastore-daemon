@@ -484,6 +484,18 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "update-process-upload": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpdateProcessUpload",
+      "description": "enable update porcess upload",
+      "description[zh_CN]": "是否开启process数据上报",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "enable-core-list": {
       "value": false,
       "serial": 0,

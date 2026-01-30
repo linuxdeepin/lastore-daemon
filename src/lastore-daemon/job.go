@@ -99,18 +99,10 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 		progressRangeEnd:   1,
 		environ:            environ,
 	}
-	if jobType == system.DownloadJobType {
-		go j.initDownloadSize()
-	}
 	return j
 }
 
-func (j *Job) initDownloadSize() {
-	s, _, err := system.QueryPackageDownloadSize(system.AllInstallUpdate, j.Packages...)
-	if err != nil {
-		logger.Warningf("initDownloadSize failed: %v", err)
-		return
-	}
+func (j *Job) initDownloadSize(s float64) {
 	size := int64(s)
 	j.PropsMu.Lock()
 	if j.DownloadSize == 0 {
