@@ -1,3 +1,27 @@
+lastore-daemon (6.2.46) unstable; urgency=medium
+
+  * feat: support running platfrom-deployed scripts at each stage of the update process (#305)
+  * fix: Synchronize intranet  update logic
+  * fix: Skip authorization during private updates for easier testing
+  * feat: Add environment-check reporting
+  * fix: Remove changes related to P2P
+  * fix: Remove process namespace check
+  * fix(i18n): Correct translation texts and add Chinese translations
+  * fix: SystemType reset to empty after successful update
+  * docs(iup-tool): Add README documentation for the intranet update platform debugging tool
+  * fix: Incorrect repository source configuration
+  * feat: Add iup-tool for testing the internal update platform
+  * feat: add update source success process event
+  * fix: Remove logic that affects process startup
+  * fix: Remove features related to the outdated backup and restore system "ab recovery"
+  * feat: Support intranet update environment checks and notification strategies
+  * feat(updateplatform): Add Helper support for machineID retrieval and policy check interval configuration
+  * fix(lastore-upgrade-query): Enhance validity check for upgrade packages and improve error messages
+  * fix: remove "bash -c" or "sh -c" from command (#302)
+  * dbus: remove allow own for com.deepin.lastore.Smartmirror and org.deepin.dde.Lastore1.Smartmirror (#289)
+  * feat: Add gatherinfo and posthardware commands to lastore-tools
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 30 Jan 2026 17:35:58 +0800
+
 lastore-daemon (6.2.45) unstable; urgency=medium
 
   * fix: check display-manager.service instead of lightdm (#286)
