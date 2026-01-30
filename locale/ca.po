@@ -6,7 +6,7 @@
 # Translators:
 # deepin_transifex <xiabin@linuxdeepin.com>, 2025
 # deepiner, 2025
-# Davidmp <medipas@gmail.com>, 2025
+# Davidmp <medipas@gmail.com>, 2026
 # 
 #, fuzzy
 msgid ""
@@ -15,7 +15,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-01-27 17:27+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Davidmp <medipas@gmail.com>, 2025\n"
+"Last-Translator: Davidmp <medipas@gmail.com>, 2026\n"
 "Language-Team: Catalan (https://app.transifex.com/linuxdeepin/teams/3617/ca/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -79,6 +79,8 @@ msgstr ""
 msgid ""
 "New version available! The download of the update package will begin shortly"
 msgstr ""
+"Versió nova disponible! La baixada del paquet d'actualització començarà "
+"d'aquí a prop."
 
 #: ../src/lastore-daemon/manager_download.go:168
 msgid "New version available! Downloading..."
@@ -125,7 +127,7 @@ msgstr "Descarta-ho"
 #: ../src/lastore-daemon/manager_download.go:286
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "Baixada completada. L'ordinador s'actualitzarà a les %s"
 
 #: ../src/lastore-daemon/manager_update.go:186
 msgid "New version available!"
@@ -134,6 +136,8 @@ msgstr "Nova versió disponible!"
 #: ../src/lastore-daemon/manager_update.go:192
 msgid "New version available! Please go to control-center to check"
 msgstr ""
+"Versió nova disponible! Si us plau, aneu al Centre de control per comprovar-"
+"ho."
 
 #: ../src/lastore-daemon/manager_update.go:229
 msgid "Failed to check for updates. Please check your network."
@@ -148,11 +152,12 @@ msgstr ""
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "timer has changed. Please reboot to take effect"
 msgstr ""
+"El temporitzador ha canviat. Si us plau, reinicieu-lo perquè tingui efecte."
 
 #: ../src/lastore-daemon/manager_update.go:622
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr ""
+msgstr "L'ordinador s'actualitzarà a les %s"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
@@ -160,7 +165,7 @@ msgstr "Es fa una còpia de seguretat i s'instal·len actualitzacions..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "Comença l'actualització. Si us plau, no atureu el sistema."
 
 #: ../src/lastore-daemon/manager_upgrade.go:241
 msgid "Backup failed!"
