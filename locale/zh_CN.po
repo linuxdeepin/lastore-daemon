@@ -2,14 +2,14 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# 
 # Translators:
 # Hualet Wang (Hualet Wang) <mr.asianwang@gmail.com>, 2025
 # cxbii <mycxbii@gmail.com>, 2025
 # Maggie Liu <maggie.liufei@gmail.com>, 2025
 # deepiner, 2025
 # Gary Wang <wzc782970009@gmail.com>, 2025
-#
+# 
 #, fuzzy
 msgid ""
 msgstr ""
@@ -18,12 +18,11 @@ msgstr ""
 "POT-Creation-Date: 2026-01-27 17:27+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
 "Last-Translator: Gary Wang <wzc782970009@gmail.com>, 2025\n"
-"Language-Team: Chinese (China) (https://app.transifex.com/linuxdeepin/"
-"teams/3617/zh_CN/)\n"
-"Language: zh_CN\n"
+"Language-Team: Chinese (China) (https://app.transifex.com/linuxdeepin/teams/3617/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: ../src/lastore-daemon/inhibitor.go:44
@@ -68,7 +67,7 @@ msgstr "已成功清理软件包缓存"
 
 #: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr "正在检查和安装更新..."
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:104
 #: ../src/lastore-daemon/manager_download.go:206
@@ -79,7 +78,7 @@ msgstr "更新包下载失败，请释放%g GB空间"
 #: ../src/lastore-daemon/manager_download.go:136
 msgid ""
 "New version available! The download of the update package will begin shortly"
-msgstr "检测到新的更新任务，即将开始下载更新包"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:168
 msgid "New version available! Downloading..."
@@ -107,7 +106,8 @@ msgid "Downloading updates failed. Please check your network."
 msgstr "更新包下载失败，请检查网络设置"
 
 #: ../src/lastore-daemon/manager_download.go:273
-msgid "Downloading completed. You can install updates when shutdown or reboot."
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
 msgstr "更新包已下载完成，您可以在关机或重启时安装更新"
 
 #: ../src/lastore-daemon/manager_download.go:276
@@ -121,7 +121,7 @@ msgstr "忽略"
 #: ../src/lastore-daemon/manager_download.go:286
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr "更新包下载完成，将于%s开始更新。"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_update.go:186
 msgid "New version available!"
@@ -129,7 +129,7 @@ msgstr "检查到有新系统版本"
 
 #: ../src/lastore-daemon/manager_update.go:192
 msgid "New version available! Please go to control-center to check"
-msgstr "检测到新的更新任务，双击托盘更新图标或进入控制中心查看"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_update.go:229
 msgid "Failed to check for updates. Please check your network."
@@ -141,12 +141,12 @@ msgstr "检测更新失败，请清理磁盘空间"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "timer has changed. Please reboot to take effect"
-msgstr "终端更新管理配置已刷新，重启后生效"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_update.go:622
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr "系统将在%s更新"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
@@ -154,7 +154,7 @@ msgstr "备份和安装更新中..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr "系统开始更新，更新完成前请不要关闭计算机"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:241
 msgid "Backup failed!"
@@ -197,14 +197,3 @@ msgstr "稍后重启"
 #: ../src/lastore-daemon/manager_upgrade.go:738
 msgid "Reboot Now"
 msgstr "立即重启"
-
-#~ msgid ""
-#~ "Updates failed: insufficient disk space. Please reboot to avoid the "
-#~ "effect on your system."
-#~ msgstr "磁盘空间不足，此次更新失败，请尝试重启，以避免影响系统正常使用"
-
-#~ msgid "Reboot"
-#~ msgstr "重启"
-
-#~ msgid "Updates failed. Please reboot to avoid the effect on your system."
-#~ msgstr "此次更新失败，请尝试重启，以避免影响系统正常使用"
