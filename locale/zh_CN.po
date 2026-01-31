@@ -68,7 +68,7 @@ msgstr "已成功清理软件包缓存"
 
 #: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "检查和安装更新中..."
 
 #: ../src/lastore-daemon/manager_download.go:104
 #: ../src/lastore-daemon/manager_download.go:206
