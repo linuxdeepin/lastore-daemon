@@ -9,6 +9,7 @@
 # Maggie Liu <maggie.liufei@gmail.com>, 2025
 # deepiner, 2025
 # Gary Wang <wzc782970009@gmail.com>, 2025
+# . ., 2026
 # 
 #, fuzzy
 msgid ""
@@ -17,7 +18,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-01-27 17:27+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Gary Wang <wzc782970009@gmail.com>, 2025\n"
+"Last-Translator: . ., 2026\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/linuxdeepin/teams/3617/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -78,7 +79,7 @@ msgstr "更新包下载失败，请释放%g GB空间"
 #: ../src/lastore-daemon/manager_download.go:136
 msgid ""
 "New version available! The download of the update package will begin shortly"
-msgstr ""
+msgstr "有新版本可用！安装包将很快开始下载。"
 
 #: ../src/lastore-daemon/manager_download.go:168
 msgid "New version available! Downloading..."
@@ -154,7 +155,7 @@ msgstr "备份和安装更新中..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "更新已开始。请不要关机"
 
 #: ../src/lastore-daemon/manager_upgrade.go:241
 msgid "Backup failed!"
