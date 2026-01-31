@@ -122,7 +122,7 @@ msgstr "忽略"
 #: ../src/lastore-daemon/manager_download.go:286
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "下载已完成。计算机将在%s更新"
 
 #: ../src/lastore-daemon/manager_update.go:186
 msgid "New version available!"
@@ -130,7 +130,7 @@ msgstr "检查到有新系统版本"
 
 #: ../src/lastore-daemon/manager_update.go:192
 msgid "New version available! Please go to control-center to check"
-msgstr ""
+msgstr "有新版本可用！请前往控制中心查看。"
 
 #: ../src/lastore-daemon/manager_update.go:229
 msgid "Failed to check for updates. Please check your network."
