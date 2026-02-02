@@ -162,7 +162,13 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job
 	var isExist bool
-	err = system.CustomSourceWrapper(system.AllCheckUpdate, func(path string, unref func()) error {
+	var updateType system.UpdateType
+	if m.config.IntranetUpdate {
+		updateType = system.SystemUpdate //Intranet updates are limited to system updates only
+	} else {
+		updateType = system.AllCheckUpdate
+	}
+	err = system.CustomSourceWrapper(updateType, func(path string, unref func()) error {
 		m.do.Lock()
 		defer m.do.Unlock()
 		isExist, job, err = m.jobManager.CreateJob("", system.UpdateSourceJobType, nil, environ, nil)

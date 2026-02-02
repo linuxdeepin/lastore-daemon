@@ -224,7 +224,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 
 func (j *Job) _InitProgressRange(begin, end float64) {
 	if end <= begin || end-begin > 1 || begin > 1 || end > 1 {
-		panic("Invalid Progress range init")
+		panic(fmt.Sprintf("Invalid Progress range init: begin: %.2f, end: %.2f", begin, end))
 	}
 	if j.Progress != 0 {
 		panic("InitProgressRange can only invoke once and before job start")
