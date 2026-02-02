@@ -305,15 +305,11 @@ func UpdateOtherSystemSourceDir(otherSourceList []string) error {
 // CustomSourceWrapper 根据updateType组合source文件,doRealAction完成实际操作,unref用于释放资源
 func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, unref func()) error) error {
 	var sourcePathList []string
-	if IntranetUpdate {
-		sourcePathList = append(sourcePathList, SystemUpdateSource)
-	} else {
-		for _, t := range AllCheckUpdateType() {
-			category := updateType & t
-			if category != 0 {
-				sourcePath := GetCategorySourceMap()[t]
-				sourcePathList = append(sourcePathList, sourcePath)
-			}
+	for _, t := range AllCheckUpdateType() {
+		category := updateType & t
+		if category != 0 {
+			sourcePath := GetCategorySourceMap()[t]
+			sourcePathList = append(sourcePathList, sourcePath)
 		}
 	}
 	// 由于103x版本兼容，检查更新时需要检查商店仓库
@@ -326,9 +322,6 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 	case 1:
 		// 如果只有一个仓库，证明是单项的更新，可以直接使用默认的文件夹
 		if doRealAction != nil {
-			if IntranetUpdate {
-				return doRealAction(sourcePathList[0], nil)
-			}
 			return doRealAction(GetCategorySourceMap()[updateType], nil)
 		}
 		return errors.New("doRealAction is nil")
