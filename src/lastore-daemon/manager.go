@@ -92,7 +92,6 @@ type Manager struct {
 	sysDBusDaemon ofdbus.DBus
 	systemd       systemd1.Manager
 
-	grub             *grubManager
 	userAgents       *userAgentMap // 闲时退出时，需要保存数据，启动时需要根据uid,agent sender以及session path完成数据恢复
 	statusManager    *UpdateModeStatusManager
 	updatePlatform   *updateplatform.UpdatePlatformManager
@@ -140,7 +139,6 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
-	m.grub = newGrubManager(service.Conn(), m.signalLoop)
 	m.jobManager = NewJobManager(service, updateApi, m.updateJobList, m.processLogFds)
 	m.immutableManager = newImmutableManager(m.jobManager.handleJobProgressInfo)
 	go m.handleOSSignal()
