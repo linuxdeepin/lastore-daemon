@@ -11,13 +11,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
-	"unicode"
 
-	grub2 "github.com/linuxdeepin/go-dbus-factory/com.deepin.daemon.grub2"
 	license "github.com/linuxdeepin/go-dbus-factory/system/com.deepin.license"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
@@ -156,92 +153,6 @@ const (
 	// running状态
 	ErrorNeedCheck JobErrorType = "needCheck"
 )
-
-const (
-	GrubTitleRollbackPrefix = "BEGIN /etc/grub.d/11_deepin_ab_recovery"
-	GrubTitleRollbackSuffix = "END /etc/grub.d/11_deepin_ab_recovery"
-	GrubTitleNormalPrefix   = "BEGIN /etc/grub.d/15_immutable"
-	GrubTitleNormalSuffix   = "END /etc/grub.d/15_immutable"
-)
-
-func GetGrubRollbackTitle(grubPath string) string {
-	return getGrubTitleByPrefix(grubPath, GrubTitleRollbackPrefix, GrubTitleRollbackSuffix)
-}
-
-func GetGrubNormalTitle(grubPath string) string {
-	return getGrubTitleByPrefix(grubPath, GrubTitleNormalPrefix, GrubTitleNormalSuffix)
-}
-
-func getGrubTitleByPrefix(grubPath string, start, end string) (entryTitle string) {
-	fileContent, err := os.ReadFile(grubPath)
-	if err != nil {
-		logger.Warning(err)
-		return ""
-	}
-	sl := bufio.NewScanner(strings.NewReader(string(fileContent)))
-	sl.Split(bufio.ScanLines)
-	needNext := false
-	for sl.Scan() {
-		line := sl.Text()
-		line = strings.TrimSpace(line)
-		if !needNext {
-			needNext = strings.Contains(line, start)
-		} else {
-			if strings.Contains(line, end) {
-				logger.Warningf("%v not found %v entry", grubPath, start)
-				return ""
-			}
-			if strings.HasPrefix(line, "menuentry ") {
-				title, ok := parseTitle(line)
-				if ok {
-					entryTitle = title
-					break
-				} else {
-					logger.Warningf("parse entry title failed from: %q", line)
-					return ""
-				}
-			}
-		}
-	}
-	err = sl.Err()
-	if err != nil {
-		return ""
-	}
-	return entryTitle
-}
-
-// getGrubTitleByIndex index 的起始值是0
-func getGrubTitleByIndex(grub grub2.Grub2, index int) (entryTitle string) {
-	if grub == nil {
-		return ""
-	}
-	entryList, err := grub.GetSimpleEntryTitles(0)
-	if err != nil {
-		logger.Warning(err)
-		return ""
-	}
-	if len(entryList) < index+1 {
-		logger.Warningf(" index:%v out of range", index)
-		return ""
-	}
-	return entryList[index]
-}
-
-var (
-	entryRegexpSingleQuote = regexp.MustCompile(`^ *(menuentry|submenu) +'(.*?)'.*$`)
-	entryRegexpDoubleQuote = regexp.MustCompile(`^ *(menuentry|submenu) +"(.*?)".*$`)
-)
-
-func parseTitle(line string) (string, bool) {
-	line = strings.TrimLeftFunc(line, unicode.IsSpace)
-	if entryRegexpSingleQuote.MatchString(line) {
-		return entryRegexpSingleQuote.FindStringSubmatch(line)[2], true
-	} else if entryRegexpDoubleQuote.MatchString(line) {
-		return entryRegexpDoubleQuote.FindStringSubmatch(line)[2], true
-	} else {
-		return "", false
-	}
-}
 
 func HandleDelayPackage(hold bool, packages []string) {
 	action := "unhold"
