@@ -678,20 +678,42 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 			}
 		} else if strings.Contains(errType, system.ErrorInsufficientSpace.String()) {
-			msg := gettext.Tr("Updates failed: insufficient disk space.")
-			action := []string{}
+			// 空间不足
+			// 已备份
+			msg := gettext.Tr("Updates failed: insufficient disk space. Please reboot to avoid the effect on your system.")
+			action := []string{"reboot", gettext.Tr("Reboot")}
+			hints := map[string]dbus.Variant{
+				"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"),
+				"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
+			// 未备份
+			if m.statusManager.abStatus != system.HasBackedUp {
+				msg = gettext.Tr("Updates failed: insufficient disk space.")
+				action = []string{}
+				hints = nil
+			}
 			if m.config.IntranetUpdate {
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutPrivateLong)
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutPrivateLong)
 			} else {
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 			}
 		} else {
-			msg := gettext.Tr("Updates failed.")
-			action := []string{}
+			// 其他原因
+			// 已备份
+			msg := gettext.Tr("Updates failed. Please reboot to avoid the effect on your system.")
+			action := []string{"reboot", gettext.Tr("Reboot")}
+			hints := map[string]dbus.Variant{
+				"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"),
+				"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
+			// 未备份
+			if m.statusManager.abStatus != system.HasBackedUp {
+				msg = gettext.Tr("Updates failed.")
+				action = []string{}
+				hints = nil
+			}
 			if m.config.IntranetUpdate {
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutPrivateLong)
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutPrivateLong)
 			} else {
-				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, nil, system.NotifyExpireTimeoutDefault)
+				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 			}
 		}
 	}

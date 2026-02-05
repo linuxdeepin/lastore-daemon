@@ -111,7 +111,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 		},
 		string(system.FailedStatus): func() error {
 			m.updatePlatform.PostUpgradeStatus(uuid, updateplatform.UpgradeFailed, job.Description)
-			// TODO 可能丢失调用 m.updatePlatform.SaveJobPostMsgByUUID(uuid, updateplatform.UpgradeFailed, job.Description)
 			go func() {
 				m.inhibitAutoQuitCountAdd()
 				defer m.inhibitAutoQuitCountSub()
@@ -131,7 +130,6 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					EventContent: msg,
 				}
 				m.updatePlatform.PostProcessEventMessage(procEvent)
-				// TODO: 可能丢失调用 m.updatePlatform.PostSystemUpgradeMessage(uuid)
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)
