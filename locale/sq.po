@@ -189,7 +189,7 @@ msgid ""
 "on your system."
 msgstr ""
 "Përditësimet dështuan: hapësirë disku e pamjaftueshme. Ju lutemi, riniseni "
-"që të shmanget efekt në sistemin tuaj."
+"që të shmanget efekti në sistemin tuaj."
 
 #: ../src/lastore-daemon/manager_upgrade.go:684
 #: ../src/lastore-daemon/manager_upgrade.go:701
@@ -203,8 +203,8 @@ msgstr "Përditësimi dështoi: hapësirë disku e pamjaftueshme."
 #: ../src/lastore-daemon/manager_upgrade.go:700
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
-"Përditësimet dështuan. Ju lutemi, riniseni, që të shmanget efekt në sistemin"
-" tuaj."
+"Përditësimet dështuan. Ju lutemi, riniseni, që të shmanget efekti në "
+"sistemin tuaj."
 
 #: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
