@@ -8,17 +8,17 @@
 # مۇختەر مەخمۇت <yeganaaa@163.com>, 2025
 # Bashqut <2250907458@qq.com>, 2025
 # deepiner, 2025
-# 阿迪力 买买提明 <251078110@qq.com>, 2025
 # Ug HushBeg <HushBeg@163.com>, 2025
+# 阿迪力 买买提明 <251078110@qq.com>, 2026
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-27 17:27+0800\n"
+"POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Ug HushBeg <HushBeg@163.com>, 2025\n"
+"Last-Translator: 阿迪力 买买提明 <251078110@qq.com>, 2026\n"
 "Language-Team: Uyghur (https://app.transifex.com/linuxdeepin/teams/3617/ug/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -46,23 +46,23 @@ msgstr "كونترول مەركىزى "
 msgid "App Store"
 msgstr "ئەپ بازىرى"
 
-#: ../src/lastore-daemon/manager.go:487
+#: ../src/lastore-daemon/manager.go:485
 msgid "Removed successfully"
 msgstr "ئۆچۈرۈلدى"
 
-#: ../src/lastore-daemon/manager.go:492
+#: ../src/lastore-daemon/manager.go:490
 msgid "Failed to remove the app"
 msgstr "ئۆچۈرەلمىدى"
 
-#: ../src/lastore-daemon/manager.go:495
+#: ../src/lastore-daemon/manager.go:493
 msgid "Retry"
 msgstr "قايتا سىناش"
 
-#: ../src/lastore-daemon/manager.go:497
+#: ../src/lastore-daemon/manager.go:495
 msgid "Cancel"
 msgstr "بىكار قىلىش"
 
-#: ../src/lastore-daemon/manager.go:531
+#: ../src/lastore-daemon/manager.go:529
 msgid "Package cache wiped"
 msgstr "بوغچا قالدۇقىنى تازىلاش"
 
@@ -70,37 +70,37 @@ msgstr "بوغچا قالدۇقىنى تازىلاش"
 msgid "Checking and installing updates..."
 msgstr ""
 
-#: ../src/lastore-daemon/manager_download.go:104
+#: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr ""
 
-#: ../src/lastore-daemon/manager_download.go:136
+#: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
 msgstr ""
 
-#: ../src/lastore-daemon/manager_download.go:168
+#: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
 msgstr "يېڭى نەشردىكى سىستېما بايقالدى، چۈشۈۋاتىدۇ..."
 
-#: ../src/lastore-daemon/manager_download.go:171
+#: ../src/lastore-daemon/manager_download.go:157
 #: ../src/lastore-daemon/manager_download.go:224
-#: ../src/lastore-daemon/manager_update.go:187
-#: ../src/lastore-daemon/manager_update.go:230
+#: ../src/lastore-daemon/manager_update.go:238
+#: ../src/lastore-daemon/manager_update.go:294
 msgid "View"
 msgstr "كۆرۈش"
 
 #: ../src/lastore-daemon/manager_download.go:212
-#: ../src/lastore-daemon/manager_upgrade.go:631
+#: ../src/lastore-daemon/manager_upgrade.go:672
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
 "قىسمەن ھۆججەتلەر بۇزۇلغانلىقتىن بۇ قېتىملىق يېڭىلاش مەغلۇب بولدى، قايتا "
 "يېڭىلاڭ"
 
 #: ../src/lastore-daemon/manager_download.go:213
-#: ../src/lastore-daemon/manager_upgrade.go:632
+#: ../src/lastore-daemon/manager_upgrade.go:673
 msgid "Try Again"
 msgstr "قايتا سىناش"
 
@@ -108,47 +108,47 @@ msgstr "قايتا سىناش"
 msgid "Downloading updates failed. Please check your network."
 msgstr "يېڭىلاش بولىقى چۈشمىدى، تور تەڭشىكىنى تەكشۈرۈڭ"
 
-#: ../src/lastore-daemon/manager_download.go:273
+#: ../src/lastore-daemon/manager_download.go:287
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
 "يېڭىلاش بولىقى چۈشۈپ بولدى، كومپيۇتېرنى تاقىغان ياكى قايتا قوزغاتقاندا "
 "قاچىلىسىڭىز بولىدۇ"
 
-#: ../src/lastore-daemon/manager_download.go:276
+#: ../src/lastore-daemon/manager_download.go:290
 msgid "Update Now"
 msgstr "يېڭىلايمەن"
 
-#: ../src/lastore-daemon/manager_download.go:278
+#: ../src/lastore-daemon/manager_download.go:292
 msgid "Dismiss"
 msgstr "ئۆتكۈزۈۋېتىش"
 
-#: ../src/lastore-daemon/manager_download.go:286
+#: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
 msgstr ""
 
-#: ../src/lastore-daemon/manager_update.go:186
+#: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
 msgstr "سىستېمىنىڭ يېڭى نەشرى بايقالدى"
 
-#: ../src/lastore-daemon/manager_update.go:192
+#: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
 msgstr ""
 
-#: ../src/lastore-daemon/manager_update.go:229
+#: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
 msgstr "يېڭىلاش مەغلۇب بولدى، تور تەڭشىكىنى تەكشۈرۈڭ"
 
-#: ../src/lastore-daemon/manager_update.go:235
+#: ../src/lastore-daemon/manager_update.go:299
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr "يېڭىلاش مەغلۇب بولدى،دىسكا بوشلۇقىنى تازىلاڭ"
 
-#: ../src/lastore-daemon/manager_update.go:293
+#: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
 msgstr ""
 
-#: ../src/lastore-daemon/manager_update.go:622
+#: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
 msgstr ""
@@ -161,19 +161,19 @@ msgstr "زاپاسلاۋاتىدۇ ۋە يېڭىلانمىنى قاچىلاۋا�
 msgid "Start to update. Please do not shutdown"
 msgstr ""
 
-#: ../src/lastore-daemon/manager_upgrade.go:241
+#: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
 msgstr "زاپاسلانمىدى"
 
-#: ../src/lastore-daemon/manager_upgrade.go:242
+#: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Back Up Again"
 msgstr "قايتا زاپاسلاش"
 
-#: ../src/lastore-daemon/manager_upgrade.go:242
+#: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Proceed to Update"
 msgstr "داۋاملىق يېڭىلاش"
 
-#: ../src/lastore-daemon/manager_upgrade.go:564
+#: ../src/lastore-daemon/manager_upgrade.go:605
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
@@ -181,28 +181,47 @@ msgstr ""
 "باتارېىيەنىڭ توكى %60دىن تۆۋەن، ئوڭۇشلۇق يېڭىلاش ئۈچۈن توك مەنبەسىنى ۋاقتىدا"
 " چېتىڭ"
 
-#: ../src/lastore-daemon/manager_upgrade.go:640
+#: ../src/lastore-daemon/manager_upgrade.go:683
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+"دىسكا بوشلۇقى يېتىشمىگەچكە بۇ قېتىملىق يېڭىلاش مەغلۇب بولدى، سىستېمىنى "
+"نورمال ئىشلىتىشىڭىزگە تەسىر يەتمەسلىكى ئۈچۈن كومپيۇتېرنى قايتا قوزغىتىڭ"
+
+#: ../src/lastore-daemon/manager_upgrade.go:684
+#: ../src/lastore-daemon/manager_upgrade.go:701
+msgid "Reboot"
+msgstr "قايتا قوزغىتىش"
+
+#: ../src/lastore-daemon/manager_upgrade.go:688
 msgid "Updates failed: insufficient disk space."
 msgstr "دىسكا سىغىمى يەتمىگەچكە بۇ قېتىملىق يېڭىلاش مەغلۇب بولدى"
 
-#: ../src/lastore-daemon/manager_upgrade.go:648
+#: ../src/lastore-daemon/manager_upgrade.go:700
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr ""
+"بۇ قېتىملىق يېڭىلاش مەغلۇب بولدى، سىستېمىنى نورمال ئىشلىتىشىڭىزگە تەسىر "
+"يەتمەسلىكى ئۈچۈن كومپيۇتېرنى قايتا قوزغىتىڭ"
+
+#: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
 msgstr "بۇ قېتىملىق يېڭىلاش مەغلۇب بولدى"
 
-#: ../src/lastore-daemon/manager_upgrade.go:736
+#: ../src/lastore-daemon/manager_upgrade.go:795
 msgid "Updates successful"
 msgstr "يېڭىلاندى"
 
-#: ../src/lastore-daemon/manager_upgrade.go:737
+#: ../src/lastore-daemon/manager_upgrade.go:796
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
 "سىستېما ۋە ئەپلەرنى نورمال ئىشلىتىشىڭىز ئۈچۈن، يېڭىلانغاندىن كېيىن سىستېمىنى"
 " قايتا قوزغىتىڭ"
 
-#: ../src/lastore-daemon/manager_upgrade.go:738
+#: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Later"
 msgstr "سەل تۇرۇپ قايتا قوزغىتىش"
 
-#: ../src/lastore-daemon/manager_upgrade.go:738
+#: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Now"
 msgstr "ھازىلار قايتا قوزغىتىش"
