@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-27 17:27+0800\n"
+"POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
 "Last-Translator: Davidmp <medipas@gmail.com>, 2026\n"
 "Language-Team: Catalan (https://app.transifex.com/linuxdeepin/teams/3617/ca/)\n"
@@ -43,23 +43,23 @@ msgstr "Centre de control"
 msgid "App Store"
 msgstr "Botiga d'aplicacions"
 
-#: ../src/lastore-daemon/manager.go:487
+#: ../src/lastore-daemon/manager.go:485
 msgid "Removed successfully"
 msgstr "S'ha eliminat correctament."
 
-#: ../src/lastore-daemon/manager.go:492
+#: ../src/lastore-daemon/manager.go:490
 msgid "Failed to remove the app"
 msgstr "Ha fallat eliminar l'aplicació."
 
-#: ../src/lastore-daemon/manager.go:495
+#: ../src/lastore-daemon/manager.go:493
 msgid "Retry"
 msgstr "Torna-ho a provar"
 
-#: ../src/lastore-daemon/manager.go:497
+#: ../src/lastore-daemon/manager.go:495
 msgid "Cancel"
 msgstr "Cancel·la"
 
-#: ../src/lastore-daemon/manager.go:531
+#: ../src/lastore-daemon/manager.go:529
 msgid "Package cache wiped"
 msgstr "S'ha netejat la cau de paquets."
 
@@ -67,7 +67,7 @@ msgstr "S'ha netejat la cau de paquets."
 msgid "Checking and installing updates..."
 msgstr "Es comproven i s'instal·len actualitzacions..."
 
-#: ../src/lastore-daemon/manager_download.go:104
+#: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
@@ -75,33 +75,33 @@ msgstr ""
 "Ha fallat baixar les actualitzacions. Si us plau, primer allibereu %g GB "
 "d'espai al disc."
 
-#: ../src/lastore-daemon/manager_download.go:136
+#: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
 msgstr ""
 "Versió nova disponible! La baixada del paquet d'actualització començarà "
 "d'aquí a prop."
 
-#: ../src/lastore-daemon/manager_download.go:168
+#: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
 msgstr "Versió nova disponible! Es baixa..."
 
-#: ../src/lastore-daemon/manager_download.go:171
+#: ../src/lastore-daemon/manager_download.go:157
 #: ../src/lastore-daemon/manager_download.go:224
-#: ../src/lastore-daemon/manager_update.go:187
-#: ../src/lastore-daemon/manager_update.go:230
+#: ../src/lastore-daemon/manager_update.go:238
+#: ../src/lastore-daemon/manager_update.go:294
 msgid "View"
 msgstr "Visualització"
 
 #: ../src/lastore-daemon/manager_download.go:212
-#: ../src/lastore-daemon/manager_upgrade.go:631
+#: ../src/lastore-daemon/manager_upgrade.go:672
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
 "Les actualitzacions han fallat: fitxers danyats. Si us plau, actualitzeu un "
 "altre cop."
 
 #: ../src/lastore-daemon/manager_download.go:213
-#: ../src/lastore-daemon/manager_upgrade.go:632
+#: ../src/lastore-daemon/manager_upgrade.go:673
 msgid "Try Again"
 msgstr " Torneu-ho a provar"
 
@@ -109,52 +109,52 @@ msgstr " Torneu-ho a provar"
 msgid "Downloading updates failed. Please check your network."
 msgstr "No s'han pogut baixar les actualitzacions. Comproveu la xarxa."
 
-#: ../src/lastore-daemon/manager_download.go:273
+#: ../src/lastore-daemon/manager_download.go:287
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
 "S'ha completat la baixada. Podeu instal·lar les actualitzacions quan tanqueu"
 " o reinicieu."
 
-#: ../src/lastore-daemon/manager_download.go:276
+#: ../src/lastore-daemon/manager_download.go:290
 msgid "Update Now"
 msgstr "Actualitza ara"
 
-#: ../src/lastore-daemon/manager_download.go:278
+#: ../src/lastore-daemon/manager_download.go:292
 msgid "Dismiss"
 msgstr "Descarta-ho"
 
-#: ../src/lastore-daemon/manager_download.go:286
+#: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
 msgstr "Baixada completada. L'ordinador s'actualitzarà a les %s"
 
-#: ../src/lastore-daemon/manager_update.go:186
+#: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
 msgstr "Nova versió disponible!"
 
-#: ../src/lastore-daemon/manager_update.go:192
+#: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
 msgstr ""
 "Versió nova disponible! Si us plau, aneu al Centre de control per comprovar-"
 "ho."
 
-#: ../src/lastore-daemon/manager_update.go:229
+#: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
 msgstr ""
 "No s'han pogut comprovar si hi ha actualitzacions. Comproveu la xarxa."
 
-#: ../src/lastore-daemon/manager_update.go:235
+#: ../src/lastore-daemon/manager_update.go:299
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr ""
 "No s'ha pogut comprovar si hi ha actualitzacions. Netegeu primer el disc."
 
-#: ../src/lastore-daemon/manager_update.go:293
+#: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
 msgstr ""
 "El temporitzador ha canviat. Si us plau, reinicieu-lo perquè tingui efecte."
 
-#: ../src/lastore-daemon/manager_update.go:622
+#: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
 msgstr "L'ordinador s'actualitzarà a les %s"
@@ -167,19 +167,19 @@ msgstr "Es fa una còpia de seguretat i s'instal·len actualitzacions..."
 msgid "Start to update. Please do not shutdown"
 msgstr "Comença l'actualització. Si us plau, no atureu el sistema."
 
-#: ../src/lastore-daemon/manager_upgrade.go:241
+#: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
 msgstr "Ha fallat la còpia de seguretat!"
 
-#: ../src/lastore-daemon/manager_upgrade.go:242
+#: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Back Up Again"
 msgstr "Torna a fer una còpia de seguretat"
 
-#: ../src/lastore-daemon/manager_upgrade.go:242
+#: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Proceed to Update"
 msgstr "Procedeix a l'actualització"
 
-#: ../src/lastore-daemon/manager_upgrade.go:564
+#: ../src/lastore-daemon/manager_upgrade.go:605
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
@@ -187,27 +187,46 @@ msgstr ""
 "La capacitat de la bateria és inferior al 60%. Per obtenir actualitzacions "
 "correctes, endolleu el dispositiu."
 
-#: ../src/lastore-daemon/manager_upgrade.go:640
+#: ../src/lastore-daemon/manager_upgrade.go:683
+msgid ""
+"Updates failed: insufficient disk space. Please reboot to avoid the effect "
+"on your system."
+msgstr ""
+"Les actualitzacions han fallat: espai al disc insuficient. Si us plau, "
+"reinicieu per evitar-ne l'efecte al sistema."
+
+#: ../src/lastore-daemon/manager_upgrade.go:684
+#: ../src/lastore-daemon/manager_upgrade.go:701
+msgid "Reboot"
+msgstr "Reinicia't"
+
+#: ../src/lastore-daemon/manager_upgrade.go:688
 msgid "Updates failed: insufficient disk space."
 msgstr "Les actualitzacions han fallat: espai al disc insuficient."
 
-#: ../src/lastore-daemon/manager_upgrade.go:648
+#: ../src/lastore-daemon/manager_upgrade.go:700
+msgid "Updates failed. Please reboot to avoid the effect on your system."
+msgstr ""
+"Les actualitzacions han fallat. Si us plau, reinicieu per evitar-ne l'efecte"
+" al sistema."
+
+#: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
 msgstr "Ha fallat l'actualització."
 
-#: ../src/lastore-daemon/manager_upgrade.go:736
+#: ../src/lastore-daemon/manager_upgrade.go:795
 msgid "Updates successful"
 msgstr "Actualitzacions correctes"
 
-#: ../src/lastore-daemon/manager_upgrade.go:737
+#: ../src/lastore-daemon/manager_upgrade.go:796
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
 "Reinicieu l'ordinador per usar el sistema i les aplicacions correctament."
 
-#: ../src/lastore-daemon/manager_upgrade.go:738
+#: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Later"
 msgstr "Reinicia't més tard"
 
-#: ../src/lastore-daemon/manager_upgrade.go:738
+#: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Now"
 msgstr "Reinicia't ara"
