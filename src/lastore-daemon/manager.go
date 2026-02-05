@@ -253,7 +253,6 @@ func (m *Manager) initAgent() {
 
 func (m *Manager) initPlatformManager() {
 	m.updatePlatform = updateplatform.NewUpdatePlatformManager(m.config, false)
-	// TODO: 可能缺少 m.loadPlatformCache()
 	if isFirstBoot() || m.config.IntranetUpdate {
 		// 不能阻塞初始化流程,防止dbus服务激活超时
 		go m.updatePlatform.RetryPostHistory() // 此处调用还没有export以及dispatch job,因此可以判断是否需要check.
