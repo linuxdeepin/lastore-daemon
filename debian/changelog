@@ -1,3 +1,12 @@
+lastore-daemon (6.2.47) unstable; urgency=medium
+
+  * fix: Remove CheckPolicyCron related logic
+  * fix: Enhance the installation failure notification text
+  * fix: Remove unused GRUB operation logic
+  * fix: Security updates use the system update sources
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Fri, 06 Feb 2026 13:43:34 +0800
+
 lastore-daemon (6.2.46) unstable; urgency=medium
 
   * feat: support running platfrom-deployed scripts at each stage of the update process (#305)
