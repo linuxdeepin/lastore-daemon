@@ -393,19 +393,6 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
-    "check-policy-on-calendar": {
-      "value": "",
-      "serial": 0,
-      "flags": [
-        "global"
-      ],
-      "name": "CheckPolicyOnCalendar",
-      "description": "check policy on calendar",
-      "name[zh_CN]": "策略检查间隔",
-      "description[zh_CN]": "策略检查间隔 systemd定时器里的OnCalendar参数",
-      "permissions": "readwrite",
-      "visibility": "private"
-    },
     "post-upgrade-on-calendar": {
       "value": "*:0/30",
       "serial": 0,

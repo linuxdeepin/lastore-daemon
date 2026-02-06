@@ -91,7 +91,6 @@ type Config struct {
 	PlatformUpdate           bool
 
 	PlatformUrl            string // 更新接口地址
-	CheckPolicyCron        string // 策略检查间隔
 	StartCheckRange        []int  // 开机检查更新区间
 	CheckPolicyInterval    int    // 策略检查时间间隔(单位：秒)
 	GetHardwareIdByHelper  bool   // machineID是否直接从sync helper获取
@@ -186,7 +185,6 @@ const (
 	dSettingsKeyUpdateStatus                         = "update-status"
 	dSettingsKeyPlatformUpdate                       = "platform-update"
 	dSettingsKeyPlatformUrl                          = "platform-url"
-	dSettingsKeyCheckPolicyOnCalendar                = "check-policy-on-calendar"
 	dSettingsKeyStartCheckRange                      = "start-check-range"
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
 	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
@@ -525,13 +523,6 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.PlatformRepoComponents = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckPolicyOnCalendar)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.CheckPolicyCron = v.Value().(string)
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPostUpgradeOnCalendar)
