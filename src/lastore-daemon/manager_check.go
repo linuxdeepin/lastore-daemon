@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"syscall"
 	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
@@ -44,30 +43,32 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 	if m.rebootTimeoutTimer != nil {
 		m.rebootTimeoutTimer.Stop()
 	}
-	var inhibitFd dbus.UnixFD = -1
 	why := Tr("Checking and installing updates...")
+	var inhibitHeld bool
 	inhibit := func(enable bool) {
-		logger.Infof("handle inhibit:%v fd:%v", enable, inhibitFd)
+		logger.Infof("handle inhibit:%v held:%v", enable, inhibitHeld)
 		if enable {
-			if inhibitFd == -1 {
-				fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
-				if err != nil {
-					logger.Infof("checkUpgrade:prevent shutdown failed: fd:%v, err:%v\n", fd, err)
-				} else {
-					logger.Infof("checkUpgrade:prevent shutdown: fd:%v\n", fd)
-					inhibitFd = fd
-				}
+			if inhibitHeld {
+				return
 			}
+			_, err := sharedInhibitAcquire(why)
+			if err != nil {
+				logger.Infof("checkUpgrade:prevent shutdown failed: err:%v\n", err)
+				return
+			}
+			logger.Info("checkUpgrade:prevent shutdown")
+			inhibitHeld = true
 		} else {
-			if inhibitFd != -1 {
-				err := syscall.Close(int(inhibitFd))
-				if err != nil {
-					logger.Infof("checkUpgrade:enable shutdown failed: fd:%d, err:%s\n", inhibitFd, err)
-				} else {
-					logger.Info("checkUpgrade:enable shutdown")
-					inhibitFd = -1
-				}
+			if !inhibitHeld {
+				return
 			}
+			err := sharedInhibitRelease()
+			if err != nil {
+				logger.Infof("checkUpgrade:enable shutdown failed: err:%v\n", err)
+				return
+			}
+			logger.Info("checkUpgrade:enable shutdown")
+			inhibitHeld = false
 		}
 	}
 	var job *Job
