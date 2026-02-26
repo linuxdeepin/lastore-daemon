@@ -5,10 +5,22 @@
 package main
 
 import (
+	"sync"
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
+)
+
+var (
+	sharedInhibitMu  sync.Mutex
+	sharedInhibitRef int
+	sharedInhibitFd  dbus.UnixFD = -1
+)
+
+var (
+	inhibitorFn    = Inhibitor
+	closeInhibitFd = func(fd dbus.UnixFD) error { return syscall.Close(int(fd)) }
 )
 
 type methodCaller uint
@@ -47,22 +59,56 @@ func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 		default:
 			why = Tr("Preventing from shutting down")
 		}
-		fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
-		logger.Infof("Prevent shutdown...: fd:%v\n", fd)
+		fd, err := sharedInhibitAcquire(why)
 		if err != nil {
-			logger.Infof("Prevent shutdown failed: fd:%v, err:%v\n", fd, err)
+			logger.Infof("Prevent shutdown failed: err:%v\n", err)
 			return
 		}
+		logger.Info("Prevent shutdown...")
 		m.inhibitFd = fd
 	} else if !onChanging && m.inhibitFd != -1 {
-		err := syscall.Close(int(m.inhibitFd))
+		err := sharedInhibitRelease()
 		if err != nil {
-			logger.Infof("Enable shutdown...: fd:%d, err:%s\n", m.inhibitFd, err)
+			logger.Infof("Enable shutdown failed: err:%v\n", err)
 		} else {
 			logger.Info("Enable shutdown...")
 		}
 		m.inhibitFd = -1
 	}
+}
+
+func sharedInhibitAcquire(why string) (dbus.UnixFD, error) {
+	sharedInhibitMu.Lock()
+	defer sharedInhibitMu.Unlock()
+
+	if sharedInhibitRef == 0 {
+		fd, err := inhibitorFn("shutdown:sleep", dbusServiceName, why)
+		if err != nil {
+			return 0, err
+		}
+		sharedInhibitFd = fd
+	}
+	sharedInhibitRef++
+	return sharedInhibitFd, nil
+}
+
+func sharedInhibitRelease() error {
+	sharedInhibitMu.Lock()
+	defer sharedInhibitMu.Unlock()
+
+	if sharedInhibitRef == 0 {
+		return nil
+	}
+	sharedInhibitRef--
+	if sharedInhibitRef != 0 {
+		return nil
+	}
+	if sharedInhibitFd == -1 {
+		return nil
+	}
+	fd := sharedInhibitFd
+	sharedInhibitFd = -1
+	return closeInhibitFd(fd)
 }
 
 func Inhibitor(what, who, why string) (dbus.UnixFD, error) {

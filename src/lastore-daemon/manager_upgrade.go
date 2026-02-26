@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
@@ -100,30 +99,32 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 		}
 		return "/", dbusutil.ToError(createJobErr)
 	}
-	var inhibitFd dbus.UnixFD = -1
 	why := Tr("Backing up and installing updates...")
+	var inhibitHeld bool
 	inhibit := func(enable bool) {
-		logger.Infof("DistUpgradePartly:handle inhibit:%v fd:%v", enable, inhibitFd)
+		logger.Infof("DistUpgradePartly:handle inhibit:%v held:%v", enable, inhibitHeld)
 		if enable {
-			if inhibitFd == -1 {
-				fd, err := Inhibitor("shutdown:sleep", dbusServiceName, why)
-				if err != nil {
-					logger.Infof("DistUpgradePartly:prevent shutdown failed: fd:%v, err:%v\n", fd, err)
-				} else {
-					logger.Infof("DistUpgradePartly:prevent shutdown: fd:%v\n", fd)
-					inhibitFd = fd
-				}
+			if inhibitHeld {
+				return
 			}
+			_, err := sharedInhibitAcquire(why)
+			if err != nil {
+				logger.Infof("DistUpgradePartly:prevent shutdown failed: err:%v\n", err)
+				return
+			}
+			logger.Info("DistUpgradePartly:prevent shutdown")
+			inhibitHeld = true
 		} else {
-			if inhibitFd != -1 {
-				err := syscall.Close(int(inhibitFd))
-				if err != nil {
-					logger.Infof("DistUpgradePartly:enable shutdown failed: fd:%d, err:%s\n", inhibitFd, err)
-				} else {
-					logger.Info("DistUpgradePartly:enable shutdown")
-					inhibitFd = -1
-				}
+			if !inhibitHeld {
+				return
 			}
+			err := sharedInhibitRelease()
+			if err != nil {
+				logger.Infof("DistUpgradePartly:enable shutdown failed: err:%v\n", err)
+				return
+			}
+			logger.Info("DistUpgradePartly:enable shutdown")
+			inhibitHeld = false
 		}
 	}
 	// 开始更新job
