@@ -155,7 +155,7 @@ msgstr "Varmuuskopioidaan ja asennetaan päivityksiä..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "Aloita päivitys. Älä sammuta päivityksen aikana"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
