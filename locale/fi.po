@@ -77,7 +77,7 @@ msgstr "Päivitysten lataaminen epäonnistui. Vapauta ensin %g Gt levytilaa."
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
-msgstr ""
+msgstr "Uusi versio saatavilla! Päivityksen lataus alkaa pian"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
@@ -122,7 +122,7 @@ msgstr "Hylkää"
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "Lataaminen valmiina. Tietokone päivitetään %s"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
@@ -130,7 +130,7 @@ msgstr "Uusi versio saatavilla!"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
-msgstr ""
+msgstr "Uusi versio saatavilla! Katso ohjauspaneelista."
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
@@ -142,12 +142,12 @@ msgstr "Päivitysten tarkistus epäonnistui. Puhdista levy ensin."
 
 #: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
-msgstr ""
+msgstr "aika on muuttunut. Käynnistä uudelleen, jotta päivitys tulee voimaan"
 
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr ""
+msgstr "Tietokone päivitetään klo %s"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
