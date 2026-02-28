@@ -1,3 +1,9 @@
+lastore-daemon (6.2.48) unstable; urgency=medium
+
+  * fix: deduplicate logind shutdown inhibitors during silent updates (#318)
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Sat, 28 Feb 2026 15:56:51 +0800
+
 lastore-daemon (6.2.47) unstable; urgency=medium
 
   * fix: Remove CheckPolicyCron related logic
