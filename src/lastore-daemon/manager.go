@@ -103,6 +103,7 @@ type Manager struct {
 	updateTime string // 定时时间，记录定时更新通知，防止重复发通知
 
 	checkDpkgCapabilityOnce sync.Once
+	sysPowerWatchOnce       sync.Once
 	supportDpkgScriptIgnore bool
 
 	logFds     []*os.File
