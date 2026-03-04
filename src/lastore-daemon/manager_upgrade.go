@@ -25,7 +25,6 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
-	"github.com/linuxdeepin/go-lib/dbusutil/proxy"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -551,7 +550,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				return m.afterUpgradeCmdSuccessHook()
 			},
 			string(system.EndStatus): func() error {
-				m.sysPower.RemoveHandler(proxy.RemovePropertiesChangedHandler)
 				if unref != nil {
 					unref()
 				}
@@ -581,8 +579,11 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 
 func (m *Manager) handleSysPowerChanged() {
 	isLaptop, err := m.sysPower.HasBattery().Get(0)
-	if err == nil && isLaptop {
-		var lowPowerNotifyId uint32 = 0
+	if err != nil || !isLaptop {
+		return
+	}
+	m.sysPowerWatchOnce.Do(func() {
+		var lowPowerNotifyID uint32
 		var handleSysPowerBatteryEventMu sync.Mutex
 		onBatteryGlobal, _ := m.sysPower.OnBattery().Get(0)
 		batteryPercentage, _ := m.sysPower.BatteryPercentage().Get(0)
@@ -601,21 +602,17 @@ func (m *Manager) handleSysPowerChanged() {
 		handleSysPowerBatteryEvent := func() {
 			handleSysPowerBatteryEventMu.Lock()
 			defer handleSysPowerBatteryEventMu.Unlock()
-			if onBatteryGlobal && batteryPercentage < 60.0 && m.statusManager.isUpgrading() && lowPowerNotifyId == 0 {
-				go func() {
-					msg := gettext.Tr("The battery capacity is lower than 60%. To get successful updates, please plug in.")
-					lowPowerNotifyId = m.sendNotify(updateNotifyShow, 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
-				}()
+			if onBatteryGlobal && batteryPercentage < 60.0 && m.statusManager.isUpgrading() && lowPowerNotifyID == 0 {
+				msg := gettext.Tr("The battery capacity is lower than 60%. To get successful updates, please plug in.")
+				lowPowerNotifyID = m.sendNotify(updateNotifyShow, 0, "notification-battery_low", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 			}
 			// 用户连上电源时,需要关闭通知
-			if !onBatteryGlobal {
-				if lowPowerNotifyId != 0 {
-					err = m.closeNotify(lowPowerNotifyId)
-					if err != nil {
-						logger.Warning(err)
-					} else {
-						lowPowerNotifyId = 0
-					}
+			if !onBatteryGlobal && lowPowerNotifyID != 0 {
+				closeErr := m.closeNotify(lowPowerNotifyID)
+				if closeErr != nil {
+					logger.Warning(closeErr)
+				} else {
+					lowPowerNotifyID = 0
 				}
 			}
 		}
@@ -635,7 +632,7 @@ func (m *Manager) handleSysPowerChanged() {
 			onBatteryGlobal = onBattery
 			go handleSysPowerBatteryEvent()
 		})
-	}
+	})
 }
 
 func (m *Manager) preRunningHook(needChangeGrub bool, mode system.UpdateType) {
