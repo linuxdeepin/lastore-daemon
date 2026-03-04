@@ -59,6 +59,7 @@ func NewStatusManager(config *config.Config, callback func(newStatus string)) *U
 }
 
 func (m *UpdateModeStatusManager) InitModifyData() {
+	firstBoot := isFirstBoot()
 	m.updateMode, m.checkMode = filterMode(m.updateMode, m.checkMode)
 	err := m.lsConfig.SetUpdateMode(m.updateMode)
 	if err != nil {
@@ -97,20 +98,10 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 		m.currentTriggerBackingUpType = obj.TriggerBackingUpType
 		m.abStatus = obj.ABStatus
 		m.abError = obj.ABError
-		if isFirstBoot() {
-			for key, value := range m.updateModeStatusObj {
-				switch value {
-				case system.IsDownloading, system.DownloadPause, system.DownloadErr:
-					m.updateModeStatusObj[key] = system.NotDownload
-				case system.UpgradeErr, system.Upgrading, system.WaitRunUpgrade, system.CanUpgrade:
-					m.updateModeStatusObj[key] = system.NotDownload
-				case system.Upgraded:
-					m.updateModeStatusObj[key] = system.NoUpdate
-				}
-			}
-			m.currentTriggerBackingUpType = system.AllInstallUpdate
-			m.abStatus = system.NotBackup
-			m.abError = system.NoABError
+		if m.recoverStatusAfterDaemonRestart(firstBoot) {
+			logger.Info("reset transient update status after daemon restart")
+		}
+		if firstBoot {
 			err := m.lsConfig.UpdateLastoreDaemonStatus(config.CanUpgrade, false)
 			if err != nil {
 				logger.Warning(err)
@@ -120,6 +111,64 @@ func (m *UpdateModeStatusManager) InitModifyData() {
 	}
 	m.statusMapMu.Unlock()
 	m.updateModeDownloadSizeMap = make(map[string]float64)
+}
+
+func (m *UpdateModeStatusManager) recoverStatusAfterDaemonRestart(firstBoot bool) bool {
+	changed := false
+	for key, value := range m.updateModeStatusObj {
+		newStatus := recoverUpdateModeStatus(value, firstBoot)
+		if newStatus != value {
+			m.updateModeStatusObj[key] = newStatus
+			changed = true
+		}
+	}
+
+	if firstBoot {
+		if m.currentTriggerBackingUpType != system.AllInstallUpdate {
+			m.currentTriggerBackingUpType = system.AllInstallUpdate
+			changed = true
+		}
+		if m.abStatus != system.NotBackup {
+			m.abStatus = system.NotBackup
+			changed = true
+		}
+		if m.abError != system.NoABError {
+			m.abError = system.NoABError
+			changed = true
+		}
+		return changed
+	}
+
+	// service重启后进行中的备份流程无法继续，需要回到初始备份状态
+	if m.abStatus == system.BackingUp || m.abStatus == system.HasBackedUp {
+		m.currentTriggerBackingUpType = system.AllInstallUpdate
+		m.abStatus = system.NotBackup
+		m.abError = system.NoABError
+		changed = true
+	}
+	return changed
+}
+
+func recoverUpdateModeStatus(status system.UpdateModeStatus, firstBoot bool) system.UpdateModeStatus {
+	if firstBoot {
+		switch status {
+		case system.IsDownloading, system.DownloadPause, system.DownloadErr:
+			return system.NotDownload
+		case system.UpgradeErr, system.Upgrading, system.WaitRunUpgrade, system.CanUpgrade:
+			return system.NotDownload
+		case system.Upgraded:
+			return system.NoUpdate
+		default:
+			return status
+		}
+	}
+
+	switch status {
+	case system.IsDownloading, system.DownloadPause, system.WaitRunUpgrade, system.Upgrading:
+		return system.NotDownload
+	default:
+		return status
+	}
 }
 
 // filterMode 去除 updateMode 和 checkMode 不满足条件的数据
