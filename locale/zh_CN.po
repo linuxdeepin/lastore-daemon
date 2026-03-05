@@ -178,7 +178,7 @@ msgstr "电池电量低于60%，为保障更新成功，请及时接入电源"
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
-msgstr "磁盘空间不足，此次更新失败，请重启进行恢复。"
+msgstr "磁盘空间不足，此次更新失败，请尝试重启，以避免影响系统正常使用"
 
 #: ../src/lastore-daemon/manager_upgrade.go:684
 #: ../src/lastore-daemon/manager_upgrade.go:701
@@ -191,7 +191,7 @@ msgstr "磁盘空间不足，此次更新失败"
 
 #: ../src/lastore-daemon/manager_upgrade.go:700
 msgid "Updates failed. Please reboot to avoid the effect on your system."
-msgstr "此次更新失败，请重启进行恢复"
+msgstr "此次更新失败，请尝试重启，以避免影响系统正常使用"
 
 #: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
