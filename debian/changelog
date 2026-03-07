@@ -1,3 +1,13 @@
+lastore-daemon (6.2.49) unstable; urgency=medium
+
+  * fix: deduplicate low-battery notifications during upgrade retries (#320)
+  * fix: recover transient update and backup states after daemon restart (#321)
+  * fix: refine zh_CN wording for update failure reboot prompts (#322)
+  * fix: use route -n to avoid reverse lookup timeout (#323)
+  * fix: initialize lastore config to clean incremental update cache (#324)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Sat, 07 Mar 2026 15:23:35 +0800
+
 lastore-daemon (6.2.48) unstable; urgency=medium
 
   * fix: deduplicate logind shutdown inhibitors during silent updates (#318)
