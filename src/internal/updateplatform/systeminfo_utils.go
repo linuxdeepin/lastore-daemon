@@ -554,28 +554,34 @@ func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) str
 }
 
 func getDefaultMac() (string, error) {
-	res, err := exec.Command("route").Output()
+	res, err := exec.Command("route", "-n").Output()
 	if err != nil {
 		return "", err
 	}
-	lines := strings.Split(string(res), "\n")
-	var dev string
-	for _, line := range lines {
-		if strings.Contains(line, "default") {
-			devs := strings.Split(line, " ")
-			dev = devs[len(devs)-1]
-			break
-		}
-	}
+	dev := getDefaultRouteIface(string(res))
 	if len(dev) == 0 {
 		return "", nil
 	}
 
-	mac, err := os.ReadFile("/sys/class/net/" + dev + "/address")
+	mac, err := os.ReadFile(filepath.Join("/sys/class/net", dev, "address"))
 	if err != nil {
 		return "", err
 	}
-	return string(mac), nil
+	return strings.TrimSpace(string(mac)), nil
+}
+
+func getDefaultRouteIface(routeOutput string) string {
+	lines := strings.Split(routeOutput, "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 8 {
+			continue
+		}
+		if fields[0] == "0.0.0.0" {
+			return fields[len(fields)-1]
+		}
+	}
+	return ""
 }
 
 func getClientPackageInfo(client string) string {
