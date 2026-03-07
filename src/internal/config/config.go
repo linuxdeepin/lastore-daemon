@@ -27,6 +27,12 @@ type LastoreDaemonStatus uint32
 
 var logger = log.NewLogger("lastore/config")
 
+// DisableConsoleLogging keeps config logs away from stdout for commands that
+// need machine-readable output.
+func DisableConsoleLogging() {
+	logger.RemoveBackendConsole()
+}
+
 const (
 	CanUpgrade    LastoreDaemonStatus = 1 << 0 // 是否可以进行安装更新操作
 	DisableUpdate LastoreDaemonStatus = 1 << 1 // 当前系统是否禁用了更新
