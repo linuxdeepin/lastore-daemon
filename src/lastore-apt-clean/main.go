@@ -14,10 +14,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"syscall"
 	"time"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 
 	"github.com/linuxdeepin/go-lib/log"
@@ -53,7 +55,6 @@ func init() {
 	flag.BoolVar(&options.forceDelete, "force-delete", false, "force delete deb files")
 	flag.BoolVar(&options.printJSON, "print-json", false,
 		"Print information about files that can be safely deleted, in json format")
-	flag.BoolVar(&options.incrementalUpdate, "incremental-update", false, "whether to enable incremental update")
 	_ = os.Setenv("LC_ALL", "C")
 }
 
@@ -71,11 +72,13 @@ func main() {
 	if options.printJSON {
 		// 让 logger 不在标准输出打印其他内容，只打印在系统日志中。
 		logger.RemoveBackendConsole()
+		config.DisableConsoleLogging()
 	}
 	findBins()
 
 	// 如果是增量更新，则调用deepin-immutable-ctl upgrade cleanup命令清理immutable系统的缓存deb包和ostree包分支
-	if options.incrementalUpdate {
+	cfg := config.NewConfig(path.Join("/var/lib/lastore", "config.json"))
+	if cfg.IncrementalUpdate {
 		err := exec.Command("deepin-immutable-ctl", "upgrade", "clean").Run()
 		if err != nil {
 			logger.Debugf("failed to clean upgrade cache: %v", err)
