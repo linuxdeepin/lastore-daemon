@@ -124,13 +124,12 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 					Detail:         msg,
 				}, false)
 
-				procEvent := updateplatform.ProcessEvent{
+				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.CheckEnv,
 					EventStatus:  false,
 					EventContent: msg,
-				}
-				m.updatePlatform.PostProcessEventMessage(procEvent)
+				})
 				m.reportLog(upgradeStatusReport, false, job.Description)
 			}()
 			inhibit(false)

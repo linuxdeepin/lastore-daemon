@@ -137,13 +137,12 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 			UpdateType: mode.JobType(),
 			Detail:     msg,
 		}, true)
-		procEvent := updateplatform.ProcessEvent{
+		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.StartInstall,
 			EventStatus:  true,
 			EventContent: msg,
-		}
-		m.updatePlatform.PostProcessEventMessage(procEvent)
+		})
 		return m.jobManager.MarkStart(upgradeJob.Id)
 	}
 
@@ -205,62 +204,75 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
 
-				procEvent := updateplatform.ProcessEvent{
+				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.StartBackUp,
 					EventStatus:  true,
 					EventContent: "start backup",
-				}
-				m.updatePlatform.PostProcessEventMessage(procEvent)
+				})
 
-				systemErr := dut.CheckSystem(dut.PreBackupCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PreBackupCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PreBackupCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PreBackupCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.HasBackedUp, system.NoABError)
-				procEvent := updateplatform.ProcessEvent{
+				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.BackUpComplete,
 					EventStatus:  true,
 					EventContent: "backup successfully completed",
-				}
-				m.updatePlatform.PostProcessEventMessage(procEvent)
+				})
 				inhibit(false)
 
-				systemErr := dut.CheckSystem(dut.PostBackupCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PostBackupCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PostBackupCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PostBackupCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
 			},
 			string(system.FailedStatus): func() error {
 				m.statusManager.SetABStatus(mode, system.BackupFailed, system.OtherError)
-				procEvent := updateplatform.ProcessEvent{
+				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.BackUpComplete,
 					EventStatus:  false,
 					EventContent: "backup failed",
-				}
-				m.updatePlatform.PostProcessEventMessage(procEvent)
+				})
 				// 备份失败时重置UpdateStatus为CanUpgrade，让用户可以重新操作
 				m.statusManager.SetUpdateStatus(mode, system.CanUpgrade)
 				inhibit(false)
@@ -275,16 +287,24 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 						buildDistUpgradePartlyCommand(mode, false))}
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
-				systemErr := dut.CheckSystem(dut.PostBackupCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PostBackupCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PostBackupCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PostBackupCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
@@ -446,13 +466,12 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 						UpdateType: mode.JobType(),
 						Detail:     msg,
 					}, true)
-					procEvent := updateplatform.ProcessEvent{
+					m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 						TaskID:       1,
 						EventType:    updateplatform.StartInstall,
 						EventStatus:  false,
 						EventContent: msg,
-					}
-					m.updatePlatform.PostProcessEventMessage(procEvent)
+					})
 
 					if unref != nil {
 						unref()
@@ -461,25 +480,33 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				}
 				logger.Info("update UUID:", uuid)
 				m.updatePlatform.CreateJobPostMsgInfo(uuid, job.updateTyp)
-				systemErr := dut.CheckSystem(dut.PreUpgradeCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PreUpgradeCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-						procEvent := updateplatform.ProcessEvent{
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PreUpgradeCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
+
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 							TaskID:       1,
 							EventType:    updateplatform.StartInstall,
 							EventStatus:  false,
 							EventContent: err.Error(),
-						}
-						m.updatePlatform.PostProcessEventMessage(procEvent)
+						})
 					}(systemErr)
 
 					return systemErr
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PreUpgradeCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 				if !system.CheckInstallAddSize(mode) {
 					return &system.JobError{
@@ -499,25 +526,33 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
-				systemErr := dut.CheckSystem(dut.MidUpgradeCheck, nil)
-				if systemErr != nil {
+				checkType := dut.MidUpgradeCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
-
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-						procEvent := updateplatform.ProcessEvent{
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.MidUpgradeCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
+
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 							TaskID:       1,
 							EventType:    updateplatform.StartInstall,
 							EventStatus:  false,
 							EventContent: err.Error(),
-						}
-						m.updatePlatform.PostProcessEventMessage(procEvent)
+						})
 					}(systemErr)
+
 					return systemErr
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.MidUpgradeCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
 					if err := m.immutableManager.osTreeRefresh(); err != nil {
@@ -750,13 +785,12 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 				UpdateType: mode.JobType(),
 				Detail:     detailMsg,
 			}, true)
-			procEvent := updateplatform.ProcessEvent{
+			m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 				TaskID:       1,
 				EventType:    updateplatform.StartInstall,
 				EventStatus:  false,
 				EventContent: detailMsg,
-			}
-			m.updatePlatform.PostProcessEventMessage(procEvent)
+			})
 		}
 	}()
 	m.statusManager.SetUpdateStatus(mode, system.UpgradeErr)

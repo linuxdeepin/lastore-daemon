@@ -162,13 +162,12 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 				Type:   "error",
 				Detail: msg,
 			}, true)
-			procEvent := updateplatform.ProcessEvent{
+			m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 				TaskID:       1,
 				EventType:    updateplatform.GetUpdateEvent,
 				EventStatus:  false,
 				EventContent: msg,
-			}
-			m.updatePlatform.PostProcessEventMessage(procEvent)
+			})
 
 			err = m.delRebootCheckOption(all)
 			if err != nil {
