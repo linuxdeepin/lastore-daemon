@@ -170,13 +170,16 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				systemErr := dut.CheckSystem(dut.PreDownloadCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
+
 				}
 
 				return nil
@@ -238,7 +241,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						UpdateType:     mode.JobType(),
 						JobDescription: job.Description,
 						Detail:         msg,
-					}, true)
+					})
 					procEvent := updateplatform.ProcessEvent{
 						TaskID:       1,
 						EventType:    updateplatform.StartDownload,
@@ -251,25 +254,21 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				systemErr := dut.CheckSystem(dut.PostDownloadCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
 				msg := fmt.Sprintf("download %v package success", j.updateTyp.JobType())
-				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-					Type:           "info",
-					UpdateType:     mode.JobType(),
-					JobDescription: j.Description,
-					Detail:         msg,
-				}, false) // 上报下载成功状态
 				procEvent := updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.DownloadComplete,
@@ -316,13 +315,15 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					systemErr := dut.CheckSystem(dut.PostDownloadCheck, nil)
 					if systemErr != nil {
 						logger.Warning(systemErr)
-						go func(err *system.JobError) {
-							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-								Type:           "error",
-								JobDescription: err.ErrType.String(),
-								Detail:         err.ErrDetail,
-							}, true)
-						}(systemErr)
+						if m.config.IntranetUpdate {
+							go func(err *system.JobError) {
+								m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+									Type:           "error",
+									JobDescription: err.ErrType.String(),
+									Detail:         err.ErrDetail,
+								})
+							}(systemErr)
+						}
 					}
 
 					if m.updatePlatform.UpdateNowForce {
@@ -343,7 +344,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					UpdateType:     j.updateTyp.JobType(),
 					JobDescription: j.Description,
 					Detail:         fmt.Sprintf("download %v package success", j.updateTyp.JobType()),
-				}, false)
+				})
 				return nil
 			},
 			string(system.EndStatus): func() error {

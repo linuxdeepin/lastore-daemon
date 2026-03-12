@@ -1488,16 +1488,15 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	if err != nil {
 		logger.Warningf("get post process event msg response failed:%v", err)
 	}
-	return
 }
 
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
-func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUpload bool) {
+func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage) {
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		return
 	}
 
-	if !m.config.UpdateProcessUpload && m.config.IntranetUpdate && !forceUpload {
+	if !m.config.UpdateProcessUpload {
 		return
 	}
 

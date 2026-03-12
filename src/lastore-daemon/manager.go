@@ -161,7 +161,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 			m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 				Type:   "error",
 				Detail: msg,
-			}, true)
+			})
 			procEvent := updateplatform.ProcessEvent{
 				TaskID:       1,
 				EventType:    updateplatform.GetUpdateEvent,

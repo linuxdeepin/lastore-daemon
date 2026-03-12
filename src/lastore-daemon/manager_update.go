@@ -258,7 +258,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 						Type:   "info",
 						Detail: msgContent,
-					}, false)
+					})
 
 					m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 						TaskID:       1,
@@ -273,13 +273,15 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				systemErr := dut.CheckSystem(dut.PostUpdateCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				return nil
@@ -310,7 +312,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						Type:           "error",
 						JobDescription: job.Description,
 						Detail:         msg,
-					}, false)
+					})
 					procEvent := updateplatform.ProcessEvent{
 						TaskID:       1,
 						EventType:    updateplatform.GetUpdateEvent,
@@ -323,13 +325,15 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				systemErr := dut.CheckSystem(dut.PostUpdateCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				return nil
@@ -390,13 +394,15 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				systemErr := dut.CheckSystem(dut.PreUpdateCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				// 从更新平台获取数据并处理完成后,进度更新到10%
@@ -641,7 +647,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 					Type:   "error",
 					Detail: msg,
-				}, false)
+				})
 				procEvent := updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.GetUpdateEvent,
@@ -668,7 +674,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 							Type:   "error",
 							Detail: msg,
-						}, false)
+						})
 						procEvent := updateplatform.ProcessEvent{
 							TaskID:       1,
 							EventType:    updateplatform.GetUpdateEvent,

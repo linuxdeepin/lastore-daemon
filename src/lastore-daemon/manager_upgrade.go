@@ -136,7 +136,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 			Type:       "info",
 			UpdateType: mode.JobType(),
 			Detail:     msg,
-		}, true)
+		})
 		procEvent := updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.StartInstall,
@@ -216,13 +216,15 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				systemErr := dut.CheckSystem(dut.PreBackupCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				return nil
@@ -241,13 +243,15 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				systemErr := dut.CheckSystem(dut.PostBackupCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				return nil
@@ -278,13 +282,15 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				systemErr := dut.CheckSystem(dut.PostBackupCheck, nil)
 				if systemErr != nil {
 					logger.Warning(systemErr)
-					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
-					}(systemErr)
+					if m.config.IntranetUpdate {
+						go func(err *system.JobError) {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}(systemErr)
+					}
 				}
 
 				return nil
@@ -445,7 +451,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 						Type:       "error",
 						UpdateType: mode.JobType(),
 						Detail:     msg,
-					}, true)
+					})
 					procEvent := updateplatform.ProcessEvent{
 						TaskID:       1,
 						EventType:    updateplatform.StartInstall,
@@ -465,11 +471,13 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				if systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						if m.config.IntranetUpdate {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}
 						procEvent := updateplatform.ProcessEvent{
 							TaskID:       1,
 							EventType:    updateplatform.StartInstall,
@@ -504,11 +512,13 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 					logger.Warning(systemErr)
 
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						if m.config.IntranetUpdate {
+							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+								Type:           "error",
+								JobDescription: err.ErrType.String(),
+								Detail:         err.ErrDetail,
+							})
+						}
 						procEvent := updateplatform.ProcessEvent{
 							TaskID:       1,
 							EventType:    updateplatform.StartInstall,
@@ -749,7 +759,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 				Type:       "error",
 				UpdateType: mode.JobType(),
 				Detail:     detailMsg,
-			}, true)
+			})
 			procEvent := updateplatform.ProcessEvent{
 				TaskID:       1,
 				EventType:    updateplatform.StartInstall,
@@ -784,7 +794,7 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
 		Type:   "info",
 		Detail: fmt.Sprintf("%v install package success, need reboot and check", mode.JobType()),
-	}, false)
+	})
 	return nil
 }
 
