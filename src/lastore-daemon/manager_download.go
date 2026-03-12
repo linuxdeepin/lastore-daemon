@@ -123,13 +123,12 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	if m.config.IntranetUpdate {
 		msg := gettext.Tr("New version available! The download of the update package will begin shortly")
 		go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
-		procEvent := updateplatform.ProcessEvent{
+		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.StartDownload,
 			EventStatus:  true,
 			EventContent: msg,
-		}
-		m.updatePlatform.PostProcessEventMessage(procEvent)
+		})
 	}
 	job.initiator = initiator
 	currentJob := job
@@ -167,16 +166,24 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		}
 		j.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
-				systemErr := dut.CheckSystem(dut.PreDownloadCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PreDownloadCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PreDownloadCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PreDownloadCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
@@ -239,44 +246,44 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						JobDescription: job.Description,
 						Detail:         msg,
 					}, true)
-					procEvent := updateplatform.ProcessEvent{
+					m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 						TaskID:       1,
 						EventType:    updateplatform.StartDownload,
 						EventStatus:  false,
 						EventContent: msg,
-					}
-					m.updatePlatform.PostProcessEventMessage(procEvent)
+					})
 				}()
 
-				systemErr := dut.CheckSystem(dut.PostDownloadCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PostDownloadCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PostDownloadCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PostDownloadCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
 				msg := fmt.Sprintf("download %v package success", j.updateTyp.JobType())
-				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-					Type:           "info",
-					UpdateType:     mode.JobType(),
-					JobDescription: j.Description,
-					Detail:         msg,
-				}, false) // 上报下载成功状态
-				procEvent := updateplatform.ProcessEvent{
+				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.DownloadComplete,
 					EventStatus:  true,
 					EventContent: msg,
-				}
-				m.updatePlatform.PostProcessEventMessage(procEvent) // 上报下载成功状态
+				}) // 上报下载成功状态
 				logger.Infof("enter download job succeed callback, UpdateNowForce: %v", m.updatePlatform.UpdateNowForce)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.CanUpgrade)
 				if j.next == nil {
@@ -313,16 +320,24 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						m.reportLog(downloadStatusReport, true, "")
 					}()
 
-					systemErr := dut.CheckSystem(dut.PostDownloadCheck, nil)
-					if systemErr != nil {
+					checkType := dut.PostDownloadCheck
+					if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 						logger.Warning(systemErr)
 						go func(err *system.JobError) {
-							m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-								Type:           "error",
-								JobDescription: err.ErrType.String(),
-								Detail:         err.ErrDetail,
-							}, true)
+							m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+								TaskID:       1,
+								EventType:    updateplatform.PostDownloadCheck,
+								EventStatus:  false,
+								EventContent: err.ErrDetail,
+							})
 						}(systemErr)
+					} else {
+						go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PostDownloadCheck,
+							EventStatus:  true,
+							EventContent: fmt.Sprintf("%v success", checkType),
+						})
 					}
 
 					if m.updatePlatform.UpdateNowForce {

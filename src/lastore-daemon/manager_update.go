@@ -54,36 +54,33 @@ func prepareUpdateSource() {
 func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 	supportArchs, err := system.SystemArchitectures()
 	if err != nil {
-		procEvent := updateplatform.ProcessEvent{
+		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.CheckEnv,
 			EventStatus:  false,
 			EventContent: err.Error(),
-		}
-		m.updatePlatform.PostProcessEventMessage(procEvent)
+		})
 		return false
 	}
 	installedMap, err := loadPkgStatusVersion()
 	if err != nil {
-		procEvent := updateplatform.ProcessEvent{
+		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.CheckEnv,
 			EventStatus:  false,
 			EventContent: err.Error(),
-		}
-		m.updatePlatform.PostProcessEventMessage(procEvent)
+		})
 		return false
 	}
 
 	cmd := exec.Command("dpkg", "--audit")
 	if err := cmd.Run(); err != nil {
-		procEvent := updateplatform.ProcessEvent{
+		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.CheckEnv,
 			EventStatus:  false,
 			EventContent: err.Error(),
-		}
-		m.updatePlatform.PostProcessEventMessage(procEvent)
+		})
 		return false
 	}
 
@@ -116,13 +113,12 @@ func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 	if len(errMsg) > 0 {
 		status = false
 	}
-	procEvent := updateplatform.ProcessEvent{
+	m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 		TaskID:       1,
 		EventType:    updateplatform.CheckEnv,
 		EventStatus:  status,
 		EventContent: errMsg,
-	}
-	m.updatePlatform.PostProcessEventMessage(procEvent)
+	})
 	return status
 }
 
@@ -272,16 +268,24 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updatePlatform.SaveCache(m.config)
 				job.setPropProgress(1.0)
 
-				systemErr := dut.CheckSystem(dut.PostUpdateCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PostUpdateCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PostUpdateCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PostUpdateCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
@@ -313,25 +317,32 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						JobDescription: job.Description,
 						Detail:         msg,
 					}, false)
-					procEvent := updateplatform.ProcessEvent{
+					m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 						TaskID:       1,
 						EventType:    updateplatform.GetUpdateEvent,
 						EventStatus:  false,
 						EventContent: msg,
-					}
-					m.updatePlatform.PostProcessEventMessage(procEvent)
+					})
 				}()
 
-				systemErr := dut.CheckSystem(dut.PostUpdateCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PostUpdateCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PostUpdateCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PostUpdateCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				return nil
@@ -389,16 +400,24 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updatePlatform.PrepareCheckScripts()
 				m.updater.setPropUpdateTarget(m.updatePlatform.GetUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
 
-				systemErr := dut.CheckSystem(dut.PreUpdateCheck, nil)
-				if systemErr != nil {
+				checkType := dut.PreUpdateCheck
+				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
-						m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-							Type:           "error",
-							JobDescription: err.ErrType.String(),
-							Detail:         err.ErrDetail,
-						}, true)
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+							TaskID:       1,
+							EventType:    updateplatform.PreUpdateCheck,
+							EventStatus:  false,
+							EventContent: err.ErrDetail,
+						})
 					}(systemErr)
+				} else {
+					go m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+						TaskID:       1,
+						EventType:    updateplatform.PreUpdateCheck,
+						EventStatus:  true,
+						EventContent: fmt.Sprintf("%v success", checkType),
+					})
 				}
 
 				// 从更新平台获取数据并处理完成后,进度更新到10%
@@ -644,13 +663,12 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 					Type:   "error",
 					Detail: msg,
 				}, false)
-				procEvent := updateplatform.ProcessEvent{
+				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.GetUpdateEvent,
 					EventStatus:  false,
 					EventContent: msg,
-				}
-				m.updatePlatform.PostProcessEventMessage(procEvent)
+				})
 			}()
 			logger.Warning(e)
 		}
@@ -671,13 +689,12 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 							Type:   "error",
 							Detail: msg,
 						}, false)
-						procEvent := updateplatform.ProcessEvent{
+						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 							TaskID:       1,
 							EventType:    updateplatform.GetUpdateEvent,
 							EventStatus:  false,
 							EventContent: msg,
-						}
-						m.updatePlatform.PostProcessEventMessage(procEvent)
+						})
 					}()
 					logger.Warning(e)
 				}

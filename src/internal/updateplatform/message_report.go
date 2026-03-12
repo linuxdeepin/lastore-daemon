@@ -45,6 +45,7 @@ type ProcessEvent struct {
 	EventType    int    `json:"eventType"`
 	EventStatus  bool   `json:"eventStatus"`
 	EventContent string `json:"eventContent"`
+	ExecAct      int64  `json:"execAct"`
 }
 
 const (
@@ -55,6 +56,16 @@ const (
 	StartBackUp      int = 5
 	BackUpComplete   int = 6
 	StartInstall     int = 7
+
+	PreUpdateCheck    int = 101
+	PostUpdateCheck   int = 102
+	PreDownloadCheck  int = 103
+	PostDownloadCheck int = 104
+	PreBackupCheck    int = 105
+	PostBackupCheck   int = 106
+	PreUpgradeCheck   int = 107
+	MidUpgradeCheck   int = 108
+	PostUpgradeCheck  int = 109
 )
 
 type ShellCheck struct {
@@ -1450,6 +1461,9 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	}
 	logger.Debug("post process event msg:", body)
 	body.TaskID = m.taskID
+	if body.ExecAct == 0 {
+		body.ExecAct = time.Now().Unix()
+	}
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		logger.Warning("platform is disabled")
 		return
@@ -1493,7 +1507,6 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	if err != nil {
 		logger.Warningf("get post process event msg response failed:%v", err)
 	}
-	return
 }
 
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
