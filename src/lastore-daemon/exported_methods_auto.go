@@ -147,6 +147,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"enable"},
 		},
 		{
+			Name:   "SetShutdownForceUpdate",
+			Fn:     v.SetShutdownForceUpdate,
+			InArgs: []string{"force"},
+		},
+		{
 			Name:   "SetUpdateSources",
 			Fn:     v.SetUpdateSources,
 			InArgs: []string{"updateType", "repoType", "repoConfig", "isReset"},
