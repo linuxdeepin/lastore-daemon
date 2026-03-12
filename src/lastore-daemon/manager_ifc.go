@@ -340,6 +340,21 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	return nil
 }
 
+func (m *Manager) SetShutdownForceUpdate(sender dbus.Sender, force bool) *dbus.Error {
+	if m.config == nil || !m.config.IntranetUpdate {
+		return nil
+	}
+
+	m.service.DelayAutoQuit()
+	err := checkInvokePermission(m.service, sender)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+
+	m.statusManager.SetFrontForceUpdate(force)
+	return nil
+}
+
 func (m *Manager) StartJob(jobId string) *dbus.Error {
 	m.service.DelayAutoQuit()
 	m.do.Lock()
