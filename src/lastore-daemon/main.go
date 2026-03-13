@@ -76,6 +76,8 @@ func main() {
 	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
 	logger.Info("intranet update:", config.IntranetUpdate)
 	system.IntranetUpdate = config.IntranetUpdate
+	logger.Info("incremental update:", config.IncrementalUpdate)
+	system.IncrementalUpdate = config.IncrementalUpdate
 	if config.IntranetUpdate {
 		go func() {
 			out, err := exec.Command("/usr/bin/lastore-tools", "gatherinfo", "-type=post").CombinedOutput()

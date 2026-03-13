@@ -9,10 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 type UpdateModeStatusManager struct {
@@ -481,25 +480,11 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 					changed = true
 				}
 			} else {
-				sourceList, ok := system.GetCategorySourceMap()[typ]
-				sourceArgs := ""
-				if ok && sourceList != "" {
-					if utils.IsDir(sourceList) {
-						sourceArgs = "-o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::SourceParts=" + sourceList
-					} else {
-						sourceArgs = "-o Dir::Etc::sourcelist=" + sourceList + " -o Dir::Etc::SourceParts=/dev/null"
-					}
-				}
-				if m.lsConfig.IncrementalUpdate && needDownloadSize > 0 && apt.IsIncrementalUpdateCached(sourceArgs) {
-					needDownloadSize = 0.0
-				}
-
 				m.updateModeDownloadSizeMapLock.Lock()
 				m.updateModeDownloadSizeMap[currentMode.JobType()] = needDownloadSize
 				m.updateModeDownloadSizeMapLock.Unlock()
-				logger.Infof("currentMode: %v, needDownloadSize: %v,"+
-					" allPackageSize: %v, oldStatus: %v",
-					currentMode.JobType(), needDownloadSize, allPackageSize, oldStatus)
+				logger.Infof("currentMode: %v, needDownloadSize: %s, allPackageSize: %s, oldStatus: %v",
+					currentMode.JobType(), utils.FormatSize(needDownloadSize), utils.FormatSize(allPackageSize), oldStatus)
 				// allPackageSize == 0 有两种情况：1.无需更新;2.更新完成需要重启;
 				if allPackageSize == 0 {
 					if oldStatus != system.Upgraded {

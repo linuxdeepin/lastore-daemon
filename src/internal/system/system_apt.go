@@ -10,6 +10,7 @@ package system
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -200,8 +201,101 @@ func QueryPackageDownloadSize(updateType UpdateType, packages ...string) (float6
 	return *downloadSize, *allPackageSize, nil
 }
 
-// QuerySourceDownloadSize 根据更新类型(仓库),获取需要的下载量,return arg0:需要下载的量;arg1:所有包的大小;arg2:error
+// queryDownloadSizeViaApt queries the download size information by running apt-get dist-upgrade
+// with the given source path. It parses the command output to extract package size data.
+// Returns: bytes needed to download, total size of all packages, error.
+func queryDownloadSizeViaApt(path string, updateType UpdateType, pkgList []string) (float64, float64, error) {
+	var cmd *exec.Cmd
+	if utils2.IsDir(path) {
+		// #nosec G204
+		cmd = exec.Command("/usr/bin/apt-get",
+			append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+				"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
+				"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}, pkgList...)...)
+	} else {
+		// #nosec G204
+		cmd = exec.Command("/usr/bin/apt-get",
+			append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
+				"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
+				"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}, pkgList...)...)
+	}
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
+	logger.Infof("%v download size cmd: %v", updateType.JobType(), cmd.String())
+	lines, err := utils.FilterExecOutput(cmd, time.Second*120, func(line string) bool {
+		_, _, _err := parsePackageSize(line)
+		return _err == nil
+	})
+	if err != nil && len(lines) == 0 {
+		return 0, 0, fmt.Errorf("run:%v failed-->%v", cmd.Args, err)
+	}
+	if len(lines) != 0 {
+		needDownloadSize, allSize, err := parsePackageSize(lines[0])
+		if err != nil {
+			logger.Warning(err)
+			return 0, 0, err
+		}
+		return needDownloadSize, allSize, nil
+	}
+	return 0, 0, nil
+}
+
+// immutableUpgradeCheckOutput represents the JSON output of deepin-immutable-ctl upgrade check -j.
+type immutableUpgradeCheckOutput struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		TotalSize            uint64 `json:"totalSize"`
+		CachedOstreePkgCount int    `json:"cachedOstreePkgCount"`
+		NeedDownload         struct {
+			Size uint64 `json:"size"`
+		} `json:"needDownload"`
+	} `json:"data"`
+}
+
+// queryDownloadSizeForIncrementalUpdate queries the download size information for incremental updates
+// by invoking deepin-immutable-ctl upgrade check. The source path is passed via the
+// DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION environment variable.
+// Returns: bytes needed to download, total size of all packages, error.
+func queryDownloadSizeForIncrementalUpdate(path string, updateType UpdateType, pkgList []string) (float64, float64, error) {
+	var sourceArgs string
+	cmd := exec.Command(DeepinImmutableCtlPath, "upgrade", "check", "-j")
+	if path != "" {
+		if utils2.IsDir(path) {
+			sourceArgs = "-o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::SourceParts=" + path
+		} else {
+			sourceArgs = "-o Dir::Etc::sourcelist=" + path + " -o Dir::Etc::SourceParts=/dev/null"
+		}
+	}
+	cmd.Env = append(os.Environ(), "LC_ALL=C",
+		"DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION="+sourceArgs)
+	logger.Infof("%v download size cmd: %v", updateType.JobType(), cmd.String())
+	out, err := cmd.Output()
+	logger.Debugf("immutable upgrade check output: %s", out)
+	if err != nil {
+		return 0, 0, fmt.Errorf("run %v failed: %v", cmd.Args, err)
+	}
+	var result immutableUpgradeCheckOutput
+	if err := json.Unmarshal(out, &result); err != nil {
+		return 0, 0, fmt.Errorf("parse immutable upgrade check output failed: %v", err)
+	}
+	logger.Debugf("immutable upgrade check result: %+v", result)
+	if result.Code != 0 {
+		return 0, 0, fmt.Errorf("immutable upgrade check returned code %d: %s", result.Code, result.Message)
+	}
+	needDownload := result.Data.NeedDownload.Size
+	totalSize := result.Data.TotalSize
+	if needDownload == 0 && totalSize == 0 && result.Data.CachedOstreePkgCount > 0 {
+		// TODO 此时如果返回 0, 0, nil 会导致控制中心界面卡住。
+		return 0, 1, nil
+	}
+	return float64(needDownload), float64(totalSize), nil
+}
+
+// QuerySourceDownloadSize returns the download size information for the given update type.
+// It selects the appropriate backend (apt or immutable-ctl) based on the IncrementalUpdate flag.
+// Returns: bytes needed to download, total size of all packages, error.
 func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, float64, error) {
+	logger.Debugf("QuerySourceDownloadSize updateType: %v, pkgList: %v", updateType, pkgList)
 	startTime := time.Now()
 	downloadSize := new(float64)
 	allPackageSize := new(float64)
@@ -211,39 +305,16 @@ func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, 
 				unref()
 			}
 		}()
-		var cmd *exec.Cmd
-		if utils2.IsDir(path) {
-			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
-				append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
-					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
-					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}, pkgList...)...)
-		} else {
-			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
-				append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
-					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
-					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}, pkgList...)...)
+		queryFn := queryDownloadSizeViaApt
+		if IncrementalUpdate {
+			queryFn = queryDownloadSizeForIncrementalUpdate
 		}
-		cmd.Env = append(os.Environ(), "LC_ALL=C")
-		logger.Infof("%v download size cmd: %v", updateType.JobType(), cmd.String())
-		lines, err := utils.FilterExecOutput(cmd, time.Second*120, func(line string) bool {
-			_, _, _err := parsePackageSize(line)
-			return _err == nil
-		})
-		if err != nil && len(lines) == 0 {
-			return fmt.Errorf("run:%v failed-->%v", cmd.Args, err)
+		needDownloadSize, allSize, err := queryFn(path, updateType, pkgList)
+		if err != nil {
+			return err
 		}
-
-		if len(lines) != 0 {
-			needDownloadSize, allSize, err := parsePackageSize(lines[0])
-			if err != nil {
-				logger.Warning(err)
-				return err
-			}
-			*downloadSize = needDownloadSize
-			*allPackageSize = allSize
-		}
+		*downloadSize = needDownloadSize
+		*allPackageSize = allSize
 		return nil
 	})
 	if err != nil {
@@ -251,6 +322,8 @@ func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, 
 		return SizeDownloaded, SizeDownloaded, err
 	}
 	logger.Debug("end QuerySourceDownloadSize duration:", time.Now().Sub(startTime))
+	logger.Debugf("QuerySourceDownloadSize result, download size: %s, all package size: %s",
+		utils.FormatSize(*downloadSize), utils.FormatSize(*allPackageSize))
 	return *downloadSize, *allPackageSize, nil
 }
 
@@ -329,7 +402,7 @@ func QuerySourceAddSize(updateType UpdateType) (float64, error) {
 		logger.Warning(err)
 		return SizeUnknown, err
 	}
-	logger.Debug("end QuerySourceDownloadSize duration:", time.Now().Sub(startTime))
+	logger.Debug("end QuerySourceAddSize duration:", time.Now().Sub(startTime))
 	return *addSize, nil
 }
 

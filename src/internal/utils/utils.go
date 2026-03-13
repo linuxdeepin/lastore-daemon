@@ -179,3 +179,25 @@ func doUnsetEnvC(envName string) {
 	defer C.free(unsafe.Pointer(cname))
 	C.unsetenv(cname)
 }
+
+// FormatSize formats bytes to human readable format (e.g., 1.5 MiB, 2.3 GiB)
+// Uses binary units (1 KiB = 1024 B)
+func FormatSize(bytes float64) string {
+	if bytes < 0 {
+		return "unknown"
+	}
+
+	units := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"}
+	unitIndex := 0
+	size := bytes
+
+	for size >= 1024 && unitIndex < len(units)-1 {
+		size /= 1024
+		unitIndex++
+	}
+
+	if unitIndex == 0 {
+		return fmt.Sprintf("%.0f %s", size, units[unitIndex])
+	}
+	return fmt.Sprintf("%.2f %s", size, units[unitIndex])
+}
