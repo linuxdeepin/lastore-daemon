@@ -13,6 +13,7 @@ import (
 const VarLibDir = "/var/lib/lastore"
 
 var IntranetUpdate bool
+var IncrementalUpdate bool
 
 type Status string
 
