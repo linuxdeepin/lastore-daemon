@@ -1,3 +1,11 @@
+lastore-daemon (6.2.50) unstable; urgency=medium
+
+  * feat: support lastore-daemon debug mode (#326)
+  * feat(lastore-daemon): add SetShutdownForceUpdate D-Bus method for intranet shutdown control (#327)
+  * revert: recover transient update and backup states after daemon restart (#328)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Sat, 14 Mar 2026 16:43:09 +0800
+
 lastore-daemon (6.2.49) unstable; urgency=medium
 
   * fix: deduplicate low-battery notifications during upgrade retries (#320)
