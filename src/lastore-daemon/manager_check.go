@@ -117,13 +117,14 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 				defer m.inhibitAutoQuitCountSub()
 
 				msg := fmt.Sprintf("%v postcheck error: %v", checkOrder.JobType(), job.Description)
-				m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
-					Type:           "error",
-					UpdateType:     checkOrder.JobType(),
-					JobDescription: job.Description,
-					Detail:         msg,
-				}, false)
-
+				if m.config.IntranetUpdate {
+					m.updatePlatform.PostStatusMessage(updateplatform.StatusMessage{
+						Type:           "error",
+						UpdateType:     checkOrder.JobType(),
+						JobDescription: job.Description,
+						Detail:         msg,
+					})
+				}
 				procEvent := updateplatform.ProcessEvent{
 					TaskID:       1,
 					EventType:    updateplatform.CheckEnv,
