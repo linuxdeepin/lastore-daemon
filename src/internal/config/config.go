@@ -968,7 +968,14 @@ func (c *Config) SetCheckPolicyInterval(interval int) error {
 
 func (c *Config) SetStartCheckRange(checkRange []int) error {
 	c.StartCheckRange = checkRange
-	return c.save(dSettingsKeyStartCheckRange, checkRange)
+
+	// TODO: remove this after bug of dde-dconfig fixed
+	variants := make([]dbus.Variant, 0, len(checkRange))
+	for _, item := range checkRange {
+		variants = append(variants, dbus.MakeVariant(item))
+	}
+
+	return c.save(dSettingsKeyStartCheckRange, variants)
 }
 
 const (
