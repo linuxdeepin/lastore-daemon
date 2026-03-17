@@ -1236,6 +1236,11 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 	var repos []string
 	for _, repo := range m.repoInfos {
+
+		if m.config.UpgradeDeliveryEnabled {
+			repo.Source = strings.ReplaceAll(repo.Source, "https://", "delivery://")
+			repo.Uri = strings.ReplaceAll(repo.Uri, "https://", "delivery://")
+		}
 		if strings.HasPrefix(repo.Source, "deb ") {
 			repos = append(repos, repo.Source)
 		} else {

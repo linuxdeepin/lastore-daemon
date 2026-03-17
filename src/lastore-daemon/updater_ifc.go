@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/linuxdeepin/dde-api/polkit"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 )
 
@@ -161,8 +162,35 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) SetP2PUpdateEnable(enable bool) *dbus.Error {
-	err := u.dealSetP2PUpdateEnable(enable)
+func (u *Updater) SetP2PUpdateEnable(sender dbus.Sender, enable bool) *dbus.Error {
+	err := polkit.CheckAuth(polkitActionChangeUpgradeDelivery, string(sender), nil)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	err = u.config.SetUpgradeDeliveryEnabled(enable)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	u.setPropP2PUpdateEnable(enable)
+	return nil
+}
+
+func (u *Updater) CleanTransmissionFiles(sender dbus.Sender) *dbus.Error {
+	err := polkit.CheckAuth(polkitActionChangeUpgradeDelivery, string(sender), nil)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	sysBus, err := dbus.SystemBus()
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	object := sysBus.Object("org.deepin.upgradedelivery", "/org/deepin/upgradedelivery")
+	err = object.Call("org.deepin.upgradedelivery.Clear", 0).Store()
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)

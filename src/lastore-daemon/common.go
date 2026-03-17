@@ -36,7 +36,7 @@ import (
 	"github.com/linuxdeepin/go-lib/strv"
 )
 
-var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file|p2p)://[^ ]+)`)
+var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file|p2p|delivery)://[^ ]+)`)
 
 const lastoreGatherInfo = "lastoreGatherInfo"
 
@@ -597,6 +597,7 @@ func checkSenderNsMntValid(pid uint32) bool {
 }
 
 const polkitActionChangeOwnData = "org.deepin.dde.accounts.user-administration"
+const polkitActionChangeUpgradeDelivery = "com.deepin.lastore.doUpgradeDelivery"
 
 func checkInvokePermission(service *dbusutil.Service, sender dbus.Sender) error {
 	uid, err := service.GetConnUID(string(sender))

@@ -157,8 +157,8 @@ func (v *Updater) emitPropChangedUpdateTarget(value string) error {
 }
 
 func (v *Updater) setPropP2PUpdateEnable(value bool) (changed bool) {
-	if v.p2PUpdateEnable != value {
-		v.p2PUpdateEnable = value
+	if v.P2PUpdateEnable != value {
+		v.P2PUpdateEnable = value
 		v.emitPropChangedP2PUpdateEnable(value)
 		return true
 	}
@@ -166,12 +166,12 @@ func (v *Updater) setPropP2PUpdateEnable(value bool) (changed bool) {
 }
 
 func (v *Updater) emitPropChangedP2PUpdateEnable(value bool) error {
-	return v.service.EmitPropertyChanged(v, "p2PUpdateEnable", value)
+	return v.service.EmitPropertyChanged(v, "P2PUpdateEnable", value)
 }
 
 func (v *Updater) setPropP2PUpdateSupport(value bool) (changed bool) {
-	if v.p2PUpdateSupport != value {
-		v.p2PUpdateSupport = value
+	if v.P2PUpdateSupport != value {
+		v.P2PUpdateSupport = value
 		v.emitPropChangedP2PUpdateSupport(value)
 		return true
 	}
@@ -179,7 +179,7 @@ func (v *Updater) setPropP2PUpdateSupport(value bool) (changed bool) {
 }
 
 func (v *Updater) emitPropChangedP2PUpdateSupport(value bool) error {
-	return v.service.EmitPropertyChanged(v, "p2PUpdateSupport", value)
+	return v.service.EmitPropertyChanged(v, "P2PUpdateSupport", value)
 }
 
 func (v *Job) setPropId(value string) (changed bool) {
@@ -415,6 +415,10 @@ func (v *Manager) setPropHardwareId(value string) (changed bool) {
 		return true
 	}
 	return false
+}
+
+func (v *Manager) emitPropChangedUpgradeDeliveryEnabled(enable bool) error {
+	return v.service.EmitPropertyChanged(v, "UpgradeDeliveryEnabled", enable)
 }
 
 func (v *Manager) emitPropChangedHardwareId(value string) error {
