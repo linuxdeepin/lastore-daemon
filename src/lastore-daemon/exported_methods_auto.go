@@ -216,6 +216,10 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"enable"},
 		},
 		{
+			Name: "CleanTransmissionFiles",
+			Fn:   v.CleanTransmissionFiles,
+		},
+		{
 			Name:   "SetUpdateNotify",
 			Fn:     v.SetUpdateNotify,
 			InArgs: []string{"enable"},

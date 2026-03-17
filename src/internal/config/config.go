@@ -107,6 +107,7 @@ type Config struct {
 	EnableVersionCheck     bool
 	UpdateProcessUpload    bool
 	PlatformRepoComponents string // 更新平台仓库组件
+	UpgradeDeliveryEnabled bool   // 传递优化服务是否开机可用
 
 	ClassifiedUpdatablePackages map[string][]string
 	OnlineCache                 string
@@ -200,6 +201,7 @@ const (
 	dSettingsKeyUpdateProcessUpload                  = "update-process-upload"
 	dSettingsKeyEnableCoreList                       = "enable-core-list"
 	dSettingsKeyClientPackageName                    = "client-package-name"
+	dSettingsKeyUpgradeDeliveryEnabled               = "upgrade-delivery-enabled"
 	dSettingsKeySystemCustomSource                   = "system-custom-source"
 	dSettingsKeySecurityCustomSource                 = "security-custom-source"
 	dSettingsKeySystemRepoType                       = "system-repo-type"
@@ -607,6 +609,26 @@ func getConfigFromDSettings() *Config {
 		c.ClientPackageName = v.Value().(string)
 	}
 
+	updateUpgradeDeliveryEnabled := func() {
+		v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpgradeDeliveryEnabled)
+		if err != nil {
+			logger.Warning(err)
+			c.UpgradeDeliveryEnabled = false
+		} else {
+			c.UpgradeDeliveryEnabled = v.Value().(bool)
+		}
+	}
+	updateUpgradeDeliveryEnabled()
+	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
+		switch key {
+		case dSettingsKeyUpgradeDeliveryEnabled:
+			updateUpgradeDeliveryEnabled()
+		}
+	})
+	if err != nil {
+		logger.Warning(err)
+	}
+
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemCustomSource)
 	if err != nil {
 		logger.Warning(err)
@@ -927,6 +949,11 @@ func (c *Config) SetSecurityCustomSource(sources []string) error {
 func (c *Config) SetSystemRepoType(typ RepoType) error {
 	c.SystemRepoType = typ
 	return c.save(dSettingsKeySystemRepoType, typ)
+}
+
+func (c *Config) SetUpgradeDeliveryEnabled(enable bool) error {
+	c.UpgradeDeliveryEnabled = enable
+	return c.save(dSettingsKeyUpgradeDeliveryEnabled, enable)
 }
 
 func (c *Config) SetSecurityRepoType(typ RepoType) error {

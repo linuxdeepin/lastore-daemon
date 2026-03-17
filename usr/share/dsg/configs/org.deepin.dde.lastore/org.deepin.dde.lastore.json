@@ -509,6 +509,19 @@
       "permissions": "readonly",
       "visibility": "private"
     },
+    "upgrade-delivery-enabled": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "UpgradeDeliveryEnabled",
+      "description": "upgrade delivery enabled",
+      "name[zh_CN]": "传递优化服务开机是否可用",
+      "description[zh_CN]": "传递优化服务开机是否可用",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
     "system-custom-source": {
       "value": [],
       "serial": 0,

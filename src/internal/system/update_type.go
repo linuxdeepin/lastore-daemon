@@ -7,14 +7,19 @@ package system
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/linuxdeepin/go-lib/strv"
+	"github.com/linuxdeepin/go-lib/utils"
 )
 
 type UpdateType uint64
+
+// org.deepin.upgradedelivery的ServiceStatus返回的服务状态。1为可用，2为不可用，0为未知
+const UpgradeDeliveryEnable int32 = 1
 
 // 用于设置UpdateMode属性,最大支持64位
 const (
@@ -166,6 +171,76 @@ func UpdateSystemDefaultSourceDir(sourceList []string) error {
 		}
 	}
 	return nil
+}
+
+func UpdateP2pDefaultSourceDir(updateType UpdateType, upgradeDeliveryEnabled bool) {
+	if !upgradeDeliveryEnabled {
+		return
+	}
+	var sourceDir string
+	switch updateType {
+	case SystemUpdate:
+		sourceDir = SoftLinkSystemSourceDir
+	case SecurityUpdate:
+		sourceDir = SecuritySourceDir
+	}
+	p2pSource, err := ioutil.TempFile("/tmp", "p2pSource.*.list")
+	defer os.Remove(p2pSource.Name())
+	//从SystemSource.d或SecuritySource.d中读取每个文件内容并将协议替换成delivery协议后存放到/tmp中
+	//这么做为了保证替换协议的原子性
+	files, err := ioutil.ReadDir(sourceDir)
+	if err != nil {
+		logger.Warningf("Error writing dir: %s err:%v", sourceDir, err)
+		return
+	}
+	for _, file := range files {
+		var content []byte
+		filePath := filepath.Join(sourceDir, file.Name())
+		if utils.IsSymlink(filePath) {
+			targetPath, err := os.Readlink(filePath)
+			if err != nil {
+				logger.Warningf("Error read link: %s err:%v", filePath, err)
+				continue
+			}
+			if !utils.IsFileExist(targetPath) {
+				logger.Warningf("target file is not exist: %s err:%v", filePath, err)
+				continue
+			}
+			content, err = ioutil.ReadFile(targetPath)
+			if err != nil {
+				logger.Warningf("Error reading file: %v\n", err)
+				return
+			}
+		} else {
+			content, err = ioutil.ReadFile(filePath)
+			if err != nil {
+				logger.Warningf("Error reading file: %v\n", err)
+				return
+			}
+		}
+		var newContent string
+		newContent = strings.ReplaceAll(string(content), "https://", "delivery://")
+		_, err = p2pSource.Write([]byte(newContent))
+		if err != nil {
+			logger.Warningf("Error writing file: %v\n", err)
+			return
+		}
+	}
+	//所有协议均正常替换后重新创建SystemSource.d或SecuritySource.d，再讲/tmp中的文件拷贝过去
+	err = os.RemoveAll(sourceDir)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = os.MkdirAll(sourceDir, 0755)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = utils.MoveFile(p2pSource.Name(), filepath.Join(sourceDir, filepath.Base(p2pSource.Name())))
+	if err != nil {
+		logger.Warning(err)
+	}
 }
 
 func UpdateSecurityDefaultSourceDir(sourceList []string) error {

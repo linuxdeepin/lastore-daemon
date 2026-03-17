@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,8 +79,8 @@ type Updater struct {
 
 	UpdateTarget string
 
-	p2PUpdateEnable  bool // p2p更新是否开启
-	p2PUpdateSupport bool // 是否支持p2p更新
+	P2PUpdateEnable  bool // p2p更新是否开启
+	P2PUpdateSupport bool // 是否支持p2p更新
 }
 
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
@@ -106,29 +107,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	if err != nil {
 		logger.Warning(err)
 	}
-	state, err := u.systemdManager.GetUnitFileState(0, p2pService)
-	if err != nil {
-		logger.Warning("get p2p service state err:", err)
-		u.p2PUpdateEnable = false
-		u.p2PUpdateSupport = false
-	} else {
-		u.p2PUpdateEnable = false
-		u.p2PUpdateSupport = true
-		if state == "enabled" {
-			unit, err := u.getP2PUnit()
-			if err != nil {
-				logger.Warning("get p2p unit err:", err)
-			} else {
-				value, err := unit.Unit().ActiveState().Get(0)
-				if err != nil {
-					logger.Warning("get p2p SubState err:", err)
-				}
-				if value == "active" {
-					u.p2PUpdateEnable = true
-				}
-			}
-		}
-	}
+	u.refreshUpgradeDeliveryService()
 	return u
 }
 
@@ -136,6 +115,50 @@ func SetAPTSmartMirror(url string) error {
 	return os.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
 		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
 		0644) // #nosec G306
+}
+
+func (u *Updater) refreshUpgradeDeliveryService() {
+	// 检查upgrade服务是否被正常安装
+	_, err := u.service.NameHasOwner("org.deepin.upgradedelivery")
+	if err != nil {
+		logger.Warning(err)
+		u.setPropP2PUpdateSupport(false)
+		return
+	}
+	object := u.service.Conn().Object("org.deepin.upgradedelivery", "/org/deepin/upgradedelivery")
+	var ret dbus.Variant
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	err = object.CallWithContext(ctx, "org.deepin.upgradedelivery.ServiceStatus", 0).Store(&ret)
+	if err != nil {
+		logger.Warning(err)
+		u.setPropP2PUpdateSupport(false)
+		return
+	}
+	u.setPropP2PUpdateSupport(true)
+	v := ret.Value()
+	u.setPropP2PUpdateEnable(u.config.UpgradeDeliveryEnabled)
+	// 情况一：当upgrade服务开启但P2PUpdateEnable关闭时，尝试关闭服务。若关闭失败则将P2PUpdateEnable恢复为true
+	if !u.P2PUpdateEnable && v == system.UpgradeDeliveryEnable {
+		err = object.Call("org.deepin.upgradedelivery.DisableService", 0).Err
+		if err != nil {
+			logger.Warning(err)
+			u.setPropP2PUpdateEnable(true)
+		} else {
+			err = object.Call("org.deepin.upgradedelivery.Clear", 0).Err
+		}
+		return
+	}
+	// 情况二：当upgrade服务开启但P2PUpdateEnable为false时，将P2PUpdateEnable设置为true
+	if v == system.UpgradeDeliveryEnable {
+		u.setPropP2PUpdateEnable(true)
+		return
+	}
+	// 情况三：当upgrade服务未开启但P2PUpdateEnable为true时，尝试拉起服务。若拉起失败则将P2PUpdateEnable设置为false
+	err = object.Call("org.deepin.upgradedelivery.StartService", 0).Err
+	if err != nil {
+		logger.Warning(err)
+		u.setPropP2PUpdateEnable(false)
+	}
 }
 
 type LocaleMirrorSource struct {
@@ -451,10 +474,10 @@ func (u *Updater) getP2PUnit() (systemd1.Unit, error) {
 }
 
 func (u *Updater) dealSetP2PUpdateEnable(enable bool) error {
-	if !u.p2PUpdateSupport {
+	if !u.P2PUpdateSupport {
 		return fmt.Errorf("unsupport p2p update")
 	}
-	if u.p2PUpdateEnable == enable {
+	if u.P2PUpdateEnable == enable {
 		return nil
 	}
 	files := []string{p2pService}
