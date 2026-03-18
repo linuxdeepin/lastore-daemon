@@ -34,9 +34,11 @@ type Command struct {
 
 	pipe *os.File
 
-	Indicator         Indicator
-	ParseProgressInfo ParseProgressInfo
-	ParseJobError     ParseJobError
+	Indicator                 Indicator
+	DeliveryIndicator         DeliveryIndicator
+	ParseProgressInfo         ParseProgressInfo
+	ParseJobError             ParseJobError
+	ParseDeliveryDownloadInfo ParseDeliveryDownloadInfo
 
 	Stdout   bytes.Buffer
 	Stderr   bytes.Buffer
@@ -275,17 +277,27 @@ func (c *Command) updateProgress() {
 			return
 		}
 
-		info, err := c.ParseProgressInfo(c.JobId, line)
-		if err != nil {
-			logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
-			c.Indicator(JobProgressInfo{
-				OnlyLog:     true,
-				OriginalLog: line,
-			})
+		if strings.Contains(line, "102 Status") {
+			deliveryInfo, err := c.ParseDeliveryDownloadInfo(c.JobId, line)
+			if err != nil {
+				logger.Errorf("aptCommand.updateProgress %v -> %v\n", deliveryInfo, err)
+				continue
+			}
+			c.DeliveryIndicator(deliveryInfo)
 			continue
+		} else {
+			info, err := c.ParseProgressInfo(c.JobId, line)
+			if err != nil {
+				logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
+				c.Indicator(JobProgressInfo{
+					OnlyLog:     true,
+					OriginalLog: line,
+				})
+				continue
+			}
+			info.OriginalLog = line
+			c.Cancelable = info.Cancelable
+			c.Indicator(info)
 		}
-		info.OriginalLog = line
-		c.Cancelable = info.Cancelable
-		c.Indicator(info)
 	}
 }

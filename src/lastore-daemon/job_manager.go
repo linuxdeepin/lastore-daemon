@@ -43,8 +43,9 @@ type JobManager struct {
 
 	system system.System
 
-	mux     sync.RWMutex
-	changed bool
+	mux                     sync.RWMutex
+	changed                 bool
+	DownloadLimitOnChanging bool
 
 	dispatchMux sync.Mutex
 	notify      func()
@@ -69,6 +70,7 @@ func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()
 	m.createJobList(DelayLockQueue, 1)
 
 	api.AttachIndicator(m.handleJobProgressInfo)
+	api.AttachDeliveryIndicator(m.handleDeliveryDownloadInfo)
 	return m
 }
 
@@ -136,6 +138,10 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 						"Dir::Etc::SourceParts": "/dev/null",
 					}
 				}
+
+				// 理论上只有开启了更新传递后，这个选项才会有效，不过没有开启的话，加上这个选项也不会报错，所以统一都加上吧
+				partJob.option["Acquire::delivery::LogLevel"] = "1"
+
 				partJob.updateTyp = typ
 				if len(jobList) >= 1 {
 					jobList[len(jobList)-1].next = partJob
@@ -357,6 +363,7 @@ func (jm *JobManager) ForceAbortAndRetry(job *Job) error {
 		job.retry = 1
 	}
 
+	jm.DownloadLimitOnChanging = true
 	return nil
 }
 
@@ -559,6 +566,18 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	}
 	if j.updateInfo(info) {
 		jm.markDirty()
+	}
+}
+
+func (jm *JobManager) handleDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
+	j := jm.findJobById(info.JobId)
+	if j == nil {
+		logger.Warningf("Can't find Job %q when update info %v\n", info.JobId, info)
+		return
+	}
+	j.updateDeliveryDownloadInfo(info)
+	if info.Speed > 0 && jm.DownloadLimitOnChanging {
+		jm.DownloadLimitOnChanging = false
 	}
 }
 
