@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -382,9 +383,18 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						return nil
 					}
 				}
+				if updateplatform.IsForceUpdate(m.updatePlatform.Tp) && m.updatePlatform.Tp != updateplatform.UpdateRegularly {
+					m.stopTimerUnit(lastoreRegularlyUpdate)
+				}
 				if m.updatePlatform.TimerHasChanged {
 					msg := gettext.Tr("timer has changed. Please reboot to take effect")
 					go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+				}
+
+				if m.config.IntranetUpdate {
+					if err = m.refreshThrottlingFromPlatform(); err != nil {
+						logger.Warning("updatePlatform gen download speed limit failed", err)
+					}
 				}
 
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
@@ -450,6 +460,31 @@ var getUpgradablePackageListMap = map[system.UpdateType]func([]string) (map[stri
 	system.SystemUpdate:   getSystemUpgradablePackagesMap,
 	system.SecurityUpdate: getSecurityUpgradablePackagesMap,
 	system.UnknownUpdate:  getUnknownUpgradablePackagesMap,
+}
+
+func (m *Manager) refreshThrottlingFromPlatform() error {
+	var downloadSpeed downloadSpeedLimitConfig
+	if err := json.Unmarshal([]byte(m.config.LocalDownloadSpeedLimitConfig), &downloadSpeed); err != nil {
+		downloadSpeed = downloadSpeedLimitConfig{
+			DownloadSpeedLimitEnabled: true,
+			LimitSpeed:                strconv.FormatInt(defaultSpeedLimit, 10),
+			IsOnlineSpeedLimit:        false,
+		}
+	}
+	if err := m.updatePlatform.GenThrottlingByToken(); err != nil {
+		return fmt.Errorf("failed to get throttling data %w", err)
+	}
+
+	m.applyOnlineRateLimit(&downloadSpeed, m.updatePlatform.OnlineRateLimit.ServerTime)
+
+	downloadSpeedStr, err := json.Marshal(downloadSpeed)
+	if err != nil {
+		return fmt.Errorf("failed to marshal download speed limit")
+	}
+	logger.Infof("set download limit %v --> %v by platform", m.config.DownloadSpeedLimitConfig, string(downloadSpeedStr))
+	m.updater.SetDownloadSpeedLimit(string(downloadSpeedStr))
+
+	return nil
 }
 
 // 生成系统更新内容和安全更新内容

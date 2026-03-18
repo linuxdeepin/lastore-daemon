@@ -119,10 +119,11 @@ type UpdatePlatformManager struct {
 	Token string
 	arch  string
 
-	Tp             UpdateTp  // 更新策略类型:1.非强制更新，2.强制更新/立即更新，3.强制更新/关机或重启时更新，4.强制更新/指定时间更新
-	UpdateTime     time.Time // 更新时间(指定时间更新时的时间)
-	UpdateNowForce bool      // 立即更新
-	mu             sync.Mutex
+	Tp              UpdateTp  // 更新策略类型:1.非强制更新，2.强制更新/立即更新，3.强制更新/关机或重启时更新，4.强制更新/指定时间更新
+	UpdateTime      time.Time // 更新时间(指定时间更新时的时间)
+	OnlineRateLimit throttlingMessage
+	UpdateNowForce  bool // 立即更新
+	mu              sync.Mutex
 
 	jobPostMsgMap     map[string]*UpgradePostMsg
 	jobPostMsgMapMu   sync.Mutex
@@ -454,6 +455,18 @@ type Version struct {
 	TaskID   int    `json:"taskID"`
 }
 
+type AllDayRateLimit struct {
+	Bps    int  `json:"bps"`
+	Enable bool `json:"enable"`
+}
+
+type PeakOrNotTimeRateLimit struct {
+	Enable    bool   `json:"enable"`
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+	Bps       int    `json:"bps"`
+}
+
 type Policy struct {
 	Tp UpdateTp `json:"tp"`
 
@@ -485,6 +498,13 @@ type updateMessage struct {
 	ClientPollSetting ClientPollSetting `json:"clientPollSetting"`
 }
 
+type throttlingMessage struct {
+	ServerTime           string                 `json:"serverTime"`
+	AllDayRateLimit      AllDayRateLimit        `json:"allDayRateLimit"`      // 全天限速
+	PeakTimeRateLimit    PeakOrNotTimeRateLimit `json:"peakTimeRateLimit"`    // 忙时(07:00~22:00)限速
+	OffPeakTimeRateLimit PeakOrNotTimeRateLimit `json:"offPeakTimeRateLimit"` // 闲时(22:00~07:00)限速
+}
+
 type tokenMessage struct {
 	Result bool            `json:"result"`
 	Code   int             `json:"code"`
@@ -504,6 +524,7 @@ const (
 	GetTargetPkgLists // 系统软件包清单
 	GetCurrentPkgLists
 	GetPkgCVEs // CVE 信息
+	GetThrottling
 	PostProcess
 	PostProcessEvent
 	PostResult
@@ -539,6 +560,10 @@ var Urls = map[requestType]requestContent{
 		"/api/v1/cve/sync",
 		"GET",
 	},
+	GetThrottling: {
+		"/api/v1/throttling/client",
+		"GET",
+	},
 	PostProcess: {
 		"/api/v1/process",
 		"POST",
@@ -566,6 +591,19 @@ func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
 	}
 	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
 	request.Header.Set("X-Packages", base64.RawStdEncoding.EncodeToString([]byte(getClientPackageInfo(m.config.ClientPackageName))))
+	return client.Do(request)
+}
+
+func (m *UpdatePlatformManager) genThrottlingResponse() (*http.Response, error) {
+	throttlingUrl := m.requestUrl + Urls[GetThrottling].path
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	request, err := http.NewRequest(Urls[GetThrottling].method, throttlingUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %v ", GetThrottling.string(), err.Error())
+	}
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
 	return client.Do(request)
 }
 
@@ -727,6 +765,18 @@ func getVersionData(data json.RawMessage) *updateMessage {
 	return tmp
 }
 
+func getThrottlingData(data json.RawMessage) *throttlingMessage {
+	tmp := &throttlingMessage{}
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to updateMessage: %v ", GetThrottling.string(), err.Error())
+		return nil
+	}
+	serverTime, err := time.ParseInLocation(time.RFC3339, tmp.ServerTime, time.Local)
+	tmp.ServerTime = serverTime.Format("15:04:05")
+	return tmp
+}
+
 func getTargetPkgListData(data json.RawMessage) *PreInstalledPkgMeta {
 	tmp := &PreInstalledPkgMeta{}
 	err := json.Unmarshal(data, &tmp)
@@ -839,7 +889,9 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) err
 	// 根据配置更新Tp
 	switch m.Tp {
 	case UpdateNow:
+		m.config.SetInstallUpdateTime("")
 	case UpdateShutdown:
+		m.config.SetInstallUpdateTime("")
 	case UpdateRegularly:
 	default:
 		logger.Debug("Config update time:", m.config.UpdateTime)
@@ -879,6 +931,24 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) err
 		m.config.SetInstallUpdateTime(m.UpdateTime.Format(time.RFC3339))
 	}
 	logger.Info("Force Update:", IsForceUpdate(m.Tp), "update Immediate:", m.UpdateNowForce, "updateTime:", m.UpdateTime)
+	return err
+}
+
+func (m *UpdatePlatformManager) GenThrottlingByToken() error {
+	response, err := m.genThrottlingResponse()
+	if err != nil {
+		return fmt.Errorf("failed get throttling data %v", err)
+	}
+	data, err := getResponseData(response, GetThrottling)
+	if err != nil {
+		return fmt.Errorf("failed get throttling data %v", err)
+	}
+	msg := getThrottlingData(data)
+	if msg == nil {
+		return errors.New("failed get throttling data")
+	}
+
+	m.OnlineRateLimit = *msg
 	return err
 }
 

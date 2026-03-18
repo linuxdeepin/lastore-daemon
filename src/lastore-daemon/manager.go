@@ -63,8 +63,9 @@ type Manager struct {
 	// dbusutil-gen: equal=nil
 	UpgradableApps []string
 
-	SystemOnChanging bool
-	AutoClean        bool
+	SystemOnChanging        bool
+	AutoClean               bool
+	DownloadLimitOnChanging bool
 
 	inhibitFd        dbus.UnixFD
 	updateSourceOnce bool
@@ -126,19 +127,20 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	}
 
 	m := &Manager{
-		service:              service,
-		config:               c,
-		updateApi:            updateApi,
-		SystemArchitectures:  archs,
-		inhibitFd:            -1,
-		AutoClean:            c.AutoClean,
-		loginManager:         login1.NewManager(service.Conn()),
-		sysDBusDaemon:        ofdbus.NewDBus(service.Conn()),
-		signalLoop:           dbusutil.NewSignalLoop(service.Conn(), 10),
-		systemd:              systemd1.NewManager(service.Conn()),
-		sysPower:             power.NewPower(service.Conn()),
-		securitySourceConfig: make(UpdateSourceConfig),
-		systemSourceConfig:   make(UpdateSourceConfig),
+		service:                 service,
+		config:                  c,
+		updateApi:               updateApi,
+		SystemArchitectures:     archs,
+		inhibitFd:               -1,
+		AutoClean:               c.AutoClean,
+		loginManager:            login1.NewManager(service.Conn()),
+		sysDBusDaemon:           ofdbus.NewDBus(service.Conn()),
+		signalLoop:              dbusutil.NewSignalLoop(service.Conn(), 10),
+		systemd:                 systemd1.NewManager(service.Conn()),
+		sysPower:                power.NewPower(service.Conn()),
+		securitySourceConfig:    make(UpdateSourceConfig),
+		systemSourceConfig:      make(UpdateSourceConfig),
+		DownloadLimitOnChanging: false,
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
@@ -259,6 +261,13 @@ func (m *Manager) initPlatformManager() {
 		// 不能阻塞初始化流程,防止dbus服务激活超时
 		go m.updatePlatform.RetryPostHistory() // 此处调用还没有export以及dispatch job,因此可以判断是否需要check.
 	}
+}
+
+func (m *Manager) TryToStartCronCheck() {
+	if utils.IsFileExist("/run/systemd/transient/lastoreCronCheckPrivate.timer") {
+		return
+	}
+	m.startCheckPolicyTask()
 }
 
 func (m *Manager) delUpdatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -1001,6 +1010,8 @@ func (m *Manager) ChangePrepareDistUpgradeJobOption() {
 				err := m.jobManager.ForceAbortAndRetry(job)
 				if err != nil {
 					logger.Warning(err)
+				} else {
+					m.setPropDownloadLimitOnChanging(m.jobManager.DownloadLimitOnChanging)
 				}
 			}
 		}
@@ -1021,8 +1032,9 @@ func (m *Manager) afterUpdateModeChanged(change *dbusutil.PropertyChanged) {
 }
 
 func (m *Manager) handleDownloadLimitChanged(job *Job) {
-	limitEnable, limitConfig := m.updater.GetLimitConfig()
-	if limitEnable {
+	limitEnable, limitConfig, limitIsOnline := m.updater.GetLimitConfig()
+	logger.Infof("handleDownloadLimitChanged limitEnable: %v, limitConfig: %v, limitIsOnline: %v", limitEnable, limitConfig, limitIsOnline)
+	if limitEnable || limitIsOnline {
 		if job.option == nil {
 			job.option = make(map[string]string)
 		}

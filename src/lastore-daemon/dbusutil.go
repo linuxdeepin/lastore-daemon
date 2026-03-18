@@ -286,6 +286,19 @@ func (v *Job) emitPropChangedProgress(value float64) error {
 	return v.service.EmitPropertyChanged(v, "Progress", value)
 }
 
+func (v *Job) setPropProto(value string) (changed bool) {
+	if v.Proto != value {
+		v.Proto = value
+		v.emitPropChangedProto(value)
+		return true
+	}
+	return false
+}
+
+func (v *Job) emitPropChangedProto(value string) error {
+	return v.service.EmitPropertyChanged(v, "Proto", value)
+}
+
 func (v *Job) setPropDescription(value string) (changed bool) {
 	if v.Description != value {
 		v.Description = value
@@ -354,6 +367,19 @@ func (v *Manager) setPropSystemOnChanging(value bool) (changed bool) {
 
 func (v *Manager) emitPropChangedSystemOnChanging(value bool) error {
 	return v.service.EmitPropertyChanged(v, "SystemOnChanging", value)
+}
+
+func (v *Manager) setPropDownloadLimitOnChanging(value bool) (changed bool) {
+	if v.DownloadLimitOnChanging != value {
+		v.DownloadLimitOnChanging = value
+		v.emitPropChangedDownloadLimitOnChanging(value)
+		return true
+	}
+	return false
+}
+
+func (v *Manager) emitPropChangedDownloadLimitOnChanging(value bool) error {
+	return v.service.EmitPropertyChanged(v, "DownloadLimitOnChanging", value)
 }
 
 func (v *Manager) setPropAutoClean(value bool) (changed bool) {
