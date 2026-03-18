@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -130,8 +131,7 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 }
 
 func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
-	err := json.Unmarshal([]byte(limitConfig), &u.downloadSpeedLimitConfigObj)
-	if err != nil {
+	if err := json.Unmarshal([]byte(limitConfig), &u.downloadSpeedLimitConfigObj); err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
@@ -144,16 +144,25 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 			}
 			changed := u.setPropDownloadSpeedLimitConfig(string(config))
 			if changed {
-				logger.Info("speed limit: ", u.downloadSpeedLimitConfigObj)
-				err := u.config.SetDownloadSpeedLimitConfig(string(config))
-				if err != nil {
-					logger.Warning(err)
-					return
+				logger.Infof("set changed speed limit: %v", limitConfig)
+				// When IsOnlineSpeedLimit is false, it means manual speed limit is set.
+				// Save to both configs to ensure the value persists after daemon restart.
+				if strings.Contains(limitConfig, "IsOnlineSpeedLimit") && !u.downloadSpeedLimitConfigObj.IsOnlineSpeedLimit {
+					err := u.config.SetLocalDownloadSpeedLimitConfig(string(config))
+					if err != nil {
+						logger.Warning(err)
+						return
+					}
+				} else {
+					err := u.config.SetDownloadSpeedLimitConfig(string(config))
+					if err != nil {
+						logger.Warning(err)
+						return
+					}
 				}
 				u.manager.ChangePrepareDistUpgradeJobOption()
 			}
 			logger.Info("update limit config")
-			return
 		})
 	} else {
 		u.setDownloadSpeedLimitTimer.Reset(time.Second)

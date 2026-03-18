@@ -697,7 +697,7 @@ func (m *Manager) GetUpdateDetails(sender dbus.Sender, fd dbus.UnixFD, realTime 
 		// 使用流式复制，避免将整个文件读入内存
 		logFile, err := os.Open(logTmpPath)
 		if err != nil {
-			logger.Warning(err)
+			logger.Warningf("failed to open file: %v", err)
 			return dbusutil.ToError(err)
 		}
 		defer logFile.Close()

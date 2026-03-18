@@ -29,6 +29,7 @@ type APTSystem struct {
 	CmdSet            map[string]*system.Command
 	Indicator         system.Indicator
 	IncrementalUpdate bool
+	DeliveryIndicator system.DeliveryIndicator
 }
 
 func NewSystem(nonUnknownList []string, otherList []string, incrementalUpdate bool) system.System {
@@ -54,6 +55,53 @@ func parseProgressField(v string) (float64, error) {
 		return -1, fmt.Errorf("unknown progress value: %q", v)
 	}
 	return progress, nil
+}
+
+func parseDeliveryDownloadInfo(id, line string) (system.JobDeliveryDownloadInfo, error) {
+	if strings.Contains(line, "102 Status") {
+		var jobDeliveryDownloadInfo system.JobDeliveryDownloadInfo
+		jobDeliveryDownloadInfo.JobId = id
+		line = strings.TrimPrefix(line, "102 Status[")
+		line = strings.TrimSuffix(line, "]")
+		parts := strings.Split(line, "} {")
+		var isFinish bool
+		var err error
+		var speed int64
+		var proto string
+		for i := range parts {
+			parts[i] = strings.Trim(parts[i], "{} ")
+		}
+		for _, part := range parts {
+			kv := strings.SplitN(part, " ", 2)
+			if len(kv) != 2 {
+				continue
+			}
+			key := kv[0]
+			value := kv[1]
+
+			if key != "IsFinish" && key != "Speed" && key != "Proto" {
+				continue
+			} else if key == "IsFinish" {
+				isFinish, err = strconv.ParseBool(value)
+				if err != nil {
+					logger.Warningf("failed to parse isFinish %v", err)
+					isFinish = true
+				}
+			} else if key == "Speed" {
+				speed, _ = strconv.ParseInt(value, 10, 64)
+			} else if key == "Proto" {
+				proto = value
+			}
+		}
+		if !isFinish {
+			jobDeliveryDownloadInfo.Speed = speed
+			jobDeliveryDownloadInfo.Proto = proto
+		} else {
+			jobDeliveryDownloadInfo.Speed = -1
+		}
+		return jobDeliveryDownloadInfo, nil
+	}
+	return system.JobDeliveryDownloadInfo{JobId: id}, nil
 }
 
 func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
@@ -107,6 +155,10 @@ func parseProgressInfo(id, line string) (system.JobProgressInfo, error) {
 
 func (p *APTSystem) AttachIndicator(f system.Indicator) {
 	p.Indicator = f
+}
+
+func (p *APTSystem) AttachDeliveryIndicator(f system.DeliveryIndicator) {
+	p.DeliveryIndicator = f
 }
 
 func WaitDpkgLockRelease() {
@@ -268,7 +320,7 @@ func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ ma
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.DownloadJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+	c := newAPTCommand(p, jobId, system.DownloadJobType, p.Indicator, p.DeliveryIndicator, append(packages, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	return c.Start()
 }
@@ -300,11 +352,11 @@ func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[
 		environ["DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION"] = upgradeArgString
 		logger.Info("DownloadSource set env DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION:", upgradeArgString)
 
-		c := newAPTCommand(p, jobId, system.IncrementalDownloadJobType, p.Indicator, cmdArgs)
+		c := newAPTCommand(p, jobId, system.IncrementalDownloadJobType, p.Indicator, p.DeliveryIndicator, cmdArgs)
 		c.SetEnv(environ)
 		return c.Start()
 	}
-	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, append(packages, OptionToArgs(args)...))
+	c := newAPTCommand(p, jobId, system.PrepareDistUpgradeJobType, p.Indicator, p.DeliveryIndicator, append(packages, OptionToArgs(args)...))
 	c.SetEnv(environ)
 	return c.Start()
 }
@@ -316,7 +368,7 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 		return err
 	}
 
-	c := newAPTCommand(p, jobId, system.RemoveJobType, p.Indicator, packages)
+	c := newAPTCommand(p, jobId, system.RemoveJobType, p.Indicator, p.DeliveryIndicator, packages)
 	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)
@@ -328,7 +380,7 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 	if err != nil {
 		return err
 	}
-	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, append(OptionToArgs(args), packages...))
+	c := newAPTCommand(p, jobId, system.InstallJobType, p.Indicator, p.DeliveryIndicator, append(OptionToArgs(args), packages...))
 	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)
@@ -365,12 +417,12 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 		environ["DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION"] = upgradeArgString
 		logger.Info("DistUpgrade set env DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION:", upgradeArgString)
 
-		c := newAPTCommand(p, jobId, system.IncrementalUpdateJobType, p.Indicator, cmdArgs)
+		c := newAPTCommand(p, jobId, system.IncrementalUpdateJobType, p.Indicator, p.DeliveryIndicator, cmdArgs)
 		c.SetEnv(environ)
 		return c.Start()
 	}
 
-	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, append(OptionToArgs(args), packages...))
+	c := newAPTCommand(p, jobId, system.DistUpgradeJobType, p.Indicator, p.DeliveryIndicator, append(OptionToArgs(args), packages...))
 	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	return safeStart(c)
@@ -384,7 +436,7 @@ func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args m
 			logger.Warningf("Failed to update remotes: %v, %s", err, string(output))
 		}
 	}
-	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, OptionToArgs(args))
+	c := newAPTCommand(p, jobId, system.UpdateSourceJobType, p.Indicator, p.DeliveryIndicator, OptionToArgs(args))
 	c.AtExitFn = func() bool {
 		// 无网络时检查更新失败,exitCode为0,空间不足(不确定exit code)导致需要特殊处理
 		if c.ExitCode == system.ExitSuccess && bytes.Contains(c.Stderr.Bytes(), []byte("Some index files failed to download")) {
@@ -402,7 +454,7 @@ func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args m
 }
 
 func (p *APTSystem) Clean(jobId string) error {
-	c := newAPTCommand(p, jobId, system.CleanJobType, p.Indicator, nil)
+	c := newAPTCommand(p, jobId, system.CleanJobType, p.Indicator, p.DeliveryIndicator, nil)
 	return c.Start()
 }
 
@@ -422,7 +474,7 @@ func (p *APTSystem) AbortWithFailed(jobId string) error {
 
 func (p *APTSystem) FixError(jobId string, errType string, environ map[string]string, args map[string]string) error {
 	WaitDpkgLockRelease()
-	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, append([]string{errType}, OptionToArgs(args)...))
+	c := newAPTCommand(p, jobId, system.FixErrorJobType, p.Indicator, p.DeliveryIndicator, append([]string{errType}, OptionToArgs(args)...))
 	environ["IMMUTABLE_DISABLE_REMOUNT"] = "false"
 	c.SetEnv(environ)
 	if system.JobErrorType(errType) == system.ErrorDependenciesBroken { // 修复依赖错误的时候，会有需要卸载dde的情况，因此需要用safeStart来进行处理
@@ -655,7 +707,7 @@ func parseBackupJobError(stdErrStr string, stdOutStr string) *system.JobError {
 }
 
 func (p *APTSystem) OsBackup(jobId string) error {
-	c := newAPTCommand(p, jobId, system.BackupJobType, p.Indicator, nil)
+	c := newAPTCommand(p, jobId, system.BackupJobType, p.Indicator, p.DeliveryIndicator, nil)
 	c.ParseJobError = parseBackupJobError
 	c.ParseProgressInfo = func(id, line string) (system.JobProgressInfo, error) {
 		type info struct {

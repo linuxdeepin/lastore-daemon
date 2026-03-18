@@ -120,19 +120,21 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	return exec.Command("apt-get", args...)
 }
 
-func newAPTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn system.Indicator, cmdArgs []string) *system.Command {
+func newAPTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn system.Indicator, deliveryFn system.DeliveryIndicator, cmdArgs []string) *system.Command {
 	cmd := createCommandLine(cmdType, cmdArgs)
 
 	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	r := &system.Command{
-		JobId:             jobId,
-		CmdSet:            cmdSet,
-		Indicator:         fn,
-		ParseJobError:     parseJobError,
-		ParseProgressInfo: parseProgressInfo,
-		Cmd:               cmd,
-		Cancelable:        true,
+		JobId:                     jobId,
+		CmdSet:                    cmdSet,
+		Indicator:                 fn,
+		DeliveryIndicator:         deliveryFn,
+		ParseJobError:             parseJobError,
+		ParseProgressInfo:         parseProgressInfo,
+		ParseDeliveryDownloadInfo: parseDeliveryDownloadInfo,
+		Cmd:                       cmd,
+		Cancelable:                true,
 	}
 	cmd.Stdout = &r.Stdout
 	cmd.Stderr = &r.Stderr

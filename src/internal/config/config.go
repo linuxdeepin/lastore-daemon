@@ -91,10 +91,11 @@ type Config struct {
 	NonUnknownList     []string // 非未知来源更新list文件
 	OtherSourceList    []string // 其他类型更新list文件路径
 
-	DownloadSpeedLimitConfig string
-	lastoreDaemonStatus      LastoreDaemonStatus
-	UpdateStatus             string
-	PlatformUpdate           bool
+	DownloadSpeedLimitConfig      string
+	LocalDownloadSpeedLimitConfig string
+	lastoreDaemonStatus           LastoreDaemonStatus
+	UpdateStatus                  string
+	PlatformUpdate                bool
 
 	PlatformUrl            string // 更新接口地址
 	StartCheckRange        []int  // 开机检查更新区间
@@ -188,6 +189,7 @@ const (
 	dSettingsKeySystemSourceList                     = "system-sources"
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
 	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
+	dSettingsKeyLocalDownloadSpeedLimit              = "local-download-speed-limit"
 	DSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
 	dSettingsKeyPlatformUpdate                       = "platform-update"
@@ -465,6 +467,13 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.DownloadSpeedLimitConfig = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLocalDownloadSpeedLimit)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.LocalDownloadSpeedLimitConfig = v.Value().(string)
 	}
 
 	updateLastoreDaemonStatus := func() {
@@ -897,6 +906,11 @@ func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
 func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
 	c.DownloadSpeedLimitConfig = config
 	return c.save(dSettingsKeyDownloadSpeedLimit, config)
+}
+
+func (c *Config) SetLocalDownloadSpeedLimitConfig(config string) error {
+	c.LocalDownloadSpeedLimitConfig = config
+	return c.save(dSettingsKeyLocalDownloadSpeedLimit, config)
 }
 
 func (c *Config) SetLastoreDaemonStatus(status LastoreDaemonStatus) error {
