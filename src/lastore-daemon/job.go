@@ -40,8 +40,10 @@ type Job struct {
 	Description string
 
 	// completed bytes per second
-	Speed      int64
-	speedMeter SpeedMeter
+	Speed         int64
+	DeliverySpeed int64
+	Proto         string
+	speedMeter    SpeedMeter
 
 	Cancelable bool
 
@@ -131,6 +133,13 @@ func (j *Job) String() string {
 	)
 }
 
+func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
+	j.PropsMu.Lock()
+	defer j.PropsMu.Unlock()
+	j.DeliverySpeed = info.Speed
+	j.Proto = info.Proto
+}
+
 // updateInfo update Job information from info and return
 // whether the information changed.
 func (j *Job) updateInfo(info system.JobProgressInfo) bool {
@@ -183,12 +192,13 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	}
 
 	// see the apt.go, we scale download progress value range in [0,0.5
-	speed := j.speedMeter.Speed(info.Progress)
+	speed := j.speedMeter.Speed(info.Progress, j.DeliverySpeed)
 
 	if speed != j.Speed {
 		changed = true
 		j.Speed = speed
 		_ = j.emitPropChangedSpeed(speed)
+		_ = j.emitPropChangedProto(j.Proto)
 	}
 
 	if info.FatalError {

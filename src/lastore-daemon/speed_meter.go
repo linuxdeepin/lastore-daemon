@@ -24,7 +24,7 @@ func (s *SpeedMeter) SetDownloadSize(size int64) {
 	}
 }
 
-func (s *SpeedMeter) Speed(newProgress float64) int64 {
+func (s *SpeedMeter) Speed(newProgress float64, deliverySpeed int64) int64 {
 	now := time.Now()
 
 	if s.startTime.IsZero() {
@@ -38,8 +38,12 @@ func (s *SpeedMeter) Speed(newProgress float64) int64 {
 		return 0
 	}
 
-	if now.Sub(s.updateTime).Seconds() > 3 {
-		s.speed = int64(1.024 * (newProgress - s.progress) * float64(s.DownloadSize) / now.Sub(s.updateTime).Seconds())
+	if now.Sub(s.updateTime).Seconds() > 5 && newProgress > s.progress {
+		if deliverySpeed >= 0 {
+			s.speed = deliverySpeed
+		} else {
+			s.speed = int64(1.024 * (newProgress - s.progress) * float64(s.DownloadSize) / now.Sub(s.updateTime).Seconds())
+		}
 		s.updateTime = now
 		s.progress = newProgress
 	}

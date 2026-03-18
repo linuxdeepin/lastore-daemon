@@ -62,6 +62,16 @@ const (
 	NotifyExpireTimeoutPrivateLong = 600000
 )
 
+type JobDeliveryDownloadInfo struct {
+	JobId          string
+	FileName       string
+	Proto          string
+	DownloadSize   int64
+	DownloadedSize int64
+	Speed          int64
+	Progress       float64
+}
+
 type JobProgressInfo struct {
 	JobId         string
 	Progress      float64
@@ -132,7 +142,9 @@ var NotSupportError = errors.New("not support operation")
 var ResourceExitError = errors.New("resource exists")
 
 type Indicator func(JobProgressInfo)
+type DeliveryIndicator func(JobDeliveryDownloadInfo)
 type ParseProgressInfo func(id, line string) (JobProgressInfo, error)
+type ParseDeliveryDownloadInfo func(id, line string) (JobDeliveryDownloadInfo, error)
 type ParseJobError func(stdErrStr string, stdOutStr string) *JobError
 
 type System interface {
@@ -146,6 +158,7 @@ type System interface {
 	Abort(jobId string) error
 	AbortWithFailed(jobId string) error
 	AttachIndicator(Indicator)
+	AttachDeliveryIndicator(DeliveryIndicator)
 	FixError(jobId string, errType string, environ map[string]string, cmdArgs map[string]string) error
 	OsBackup(jobId string) error
 	CheckSystem(jobId string, checkType string, environ map[string]string, cmdArgs map[string]string) error

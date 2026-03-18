@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
@@ -20,6 +22,73 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 )
+
+const (
+	timeFormat        = "15:04"
+	timeFormatWithSec = "15:04:05"
+)
+
+func (m *Manager) setEffectiveOnlineRateLimit(nowTime string) {
+	downloadSpeed := m.updater.downloadSpeedLimitConfigObj
+	m.applyOnlineRateLimit(&downloadSpeed, nowTime)
+	downloadSpeedStr, err := json.Marshal(downloadSpeed)
+	if err == nil {
+		logger.Infof("setEffectiveOnlineRateLimit %v --> %v", m.config.DownloadSpeedLimitConfig, string(downloadSpeedStr))
+		m.updater.SetDownloadSpeedLimit(string(downloadSpeedStr))
+	}
+}
+
+func (m *Manager) applyOnlineRateLimit(downloadSpeed *downloadSpeedLimitConfig, nowTime string) {
+	onlineRateLimit := m.updatePlatform.OnlineRateLimit
+	if onlineRateLimit.AllDayRateLimit.Enable {
+		downloadSpeed.LimitSpeed = strconv.Itoa(onlineRateLimit.AllDayRateLimit.Bps)
+		downloadSpeed.IsOnlineSpeedLimit = true
+		downloadSpeed.DownloadSpeedLimitEnabled = true
+	} else if isTimeInRange(nowTime, onlineRateLimit.PeakTimeRateLimit.StartTime, onlineRateLimit.PeakTimeRateLimit.EndTime) &&
+		onlineRateLimit.PeakTimeRateLimit.Enable {
+		downloadSpeed.LimitSpeed = strconv.Itoa(onlineRateLimit.PeakTimeRateLimit.Bps)
+		downloadSpeed.IsOnlineSpeedLimit = true
+		downloadSpeed.DownloadSpeedLimitEnabled = true
+	} else if isTimeInRange(nowTime, onlineRateLimit.OffPeakTimeRateLimit.StartTime, onlineRateLimit.OffPeakTimeRateLimit.EndTime) &&
+		onlineRateLimit.OffPeakTimeRateLimit.Enable {
+		downloadSpeed.LimitSpeed = strconv.Itoa(onlineRateLimit.OffPeakTimeRateLimit.Bps)
+		downloadSpeed.IsOnlineSpeedLimit = true
+		downloadSpeed.DownloadSpeedLimitEnabled = true
+	} else {
+		err := json.Unmarshal([]byte(m.config.LocalDownloadSpeedLimitConfig), downloadSpeed)
+		if err != nil {
+			downloadSpeed.IsOnlineSpeedLimit = false
+			downloadSpeed.LimitSpeed = strconv.FormatInt(defaultSpeedLimit, 10)
+			downloadSpeed.DownloadSpeedLimitEnabled = true
+		}
+	}
+}
+
+func isTimeInRange(nowTimeStr, startStr, endStr string) bool {
+	now, err := parseTime(nowTimeStr)
+	if err != nil {
+		return false
+	}
+	start, err := parseTime(startStr)
+	if err != nil {
+		return false
+	}
+	end, err := parseTime(endStr)
+	if err != nil {
+		return false
+	}
+	if start.Before(end) {
+		return now.After(start) && now.Before(end)
+	}
+	return now.After(start) || now.Before(end)
+}
+
+func parseTime(t string) (time.Time, error) {
+	if len(t) > 5 {
+		return time.Parse(timeFormatWithSec, t)
+	}
+	return time.Parse(timeFormat, t)
+}
 
 // calculateTotalDownloadSize calculates the total download size for all packages under the specified update mode
 func calculateTotalDownloadSize(mode system.UpdateType, updatablePkgsMap map[system.UpdateType][]string) (float64, []error) {
@@ -97,6 +166,39 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
 		return nil, dbusutil.ToError(errors.New(string(errStr)))
 	}
+	done := make(chan bool)
+	if m.config.IntranetUpdate {
+		//私有化更新有忙闲时下载限速的功能，需要在真正开始下载前刷新一下线上限速配置
+		if err = m.refreshThrottlingFromPlatform(); err != nil {
+			logger.Warning("updatePlatform gen download speed limit failed", err)
+		} else {
+			go func() {
+				ticker := time.NewTicker(5 * time.Second)
+				startTime := time.Now()
+				defer ticker.Stop()
+				var count int
+				layout := "15:04:05"
+				for {
+					select {
+					case <-done:
+						logger.Info("online rate limit ticker stopped")
+						return
+					case t := <-ticker.C:
+						count++
+						downloadStartServiceTime, err := time.ParseInLocation(layout, m.updatePlatform.OnlineRateLimit.ServerTime, time.Local)
+						if err != nil {
+							logger.Warningf("format OnlineRateLimit service time failed, %v", err)
+							return
+						}
+						logger.Infof("downloadStartServiceTime %v", downloadStartServiceTime)
+						nowTime := downloadStartServiceTime.Add(t.Sub(startTime))
+						m.setEffectiveOnlineRateLimit(nowTime.Format(layout))
+					}
+				}
+			}()
+		}
+	}
+
 	var job *Job
 	var isExist bool
 
@@ -137,8 +239,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	for currentJob != nil {
 		j := currentJob
 		currentJob = currentJob.next
-		limitEnable, limitConfig := m.updater.GetLimitConfig()
-		if limitEnable {
+		limitEnable, limitConfig, limitIsOnline := m.updater.GetLimitConfig()
+		logger.Infof("preDistUpgrade limitEnable: %v, limitConfig: %v, limitIsOnline: %v", limitEnable, limitConfig, limitIsOnline)
+		if limitEnable || limitIsOnline {
 			j.option[aptLimitKey] = limitConfig
 		}
 		j.subRetryHookFn = func(job *Job) {
@@ -194,6 +297,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			},
 			string(system.FailedStatus): func() error {
 				if m.config.IntranetUpdate {
+					done <- true
 					cacheFile := "/tmp/checkpolicy.cache"
 					_ = os.RemoveAll(cacheFile)
 				}
@@ -277,6 +381,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
+				if m.config.IntranetUpdate {
+					done <- true
+				}
 				msg := fmt.Sprintf("download %v package success", j.updateTyp.JobType())
 				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
@@ -362,6 +469,9 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.EndStatus): func() error {
+				if m.config.IntranetUpdate {
+					done <- true
+				}
 				if j.next == nil {
 					logger.Info("running in last end hook")
 					// 如果出现单项失败,其他的状态需要修改,IsDownloading->notDownload

@@ -39,6 +39,7 @@ func (m *Manager) updateJobList() {
 	m.PropsMu.RUnlock()
 
 	systemOnChanging := false
+	m.setPropDownloadLimitOnChanging(m.jobManager.DownloadLimitOnChanging)
 
 	for i, j2 := range list {
 
@@ -175,4 +176,5 @@ func (j *Job) notifyAll() {
 	_ = j.emitPropChangedProgress(j.Progress)
 	_ = j.emitPropChangedSpeed(j.Speed)
 	_ = j.emitPropChangedCancelable(j.Cancelable)
+	_ = j.emitPropChangedProto(j.Proto)
 }

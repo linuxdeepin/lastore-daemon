@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	p2pService = "uos-p2p.service"
+	p2pService        = "uos-p2p.service"
+	defaultSpeedLimit = 10240
 )
 
 type ApplicationUpdateInfo struct {
@@ -46,6 +47,7 @@ type idleDownloadConfig struct {
 type downloadSpeedLimitConfig struct {
 	DownloadSpeedLimitEnabled bool
 	LimitSpeed                string
+	IsOnlineSpeedLimit        bool
 }
 
 type Updater struct {
@@ -457,8 +459,8 @@ func (u *Updater) getUpdatablePackagesWithClassification(updateType system.Updat
 	return updatablePkgs, updatablePkgsMap
 }
 
-func (u *Updater) GetLimitConfig() (bool, string) {
-	return u.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled, u.downloadSpeedLimitConfigObj.LimitSpeed
+func (u *Updater) GetLimitConfig() (bool, string, bool) {
+	return u.downloadSpeedLimitConfigObj.DownloadSpeedLimitEnabled, u.downloadSpeedLimitConfigObj.LimitSpeed, u.downloadSpeedLimitConfigObj.IsOnlineSpeedLimit
 }
 
 func (u *Updater) getP2PUnit() (systemd1.Unit, error) {
