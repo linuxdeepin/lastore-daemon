@@ -26,7 +26,7 @@ import (
 	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 /*
@@ -212,10 +212,6 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	}
 	if err != nil || size == system.SizeUnknown {
 		logger.Warningf("PackagesDownloadSize(%q)=%0.2f %v\n", strings.Join(packages, " "), size, err)
-	}
-
-	if m.config.IncrementalUpdate && size > 0 && apt.IsIncrementalUpdateCached("") {
-		size = 0.0
 	}
 
 	return int64(size), dbusutil.ToError(err)
@@ -500,9 +496,9 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 	}
 	_, allSize, err := system.QuerySourceDownloadSize(mode, pkgList)
 	if err != nil || allSize == system.SizeUnknown {
-		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
+		logger.Warningf("failed to query %v all size: %v", strings.Join(sourcePathList, " and "), err)
 	} else {
-		logger.Infof("%v size is:%v M", strings.Join(sourcePathList, " and "), int64(allSize/(1000*1000)))
+		logger.Infof("%v all size: %s", strings.Join(sourcePathList, " and "), utils.FormatSize(allSize))
 	}
 
 	return int64(allSize), dbusutil.ToError(err)

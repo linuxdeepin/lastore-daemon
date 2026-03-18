@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -287,31 +286,4 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 		return "", parseJobError(errBuf.String(), "")
 	}
 	return tmpPath, nil
-}
-
-// In incremental update mode, returns true if all packages are cached, otherwise returns false.
-func IsIncrementalUpdateCached(sourceArgs string) bool {
-	cmd := exec.Command("/usr/sbin/deepin-immutable-ctl", "upgrade", "check")
-	if sourceArgs != "" {
-		cmd.Env = append(os.Environ(), "DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION="+sourceArgs)
-	}
-	// Need download count: xxx
-	output, err := cmd.Output()
-	if err == nil {
-		matchFlag := "Need download count: "
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			index := strings.Index(line, matchFlag)
-			if index >= 0 {
-				count, err := strconv.Atoi(strings.TrimSpace(line[index+len(matchFlag):]))
-				if err == nil {
-					if count == 0 {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
 }
