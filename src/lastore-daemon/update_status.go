@@ -441,7 +441,7 @@ func (m *UpdateModeStatusManager) updateModeStatusBySize(mode system.UpdateType,
 						sourceArgs = "-o Dir::Etc::sourcelist=" + sourceList + " -o Dir::Etc::SourceParts=/dev/null"
 					}
 				}
-				if m.lsConfig.IncrementalUpdate && needDownloadSize > 0 && apt.IsIncrementalUpdateCached(sourceArgs) {
+				if m.lsConfig.UseIncrementalUpdate() && needDownloadSize > 0 && apt.IsIncrementalUpdateCached(sourceArgs) {
 					needDownloadSize = 0.0
 				}
 
