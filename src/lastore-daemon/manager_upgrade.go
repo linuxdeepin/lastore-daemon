@@ -191,6 +191,9 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				_ = os.RemoveAll(logTmpPath)
 				_ = m.logTmpFile.Close()
 				m.logTmpFile = nil
+				if err := os.MkdirAll(filepath.Dir(logTmpPath), 0755); err != nil {
+					return fmt.Errorf("failed to mkdir %s: %v", filepath.Dir(logTmpPath), err)
+				}
 				m.logTmpFile, err = os.OpenFile(logTmpPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 				if err != nil {
 					return fmt.Errorf("failed to open file %s: %v", logTmpPath, err)
