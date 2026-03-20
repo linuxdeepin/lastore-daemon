@@ -78,7 +78,7 @@ func main() {
 
 	// 如果是增量更新，则调用deepin-immutable-ctl upgrade cleanup命令清理immutable系统的缓存deb包和ostree包分支
 	cfg := config.NewConfig(path.Join("/var/lib/lastore", "config.json"))
-	if cfg.IncrementalUpdate {
+	if cfg.UseIncrementalUpdate() {
 		err := exec.Command("deepin-immutable-ctl", "upgrade", "clean").Run()
 		if err != nil {
 			logger.Debugf("failed to clean upgrade cache: %v", err)

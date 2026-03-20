@@ -800,6 +800,10 @@ func (c *Config) SetIncrementalUpdate(enable bool) error {
 	return c.save(dSettingsKeyIncrementalUpdate, enable)
 }
 
+func (c *Config) UseIncrementalUpdate() bool {
+	return !c.IntranetUpdate && c.IncrementalUpdate
+}
+
 func (c *Config) SetMirrorSource(id string) error {
 	c.MirrorSource = id
 	return c.save(dSettingsKeyMirrorSource, id)

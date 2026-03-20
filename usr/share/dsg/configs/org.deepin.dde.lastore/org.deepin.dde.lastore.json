@@ -510,7 +510,7 @@
       "visibility": "private"
     },
     "upgrade-delivery-enabled": {
-      "value": true,
+      "value": false,
       "serial": 0,
       "flags": [
         "global"
@@ -612,7 +612,7 @@
       "visibility": "private"
     },
     "incremental-update": {
-      "value": false,
+      "value": true,
       "serial": 0,
       "flags": [
         "global"
