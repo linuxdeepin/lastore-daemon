@@ -45,7 +45,7 @@ type ProcessEvent struct {
 	EventType    int    `json:"eventType"`
 	EventStatus  bool   `json:"eventStatus"`
 	EventContent string `json:"eventContent"`
-	ExecAct      int64  `json:"execAct"`
+	ExecAt       int64  `json:"execAt"`
 }
 
 const (
@@ -1428,7 +1428,7 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	if (m.config.PlatformDisabled & DisabledTargetPkgLists) == 0 {
 		syncFuncList = append(syncFuncList, m.updateTargetPkgMetaSync) // 目标版本信息
 	}
-	if (m.config.PlatformDisabled & DisabledCurrentPkgLists) == 0 {
+	if (m.config.PlatformDisabled&DisabledCurrentPkgLists) == 0 && m.preBaseline != "" {
 		syncFuncList = append(syncFuncList, m.updateCurrentPreInstalledPkgMetaSync) // 基线版本信息
 	}
 	if (m.config.PlatformDisabled & DisabledPkgCVEs) == 0 {
@@ -1461,8 +1461,8 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	}
 	logger.Debug("post process event msg:", body)
 	body.TaskID = m.taskID
-	if body.ExecAct == 0 {
-		body.ExecAct = time.Now().Unix()
+	if body.ExecAt == 0 {
+		body.ExecAt = time.Now().Unix()
 	}
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		logger.Warning("platform is disabled")

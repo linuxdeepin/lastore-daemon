@@ -276,7 +276,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 							TaskID:       1,
 							EventType:    updateplatform.PostUpdateCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PostUpdateCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -333,7 +333,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 							TaskID:       1,
 							EventType:    updateplatform.PostUpdateCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PostUpdateCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -408,7 +408,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 							TaskID:       1,
 							EventType:    updateplatform.PreUpdateCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PreUpdateCheck failed",
 						})
 					}(systemErr)
 				} else {
