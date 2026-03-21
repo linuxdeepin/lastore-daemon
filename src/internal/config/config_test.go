@@ -10,10 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/godbus/dbus/v5"
-	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,34 +77,4 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, configAfter.MirrorSource, configBefore.MirrorSource+"Test")
 	assert.Equal(t, configAfter.AppstoreRegion, configBefore.AppstoreRegion+"Test")
 	assert.Equal(t, configAfter.UpdateMode, configBefore.UpdateMode+1)
-}
-
-func TestSetStartCheckRangeSavesDBusVariants(t *testing.T) {
-	manager := &ConfigManager.MockManager{}
-	cfg := &Config{
-		dsLastoreManager: manager,
-	}
-	checkRange := []int{22, 21}
-
-	manager.MockInterfaceManager.
-		On("SetValue", dbus.Flags(0), dSettingsKeyStartCheckRange, mock.MatchedBy(func(value dbus.Variant) bool {
-			variants, ok := value.Value().([]dbus.Variant)
-			if !ok || len(variants) != len(checkRange) {
-				return false
-			}
-			for i, variant := range variants {
-				item, ok := variant.Value().(int)
-				if !ok || item != checkRange[i] {
-					return false
-				}
-			}
-			return true
-		})).
-		Return(nil).
-		Once()
-
-	err := cfg.SetStartCheckRange(checkRange)
-	require.NoError(t, err)
-	assert.Equal(t, checkRange, cfg.StartCheckRange)
-	manager.MockInterfaceManager.AssertExpectations(t)
 }

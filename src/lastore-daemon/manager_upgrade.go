@@ -222,7 +222,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 							TaskID:       1,
 							EventType:    updateplatform.PreBackupCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PreBackupCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -254,7 +254,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 							TaskID:       1,
 							EventType:    updateplatform.PostBackupCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PostBackupCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -298,7 +298,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 							TaskID:       1,
 							EventType:    updateplatform.PostBackupCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PostBackupCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -491,7 +491,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 							TaskID:       1,
 							EventType:    updateplatform.PreUpgradeCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PreUpgradeCheck failed",
 						})
 
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -537,7 +537,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 							TaskID:       1,
 							EventType:    updateplatform.MidUpgradeCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "MidUpgradeCheck failed",
 						})
 
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{

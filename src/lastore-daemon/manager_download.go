@@ -174,7 +174,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 							TaskID:       1,
 							EventType:    updateplatform.PreDownloadCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PreDownloadCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -262,7 +262,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 							TaskID:       1,
 							EventType:    updateplatform.PostDownloadCheck,
 							EventStatus:  false,
-							EventContent: err.ErrDetail,
+							EventContent: "PostDownloadCheck failed",
 						})
 					}(systemErr)
 				} else {
@@ -328,7 +328,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 								TaskID:       1,
 								EventType:    updateplatform.PostDownloadCheck,
 								EventStatus:  false,
-								EventContent: err.ErrDetail,
+								EventContent: "PostDownloadCheck failed",
 							})
 						}(systemErr)
 					} else {

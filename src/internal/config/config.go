@@ -976,7 +976,7 @@ func (c *Config) SetStartCheckRange(checkRange []int) error {
 	// TODO: remove this after bug of dde-dconfig fixed
 	variants := make([]dbus.Variant, 0, len(checkRange))
 	for _, item := range checkRange {
-		variants = append(variants, dbus.MakeVariant(item))
+		variants = append(variants, dbus.MakeVariant(int64(item)))
 	}
 
 	return c.save(dSettingsKeyStartCheckRange, variants)
