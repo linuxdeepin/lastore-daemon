@@ -1,3 +1,14 @@
+lastore-daemon (6.2.51) unstable; urgency=medium
+
+  * feat: lastore更新支持p2p协议的流量优化
+  * fix(config): prevent dconfig core dump caused by malformed config value format (#333)
+  * fix: Adjust the conditions for reporting environment check results.
+  * fix: The directory /run/lastore does not exist.
+  * fix: unify system upgrade logic (#335)
+  * fix: Fix the issue of failed reporting to the platform.
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Sat, 21 Mar 2026 18:35:29 +0800
+
 lastore-daemon (6.2.50) unstable; urgency=medium
 
   * feat: support lastore-daemon debug mode (#326)
