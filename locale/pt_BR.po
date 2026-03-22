@@ -5,7 +5,6 @@
 # 
 # Translators:
 # Cassiano Molinari <chano2808a@gmail.com>, 2025
-# Raphael Miquelis <raphaelmiquelis@gmail.com>, 2025
 # Flavio Lima <flaviolimaviolinista@gmail.com>, 2025
 # deepiner, 2025
 # 380125ae2590f93d3e1eff2258abdf75_6979c31, 2026
@@ -90,7 +89,7 @@ msgstr "Nova versão disponível! Baixando..."
 #: ../src/lastore-daemon/manager_update.go:238
 #: ../src/lastore-daemon/manager_update.go:294
 msgid "View"
-msgstr "Visualizar"
+msgstr "Exibir"
 
 #: ../src/lastore-daemon/manager_download.go:212
 #: ../src/lastore-daemon/manager_upgrade.go:672
