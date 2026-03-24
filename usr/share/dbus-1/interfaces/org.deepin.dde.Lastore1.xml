@@ -107,12 +107,14 @@
           <method name="SetUpdateSources">
                <arg type="usasb" direction="in"></arg>
           </method>
-	      <method name="RecordLocaleInfo">
-               <arg type="s" direction="in"></arg>
-          </method>
-          <method name="StartJob">
-               <arg type="s" direction="in"></arg>
-          </method>
+      <method name="RecordLocaleInfo">
+                <arg type="s" direction="in"></arg>
+      </method>
+      <method name="ReloadConfig">
+      </method>
+      <method name="StartJob">
+                <arg type="s" direction="in"></arg>
+      </method>
           <method name="UnRegisterAgent">
                <arg type="o" direction="in"></arg>
           </method>
