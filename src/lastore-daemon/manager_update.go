@@ -51,7 +51,7 @@ func prepareUpdateSource() {
 
 }
 
-func (m *Manager) beforeUpdateSourceEnvCheck() bool {
+func (m *Manager) beforeUpdateSourceEnvCheck() (bool, string) {
 	supportArchs, err := system.SystemArchitectures()
 	if err != nil {
 		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -60,7 +60,7 @@ func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 			EventStatus:  false,
 			EventContent: err.Error(),
 		})
-		return false
+		return false, err.Error()
 	}
 	installedMap, err := loadPkgStatusVersion()
 	if err != nil {
@@ -70,7 +70,7 @@ func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 			EventStatus:  false,
 			EventContent: err.Error(),
 		})
-		return false
+		return false, err.Error()
 	}
 
 	cmd := exec.Command("dpkg", "--audit")
@@ -81,7 +81,7 @@ func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 			EventStatus:  false,
 			EventContent: err.Error(),
 		})
-		return false
+		return false, err.Error()
 	}
 
 	var errMsgBuilder strings.Builder
@@ -119,7 +119,7 @@ func (m *Manager) beforeUpdateSourceEnvCheck() bool {
 		EventStatus:  status,
 		EventContent: errMsg,
 	})
-	return status
+	return status, errMsg
 }
 
 // updateSource 检查更新主要步骤:1.从更新平台获取数据并解析;2.apt update;3.最终可更新内容确定(模拟安装的方式);4.数据上报;
@@ -219,11 +219,12 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					if m.config.IntranetUpdate && !m.beforeUpdateSourceEnvCheck() {
+					status, msg := m.beforeUpdateSourceEnvCheck()
+					if m.config.IntranetUpdate && !status {
 						job.retry = 0
 						return &system.JobError{
 							ErrType:   system.ErrorDpkgError,
-							ErrDetail: "before update env check failed",
+							ErrDetail: fmt.Sprintf("before update env check failed: %s", msg),
 						}
 					}
 
