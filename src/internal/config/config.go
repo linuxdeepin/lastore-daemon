@@ -236,252 +236,20 @@ func getConfigFromDSettings() *Config {
 	systemSigLoop := dbusutil.NewSignalLoop(sysBus, 10)
 	systemSigLoop.Start()
 	c.dsLastoreManager.InitSignalExt(systemSigLoop, true)
+
+	c.reload()
+
 	// 从DSettings获取所有内容，更新config
-	v, err := c.dsLastoreManager.Value(0, dSettingsKeyUseDSettings)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.useDSettings = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyVersion)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.Version = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoCheckUpdates)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.AutoCheckUpdates = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDisableUpdateMetadata)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.DisableUpdateMetadata = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoDownloadUpdates)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.AutoDownloadUpdates = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoClean)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.AutoClean = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncrementalUpdate)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.IncrementalUpdate = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIntranetUpdate)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.IntranetUpdate = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyMirrorSource)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.MirrorSource = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateNotify)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.UpdateNotify = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckInterval)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.CheckInterval = time.Duration(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCleanInterval)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.CleanInterval = time.Duration(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateMode)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		if (c.UpdateMode & system.OnlySecurityUpdate) != 0 {
-			c.UpdateMode &= ^system.OnlySecurityUpdate
-			c.UpdateMode |= system.SecurityUpdate
-		}
-		c.UpdateMode = system.UpdateType(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCleanIntervalCacheOverLimit)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.CleanIntervalCacheOverLimit = time.Duration(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAppstoreRegion)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.AppstoreRegion = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCheckTime)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		s := v.Value().(string)
-		c.LastCheckTime, err = time.Parse(configTimeLayout, s)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCleanTime)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		s := v.Value().(string)
-		c.LastCleanTime, err = time.Parse(configTimeLayout, s)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCheckCacheSizeTime)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		s := v.Value().(string)
-		c.LastCheckCacheSizeTime, err = time.Parse(configTimeLayout, s)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyRepository)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.Repository = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyMirrorsUrl)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.MirrorsUrl = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAllowInstallRemovePkgExecPaths)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.AllowInstallRemovePkgExecPaths = append(c.AllowInstallRemovePkgExecPaths, s.Value().(string))
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoInstallUpdates)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.AutoInstallUpdates = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoInstallUpdateType)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.AutoInstallUpdateType = system.UpdateType(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAllowPostSystemUpgradeMessageVersion)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.AllowPostSystemUpgradeMessageVersion = append(c.AllowPostSystemUpgradeMessageVersion, s.Value().(string))
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpgradeStatus)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		statusContent := v.Value().(string)
-		err = json.Unmarshal([]byte(statusContent), &c.UpgradeStatus)
-		if err != nil {
-			logger.Warning(err)
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIdleDownloadConfig)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.IdleDownloadConfig = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemSourceList)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.SystemSourceList = append(c.SystemSourceList, s.Value().(string))
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyNonUnknownList)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.NonUnknownList = append(c.NonUnknownList, s.Value().(string))
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDownloadSpeedLimit)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.DownloadSpeedLimitConfig = v.Value().(string)
-	}
-
-	updateLastoreDaemonStatus := func() {
-		v, err = c.dsLastoreManager.Value(0, DSettingsKeyLastoreDaemonStatus)
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(int64))
-		}
-	}
-	updateLastoreDaemonStatus()
 	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
 		switch key {
 		case DSettingsKeyLastoreDaemonStatus:
 			oldStatus := c.lastoreDaemonStatus
-			updateLastoreDaemonStatus()
+			v, err := c.dsLastoreManager.Value(0, DSettingsKeyLastoreDaemonStatus)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(int64))
+			}
 			newStatus := c.lastoreDaemonStatus
 			if (oldStatus & DisableUpdate) != (newStatus & DisableUpdate) {
 				c.dsettingsChangedCbMapMu.Lock()
@@ -495,189 +263,6 @@ func getConfigFromDSettings() *Config {
 	})
 	if err != nil {
 		logger.Warning(err)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckUpdateMode)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.CheckUpdateMode = system.UpdateType(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateStatus)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.UpdateStatus = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUpdate)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.PlatformUpdate = v.Value().(bool)
-	}
-
-	var url string
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUrl)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		url = v.Value().(string)
-	}
-	c.PlatformUrl = url
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformRepoComponents)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.PlatformRepoComponents = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPostUpgradeOnCalendar)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.PostUpgradeCron = v.Value().(string)
-	}
-
-	var checkRange []int64
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			checkRange = append(checkRange, s.Value().(int64))
-		}
-	}
-
-	if len(checkRange) != 2 {
-		c.StartCheckRange = []int{1800, 21600}
-	} else {
-		if checkRange[0] < checkRange[1] {
-			c.StartCheckRange = []int{int(checkRange[0]), int(checkRange[1])}
-		} else {
-			c.StartCheckRange = []int{int(checkRange[1]), int(checkRange[0])}
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncludeDiskInfo)
-	if err != nil {
-		logger.Warning(err)
-		c.IncludeDiskInfo = true
-	} else {
-		c.IncludeDiskInfo = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateTime)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.UpdateTime = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformDisabled)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.PlatformDisabled = DisabledStatus(v.Value().(int64))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableVersionCheck)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.EnableVersionCheck = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateProcessUpload)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.UpdateProcessUpload = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableCoreList)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.EnableCoreList = v.Value().(bool)
-	}
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyClientPackageName)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.ClientPackageName = v.Value().(string)
-	}
-
-	updateUpgradeDeliveryEnabled := func() {
-		v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpgradeDeliveryEnabled)
-		if err != nil {
-			logger.Warning(err)
-			c.UpgradeDeliveryEnabled = false
-		} else {
-			c.UpgradeDeliveryEnabled = v.Value().(bool)
-		}
-	}
-	updateUpgradeDeliveryEnabled()
-	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
-		switch key {
-		case dSettingsKeyUpgradeDeliveryEnabled:
-			updateUpgradeDeliveryEnabled()
-		}
-	})
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemCustomSource)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.SystemCustomSource = append(c.SystemCustomSource, s.Value().(string))
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityCustomSource)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.SecurityCustomSource = append(c.SecurityCustomSource, s.Value().(string))
-		}
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemRepoType)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.SystemRepoType = RepoType(v.Value().(string))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityRepoType)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.SecurityRepoType = RepoType(v.Value().(string))
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyGetHardwareIdByHelper)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		c.GetHardwareIdByHelper = v.Value().(bool)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckPolicyInterval)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		if val, ok := v.Value().(int64); ok {
-			c.CheckPolicyInterval = int(val)
-		} else {
-			logger.Warningf("dSettings key %s: value is not int64", dSettingsKeyCheckPolicyInterval)
-		}
 	}
 
 	err = c.recoveryAndApplyOemFlag(system.SystemUpdate)
@@ -739,7 +324,6 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetRepository(oldConfig.Repository)
 	_ = c.SetMirrorsUrl(oldConfig.MirrorsUrl)
 	_ = c.SetAllowInstallRemovePkgExecPaths(append(oldConfig.AllowInstallRemovePkgExecPaths, c.AllowInstallRemovePkgExecPaths...))
-	return
 }
 
 func (c *Config) ConnectConfigChanged(key string, cb func(LastoreDaemonStatus, interface{})) {
@@ -1017,6 +601,14 @@ func (c *Config) ReloadConfig() error {
 		return errors.New("dsLastoreManager is nil")
 	}
 
+	c.reload()
+
+	system.IntranetUpdate = c.IntranetUpdate
+	logger.Info("Config reloaded successfully")
+	return nil
+}
+
+func (c *Config) reload() {
 	v, err := c.dsLastoreManager.Value(0, dSettingsKeyUseDSettings)
 	if err != nil {
 		logger.Warningf("Failed to get %s: %v", dSettingsKeyUseDSettings, err)
@@ -1428,10 +1020,6 @@ func (c *Config) ReloadConfig() error {
 			logger.Warningf("dSettings key %s: value is not int64", dSettingsKeyCheckPolicyInterval)
 		}
 	}
-
-	system.IntranetUpdate = c.IntranetUpdate
-	logger.Info("Config reloaded successfully")
-	return nil
 }
 
 func (c *Config) save(key string, v interface{}) error {
