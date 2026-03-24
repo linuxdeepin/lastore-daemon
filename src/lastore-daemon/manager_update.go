@@ -219,12 +219,14 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					status, msg := m.beforeUpdateSourceEnvCheck()
-					if m.config.IntranetUpdate && !status {
-						job.retry = 0
-						return &system.JobError{
-							ErrType:   system.ErrorDpkgError,
-							ErrDetail: fmt.Sprintf("before update env check failed: %s", msg),
+					if m.config.IntranetUpdate {
+						status, msg := m.beforeUpdateSourceEnvCheck()
+						if !status {
+							job.retry = 0
+							return &system.JobError{
+								ErrType:   system.ErrorDpkgError,
+								ErrDetail: fmt.Sprintf("before update env check failed: %s", msg),
+							}
 						}
 					}
 
