@@ -176,6 +176,10 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:     v.GetUpdateDetails,
 			InArgs: []string{"filename", "realtime"},
 		},
+		{
+			Name: "ReloadConfig",
+			Fn:   v.ReloadConfig,
+		},
 	}
 }
 func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {

@@ -710,3 +710,20 @@ func (m *Manager) GetUpdateDetails(sender dbus.Sender, fd dbus.UnixFD, realTime 
 	}
 	return nil
 }
+
+func (m *Manager) ReloadConfig(sender dbus.Sender) *dbus.Error {
+	m.service.DelayAutoQuit()
+
+	err := checkInvokePermission(m.service, sender)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+
+	err = m.config.ReloadConfig()
+	if err != nil {
+		logger.Warningf("ReloadConfig failed: %v", err)
+		return dbusutil.ToError(err)
+	}
+	return nil
+}

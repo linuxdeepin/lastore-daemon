@@ -6,6 +6,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"sync"
 	"time"
@@ -1004,6 +1005,433 @@ func (c *Config) SetOnlineCache(cache string) error {
 
 func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {
 	return c.PlatformDisabled&status == status
+}
+
+func (c *Config) ReloadConfig() error {
+	logger.Info("Reloading config from DSettings")
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+
+	if c.dsLastoreManager == nil {
+		logger.Warning("dsLastoreManager is nil, cannot reload config")
+		return errors.New("dsLastoreManager is nil")
+	}
+
+	v, err := c.dsLastoreManager.Value(0, dSettingsKeyUseDSettings)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUseDSettings, err)
+	} else {
+		c.useDSettings = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyVersion)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyVersion, err)
+	} else {
+		c.Version = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoCheckUpdates)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAutoCheckUpdates, err)
+	} else {
+		c.AutoCheckUpdates = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDisableUpdateMetadata)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyDisableUpdateMetadata, err)
+	} else {
+		c.DisableUpdateMetadata = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoDownloadUpdates)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAutoDownloadUpdates, err)
+	} else {
+		c.AutoDownloadUpdates = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoClean)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAutoClean, err)
+	} else {
+		c.AutoClean = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncrementalUpdate)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyIncrementalUpdate, err)
+	} else {
+		c.IncrementalUpdate = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIntranetUpdate)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyIntranetUpdate, err)
+	} else {
+		c.IntranetUpdate = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyMirrorSource)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyMirrorSource, err)
+	} else {
+		c.MirrorSource = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateNotify)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpdateNotify, err)
+	} else {
+		c.UpdateNotify = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckInterval)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyCheckInterval, err)
+	} else {
+		c.CheckInterval = time.Duration(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCleanInterval)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyCleanInterval, err)
+	} else {
+		c.CleanInterval = time.Duration(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateMode)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpdateMode, err)
+	} else {
+		if (c.UpdateMode & system.OnlySecurityUpdate) != 0 {
+			c.UpdateMode &= ^system.OnlySecurityUpdate
+			c.UpdateMode |= system.SecurityUpdate
+		}
+		c.UpdateMode = system.UpdateType(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCleanIntervalCacheOverLimit)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyCleanIntervalCacheOverLimit, err)
+	} else {
+		c.CleanIntervalCacheOverLimit = time.Duration(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAppstoreRegion)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAppstoreRegion, err)
+	} else {
+		c.AppstoreRegion = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCheckTime)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyLastCheckTime, err)
+	} else {
+		s := v.Value().(string)
+		c.LastCheckTime, err = time.Parse(configTimeLayout, s)
+		if err != nil {
+			logger.Warning("Failed to parse LastCheckTime")
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCleanTime)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyLastCleanTime, err)
+	} else {
+		s := v.Value().(string)
+		c.LastCleanTime, err = time.Parse(configTimeLayout, s)
+		if err != nil {
+			logger.Warning("Failed to parse LastCleanTime")
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyLastCheckCacheSizeTime)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyLastCheckCacheSizeTime, err)
+	} else {
+		s := v.Value().(string)
+		c.LastCheckCacheSizeTime, err = time.Parse(configTimeLayout, s)
+		if err != nil {
+			logger.Warning("Failed to parse LastCheckCacheSizeTime")
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyRepository)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyRepository, err)
+	} else {
+		c.Repository = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyMirrorsUrl)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyMirrorsUrl, err)
+	} else {
+		c.MirrorsUrl = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAllowInstallRemovePkgExecPaths)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAllowInstallRemovePkgExecPaths, err)
+	} else {
+		c.AllowInstallRemovePkgExecPaths = []string{}
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.AllowInstallRemovePkgExecPaths = append(c.AllowInstallRemovePkgExecPaths, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoInstallUpdates)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAutoInstallUpdates, err)
+	} else {
+		c.AutoInstallUpdates = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoInstallUpdateType)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAutoInstallUpdateType, err)
+	} else {
+		c.AutoInstallUpdateType = system.UpdateType(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAllowPostSystemUpgradeMessageVersion)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyAllowPostSystemUpgradeMessageVersion, err)
+	} else {
+		c.AllowPostSystemUpgradeMessageVersion = []string{}
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.AllowPostSystemUpgradeMessageVersion = append(c.AllowPostSystemUpgradeMessageVersion, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpgradeStatus)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpgradeStatus, err)
+	} else {
+		statusContent := v.Value().(string)
+		err = json.Unmarshal([]byte(statusContent), &c.UpgradeStatus)
+		if err != nil {
+			logger.Warning("Failed to unmarshal upgrade status")
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIdleDownloadConfig)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyIdleDownloadConfig, err)
+	} else {
+		c.IdleDownloadConfig = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemSourceList)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeySystemSourceList, err)
+	} else {
+		c.SystemSourceList = []string{}
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.SystemSourceList = append(c.SystemSourceList, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyNonUnknownList)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyNonUnknownList, err)
+	} else {
+		c.NonUnknownList = []string{}
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.NonUnknownList = append(c.NonUnknownList, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDownloadSpeedLimit)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyDownloadSpeedLimit, err)
+	} else {
+		c.DownloadSpeedLimitConfig = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyLastoreDaemonStatus)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckUpdateMode)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyCheckUpdateMode, err)
+	} else {
+		c.CheckUpdateMode = system.UpdateType(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateStatus)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpdateStatus, err)
+	} else {
+		c.UpdateStatus = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUpdate)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyPlatformUpdate, err)
+	} else {
+		c.PlatformUpdate = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUrl)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyPlatformUrl, err)
+	} else {
+		c.PlatformUrl = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformRepoComponents)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyPlatformRepoComponents, err)
+	} else {
+		c.PlatformRepoComponents = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPostUpgradeOnCalendar)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyPostUpgradeOnCalendar, err)
+	} else {
+		c.PostUpgradeCron = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyStartCheckRange, err)
+		c.StartCheckRange = []int{1800, 21600}
+	} else {
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.StartCheckRange = append(c.StartCheckRange, int(s.Value().(int64)))
+		}
+
+		if len(c.StartCheckRange) != 2 {
+			c.StartCheckRange = []int{1800, 21600}
+		}
+
+		if c.StartCheckRange[0] > c.StartCheckRange[1] {
+			tmpValue := c.StartCheckRange[0]
+			c.StartCheckRange[0] = c.StartCheckRange[1]
+			c.StartCheckRange[1] = tmpValue
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncludeDiskInfo)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyIncludeDiskInfo, err)
+	} else {
+		c.IncludeDiskInfo = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateTime)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpdateTime, err)
+	} else {
+		c.UpdateTime = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformDisabled)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyPlatformDisabled, err)
+	} else {
+		c.PlatformDisabled = DisabledStatus(v.Value().(int64))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableVersionCheck)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyEnableVersionCheck, err)
+	} else {
+		c.EnableVersionCheck = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpdateProcessUpload)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpdateProcessUpload, err)
+	} else {
+		c.UpdateProcessUpload = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyEnableCoreList)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyEnableCoreList, err)
+	} else {
+		c.EnableCoreList = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyClientPackageName)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyClientPackageName, err)
+	} else {
+		c.ClientPackageName = v.Value().(string)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpgradeDeliveryEnabled)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyUpgradeDeliveryEnabled, err)
+	} else {
+		c.UpgradeDeliveryEnabled = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemCustomSource)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeySystemCustomSource, err)
+	} else {
+		c.SystemCustomSource = []string{}
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.SystemCustomSource = append(c.SystemCustomSource, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityCustomSource)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeySecurityCustomSource, err)
+	} else {
+		c.SecurityCustomSource = []string{}
+		for _, s := range v.Value().([]dbus.Variant) {
+			c.SecurityCustomSource = append(c.SecurityCustomSource, s.Value().(string))
+		}
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemRepoType)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeySystemRepoType, err)
+	} else {
+		c.SystemRepoType = RepoType(v.Value().(string))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityRepoType)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeySecurityRepoType, err)
+	} else {
+		c.SecurityRepoType = RepoType(v.Value().(string))
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyGetHardwareIdByHelper)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyGetHardwareIdByHelper, err)
+	} else {
+		c.GetHardwareIdByHelper = v.Value().(bool)
+	}
+
+	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckPolicyInterval)
+	if err != nil {
+		logger.Warningf("Failed to get %s: %v", dSettingsKeyCheckPolicyInterval, err)
+	} else {
+		if val, ok := v.Value().(int64); ok {
+			c.CheckPolicyInterval = int(val)
+		} else {
+			logger.Warningf("dSettings key %s: value is not int64", dSettingsKeyCheckPolicyInterval)
+		}
+	}
+
+	system.IntranetUpdate = c.IntranetUpdate
+	logger.Info("Config reloaded successfully")
+	return nil
 }
 
 func (c *Config) save(key string, v interface{}) error {
