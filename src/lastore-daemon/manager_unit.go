@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -425,4 +427,14 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 	}
 
 	return nil
+}
+
+func isTimerUnitFileExists(unitName UnitName) bool {
+	timerUnitFile := filepath.Join("/run/systemd/transient", string(unitName)+".timer")
+
+	if _, err := os.Stat(timerUnitFile); err != nil {
+		return false
+	}
+
+	return true
 }
