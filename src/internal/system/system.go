@@ -12,8 +12,6 @@ import (
 
 const VarLibDir = "/var/lib/lastore"
 
-var IntranetUpdate bool
-
 type Status string
 
 const (
