@@ -264,7 +264,7 @@ func (m *Manager) initPlatformManager() {
 }
 
 func (m *Manager) TryToStartCronCheck() {
-	if utils.IsFileExist("/run/systemd/transient/lastoreCronCheckPrivate.timer") {
+	if isTimerUnitFileExists(lastoreCronCheck) {
 		return
 	}
 	m.startCheckPolicyTask()
