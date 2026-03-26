@@ -214,10 +214,6 @@ const (
 )
 
 func IsAuthorized() bool {
-	// TODO: only for test
-	if IntranetUpdate {
-		return true
-	}
 	edition, err := getEditionName()
 	if err != nil {
 		return false
