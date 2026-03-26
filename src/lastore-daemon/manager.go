@@ -18,6 +18,7 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/godbus/dbus/v5"
@@ -212,11 +213,53 @@ func (m *Manager) initDbusSignalListen() {
 }
 
 func (m *Manager) initDSettingsChangedHandle() {
-	m.config.ConnectConfigChanged(config.DSettingsKeyLastoreDaemonStatus, func(bit config.LastoreDaemonStatus, value interface{}) {
-		if bit == config.DisableUpdate {
+	m.config.ConnectConfigChanged(config.DSettingsKeyLastoreDaemonStatus, func(oldValue, newValue interface{}) {
+		oldStatus := oldValue.(config.LastoreDaemonStatus)
+		newStatus := newValue.(config.LastoreDaemonStatus)
+		if (oldStatus & config.DisableUpdate) != (newStatus & config.DisableUpdate) {
+			logger.Infof("update timer: %s", lastoreAutoCheck)
 			_ = m.updateTimerUnit(lastoreAutoCheck)
 		}
 	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyPlatformUpdate, func(oldValue, newValue interface{}) {
+		platformUpdate := newValue.(bool)
+		system.SetSystemUpdate(platformUpdate)
+		logger.Info("PlatformUpdate changed to:", platformUpdate, "SystemUpdateSource:", system.SystemUpdateSource)
+	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyPlatformUrl, func(oldValue, newValue interface{}) {
+		platformUrl := newValue.(string)
+		if m.updatePlatform != nil {
+			m.updatePlatform.UpdateRequestUrl(platformUrl)
+			logger.Info("PlatformUrl changed to:", platformUrl)
+		}
+	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyIncrementalUpdate, func(oldValue, newValue interface{}) {
+		incrementalUpdate := newValue.(bool)
+		m.UpdateIncrementalUpdate(incrementalUpdate)
+		logger.Info("IncrementalUpdate changed to:", incrementalUpdate)
+	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyAutoDownloadUpdates, func(oldValue, newValue interface{}) {
+		autoDownloadUpdates := newValue.(bool)
+		if m.updater != nil {
+			_ = m.updater.SetAutoDownloadUpdates(autoDownloadUpdates)
+			logger.Info("AutoDownloadUpdates changed to:", autoDownloadUpdates)
+		}
+	})
+}
+
+// recreateSystem 重新创建system对象，用于incremental-update热更新
+func (m *Manager) UpdateIncrementalUpdate(incrementalUpdate bool) {
+	if ds, ok := m.updateApi.(*dut.DutSystem); ok {
+		ds.APTSystem.IncrementalUpdate = incrementalUpdate
+	} else {
+		logger.Warning("UpdateIncrementalUpdate not supported for current system type")
+	}
+
+	if ds, ok := m.jobManager.system.(*dut.DutSystem); ok {
+		ds.APTSystem.IncrementalUpdate = incrementalUpdate
+	} else {
+		logger.Warning("UpdateIncrementalUpdate not supported for jobManager system type")
+	}
 }
 
 func (m *Manager) initStatusManager() {

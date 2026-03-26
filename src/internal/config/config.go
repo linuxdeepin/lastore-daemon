@@ -126,7 +126,7 @@ type Config struct {
 	filePath string
 	statusMu sync.RWMutex
 
-	dsettingsChangedCbMap   map[string]func(LastoreDaemonStatus, interface{})
+	dsettingsChangedCbMap   map[string]func(interface{}, interface{})
 	dsettingsChangedCbMapMu sync.Mutex
 }
 
@@ -165,7 +165,7 @@ const (
 	dSettingsKeyVersion                              = "version"
 	dSettingsKeyAutoCheckUpdates                     = "auto-check-updates"
 	dSettingsKeyDisableUpdateMetadata                = "disable-update-metadata"
-	dSettingsKeyAutoDownloadUpdates                  = "auto-download-updates"
+	DSettingsKeyAutoDownloadUpdates                  = "auto-download-updates"
 	dSettingsKeyAutoClean                            = "auto-clean"
 	dSettingsKeyMirrorSource                         = "mirror-source"
 	dSettingsKeyUpdateNotify                         = "update-notify"
@@ -192,8 +192,8 @@ const (
 	dSettingsKeyLocalDownloadSpeedLimit              = "local-download-speed-limit"
 	DSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
-	dSettingsKeyPlatformUpdate                       = "platform-update"
-	dSettingsKeyPlatformUrl                          = "platform-url"
+	DSettingsKeyPlatformUpdate                       = "platform-update"
+	DSettingsKeyPlatformUrl                          = "platform-url"
 	dSettingsKeyStartCheckRange                      = "start-check-range"
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
 	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
@@ -209,7 +209,7 @@ const (
 	dSettingsKeySystemRepoType                       = "system-repo-type"
 	dSettingsKeySecurityRepoType                     = "security-repo-type"
 	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
-	dSettingsKeyIncrementalUpdate                    = "incremental-update"
+	DSettingsKeyIncrementalUpdate                    = "incremental-update"
 	dSettingsKeyIntranetUpdate                       = "intranet-update"
 	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
 	dSettingsKeyCheckPolicyInterval                  = "check-policy-interval"
@@ -266,7 +266,7 @@ func getConfigFromDSettings() *Config {
 		c.DisableUpdateMetadata = v.Value().(bool)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoDownloadUpdates)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyAutoDownloadUpdates)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -280,7 +280,7 @@ func getConfigFromDSettings() *Config {
 		c.AutoClean = v.Value().(bool)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncrementalUpdate)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncrementalUpdate)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -485,25 +485,6 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 	updateLastoreDaemonStatus()
-	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
-		switch key {
-		case DSettingsKeyLastoreDaemonStatus:
-			oldStatus := c.lastoreDaemonStatus
-			updateLastoreDaemonStatus()
-			newStatus := c.lastoreDaemonStatus
-			if (oldStatus & DisableUpdate) != (newStatus & DisableUpdate) {
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(DisableUpdate, c.lastoreDaemonStatus)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		}
-	})
-	if err != nil {
-		logger.Warning(err)
-	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckUpdateMode)
 	if err != nil {
@@ -519,7 +500,7 @@ func getConfigFromDSettings() *Config {
 		c.UpdateStatus = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUpdate)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUpdate)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -527,7 +508,7 @@ func getConfigFromDSettings() *Config {
 	}
 
 	var url string
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyPlatformUrl)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUrl)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -628,15 +609,6 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 	updateUpgradeDeliveryEnabled()
-	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
-		switch key {
-		case dSettingsKeyUpgradeDeliveryEnabled:
-			updateUpgradeDeliveryEnabled()
-		}
-	})
-	if err != nil {
-		logger.Warning(err)
-	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeySystemCustomSource)
 	if err != nil {
@@ -722,6 +694,110 @@ func getConfigFromDSettings() *Config {
 	}
 	c.OtherSourceList = append(c.OtherSourceList, "/etc/apt/sources.list.d/driver.list")
 	c.SecuritySourceList = append(c.SecuritySourceList, system.SecuritySourceFile)
+
+	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
+		logger.Infof("config update: key=%s", key)
+		switch key {
+		case dSettingsKeyIntranetUpdate:
+			v, err = c.dsLastoreManager.Value(0, dSettingsKeyIntranetUpdate)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				c.IntranetUpdate = v.Value().(bool)
+			}
+		case DSettingsKeyPlatformUpdate:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUpdate)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				oldValue := c.PlatformUpdate
+				newValue := v.Value().(bool)
+				c.PlatformUpdate = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
+		case DSettingsKeyPlatformUrl:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUrl)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				oldValue := c.PlatformUrl
+				newValue := v.Value().(string)
+				c.PlatformUrl = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
+		case dSettingsKeyGetHardwareIdByHelper:
+			v, err = c.dsLastoreManager.Value(0, dSettingsKeyGetHardwareIdByHelper)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				c.GetHardwareIdByHelper = v.Value().(bool)
+			}
+		case dSettingsKeyIncludeDiskInfo:
+			v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncludeDiskInfo)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				c.IncludeDiskInfo = v.Value().(bool)
+			}
+		case DSettingsKeyIncrementalUpdate:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncrementalUpdate)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				oldValue := c.IncrementalUpdate
+				newValue := v.Value().(bool)
+				c.IncrementalUpdate = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
+		case DSettingsKeyAutoDownloadUpdates:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyAutoDownloadUpdates)
+			if err != nil {
+				logger.Warning(err)
+			} else {
+				oldValue := c.AutoDownloadUpdates
+				newValue := v.Value().(bool)
+				c.AutoDownloadUpdates = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
+		case dSettingsKeyUpgradeDeliveryEnabled:
+			updateUpgradeDeliveryEnabled()
+		case DSettingsKeyLastoreDaemonStatus:
+			oldStatus := c.lastoreDaemonStatus
+			updateLastoreDaemonStatus()
+			newStatus := c.lastoreDaemonStatus
+			if (oldStatus & DisableUpdate) != (newStatus & DisableUpdate) {
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldStatus, newStatus)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
+		}
+	})
+	if err != nil {
+		logger.Warning(err)
+	}
 	return c
 }
 
@@ -747,12 +823,11 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetRepository(oldConfig.Repository)
 	_ = c.SetMirrorsUrl(oldConfig.MirrorsUrl)
 	_ = c.SetAllowInstallRemovePkgExecPaths(append(oldConfig.AllowInstallRemovePkgExecPaths, c.AllowInstallRemovePkgExecPaths...))
-	return
 }
 
-func (c *Config) ConnectConfigChanged(key string, cb func(LastoreDaemonStatus, interface{})) {
+func (c *Config) ConnectConfigChanged(key string, cb func(interface{}, interface{})) {
 	if c.dsettingsChangedCbMap == nil {
-		c.dsettingsChangedCbMap = make(map[string]func(LastoreDaemonStatus, interface{}))
+		c.dsettingsChangedCbMap = make(map[string]func(interface{}, interface{}))
 	}
 	c.dsettingsChangedCbMapMu.Lock()
 	c.dsettingsChangedCbMap[key] = cb
@@ -796,7 +871,7 @@ func (c *Config) SetUpdateNotify(enable bool) error {
 
 func (c *Config) SetAutoDownloadUpdates(enable bool) error {
 	c.AutoDownloadUpdates = enable
-	return c.save(dSettingsKeyAutoDownloadUpdates, enable)
+	return c.save(DSettingsKeyAutoDownloadUpdates, enable)
 }
 
 func (c *Config) SetAutoClean(enable bool) error {
@@ -806,7 +881,7 @@ func (c *Config) SetAutoClean(enable bool) error {
 
 func (c *Config) SetIncrementalUpdate(enable bool) error {
 	c.IncrementalUpdate = enable
-	return c.save(dSettingsKeyIncrementalUpdate, enable)
+	return c.save(DSettingsKeyIncrementalUpdate, enable)
 }
 
 func (c *Config) UseIncrementalUpdate() bool {

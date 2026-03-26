@@ -1952,3 +1952,8 @@ func getTaskId() int {
 	}
 	return content
 }
+
+// UpdateRequestUrl 更新平台请求地址
+func (m *UpdatePlatformManager) UpdateRequestUrl(url string) {
+	m.requestUrl = url
+}
