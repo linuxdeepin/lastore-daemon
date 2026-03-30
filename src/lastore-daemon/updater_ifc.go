@@ -6,12 +6,14 @@ package main
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/dde-api/polkit"
 	"github.com/linuxdeepin/go-lib/dbusutil"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/ratelimit"
 )
 
 func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string, busErr *dbus.Error) {
@@ -204,5 +206,75 @@ func (u *Updater) CleanTransmissionFiles(sender dbus.Sender) *dbus.Error {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
+	return nil
+}
+
+func (u *Updater) SetDeliveryDownloadSpeedLimit(limitConfig string) *dbus.Error {
+	var speedLimitConfig speedLimitConfig
+	if err := json.Unmarshal([]byte(limitConfig), &speedLimitConfig); err != nil {
+		return dbusutil.ToError(err)
+	}
+
+	rateLimit := -1
+	if speedLimitConfig.SpeedLimitEnabled {
+		limitRate, err := strconv.ParseInt(speedLimitConfig.LimitSpeed, 10, 64)
+		if err != nil {
+			return dbusutil.ToError(err)
+		}
+		rateLimit = int(limitRate)
+	}
+
+	if err := ratelimit.SetIPFSDownloadRateLimit(rateLimit); err != nil {
+		return dbusutil.ToError(err)
+	}
+
+	rateInfo := ratelimit.RateInfo{
+		LimitType:   ratelimit.RateLimitTypeLocal,
+		LimitRate:   int64(rateLimit),
+		CurrentRate: int64(rateLimit),
+	}
+	rateInfoData, err := json.Marshal(rateInfo)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+	if err := u.config.SetDeliveryLocalDownloadGlobalLimit(string(rateInfoData)); err != nil {
+		return dbusutil.ToError(err)
+	}
+
+	return nil
+}
+
+func (u *Updater) SetDeliveryUploadSpeedLimit(limitConfig string) *dbus.Error {
+	var speedLimitConfig speedLimitConfig
+	if err := json.Unmarshal([]byte(limitConfig), &speedLimitConfig); err != nil {
+		return dbusutil.ToError(err)
+	}
+
+	rateLimit := -1
+	if speedLimitConfig.SpeedLimitEnabled {
+		limitRate, err := strconv.ParseInt(speedLimitConfig.LimitSpeed, 10, 64)
+		if err != nil {
+			return dbusutil.ToError(err)
+		}
+		rateLimit = int(limitRate)
+	}
+
+	if err := ratelimit.SetIPFSUploadRateLimit(rateLimit); err != nil {
+		return dbusutil.ToError(err)
+	}
+
+	rateInfo := ratelimit.RateInfo{
+		LimitType:   ratelimit.RateLimitTypeLocal,
+		LimitRate:   int64(rateLimit),
+		CurrentRate: int64(rateLimit),
+	}
+	rateInfoData, err := json.Marshal(rateInfo)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+	if err := u.config.SetDeliveryLocalUploadGlobalLimit(string(rateInfoData)); err != nil {
+		return dbusutil.ToError(err)
+	}
+
 	return nil
 }

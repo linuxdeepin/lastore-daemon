@@ -50,6 +50,12 @@ type downloadSpeedLimitConfig struct {
 	IsOnlineSpeedLimit        bool
 }
 
+type speedLimitConfig struct {
+	SpeedLimitEnabled  bool
+	LimitSpeed         string
+	IsOnlineSpeedLimit bool
+}
+
 type Updater struct {
 	manager             *Manager
 	service             *dbusutil.Service
