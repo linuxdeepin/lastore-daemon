@@ -35,6 +35,7 @@ import (
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/ratelimit"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
@@ -122,7 +123,8 @@ type UpdatePlatformManager struct {
 	Tp              UpdateTp  // 更新策略类型:1.非强制更新，2.强制更新/立即更新，3.强制更新/关机或重启时更新，4.强制更新/指定时间更新
 	UpdateTime      time.Time // 更新时间(指定时间更新时的时间)
 	OnlineRateLimit throttlingMessage
-	UpdateNowForce  bool // 立即更新
+	IPFSConfig      ratelimit.IPFSConfig // ipfs配置
+	UpdateNowForce  bool                 // 立即更新
 	mu              sync.Mutex
 
 	jobPostMsgMap     map[string]*UpgradePostMsg
@@ -528,6 +530,7 @@ const (
 	PostProcess
 	PostProcessEvent
 	PostResult
+	GetIPFSConfig
 )
 
 type requestContent struct {
@@ -575,6 +578,10 @@ var Urls = map[requestType]requestContent{
 	PostResult: {
 		"/api/v1/update/status",
 		"POST",
+	},
+	GetIPFSConfig: {
+		"/api/v1/ipfs/config",
+		"GET",
 	},
 }
 
@@ -727,6 +734,26 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 	return client.Do(request)
 }
 
+func (m *UpdatePlatformManager) genIpfsConfigResponse() (*http.Response, error) {
+	uri, err := url.Parse(m.requestUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %v: %w", uri, err)
+	}
+	uri = uri.JoinPath(Urls[GetIPFSConfig].path)
+
+	q := uri.Query()
+	q.Set("id", m.IPFSConfig.ID)
+	uri.RawQuery = q.Encode()
+	client := &http.Client{
+		Timeout: 40 * time.Second,
+	}
+	request, err := http.NewRequest(Urls[GetIPFSConfig].method, uri.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v new request failed: %w", GetIPFSConfig.string(), err)
+	}
+	return client.Do(request)
+}
+
 func getResponseData(response *http.Response, reqType requestType) (json.RawMessage, error) {
 	if http.StatusOK == response.StatusCode {
 		respData, err := io.ReadAll(response.Body)
@@ -811,6 +838,16 @@ func getCVEData(data json.RawMessage) *CVEMeta {
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
 		logger.Warningf("%v failed to Unmarshal msg.Data to CVEMeta: %v ", GetPkgCVEs.string(), err.Error())
+		return tmp
+	}
+	return tmp
+}
+
+// LoadConfig 加载服务器端配置
+func getIPFSConfigData(data json.RawMessage) *ratelimit.IPFSConfig {
+	tmp := &ratelimit.IPFSConfig{}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		logger.Warningf("%v failed to Unmarshal msg.Data to IPFSConfig: %v", GetIPFSConfig.string(), err)
 		return tmp
 	}
 	return tmp
@@ -950,6 +987,30 @@ func (m *UpdatePlatformManager) GenThrottlingByToken() error {
 
 	m.OnlineRateLimit = *msg
 	return err
+}
+
+func (m *UpdatePlatformManager) GenIpfsConfig() error {
+	response, err := m.genIpfsConfigResponse()
+	if err != nil {
+		return fmt.Errorf("failed to get ipfs config: %w", err)
+	}
+	data, err := getResponseData(response, GetIPFSConfig)
+	if err != nil {
+		return fmt.Errorf("failed to get ipfs config data: %w", err)
+	}
+	msg := getIPFSConfigData(data)
+	if msg == nil {
+		return fmt.Errorf("failed to get ipfs config data")
+	}
+
+	m.IPFSConfig = *msg
+
+	configData, err := json.Marshal(m.IPFSConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ipfs config: %w", err)
+	}
+	logger.Infof("ipfs config: %s", string(configData))
+	return nil
 }
 
 type packageLists struct {
@@ -1956,4 +2017,168 @@ func getTaskId() int {
 // UpdateRequestUrl 更新平台请求地址
 func (m *UpdatePlatformManager) UpdateRequestUrl(url string) {
 	m.requestUrl = url
+}
+
+func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
+	if err := m.GenIpfsConfig(); err != nil {
+		return fmt.Errorf("failed to gen ipfs config: %w", err)
+	}
+
+	if m.IPFSConfig.UploadLimit == nil || m.IPFSConfig.DownloadLimit == nil {
+		return nil
+	}
+
+	uploadLimitRate, err := ratelimit.GetIPFSLimitRateBySyncLimit(*m.IPFSConfig.UploadLimit)
+	if err != nil {
+		return fmt.Errorf("failed to get upload limit rate: %w", err)
+	}
+	downloadLimitRate, err := ratelimit.GetIPFSLimitRateBySyncLimit(*m.IPFSConfig.DownloadLimit)
+	if err != nil {
+		return fmt.Errorf("failed to get download limit rate: %w", err)
+	}
+
+	localUploadRateLimit := ratelimit.GetLocalRateLimitFromConfig(m.config.DeliveryLocalUploadGlobalLimit, m.config.DeliveryLocalUploadPeakLimit, m.config.DeliveryLocalUploadOffPeakLimit)
+	localDownloadRateLimit := ratelimit.GetLocalRateLimitFromConfig(m.config.DeliveryLocalDownloadGlobalLimit, m.config.DeliveryLocalDownloadPeakLimit, m.config.DeliveryLocalDownloadOffPeakLimit)
+	if localDownloadRateLimit.Global == nil {
+		localDownloadRateLimit.Global = &ratelimit.RateInfo{ // 本地不限速
+			LimitType:   ratelimit.RateLimitTypeNo,
+			LimitRate:   int64(ratelimit.MaxRate),
+			CurrentRate: int64(ratelimit.MaxRate),
+		}
+	}
+	if localUploadRateLimit.Global == nil {
+		localUploadRateLimit.Global = &ratelimit.RateInfo{ // 本地不限速
+			LimitType:   ratelimit.RateLimitTypeNo,
+			LimitRate:   int64(ratelimit.MaxRate),
+			CurrentRate: int64(ratelimit.MaxRate),
+		}
+	}
+
+	loggerUpload, err := json.Marshal(localUploadRateLimit)
+	if err != nil {
+		return fmt.Errorf("failed to marshal upload rate limit: %w", err)
+	}
+	logger.Infof("upload rate limit: %s", string(loggerUpload))
+	loggerDownload, err := json.Marshal(localDownloadRateLimit)
+	if err != nil {
+		return fmt.Errorf("failed to marshal download rate limit: %w", err)
+	}
+	logger.Infof("download rate limit: %s", string(loggerDownload))
+
+	if localDownloadRateLimit != nil {
+		downloadLimitRate.GlobalLimitLocal = localDownloadRateLimit.Global
+		downloadLimitRate.BusyLimitLocal = localDownloadRateLimit.Busy
+		downloadLimitRate.FreeLimitLocal = localDownloadRateLimit.Free
+	}
+	if localUploadRateLimit != nil {
+		uploadLimitRate.GlobalLimitLocal = localUploadRateLimit.Global
+		uploadLimitRate.BusyLimitLocal = localUploadRateLimit.Busy
+		uploadLimitRate.FreeLimitLocal = localUploadRateLimit.Free
+	}
+
+	if err := ratelimit.SetIPFSRateLimit(uploadLimitRate, downloadLimitRate); err != nil {
+		return fmt.Errorf("failed to set ipfs rate limit: %w", err)
+	}
+
+	if uploadLimitRate.GlobalLimitRemote != nil {
+		remoteUploadGlobalData, err := json.Marshal(uploadLimitRate.GlobalLimitRemote)
+		if err == nil {
+			if err := m.config.SetDeliveryRemoteUploadGlobalLimit(string(remoteUploadGlobalData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if uploadLimitRate.BusyLimitRemote != nil {
+		remoteUploadPeakData, err := json.Marshal(uploadLimitRate.BusyLimitRemote)
+		if err == nil {
+			if err := m.config.SetDeliveryRemoteUploadPeakLimit(string(remoteUploadPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if uploadLimitRate.FreeLimitRemote != nil {
+		remoteUploadOffPeakData, err := json.Marshal(uploadLimitRate.FreeLimitRemote)
+		if err == nil {
+			if err := m.config.SetDeliveryRemoteUploadOffPeakLimit(string(remoteUploadOffPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+
+	if downloadLimitRate.GlobalLimitRemote != nil {
+		remoteDownloadGlobalData, err := json.Marshal(downloadLimitRate.GlobalLimitRemote)
+		if err == nil {
+			if err := m.config.SetDeliveryRemoteDownloadGlobalLimit(string(remoteDownloadGlobalData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if downloadLimitRate.BusyLimitRemote != nil {
+		remoteDownloadPeakData, err := json.Marshal(downloadLimitRate.BusyLimitRemote)
+		if err == nil {
+			if err := m.config.SetDeliveryRemoteDownloadPeakLimit(string(remoteDownloadPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if downloadLimitRate.FreeLimitRemote != nil {
+		remoteDownloadOffPeakData, err := json.Marshal(downloadLimitRate.FreeLimitRemote)
+		if err == nil {
+			if err := m.config.SetDeliveryRemoteDownloadOffPeakLimit(string(remoteDownloadOffPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+
+	if uploadLimitRate.GlobalLimitLocal != nil {
+		localUploadGlobalData, err := json.Marshal(uploadLimitRate.GlobalLimitLocal)
+		if err == nil {
+			if err := m.config.SetDeliveryLocalUploadGlobalLimit(string(localUploadGlobalData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if uploadLimitRate.BusyLimitLocal != nil {
+		localUploadPeakData, err := json.Marshal(uploadLimitRate.BusyLimitLocal)
+		if err == nil {
+			if err := m.config.SetDeliveryLocalUploadPeakLimit(string(localUploadPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if uploadLimitRate.FreeLimitLocal != nil {
+		localUploadOffPeakData, err := json.Marshal(uploadLimitRate.FreeLimitLocal)
+		if err == nil {
+			if err := m.config.SetDeliveryLocalUploadOffPeakLimit(string(localUploadOffPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+
+	if downloadLimitRate.GlobalLimitLocal != nil {
+		localDownloadGlobalData, err := json.Marshal(downloadLimitRate.GlobalLimitLocal)
+		if err == nil {
+			if err := m.config.SetDeliveryLocalDownloadGlobalLimit(string(localDownloadGlobalData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if downloadLimitRate.BusyLimitLocal != nil {
+		localDownloadPeakData, err := json.Marshal(downloadLimitRate.BusyLimitLocal)
+		if err == nil {
+			if err := m.config.SetDeliveryLocalDownloadPeakLimit(string(localDownloadPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+	if downloadLimitRate.FreeLimitLocal != nil {
+		localDownloadOffPeakData, err := json.Marshal(downloadLimitRate.FreeLimitLocal)
+		if err == nil {
+			if err := m.config.SetDeliveryLocalDownloadOffPeakLimit(string(localDownloadOffPeakData)); err != nil {
+				logger.Warning(err)
+			}
+		}
+	}
+
+	return nil
 }
