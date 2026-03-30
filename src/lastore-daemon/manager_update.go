@@ -395,6 +395,10 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 					if err = m.refreshThrottlingFromPlatform(); err != nil {
 						logger.Warning("updatePlatform gen download speed limit failed", err)
 					}
+
+					if err := m.updatePlatform.UpdateDeliverySpeedLimit(); err != nil {
+						logger.Warningf("failed to update delivery speed limit: %v", err)
+					}
 				}
 
 				err = m.updatePlatform.UpdateAllPlatformDataSync()
