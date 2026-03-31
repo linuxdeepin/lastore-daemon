@@ -443,10 +443,6 @@ func (v *Manager) setPropHardwareId(value string) (changed bool) {
 	return false
 }
 
-func (v *Manager) emitPropChangedUpgradeDeliveryEnabled(enable bool) error {
-	return v.service.EmitPropertyChanged(v, "UpgradeDeliveryEnabled", enable)
-}
-
 func (v *Manager) emitPropChangedHardwareId(value string) error {
 	return v.service.EmitPropertyChanged(v, "HardwareId", value)
 }
