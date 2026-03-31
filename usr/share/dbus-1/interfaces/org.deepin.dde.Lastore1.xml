@@ -175,6 +175,8 @@
           <method name="SetP2PUpdateEnable">
                <arg type="b" direction="in"></arg>
           </method>
+          <method name="CleanTransmissionFiles">
+          </method>
           <method name="SetUpdateNotify">
                <arg type="b" direction="in"></arg>
           </method>
@@ -195,6 +197,8 @@
           <property name="UpdatablePackages" type="as" access="read"></property>
           <property name="AutoInstallUpdates" type="b" access="read"></property>
           <property name="UpdateNotify" type="b" access="read"></property>
+          <property name="P2PUpdateEnable" type="b" access="read"></property>
+          <property name="P2PUpdateSupport" type="b" access="read"></property>
           <property name="ClassifiedUpdatablePackages" type="{sas}" access="read"></property>
           <property name="DownloadSpeedLimitConfig" type="s" access="read"></property>
           <property name="IdleDownloadConfig" type="s" access="read"></property>
