@@ -111,8 +111,6 @@ type Manager struct {
 	logFds     []*os.File
 	logFdsMu   sync.Mutex
 	logTmpFile *os.File
-
-	UpgradeDeliveryEnabled bool
 }
 
 /*
