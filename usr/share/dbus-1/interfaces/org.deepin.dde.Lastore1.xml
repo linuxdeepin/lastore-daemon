@@ -137,7 +137,6 @@
           <property name="UpdateStatus" type="s" access="read"></property>
           <property name="CheckUpdateMode" type="u" access="readwrite"></property>
           <property name="UpdateMode" type="u" access="readwrite"></property>
-          <property name="UpgradeDeliveryEnabled" type="b" access="read"></property>
      </interface>
 
      <interface name="org.deepin.dde.Lastore1.Updater">
