@@ -29,12 +29,13 @@ import (
 )
 
 const (
-	cpuInfoFilePath    = "/proc/cpuinfo"
-	cpuKeyDelim        = ":"
-	cpuKeyName         = "model name"
-	cpuKeySWCPU        = "cpu"
-	cpuKeyARMProcessor = "Processor"
-	cpuKeyHWHardware   = "Hardware"
+	cpuInfoFilePath         = "/proc/cpuinfo"
+	cpuKeyDelim             = ":"
+	cpuKeyLoongArchCPUModel = "Model Name"
+	cpuKeyName              = "model name"
+	cpuKeySWCPU             = "cpu"
+	cpuKeyARMProcessor      = "Processor"
+	cpuKeyHWHardware        = "Hardware"
 
 	lscpuKeyModelName = "Model name"
 	lscpuKeyDelim     = ":"
@@ -278,7 +279,13 @@ func getProcessorInfo(file string) (string, error) {
 		return "", err
 	}
 
-	cpu, _ := getCPUInfoFromMap(cpuKeySWCPU, data)
+	// loongarch
+	cpu, _ := getCPUInfoFromMap(cpuKeyLoongArchCPUModel, data)
+	if len(cpu) != 0 {
+		return cpu, nil
+	}
+
+	cpu, _ = getCPUInfoFromMap(cpuKeySWCPU, data)
 	if len(cpu) != 0 {
 		return cpu, nil
 	}
