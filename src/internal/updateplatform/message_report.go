@@ -1532,7 +1532,7 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	logger.Debug("post process event msg:", body)
 	body.TaskID = m.taskID
 	if body.ExecAt == 0 {
-		body.ExecAt = time.Now().Unix()
+		body.ExecAt = time.Now().UnixMilli()
 	}
 	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
 		logger.Warning("platform is disabled")
