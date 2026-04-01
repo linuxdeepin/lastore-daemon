@@ -126,7 +126,7 @@ func (m *Manager) checkUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 
 				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
-					EventType:    updateplatform.CheckEnv,
+					EventType:    updateplatform.PostUpgradeCheck,
 					EventStatus:  false,
 					EventContent: msg,
 				})
