@@ -117,7 +117,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 	if j.next != nil && ((j.Status == system.SucceedStatus && to == system.EndStatus) || (j.Status == system.RunningStatus && to == system.SucceedStatus)) {
 		inhibitSignalEmit = true
 	}
-	logger.Infof("%q transition state from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
+	logger.Infof("trying to transition job %q from %q to %q (Cancelable:%v)\n", j.Id, j.Status, to, j.Cancelable)
 	if to == system.FailedStatus && j.retry > 0 {
 		j.Status = to
 		return nil
@@ -129,10 +129,12 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.PropsMu.Lock()
 		// 在切换running和success状态时触发一些检查，如果出错，需要终止并返回error
 		if (to == system.RunningStatus || to == system.SucceedStatus) && err != nil {
+			logger.Warningf("pre hook failed for job %q (state: %s): %v", j.Id, to, err)
 			return err
 		}
 	}
 	j.Status = to
+	logger.Infof("job %q successfully transitioned to %q", j.Id, to)
 	if NotUseDBus {
 		return nil
 	}
@@ -149,6 +151,7 @@ func TransitionJobState(j *Job, to system.Status) error {
 		j.PropsMu.Lock()
 		// 在切换running和success状态时触发一些检查，如果出错，需要终止并返回error,不过通常不会有success的after hook返回error
 		if (to == system.RunningStatus || to == system.SucceedStatus) && err != nil {
+			logger.Warningf("after hook failed for job %q (state: %s): %v", j.Id, to, err)
 			return err
 		}
 	}
