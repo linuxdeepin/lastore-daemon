@@ -166,7 +166,13 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
 		return nil, dbusutil.ToError(errors.New(string(errStr)))
 	}
-	done := make(chan bool)
+	done := make(chan struct{}, 1)
+	notifyDone := func() {
+		select {
+		case done <- struct{}{}:
+		default:
+		}
+	}
 	if m.config.IntranetUpdate {
 		//私有化更新有忙闲时下载限速的功能，需要在真正开始下载前刷新一下线上限速配置
 		if err = m.refreshThrottlingFromPlatform(); err != nil {
@@ -297,7 +303,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			},
 			string(system.FailedStatus): func() error {
 				if m.config.IntranetUpdate {
-					done <- true
+					notifyDone()
 					cacheFile := "/tmp/checkpolicy.cache"
 					_ = os.RemoveAll(cacheFile)
 				}
@@ -381,9 +387,6 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.SucceedStatus): func() error {
-				if m.config.IntranetUpdate {
-					done <- true
-				}
 				msg := fmt.Sprintf("download %v package success", j.updateTyp.JobType())
 				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 					TaskID:       1,
@@ -469,11 +472,11 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 			string(system.EndStatus): func() error {
-				if m.config.IntranetUpdate {
-					done <- true
-				}
 				if j.next == nil {
 					logger.Info("running in last end hook")
+					if m.config.IntranetUpdate {
+						notifyDone()
+					}
 					// 如果出现单项失败,其他的状态需要修改,IsDownloading->notDownload
 					// 如果已经有单项下载完成,然后取消下载,DownloadPause->notDownload
 					m.statusManager.SetUpdateStatus(mode, system.NotDownload)
