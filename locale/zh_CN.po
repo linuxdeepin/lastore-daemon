@@ -153,8 +153,8 @@ msgid "Backing up and installing updates..."
 msgstr "备份和安装更新中..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
-msgid "Start to update. Please do not shutdown"
-msgstr "系统开始更新，更新完成前请不要关闭计算机"
+msgid "Download completed, system starts backing up before update"
+msgstr "下载完成，系统开始进行更新前备份"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
