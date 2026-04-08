@@ -54,14 +54,35 @@ const (
 
 type UnitName string
 
+// lastoreAutoCheck: automatic update check scheduled task unit
+//
+// Complete workflow:
+//  1. System startup phase
+//     startOfflineTask() -> getLastoreSystemUnitMap()
+//     -> Create lastoreAutoCheck.timer
+//     -> Delay time = getNextAutoCheckDelay()
+//
+//	↓
+//
+//  2. Timer trigger phase
+//     systemd-run executes dbus-send
+//     -> Call Manager.HandleSystemEvent("AutoCheck")
+//
+//	↓
+//
+//  3. Event processing phase
+//     delHandleSystemEvent() -> handleAutoCheckEvent()
+//     -> Execute actual update check operations (UpdateSource/platform version request)
+//     -> Update LastCheckTime
+//     -> Call updateAutoCheckSystemUnit() to reset timer
+
 const (
 	lastoreAutoClean        UnitName = "lastoreAutoClean"
 	lastoreAutoCheck        UnitName = "lastoreAutoCheck"
 	lastoreAutoUpdateToken  UnitName = "lastoreAutoUpdateToken"
 	watchOsVersion          UnitName = "watchOsVersion"
 	lastoreInitIdleDownload UnitName = "lastoreInitIdleDownload"
-	lastoreRegularlyUpdate  UnitName = "lastoreRegularlyUpdate" // 到触发时间后开始检查更新->下载更新->安装更新
-	lastoreCronCheck        UnitName = "lastoreCronCheck"
+	lastoreRegularlyUpdate  UnitName = "lastoreRegularlyUpdate"
 	lastorePostUpgrade      UnitName = "lastorePostUpgrade"
 	lastoreRetryPostMsg     UnitName = "lastoreRetryPostMsg"
 )
@@ -79,8 +100,7 @@ func (m *Manager) getLastoreSystemUnitMap() lastoreUnitMap {
 	unitMap := make(lastoreUnitMap)
 	if (m.config.GetLastoreDaemonStatus()&config.DisableUpdate) == 0 && !m.ImmutableAutoRecovery { // 更新禁用未开启且无忧还原未开启时
 		unitMap[lastoreAutoCheck] = genHandleEventCmdArgs([]string{
-			// 随机数范围1800-21600，时间为0.5~6小时
-			fmt.Sprintf("--on-active=%d", int(m.getNextUpdateDelay()/time.Second)+rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0])+m.config.StartCheckRange[0])}, AutoCheck) // 根据上次检查时间,设置下一次自动检查时间
+			fmt.Sprintf("--on-active=%d", m.getNextAutoCheckDelay())}, AutoCheck)
 	}
 	unitMap[lastoreAutoClean] = genHandleEventCmdArgs([]string{
 		"--on-active=600"}, AutoClean) // 10分钟后自动检查是否需要清理
@@ -260,31 +280,6 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 	return nil
 }
 
-func (m *Manager) startCheckPolicyTask() {
-	if m.config.CheckPolicyInterval == 0 {
-		logger.Info("config: not CheckPolicyInterval")
-		return
-	}
-
-	args := []string{
-		fmt.Sprintf("--unit=%s", lastoreCronCheck),
-		fmt.Sprintf("--on-active=%d", m.config.CheckPolicyInterval),
-		fmt.Sprintf(`--on-unit-active=%d`, m.config.CheckPolicyInterval),
-		"--uid=root",
-		"/usr/bin/lastore-tools",
-		"checkpolicy",
-	}
-	cmd := exec.Command(run, args...)
-	logger.Info(cmd.String())
-	var errBuffer bytes.Buffer
-	cmd.Stderr = &errBuffer
-	err := cmd.Run()
-	if err != nil {
-		logger.Warning(err)
-		logger.Warning(errBuffer.String())
-	}
-}
-
 func (m *Manager) handleAutoDownload() {
 	if m.ImmutableAutoRecovery {
 		logger.Debug("Immutable auto recovery is enabled, don't allow to auto download")
@@ -330,6 +325,24 @@ func (m *Manager) getNextUpdateDelay() time.Duration {
 	}
 	// ensure delay at least have 10 seconds
 	return remained + _minDelayTime
+}
+
+func (m *Manager) getNextAutoCheckDelay() int {
+	checkInterval := m.config.CheckInterval
+	if checkInterval < 0 {
+		checkInterval = 0
+	}
+
+	elapsed := time.Since(m.config.LastCheckTime)
+	remained := int((checkInterval - elapsed) / time.Second)
+	if remained < 0 {
+		remained = 0
+	}
+
+	randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0]) + m.config.StartCheckRange[0]
+	autoCheckDelay := remained + randomDelay
+	logger.Infof("get next auto check delay, StartCheckRange=%v, randomDelay=%d, autoCheckDelay=%d", m.config.StartCheckRange, randomDelay, autoCheckDelay)
+	return autoCheckDelay
 }
 
 // isAllowedToTriggerSystemEvent checks if the uid is allowed to trigger system events
@@ -384,7 +397,6 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 			if err != nil {
 				logger.Warning(err)
 			}
-			m.startCheckPolicyTask() // 在第一次自动检查更新后再加任务
 		}()
 	case AutoClean:
 		go func() {
