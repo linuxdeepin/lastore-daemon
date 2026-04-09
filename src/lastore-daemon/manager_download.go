@@ -248,7 +248,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		limitEnable, limitConfig, limitIsOnline := m.updater.GetLimitConfig()
 		logger.Infof("preDistUpgrade limitEnable: %v, limitConfig: %v, limitIsOnline: %v", limitEnable, limitConfig, limitIsOnline)
 		if limitEnable || limitIsOnline {
-			j.option[aptLimitKey] = limitConfig
+			j.option[aptHttpLimitKey] = limitConfig
+			j.option[aptDeliveryLimitKey] = limitConfig
 		}
 		j.subRetryHookFn = func(job *Job) {
 			// 下载限速的配置修改需要在job失败重试的时候修改配置(此处失败为手动终止设置的失败状态)

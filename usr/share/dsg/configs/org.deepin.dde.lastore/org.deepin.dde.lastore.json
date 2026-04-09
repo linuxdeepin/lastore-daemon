@@ -634,6 +634,162 @@
       "description": "update from intranet update platform",
       "permissions": "readonly",
       "visibility": "private"
+    },
+    "delivery-remote-download-global-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryRemoteDownloadGlobalLimit",
+      "name[zh_CN]": "远程下载全局限速",
+      "description[zh_CN]": "传递优化远程下载全局限速配置",
+      "description": "Delivery remote download global limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-remote-upload-global-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryRemoteUploadGlobalLimit",
+      "name[zh_CN]": "远程上传全局限速",
+      "description[zh_CN]": "传递优化远程上传全局限速配置",
+      "description": "Delivery remote upload global limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-remote-download-peak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryRemoteDownloadPeakLimit",
+      "name[zh_CN]": "远程下载忙时限速",
+      "description[zh_CN]": "传递优化远程下载忙时限速配置",
+      "description": "Delivery remote download peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-remote-upload-peak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryRemoteUploadPeakLimit",
+      "name[zh_CN]": "远程上传忙时限速",
+      "description[zh_CN]": "传递优化远程上传忙时限速配置",
+      "description": "Delivery remote upload peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-remote-download-offpeak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryRemoteDownloadOffPeakLimit",
+      "name[zh_CN]": "远程下载闲时限速",
+      "description[zh_CN]": "传递优化远程下载闲时限速配置",
+      "description": "Delivery remote download off-peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-remote-upload-offpeak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryRemoteUploadOffPeakLimit",
+      "name[zh_CN]": "远程上传闲时限速",
+      "description[zh_CN]": "传递优化远程上传闲时限速配置",
+      "description": "Delivery remote upload off-peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-local-download-global-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryLocalDownloadGlobalLimit",
+      "name[zh_CN]": "本地下载全局限速",
+      "description[zh_CN]": "传递优化本地下载全局限速配置",
+      "description": "Delivery local download global limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-local-upload-global-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryLocalUploadGlobalLimit",
+      "name[zh_CN]": "本地上传全局限速",
+      "description[zh_CN]": "传递优化本地上传全局限速配置",
+      "description": "Delivery local upload global limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-local-download-peak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryLocalDownloadPeakLimit",
+      "name[zh_CN]": "本地下载忙时限速",
+      "description[zh_CN]": "传递优化本地下载忙时限速配置",
+      "description": "Delivery local download peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-local-upload-peak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryLocalUploadPeakLimit",
+      "name[zh_CN]": "本地上传忙时限速",
+      "description[zh_CN]": "传递优化本地上传忙时限速配置",
+      "description": "Delivery local upload peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-local-download-offpeak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryLocalDownloadOffPeakLimit",
+      "name[zh_CN]": "本地下载闲时限速",
+      "description[zh_CN]": "传递优化本地下载闲时限速配置",
+      "description": "Delivery local download off-peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
+    },
+    "delivery-local-upload-offpeak-limit": {
+      "value": "",
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "DeliveryLocalUploadOffPeakLimit",
+      "name[zh_CN]": "本地上传闲时限速",
+      "description[zh_CN]": "传递优化本地上传闲时限速配置",
+      "description": "Delivery local upload off-peak limit",
+      "permissions": "readwrite",
+      "visibility": "private"
     }
   }
 }
