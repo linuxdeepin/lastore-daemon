@@ -37,8 +37,8 @@ type IPFSConfig struct {
 	UploadLimit   *SyncLimit `json:"ul"` // 上传限速
 }
 
-const MaxRate = 1024 * 1024 * 100 // 最大速率(100 MB/s)
-const MinRate = 1024 * 1024       // 最小速率(1 MB/s)
+const MaxRate = 999999 * 1024 // 最大速率(999999 KB/s)
+const MinRate = 10 * 1024     // 最小速率(10 KB/s)
 
 const (
 	RateLimitTypeNo     = 0 // 表示不设置
