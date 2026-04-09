@@ -100,8 +100,8 @@ func main() {
 	manager.initAgent()
 	manager.initPlatformManager()
 	if config.IntranetUpdate {
-		//私有化更新的Cron是核心业务场景,不再依赖检查更新或者online定时器触发，而是直接创建
-		manager.TryToStartCronCheck()
+		//不再依赖检查更新或者online定时器触发，而是直接创建
+		manager.TryToStartAutoCheck()
 	}
 	err = serverObject.SetWriteCallback(updater, "AutoInstallUpdates", updater.autoInstallUpdatesWriteCallback)
 	if err != nil {
