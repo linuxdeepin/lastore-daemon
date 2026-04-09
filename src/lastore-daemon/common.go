@@ -386,7 +386,10 @@ func cleanAllCache() {
 	}
 }
 
-const aptLimitKey = "Acquire::http::Dl-Limit"
+// source.list协议使用了delivery后，需要适用Acquire::delivery::Dl-Limit来进行限速，但是delivery有回退到http协议的机制，
+// 所以为了避免回退后限速失效，我们需要同时设置Acquire::http::Dl-Limit和Acquire::delivery::Dl-Limit
+const aptHttpLimitKey = "Acquire::http::Dl-Limit"
+const aptDeliveryLimitKey = "Acquire::delivery::Dl-Limit"
 
 const upgradeRecordPath = "/var/cache/lastore/upgrade_record.json"
 

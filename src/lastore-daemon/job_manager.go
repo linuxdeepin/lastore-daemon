@@ -390,11 +390,13 @@ func (jm *JobManager) dispatch() {
 
 			if job.option != nil {
 				// 上一个job无论是否存在该配置，都需要传递给下一个job
-				v, ok := job.option[aptLimitKey]
-				if ok {
-					job.next.option[aptLimitKey] = v
-				} else {
-					delete(job.next.option, aptLimitKey)
+				for _, limitKey := range []string{aptHttpLimitKey, aptDeliveryLimitKey} {
+					v, ok := job.option[limitKey]
+					if ok {
+						job.next.option[limitKey] = v
+					} else {
+						delete(job.next.option, limitKey)
+					}
 				}
 			}
 			job = job.next

@@ -1119,10 +1119,12 @@ func (m *Manager) handleDownloadLimitChanged(job *Job) {
 		if job.option == nil {
 			job.option = make(map[string]string)
 		}
-		job.option[aptLimitKey] = limitConfig
+		job.option[aptHttpLimitKey] = limitConfig
+		job.option[aptDeliveryLimitKey] = limitConfig
 	} else {
 		if job.option != nil {
-			delete(job.option, aptLimitKey)
+			delete(job.option, aptHttpLimitKey)
+			delete(job.option, aptDeliveryLimitKey)
 		}
 	}
 }
