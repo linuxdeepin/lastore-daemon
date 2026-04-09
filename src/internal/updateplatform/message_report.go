@@ -778,7 +778,7 @@ func getResponseData(response *http.Response, reqType requestType) (json.RawMess
 		}
 		return msg.Data, nil
 	} else {
-		return nil, fmt.Errorf("request for %s failed, response code=%d", response.Request.RequestURI, response.StatusCode)
+		return nil, fmt.Errorf("request for %s failed, response code=%d", response.Request.URL, response.StatusCode)
 	}
 }
 
@@ -897,8 +897,8 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) err
 		m.UpdateTime, _ = time.Parse(time.RFC3339, msg.Policy.Data.UpdateTime)
 	}
 	m.TimerHasChanged = false
-	if !utils.IsElementEqual(m.config.CheckPolicyInterval, msg.ClientPollSetting.CheckPolicyInterval) && msg.ClientPollSetting.CheckPolicyInterval > 0 {
-		m.config.SetCheckPolicyInterval(msg.ClientPollSetting.CheckPolicyInterval)
+	if !utils.IsElementEqual(m.config.CheckInterval, msg.ClientPollSetting.CheckPolicyInterval*1000*1000*1000) && msg.ClientPollSetting.CheckPolicyInterval > 0 {
+		m.config.SetCheckInterval(time.Duration(msg.ClientPollSetting.CheckPolicyInterval) * time.Second)
 		m.TimerHasChanged = true
 	}
 	if !utils.IsElementEqual(m.config.StartCheckRange, msg.ClientPollSetting.StartCheckRange) && msg.ClientPollSetting.StartCheckRange != nil {
@@ -2178,6 +2178,87 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	}
+
+	return nil
+}
+
+const checkPolicyCacheFile = "/tmp/checkpolicy.cache"
+
+func (m *UpdatePlatformManager) CheckPolicyChanged() (bool, error) {
+	response, err := m.genVersionResponse()
+	if err != nil {
+		return false, fmt.Errorf("do request failed: %w", err)
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return false, fmt.Errorf("read response body failed: %w", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("request failed with status: %d", response.StatusCode)
+	}
+
+	sum := sha256.Sum256(body)
+	newSum := hex.EncodeToString(sum[:])
+
+	oldSum, _ := m.getCheckPolicyCache()
+
+	if oldSum != newSum {
+		m.saveCheckPolicyCache(newSum)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (m *UpdatePlatformManager) getCheckPolicyCache() (string, time.Time) {
+	readFile, err := os.Open(checkPolicyCacheFile)
+	if err != nil {
+		return "", time.Time{}
+	}
+	defer readFile.Close()
+
+	reader := bufio.NewReader(readFile)
+	var sum string
+	var checkTime time.Time
+
+	data, _, err := reader.ReadLine()
+	if err == nil {
+		sum = string(data)
+	}
+	data, _, err = reader.ReadLine()
+	if err == nil {
+		checkTime, _ = time.Parse(time.RFC3339, string(data))
+	}
+
+	return sum, checkTime
+}
+
+func (m *UpdatePlatformManager) saveCheckPolicyCache(sum string) error {
+	writeFile, err := os.OpenFile(checkPolicyCacheFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer writeFile.Close()
+
+	if _, err := writeFile.WriteString(sum); err != nil {
+		logger.Warning("failed to write sum:", err)
+		return err
+	}
+	if _, err := writeFile.WriteString("\n"); err != nil {
+		logger.Warning("failed to write newline:", err)
+		return err
+	}
+	if _, err := writeFile.WriteString(time.Now().Format(time.RFC3339)); err != nil {
+		logger.Warning("failed to write time:", err)
+		return err
+	}
+	if _, err := writeFile.WriteString("\n"); err != nil {
+		logger.Warning("failed to write newline:", err)
+		return err
 	}
 
 	return nil

@@ -304,11 +304,11 @@ func (m *Manager) initPlatformManager() {
 	}
 }
 
-func (m *Manager) TryToStartCronCheck() {
-	if isTimerUnitFileExists(lastoreCronCheck) {
+func (m *Manager) TryToStartAutoCheck() {
+	if isTimerUnitFileExists(lastoreAutoCheck) {
 		return
 	}
-	m.startCheckPolicyTask()
+	m.updateAutoCheckSystemUnit()
 }
 
 func (m *Manager) delUpdatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
@@ -728,14 +728,54 @@ func (m *Manager) handleAutoCheckRegularlyEvent() error {
 }
 
 func (m *Manager) handleAutoCheckEvent() error {
-	if m.config.AutoCheckUpdates && !m.ImmutableAutoRecovery {
-		_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
-		if err != nil {
+	if m.ImmutableAutoRecovery {
+		return nil
+	}
+
+	if !m.config.AutoCheckUpdates { // 不再需要自动检查更新
+		return nil
+	}
+
+	if m.config.PlatformUpdate {
+		return m.handleAutoCheckWithPlatform()
+	}
+
+	_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
+	if err != nil {
+		logger.Warning(err)
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) handleAutoCheckWithPlatform() error {
+	needUpdate, err := m.checkPlatformPolicy()
+	if err != nil {
+		logger.Warningf("check platform policy failed: %v", err)
+		if _, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0])); err != nil {
+			logger.Warning(err)
+		}
+		return err
+	}
+
+	if needUpdate {
+		if _, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0])); err != nil {
 			logger.Warning(err)
 			return err
 		}
+	} else {
+		if err := m.updateAutoCheckSystemUnit(); err != nil {
+			logger.Warning(err)
+		}
 	}
 	return nil
+}
+
+func (m *Manager) checkPlatformPolicy() (bool, error) {
+	if !m.config.PlatformUpdate {
+		return true, nil
+	}
+	return m.updatePlatform.CheckPolicyChanged()
 }
 
 func (m *Manager) handleAutoCleanEvent() error {
