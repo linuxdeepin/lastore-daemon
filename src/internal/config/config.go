@@ -111,7 +111,6 @@ type Config struct {
 
 	PlatformUrl            string // 更新接口地址
 	StartCheckRange        []int  // 开机检查更新区间
-	CheckPolicyInterval    int    // 策略检查时间间隔(单位：秒)
 	GetHardwareIdByHelper  bool   // machineID是否直接从sync helper获取
 	IncludeDiskInfo        bool   // machineID是否包含硬盘信息
 	PostUpgradeCron        string // 更新上报间隔
@@ -224,7 +223,6 @@ const (
 	DSettingsKeyIncrementalUpdate                    = "incremental-update"
 	dSettingsKeyIntranetUpdate                       = "intranet-update"
 	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
-	dSettingsKeyCheckPolicyInterval                  = "check-policy-interval"
 	dSettingsKeyDeliveryRemoteDownloadGlobalLimit    = "delivery-remote-download-global-limit"
 	dSettingsKeyDeliveryRemoteUploadGlobalLimit      = "delivery-remote-upload-global-limit"
 	dSettingsKeyDeliveryRemoteDownloadPeakLimit      = "delivery-remote-download-peak-limit"
@@ -757,17 +755,6 @@ func getConfigFromDSettings() *Config {
 		c.GetHardwareIdByHelper = v.Value().(bool)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckPolicyInterval)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		if val, ok := v.Value().(int64); ok {
-			c.CheckPolicyInterval = int(val)
-		} else {
-			logger.Warningf("dSettings key %s: value is not int64", dSettingsKeyCheckPolicyInterval)
-		}
-	}
-
 	err = c.recoveryAndApplyOemFlag(system.SystemUpdate)
 	if err != nil {
 		logger.Warning(err)
@@ -1220,11 +1207,6 @@ func (c *Config) SetUpgradeDeliveryEnabled(enable bool) error {
 func (c *Config) SetSecurityRepoType(typ RepoType) error {
 	c.SecurityRepoType = typ
 	return c.save(dSettingsKeySecurityRepoType, typ)
-}
-
-func (c *Config) SetCheckPolicyInterval(interval int) error {
-	c.CheckPolicyInterval = interval
-	return c.save(dSettingsKeyCheckPolicyInterval, interval)
 }
 
 func (c *Config) SetStartCheckRange(checkRange []int) error {
