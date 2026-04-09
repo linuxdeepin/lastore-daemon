@@ -739,7 +739,14 @@ func (m *UpdatePlatformManager) genIpfsConfigResponse() (*http.Response, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse %v: %w", uri, err)
 	}
-	uri = uri.JoinPath(Urls[GetIPFSConfig].path)
+	parentPath := filepath.Dir(uri.Path)
+	if parentPath == "." {
+		parentPath = "/"
+	}
+	uri.Path = parentPath
+
+	// ipfs限速配置的路由需要使用p2p-boot前缀来替换requestUrl部分的最后一个路径段
+	uri = uri.JoinPath("p2p-boot", Urls[GetIPFSConfig].path)
 
 	q := uri.Query()
 	q.Set("id", m.IPFSConfig.ID)
@@ -2207,6 +2214,7 @@ func (m *UpdatePlatformManager) CheckPolicyChanged() (bool, error) {
 	oldSum, _ := m.getCheckPolicyCache()
 
 	if oldSum != newSum {
+		logger.Infof("CheckPolicyChanged: oldSum=%s, newSum=%s", oldSum, newSum)
 		m.saveCheckPolicyCache(newSum)
 		return true, nil
 	}

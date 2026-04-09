@@ -21,7 +21,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
-const aptLimitKey = "Acquire::http::Dl-Limit"
+const aptHttpLimitKey = "Acquire::http::Dl-Limit"
 const aptSourcePartsKey = "Dir::Etc::SourceParts"
 const aptSourceListKey = "Dir::Etc::SourceList"
 
@@ -336,7 +336,7 @@ func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[
 
 	if p.IncrementalUpdate {
 		var cmdArgs []string
-		speedLimit, ok := args[aptLimitKey]
+		speedLimit, ok := args[aptHttpLimitKey]
 		if ok {
 			cmdArgs = append(cmdArgs, "--max-recv-speed", speedLimit)
 		}
@@ -401,7 +401,7 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 	if p.IncrementalUpdate {
 		logger.Info("incremental update")
 		var cmdArgs []string
-		speedLimit, ok := args[aptLimitKey]
+		speedLimit, ok := args[aptHttpLimitKey]
 		if ok {
 			cmdArgs = append(cmdArgs, "--max-recv-speed", speedLimit)
 		}
