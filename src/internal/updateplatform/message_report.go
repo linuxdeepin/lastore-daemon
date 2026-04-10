@@ -1386,9 +1386,16 @@ func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 	var repos []string
 	for _, repo := range m.repoInfos {
 
-		if m.config.UpgradeDeliveryEnabled {
-			repo.Source = strings.ReplaceAll(repo.Source, "https://", "delivery://")
-			repo.Uri = strings.ReplaceAll(repo.Uri, "https://", "delivery://")
+		// If the public network has Delivery Optimization enabled,
+		// then it is necessary to change http(s):// to delivery://.
+		if m.config.UpgradeDeliveryEnabled && !m.config.IntranetUpdate {
+			httpPrefix := "http://"
+			httpsPrefix := "https://"
+			deliveryPrefix := "delivery://"
+			repo.Source = strings.ReplaceAll(repo.Source, httpPrefix, deliveryPrefix)
+			repo.Uri = strings.ReplaceAll(repo.Uri, httpPrefix, deliveryPrefix)
+			repo.Source = strings.ReplaceAll(repo.Source, httpsPrefix, deliveryPrefix)
+			repo.Uri = strings.ReplaceAll(repo.Uri, httpsPrefix, deliveryPrefix)
 		}
 		if strings.HasPrefix(repo.Source, "deb ") {
 			repos = append(repos, repo.Source)
