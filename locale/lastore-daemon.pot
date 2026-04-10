@@ -144,7 +144,7 @@ msgid "Backing up and installing updates..."
 msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
-msgid "Download completed, system starts backing up before update"
+msgid "Start to update. Please do not shutdown"
 msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:267

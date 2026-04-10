@@ -203,8 +203,8 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				// 设置UpdateStatus为WaitRunUpgrade，隐藏更新并关机/重启按钮
 				m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
 				if m.config.IntranetUpdate {
-					msg := gettext.Tr("Download completed, system starts backing up before update")
-					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
+					msg := gettext.Tr("Start to update. Please do not shutdown")
+					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 				}
 
 				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
