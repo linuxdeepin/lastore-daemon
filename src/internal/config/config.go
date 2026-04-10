@@ -980,7 +980,7 @@ func (c *Config) SetIncrementalUpdate(enable bool) error {
 }
 
 func (c *Config) UseIncrementalUpdate() bool {
-	return !c.IntranetUpdate && c.IncrementalUpdate
+	return !c.IntranetUpdate && !c.UpgradeDeliveryEnabled && c.IncrementalUpdate
 }
 
 func (c *Config) SetMirrorSource(id string) error {
