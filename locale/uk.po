@@ -160,7 +160,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr ""
+msgstr "Систему буде оновлено %s"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
@@ -168,7 +168,7 @@ msgstr "Створюємо резервну копію і встановлюєм
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "Розпочато оновлення. Будь ласка, не вимикайте комп'ютер"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
