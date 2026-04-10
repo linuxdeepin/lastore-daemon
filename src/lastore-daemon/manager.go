@@ -111,6 +111,8 @@ type Manager struct {
 	logFds     []*os.File
 	logFdsMu   sync.Mutex
 	logTmpFile *os.File
+
+	isAutoCheckTimerFirstRun bool
 }
 
 /*
@@ -243,6 +245,20 @@ func (m *Manager) initDSettingsChangedHandle() {
 			logger.Info("AutoDownloadUpdates changed to:", autoDownloadUpdates)
 		}
 	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyIntranetUpdate, func(oldValue, newValue interface{}) {
+		intranetUpdate := newValue.(bool)
+		if intranetUpdate {
+			// 当开启内网更新时，将上次检查时间设置为0，并重新触发lastoreAutoCheck定时器
+			if err := m.config.SetLastCheckTime(time.Unix(0, 0)); err != nil {
+				logger.Warningf("SetLastCheckTime failed: %v", err)
+			}
+			m.isAutoCheckTimerFirstRun = true
+			if err := m.updateAutoCheckSystemUnit(); err != nil {
+				logger.Warningf("updateAutoCheckSystemUnit failed: %v", err)
+			}
+			m.isAutoCheckTimerFirstRun = false
+		}
+	})
 }
 
 // recreateSystem 重新创建system对象，用于incremental-update热更新
@@ -308,7 +324,11 @@ func (m *Manager) TryToStartAutoCheck() {
 	if isTimerUnitFileExists(lastoreAutoCheck) {
 		return
 	}
-	m.updateAutoCheckSystemUnit()
+	m.isAutoCheckTimerFirstRun = true
+	if err := m.updateAutoCheckSystemUnit(); err != nil {
+		logger.Warning(err)
+	}
+	m.isAutoCheckTimerFirstRun = false
 }
 
 func (m *Manager) delUpdatePackage(sender dbus.Sender, jobName string, packages string) (*Job, error) {
