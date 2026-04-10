@@ -956,7 +956,7 @@ func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) err
 	}
 	logger.Info("Policy tp:", m.Tp, "update time:", m.UpdateTime)
 	logger.Info("pre Baseline:", m.preBaseline, "target Baseline：", m.targetBaseline)
-	if len(m.targetBaseline) == 0 || m.preBaseline == m.targetBaseline {
+	if len(m.targetBaseline) == 0 {
 		m.Tp = NormalUpdate
 	}
 	m.UpdateNowForce = false
