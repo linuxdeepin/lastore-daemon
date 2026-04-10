@@ -320,29 +320,30 @@ func (m *Manager) handleAbortAutoDownload() {
 func (m *Manager) getNextUpdateDelay() time.Duration {
 	elapsed := time.Since(m.config.LastCheckTime)
 	remained := m.config.CheckInterval - elapsed
-	if remained < 0 {
+	if remained < _minDelayTime {
+		// ensure delay at least have 10 seconds
 		return _minDelayTime
 	}
-	// ensure delay at least have 10 seconds
-	return remained + _minDelayTime
+
+	return remained
 }
 
 func (m *Manager) getNextAutoCheckDelay() int {
-	checkInterval := m.config.CheckInterval
-	if checkInterval < 0 {
-		checkInterval = 0
+	if m.config.IntranetUpdate {
+		if m.isAutoCheckTimerFirstRun {
+			randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0]) + m.config.StartCheckRange[0]
+			return randomDelay
+		} else {
+			checkInterval := m.config.CheckInterval
+			if checkInterval < 0 {
+				checkInterval = 0
+			}
+			return int((checkInterval) / time.Second)
+		}
+	} else {
+		randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0]) + m.config.StartCheckRange[0]
+		return int(m.getNextUpdateDelay()/time.Second) + randomDelay
 	}
-
-	elapsed := time.Since(m.config.LastCheckTime)
-	remained := int((checkInterval - elapsed) / time.Second)
-	if remained < 0 {
-		remained = 0
-	}
-
-	randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0]) + m.config.StartCheckRange[0]
-	autoCheckDelay := remained + randomDelay
-	logger.Infof("get next auto check delay, StartCheckRange=%v, randomDelay=%d, autoCheckDelay=%d", m.config.StartCheckRange, randomDelay, autoCheckDelay)
-	return autoCheckDelay
 }
 
 // isAllowedToTriggerSystemEvent checks if the uid is allowed to trigger system events
