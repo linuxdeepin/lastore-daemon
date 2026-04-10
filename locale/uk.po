@@ -79,7 +79,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
-msgstr ""
+msgstr "Маємо нову версію! Невдовзі розпочнеться отримання пакунка оновлень"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
@@ -128,7 +128,7 @@ msgstr "Відкинути"
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "Отримання даних завершено. Систему буде оновлено за %s"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
@@ -137,6 +137,7 @@ msgstr "Доступна нова версія!"
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
 msgstr ""
+"Маємо нову версію! Будь ласка, перейдіть до Центру керування, щоб перевірити"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
@@ -153,6 +154,8 @@ msgstr ""
 #: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
 msgstr ""
+"Таймер змінено. Будь ласка, перезавантажте систему, щоб зміни набули "
+"чинності"
 
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
