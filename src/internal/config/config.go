@@ -221,7 +221,7 @@ const (
 	dSettingsKeySecurityRepoType                     = "security-repo-type"
 	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
 	DSettingsKeyIncrementalUpdate                    = "incremental-update"
-	dSettingsKeyIntranetUpdate                       = "intranet-update"
+	DSettingsKeyIntranetUpdate                       = "intranet-update"
 	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
 	dSettingsKeyDeliveryRemoteDownloadGlobalLimit    = "delivery-remote-download-global-limit"
 	dSettingsKeyDeliveryRemoteUploadGlobalLimit      = "delivery-remote-upload-global-limit"
@@ -309,7 +309,7 @@ func getConfigFromDSettings() *Config {
 		c.IncrementalUpdate = v.Value().(bool)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIntranetUpdate)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyIntranetUpdate)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -793,12 +793,20 @@ func getConfigFromDSettings() *Config {
 	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
 		logger.Infof("config update: key=%s", key)
 		switch key {
-		case dSettingsKeyIntranetUpdate:
-			v, err = c.dsLastoreManager.Value(0, dSettingsKeyIntranetUpdate)
+		case DSettingsKeyIntranetUpdate:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIntranetUpdate)
 			if err != nil {
 				logger.Warning(err)
 			} else {
-				c.IntranetUpdate = v.Value().(bool)
+				oldValue := c.PlatformUpdate
+				newValue := v.Value().(bool)
+				c.IntranetUpdate = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
 			}
 		case DSettingsKeyPlatformUpdate:
 			v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUpdate)
@@ -1072,6 +1080,11 @@ func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
 //	c.needDownloadSize = size
 //	return c.save(dSettingsKeyNeedDownloadSize, size)
 // }
+
+func (c *Config) SetLastCheckTime(lastCheckTime time.Time) error {
+	c.LastCheckTime = lastCheckTime
+	return c.save(dSettingsKeyLastCheckTime, c.LastCheckTime.Format(configTimeLayout))
+}
 
 func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
 	c.DownloadSpeedLimitConfig = config
