@@ -78,6 +78,7 @@ func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[stri
 		}
 		return nil
 	})
+	fn.Cancelable = true
 	return fn.Start()
 }
 
