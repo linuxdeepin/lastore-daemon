@@ -42,10 +42,12 @@ func (f *Function) atEnd(err error) {
 	}
 	progress := JobProgressInfo{
 		JobId:      f.JobId,
-		Cancelable: false,
+		Cancelable: f.Cancelable,
 	}
 	if err != nil {
 		// failed
+		// After failure, set progress.Cancelable to true
+		progress.Cancelable = true
 		progress.Progress = -1.0
 		progress.Status = FailedStatus
 		progress.Error = &JobError{
