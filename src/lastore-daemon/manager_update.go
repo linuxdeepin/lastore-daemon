@@ -63,6 +63,40 @@ func (m *Manager) beforeUpdateSourceEnvCheck() (bool, string) {
 		})
 		return false, err.Error()
 	}
+	waitForDpkgLock := func(timeout int) bool {
+		start := time.Now()
+		for {
+			if _, isLock := system.CheckLock("/var/lib/dpkg/lock"); isLock {
+				logger.Infof("dpkg lock is held, waiting... (elapsed: %v)", time.Since(start))
+				time.Sleep(time.Second)
+				continue
+			}
+			if _, isLock := system.CheckLock("/var/lib/dpkg/lock-frontend"); isLock {
+				logger.Infof("dpkg lock-frontend is held, waiting... (elapsed: %v)", time.Since(start))
+				time.Sleep(time.Second)
+				continue
+			}
+			if time.Since(start) >= time.Duration(timeout)*time.Second {
+				return false
+			}
+			break
+		}
+		logger.Infof("all lock is ok")
+		return true
+	}
+
+	waitTimeout := 5
+	if !waitForDpkgLock(waitTimeout) {
+		errMsg := fmt.Sprintf("dpkg lock wait timeout(%d seconds)", waitTimeout)
+		logger.Warningf("%s", errMsg)
+		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
+			TaskID:       1,
+			EventType:    updateplatform.CheckEnv,
+			EventStatus:  false,
+			EventContent: errMsg,
+		})
+		return false, errMsg
+	}
 	installedMap, err := loadPkgStatusVersion()
 	if err != nil {
 		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -220,16 +254,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					if m.config.IntranetUpdate {
-						status, msg := m.beforeUpdateSourceEnvCheck()
-						if !status {
-							job.retry = 0
-							return &system.JobError{
-								ErrType:   system.ErrorDpkgError,
-								ErrDetail: fmt.Sprintf("before update env check failed: %s", msg),
-							}
-						}
-					}
 
 					go m.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
@@ -435,6 +459,19 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						EventStatus:  true,
 						EventContent: fmt.Sprintf("%v success", checkType),
 					})
+				}
+
+				if len(m.UpgradableApps) > 0 {
+					if m.config.IntranetUpdate {
+						status, msg := m.beforeUpdateSourceEnvCheck()
+						if !status {
+							job.retry = 0
+							return &system.JobError{
+								ErrType:   system.ErrorDpkgError,
+								ErrDetail: fmt.Sprintf("before update env check failed: %s", msg),
+							}
+						}
+					}
 				}
 
 				// 从更新平台获取数据并处理完成后,进度更新到10%
