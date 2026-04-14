@@ -44,24 +44,54 @@ func (m *Manager) applyOnlineRateLimit(downloadSpeed *downloadSpeedLimitConfig, 
 		downloadSpeed.LimitSpeed = strconv.Itoa(onlineRateLimit.AllDayRateLimit.Bps)
 		downloadSpeed.IsOnlineSpeedLimit = true
 		downloadSpeed.DownloadSpeedLimitEnabled = true
-	} else if isTimeInRange(nowTime, onlineRateLimit.PeakTimeRateLimit.StartTime, onlineRateLimit.PeakTimeRateLimit.EndTime) &&
-		onlineRateLimit.PeakTimeRateLimit.Enable {
-		downloadSpeed.LimitSpeed = strconv.Itoa(onlineRateLimit.PeakTimeRateLimit.Bps)
-		downloadSpeed.IsOnlineSpeedLimit = true
-		downloadSpeed.DownloadSpeedLimitEnabled = true
-	} else if isTimeInRange(nowTime, onlineRateLimit.OffPeakTimeRateLimit.StartTime, onlineRateLimit.OffPeakTimeRateLimit.EndTime) &&
-		onlineRateLimit.OffPeakTimeRateLimit.Enable {
-		downloadSpeed.LimitSpeed = strconv.Itoa(onlineRateLimit.OffPeakTimeRateLimit.Bps)
-		downloadSpeed.IsOnlineSpeedLimit = true
-		downloadSpeed.DownloadSpeedLimitEnabled = true
 	} else {
-		err := json.Unmarshal([]byte(m.config.LocalDownloadSpeedLimitConfig), downloadSpeed)
+		timeState := m.getCurrentTimeState(nowTime)
+		*downloadSpeed = getDownloadSpeedLimitConfigByTimeState(m, timeState)
+	}
+}
+
+const (
+	timeStateUnknown = iota
+	timeStatePeak
+	timeStateOffPeak
+)
+
+func getDownloadSpeedLimitConfigByTimeState(m *Manager, timeState int) downloadSpeedLimitConfig {
+	switch timeState {
+	case timeStatePeak:
+		return downloadSpeedLimitConfig{
+			LimitSpeed:                strconv.Itoa(m.updatePlatform.OnlineRateLimit.PeakTimeRateLimit.Bps),
+			IsOnlineSpeedLimit:        true,
+			DownloadSpeedLimitEnabled: true,
+		}
+	case timeStateOffPeak:
+		return downloadSpeedLimitConfig{
+			LimitSpeed:                strconv.Itoa(m.updatePlatform.OnlineRateLimit.OffPeakTimeRateLimit.Bps),
+			IsOnlineSpeedLimit:        true,
+			DownloadSpeedLimitEnabled: true,
+		}
+	default:
+		var downloadSpeed downloadSpeedLimitConfig
+		err := json.Unmarshal([]byte(m.config.LocalDownloadSpeedLimitConfig), &downloadSpeed)
 		if err != nil {
 			downloadSpeed.IsOnlineSpeedLimit = false
 			downloadSpeed.LimitSpeed = strconv.FormatInt(defaultSpeedLimit, 10)
 			downloadSpeed.DownloadSpeedLimitEnabled = true
 		}
+		return downloadSpeed
 	}
+}
+
+func (m *Manager) getCurrentTimeState(nowTime string) int {
+	onlineRateLimit := m.updatePlatform.OnlineRateLimit
+	if isTimeInRange(nowTime, onlineRateLimit.PeakTimeRateLimit.StartTime, onlineRateLimit.PeakTimeRateLimit.EndTime) &&
+		onlineRateLimit.PeakTimeRateLimit.Enable {
+		return timeStatePeak
+	} else if isTimeInRange(nowTime, onlineRateLimit.OffPeakTimeRateLimit.StartTime, onlineRateLimit.OffPeakTimeRateLimit.EndTime) &&
+		onlineRateLimit.OffPeakTimeRateLimit.Enable {
+		return timeStateOffPeak
+	}
+	return timeStateUnknown
 }
 
 func isTimeInRange(nowTimeStr, startStr, endStr string) bool {
@@ -166,42 +196,19 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		m.statusManager.SetUpdateStatus(mode, system.DownloadErr)
 		return nil, dbusutil.ToError(errors.New(string(errStr)))
 	}
-	done := make(chan struct{}, 1)
-	notifyDone := func() {
-		select {
-		case done <- struct{}{}:
-		default:
-		}
-	}
+	var peakOffPeakMonitor *PeakOffPeakMonitor
 	if m.config.IntranetUpdate {
 		//私有化更新有忙闲时下载限速的功能，需要在真正开始下载前刷新一下线上限速配置
 		if err = m.refreshThrottlingFromPlatform(); err != nil {
 			logger.Warning("updatePlatform gen download speed limit failed", err)
 		} else {
-			go func() {
-				ticker := time.NewTicker(5 * time.Second)
-				startTime := time.Now()
-				defer ticker.Stop()
-				var count int
-				layout := "15:04:05"
-				for {
-					select {
-					case <-done:
-						logger.Info("online rate limit ticker stopped")
-						return
-					case t := <-ticker.C:
-						count++
-						downloadStartServiceTime, err := time.ParseInLocation(layout, m.updatePlatform.OnlineRateLimit.ServerTime, time.Local)
-						if err != nil {
-							logger.Warningf("format OnlineRateLimit service time failed, %v", err)
-							return
-						}
-						logger.Infof("downloadStartServiceTime %v", downloadStartServiceTime)
-						nowTime := downloadStartServiceTime.Add(t.Sub(startTime))
-						m.setEffectiveOnlineRateLimit(nowTime.Format(layout))
-					}
-				}
-			}()
+			peakOffPeakMonitor = NewPeakOffPeakMonitor(m, m.updatePlatform.OnlineRateLimit.ServerTime)
+			peakOffPeakMonitor.Start()
+		}
+	}
+	stopPeakOffPeakMonitor := func() {
+		if peakOffPeakMonitor != nil {
+			peakOffPeakMonitor.Stop()
 		}
 	}
 
@@ -304,7 +311,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			},
 			string(system.FailedStatus): func() error {
 				if m.config.IntranetUpdate {
-					notifyDone()
+					stopPeakOffPeakMonitor()
 					cacheFile := "/tmp/checkpolicy.cache"
 					_ = os.RemoveAll(cacheFile)
 				}
@@ -476,7 +483,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				if j.next == nil {
 					logger.Info("running in last end hook")
 					if m.config.IntranetUpdate {
-						notifyDone()
+						stopPeakOffPeakMonitor()
 					}
 					// 如果出现单项失败,其他的状态需要修改,IsDownloading->notDownload
 					// 如果已经有单项下载完成,然后取消下载,DownloadPause->notDownload
