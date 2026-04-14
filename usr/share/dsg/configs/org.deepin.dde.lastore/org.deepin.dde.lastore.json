@@ -636,7 +636,7 @@
       "visibility": "private"
     },
     "delivery-remote-download-global-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -649,7 +649,7 @@
       "visibility": "private"
     },
     "delivery-remote-upload-global-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -662,7 +662,7 @@
       "visibility": "private"
     },
     "delivery-remote-download-peak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -675,7 +675,7 @@
       "visibility": "private"
     },
     "delivery-remote-upload-peak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -688,7 +688,7 @@
       "visibility": "private"
     },
     "delivery-remote-download-offpeak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -701,7 +701,7 @@
       "visibility": "private"
     },
     "delivery-remote-upload-offpeak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -714,7 +714,7 @@
       "visibility": "private"
     },
     "delivery-local-download-global-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -727,7 +727,7 @@
       "visibility": "private"
     },
     "delivery-local-upload-global-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -740,7 +740,7 @@
       "visibility": "private"
     },
     "delivery-local-download-peak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -753,7 +753,7 @@
       "visibility": "private"
     },
     "delivery-local-upload-peak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -766,7 +766,7 @@
       "visibility": "private"
     },
     "delivery-local-download-offpeak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
@@ -779,7 +779,7 @@
       "visibility": "private"
     },
     "delivery-local-upload-offpeak-limit": {
-      "value": "",
+      "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10240,\"CurrentRate\":10240}",
       "serial": 0,
       "flags": [
         "global"
