@@ -204,7 +204,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				m.statusManager.SetUpdateStatus(mode, system.WaitRunUpgrade)
 				if m.config.IntranetUpdate {
 					msg := gettext.Tr("Start to update. Please do not shutdown")
-					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+					go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutNoHide)
 				}
 
 				m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
