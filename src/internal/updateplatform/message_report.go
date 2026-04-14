@@ -2033,6 +2033,39 @@ func (m *UpdatePlatformManager) UpdateRequestUrl(url string) {
 	m.requestUrl = url
 }
 
+func updateNoLimitConfigIfChanged(currentValue string, setFunc func(string) error) error {
+	var existingRate ratelimit.RateInfo
+	if currentValue != "" {
+		if err := json.Unmarshal([]byte(currentValue), &existingRate); err == nil {
+			if existingRate.LimitType == ratelimit.RateLimitTypeNo {
+				return nil
+			}
+			newRate := ratelimit.RateInfo{
+				LimitType:   ratelimit.RateLimitTypeNo,
+				LimitRate:   existingRate.LimitRate,
+				CurrentRate: existingRate.CurrentRate,
+				StartTime:   existingRate.StartTime,
+				EndTime:     existingRate.EndTime,
+			}
+			data, err := json.Marshal(&newRate)
+			if err != nil {
+				return err
+			}
+			return setFunc(string(data))
+		}
+	}
+	newRate := ratelimit.RateInfo{
+		LimitType:   ratelimit.RateLimitTypeNo,
+		LimitRate:   ratelimit.DefaultRateLimit,
+		CurrentRate: ratelimit.DefaultRateLimit,
+	}
+	data, err := json.Marshal(&newRate)
+	if err != nil {
+		return err
+	}
+	return setFunc(string(data))
+}
+
 func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 	if err := m.GenIpfsConfig(); err != nil {
 		return fmt.Errorf("failed to gen ipfs config: %w", err)
@@ -2056,15 +2089,15 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 	if localDownloadRateLimit.Global == nil {
 		localDownloadRateLimit.Global = &ratelimit.RateInfo{ // 本地不限速
 			LimitType:   ratelimit.RateLimitTypeNo,
-			LimitRate:   int64(ratelimit.MaxRate),
-			CurrentRate: int64(ratelimit.MaxRate),
+			LimitRate:   int64(ratelimit.DefaultRateLimit),
+			CurrentRate: int64(ratelimit.DefaultRateLimit),
 		}
 	}
 	if localUploadRateLimit.Global == nil {
 		localUploadRateLimit.Global = &ratelimit.RateInfo{ // 本地不限速
 			LimitType:   ratelimit.RateLimitTypeNo,
-			LimitRate:   int64(ratelimit.MaxRate),
-			CurrentRate: int64(ratelimit.MaxRate),
+			LimitRate:   int64(ratelimit.DefaultRateLimit),
+			CurrentRate: int64(ratelimit.DefaultRateLimit),
 		}
 	}
 
@@ -2101,6 +2134,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryRemoteUploadGlobalLimit, m.config.SetDeliveryRemoteUploadGlobalLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if uploadLimitRate.BusyLimitRemote != nil {
 		remoteUploadPeakData, err := json.Marshal(uploadLimitRate.BusyLimitRemote)
@@ -2109,6 +2146,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryRemoteUploadPeakLimit, m.config.SetDeliveryRemoteUploadPeakLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if uploadLimitRate.FreeLimitRemote != nil {
 		remoteUploadOffPeakData, err := json.Marshal(uploadLimitRate.FreeLimitRemote)
@@ -2116,6 +2157,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 			if err := m.config.SetDeliveryRemoteUploadOffPeakLimit(string(remoteUploadOffPeakData)); err != nil {
 				logger.Warning(err)
 			}
+		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryRemoteUploadOffPeakLimit, m.config.SetDeliveryRemoteUploadOffPeakLimit); err != nil {
+			logger.Warning(err)
 		}
 	}
 
@@ -2126,6 +2171,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryRemoteDownloadGlobalLimit, m.config.SetDeliveryRemoteDownloadGlobalLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if downloadLimitRate.BusyLimitRemote != nil {
 		remoteDownloadPeakData, err := json.Marshal(downloadLimitRate.BusyLimitRemote)
@@ -2134,6 +2183,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryRemoteDownloadPeakLimit, m.config.SetDeliveryRemoteDownloadPeakLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if downloadLimitRate.FreeLimitRemote != nil {
 		remoteDownloadOffPeakData, err := json.Marshal(downloadLimitRate.FreeLimitRemote)
@@ -2141,6 +2194,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 			if err := m.config.SetDeliveryRemoteDownloadOffPeakLimit(string(remoteDownloadOffPeakData)); err != nil {
 				logger.Warning(err)
 			}
+		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryRemoteDownloadOffPeakLimit, m.config.SetDeliveryRemoteDownloadOffPeakLimit); err != nil {
+			logger.Warning(err)
 		}
 	}
 
@@ -2151,6 +2208,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryLocalUploadGlobalLimit, m.config.SetDeliveryLocalUploadGlobalLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if uploadLimitRate.BusyLimitLocal != nil {
 		localUploadPeakData, err := json.Marshal(uploadLimitRate.BusyLimitLocal)
@@ -2159,6 +2220,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryLocalUploadPeakLimit, m.config.SetDeliveryLocalUploadPeakLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if uploadLimitRate.FreeLimitLocal != nil {
 		localUploadOffPeakData, err := json.Marshal(uploadLimitRate.FreeLimitLocal)
@@ -2166,6 +2231,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 			if err := m.config.SetDeliveryLocalUploadOffPeakLimit(string(localUploadOffPeakData)); err != nil {
 				logger.Warning(err)
 			}
+		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryLocalUploadOffPeakLimit, m.config.SetDeliveryLocalUploadOffPeakLimit); err != nil {
+			logger.Warning(err)
 		}
 	}
 
@@ -2176,6 +2245,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryLocalDownloadGlobalLimit, m.config.SetDeliveryLocalDownloadGlobalLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if downloadLimitRate.BusyLimitLocal != nil {
 		localDownloadPeakData, err := json.Marshal(downloadLimitRate.BusyLimitLocal)
@@ -2184,6 +2257,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 				logger.Warning(err)
 			}
 		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryLocalDownloadPeakLimit, m.config.SetDeliveryLocalDownloadPeakLimit); err != nil {
+			logger.Warning(err)
+		}
 	}
 	if downloadLimitRate.FreeLimitLocal != nil {
 		localDownloadOffPeakData, err := json.Marshal(downloadLimitRate.FreeLimitLocal)
@@ -2191,6 +2268,10 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 			if err := m.config.SetDeliveryLocalDownloadOffPeakLimit(string(localDownloadOffPeakData)); err != nil {
 				logger.Warning(err)
 			}
+		}
+	} else {
+		if err := updateNoLimitConfigIfChanged(m.config.DeliveryLocalDownloadOffPeakLimit, m.config.SetDeliveryLocalDownloadOffPeakLimit); err != nil {
+			logger.Warning(err)
 		}
 	}
 
