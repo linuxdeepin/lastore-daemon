@@ -757,7 +757,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}
 			m.inhibitAutoQuitCountSub()
 		}()
-		if !m.updatePlatform.UpdateNowForce && !m.updatePlatform.UpdateTime.IsZero() {
+		if !m.updatePlatform.UpdateNowForce && !m.updatePlatform.UpdateTime.IsZero() && len(m.updater.UpdatablePackages) > 0 {
 			timeStr := m.updatePlatform.UpdateTime.Format(TimeOnly)
 			if timeStr != m.updateTime {
 				m.updateTime = timeStr
@@ -765,7 +765,7 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 				go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 			}
 		}
-		if m.updatePlatform.Tp == updateplatform.UpdateRegularly {
+		if m.updatePlatform.Tp == updateplatform.UpdateRegularly && len(m.updater.UpdatablePackages) > 0 {
 			_ = m.updateTimerUnit(lastoreRegularlyUpdate)
 		}
 		// 强制更新开启后，以强制更新下载策略优先
