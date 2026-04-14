@@ -220,17 +220,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updateSourceOnce = true
 				m.PropsMu.Unlock()
 				if len(m.UpgradableApps) > 0 {
-					if m.config.IntranetUpdate {
-						status, msg := m.beforeUpdateSourceEnvCheck()
-						if !status {
-							job.retry = 0
-							return &system.JobError{
-								ErrType:   system.ErrorDpkgError,
-								ErrDetail: fmt.Sprintf("before update env check failed: %s", msg),
-							}
-						}
-					}
-
 					go m.reportLog(updateStatusReport, true, "")
 					// 开启自动下载时触发自动下载,发自动下载通知,不发送可更新通知;
 					// 关闭自动下载时,发可更新的通知;
