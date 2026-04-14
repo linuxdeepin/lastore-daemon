@@ -15,6 +15,8 @@ const UPGRADE_DELIVERY_SERVICE = "org.deepin.upgradedelivery"
 const UPGRADE_DELIVERY_OBJECT_PATH = "/org/deepin/upgradedelivery"
 const UPGRADE_DELIVERY_INTERFACE = "org.deepin.upgradedelivery"
 
+const DefaultRateLimit = 10 * 1024 // 10 kb/s
+
 // SyncLimit 服务器端限速配置信息
 type SyncLimit struct {
 	AllDayRateLimit   *RateLimitWithTime `json:"a,omitempty"` // 全天限制
@@ -36,9 +38,6 @@ type IPFSConfig struct {
 	DownloadLimit *SyncLimit `json:"dl"` // 下载限速
 	UploadLimit   *SyncLimit `json:"ul"` // 上传限速
 }
-
-const MaxRate = 999999 * 1024 // 最大速率(999999 KB/s)
-const MinRate = 10 * 1024     // 最小速率(10 KB/s)
 
 const (
 	RateLimitTypeNo     = 0 // 表示不设置
@@ -70,6 +69,41 @@ type IPFSLimitRate struct {
 }
 
 func SetIPFSRateLimit(uploadLimitRate, downloadLimitRate IPFSLimitRate) error {
+	// delivery dbus输入参数要求：
+	// 1. GlobalLimitLocal必须有数据，且不能为空，如果不限速需要设置限速类型为0,限速值使用默认值
+	// 2. 其他的限速，如果不限速，需要设置成nil
+	if uploadLimitRate.GlobalLimitRemote != nil && uploadLimitRate.GlobalLimitRemote.LimitType == 0 {
+		uploadLimitRate.GlobalLimitRemote = nil
+	}
+	if uploadLimitRate.BusyLimitRemote != nil && uploadLimitRate.BusyLimitRemote.LimitType == 0 {
+		uploadLimitRate.BusyLimitRemote = nil
+	}
+	if uploadLimitRate.FreeLimitRemote != nil && uploadLimitRate.FreeLimitRemote.LimitType == 0 {
+		uploadLimitRate.FreeLimitRemote = nil
+	}
+	if uploadLimitRate.BusyLimitLocal != nil && uploadLimitRate.BusyLimitLocal.LimitType == 0 {
+		uploadLimitRate.BusyLimitLocal = nil
+	}
+	if uploadLimitRate.FreeLimitLocal != nil && uploadLimitRate.FreeLimitLocal.LimitType == 0 {
+		uploadLimitRate.FreeLimitLocal = nil
+	}
+
+	if downloadLimitRate.GlobalLimitRemote != nil && downloadLimitRate.GlobalLimitRemote.LimitType == 0 {
+		downloadLimitRate.GlobalLimitRemote = nil
+	}
+	if downloadLimitRate.BusyLimitRemote != nil && downloadLimitRate.BusyLimitRemote.LimitType == 0 {
+		downloadLimitRate.BusyLimitRemote = nil
+	}
+	if downloadLimitRate.FreeLimitRemote != nil && downloadLimitRate.FreeLimitRemote.LimitType == 0 {
+		downloadLimitRate.FreeLimitRemote = nil
+	}
+	if downloadLimitRate.BusyLimitLocal != nil && downloadLimitRate.BusyLimitLocal.LimitType == 0 {
+		downloadLimitRate.BusyLimitLocal = nil
+	}
+	if downloadLimitRate.FreeLimitLocal != nil && downloadLimitRate.FreeLimitLocal.LimitType == 0 {
+		downloadLimitRate.FreeLimitLocal = nil
+	}
+
 	ipfsUploadConfigData, err := json.Marshal(uploadLimitRate)
 	if err != nil {
 		return fmt.Errorf("failed to marshal upload limit rate: %w", err)
@@ -181,8 +215,8 @@ func convertRateLimitWithTimeToRateInfo(rlwt *RateLimitWithTime) *RateInfo {
 		rateInfo.CurrentRate = int64(rlwt.RateLimit) * 1024 // kb ---> byte
 	} else {
 		rateInfo.LimitType = RateLimitTypeNo
-		rateInfo.LimitRate = MaxRate
-		rateInfo.CurrentRate = MaxRate
+		rateInfo.LimitRate = DefaultRateLimit
+		rateInfo.CurrentRate = DefaultRateLimit
 	}
 
 	if rlwt.StartTime != "" {
