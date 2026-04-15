@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,10 +41,11 @@ type Job struct {
 	Description string
 
 	// completed bytes per second
-	Speed         int64
-	DeliverySpeed int64
-	Proto         string
-	speedMeter    SpeedMeter
+	Speed                   int64
+	DeliverySpeed           int64
+	Proto                   string
+	hasDeliveryDownloadInfo bool
+	speedMeter              SpeedMeter
 
 	Cancelable bool
 
@@ -93,9 +95,10 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 		Progress:   .0,
 		Cancelable: true,
 
-		option:    make(map[string]string),
-		queueName: queueName,
-		retry:     1,
+		option:        make(map[string]string),
+		queueName:     queueName,
+		retry:         1,
+		DeliverySpeed: -1,
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
@@ -136,8 +139,32 @@ func (j *Job) String() string {
 func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
 	j.PropsMu.Lock()
 	defer j.PropsMu.Unlock()
+
+	if info.Speed == 0 && info.Proto == "" {
+		return
+	}
+
 	j.DeliverySpeed = info.Speed
-	j.Proto = info.Proto
+	j.hasDeliveryDownloadInfo = true
+
+	speed := info.Speed
+	if speed < 0 {
+		speed = 0
+	}
+	if speed != j.Speed {
+		j.Speed = speed
+		if j.service != nil {
+			_ = j.emitPropChangedSpeed(speed)
+		}
+	}
+
+	proto := normalizeDownloadProto(info.Proto)
+	if proto != j.Proto {
+		j.Proto = proto
+		if j.service != nil {
+			_ = j.emitPropChangedProto(proto)
+		}
+	}
 }
 
 // updateInfo update Job information from info and return
@@ -191,14 +218,25 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 		_ = j.emitPropChangedProgress(newProgress)
 	}
 
-	// see the apt.go, we scale download progress value range in [0,0.5
-	speed := j.speedMeter.Speed(info.Progress, j.DeliverySpeed)
+	if !j.hasDeliveryDownloadInfo {
+		if isDownloadProtocolJob(j.Type) && j.Proto != "http" {
+			changed = true
+			j.Proto = "http"
+			if j.service != nil {
+				_ = j.emitPropChangedProto(j.Proto)
+			}
+		}
 
-	if speed != j.Speed {
-		changed = true
-		j.Speed = speed
-		_ = j.emitPropChangedSpeed(speed)
-		_ = j.emitPropChangedProto(j.Proto)
+		// see the apt.go, we scale download progress value range in [0,0.5
+		speed := j.speedMeter.Speed(info.Progress, j.DeliverySpeed)
+
+		if speed != j.Speed {
+			changed = true
+			j.Speed = speed
+			if j.service != nil {
+				_ = j.emitPropChangedSpeed(speed)
+			}
+		}
 	}
 
 	if info.FatalError {
@@ -246,6 +284,26 @@ func (j *Job) _InitProgressRange(begin, end float64) {
 
 func buildProgress(p, begin, end float64) float64 {
 	return begin + p*(end-begin)
+}
+
+func normalizeDownloadProto(proto string) string {
+	switch strings.ToLower(proto) {
+	case "http", "https":
+		return "http"
+	case "p2p", "delivery":
+		return "p2p"
+	default:
+		return proto
+	}
+}
+
+func isDownloadProtocolJob(jobType string) bool {
+	switch jobType {
+	case system.DownloadJobType, system.PrepareDistUpgradeJobType, system.IncrementalDownloadJobType:
+		return true
+	default:
+		return false
+	}
 }
 
 func (j *Job) setError(e *system.JobError) {
