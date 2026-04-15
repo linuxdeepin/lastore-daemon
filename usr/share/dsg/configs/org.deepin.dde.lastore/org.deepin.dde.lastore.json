@@ -521,7 +521,7 @@
       "visibility": "private"
     },
     "upgrade-delivery-enabled": {
-      "value": true,
+      "value": false,
       "serial": 0,
       "flags": [
         "global"
