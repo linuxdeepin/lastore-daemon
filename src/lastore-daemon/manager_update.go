@@ -372,6 +372,9 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						return nil
 					}
 				}
+				if m.updater != nil {
+					m.updater.refreshUpgradeDeliveryService()
+				}
 				if updateplatform.IsForceUpdate(m.updatePlatform.Tp) && m.updatePlatform.Tp != updateplatform.UpdateRegularly {
 					m.stopTimerUnit(lastoreRegularlyUpdate)
 				}

@@ -24,6 +24,7 @@ import (
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/strv"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 )
 
 const (
@@ -125,48 +126,101 @@ func SetAPTSmartMirror(url string) error {
 		0644) // #nosec G306
 }
 
+// refreshUpgradeDeliveryService 刷新升级传递服务的状态，同步配置与实际服务状态。
+// 该函数检查 P2P 更新源支持情况，并根据 UpgradeDeliveryEnabled 配置
+// 启动或关闭升级传递服务，确保 P2PUpdateEnable 属性与配置一致。
 func (u *Updater) refreshUpgradeDeliveryService() {
-	// 检查upgrade服务是否被正常安装
+	if u.config.IntranetUpdate {
+		// 是私网更新，先根据平台下发的仓库列表来判断
+		if !sourceFileHasDeliveryProtocol(system.PlatFormSourceFile) {
+			u.setPropP2PUpdateSupport(false)
+			return
+		}
+	}
+	// 检查 upgrade delivery 服务是否被正常安装
 	_, err := u.service.NameHasOwner("org.deepin.upgradedelivery")
 	if err != nil {
 		logger.Warning(err)
 		u.setPropP2PUpdateSupport(false)
 		return
 	}
-	object := u.service.Conn().Object("org.deepin.upgradedelivery", "/org/deepin/upgradedelivery")
+	upgradeDeliveryObject := u.service.Conn().Object("org.deepin.upgradedelivery", "/org/deepin/upgradedelivery")
 	var ret dbus.Variant
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
-	err = object.CallWithContext(ctx, "org.deepin.upgradedelivery.ServiceStatus", 0).Store(&ret)
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	err = upgradeDeliveryObject.CallWithContext(ctx, "org.deepin.upgradedelivery.ServiceStatus", 0).Store(&ret)
 	if err != nil {
 		logger.Warning(err)
 		u.setPropP2PUpdateSupport(false)
 		return
 	}
 	u.setPropP2PUpdateSupport(true)
-	v := ret.Value()
-	u.setPropP2PUpdateEnable(u.config.UpgradeDeliveryEnabled)
-	// 情况一：当upgrade服务开启但P2PUpdateEnable关闭时，尝试关闭服务。若关闭失败则将P2PUpdateEnable恢复为true
-	if !u.P2PUpdateEnable && v == system.UpgradeDeliveryEnable {
-		err = object.Call("org.deepin.upgradedelivery.DisableService", 0).Err
-		if err != nil {
-			logger.Warning(err)
-			u.setPropP2PUpdateEnable(true)
+	serviceStatus := ret.Value()
+
+	// 应用 UpgradeDeliveryEnabled 配置
+	if u.config.UpgradeDeliveryEnabled {
+		// 配置启用：期望服务开启
+		if serviceStatus != system.UpgradeDeliveryEnable {
+			// 服务未开启，尝试启动
+			err = upgradeDeliveryObject.Call("org.deepin.upgradedelivery.StartService", 0).Err
+			if err != nil {
+				logger.Warning("failed to start upgrade delivery service", err)
+				u.setPropP2PUpdateEnable(false)
+			} else {
+				u.setPropP2PUpdateEnable(true)
+			}
 		} else {
-			err = object.Call("org.deepin.upgradedelivery.Clear", 0).Err
+			// 服务已开启
+			u.setPropP2PUpdateEnable(true)
 		}
-		return
+	} else {
+		// 配置禁用：期望服务关闭
+		if serviceStatus == system.UpgradeDeliveryEnable {
+			// 服务已开启，尝试关闭
+			err = upgradeDeliveryObject.Call("org.deepin.upgradedelivery.DisableService", 0).Err
+			if err != nil {
+				logger.Warning("failed to disable upgrade delivery service", err)
+				u.setPropP2PUpdateEnable(true)
+			} else {
+				err = upgradeDeliveryObject.Call("org.deepin.upgradedelivery.Clear", 0).Err
+				if err != nil {
+					logger.Warning("failed to clear upgrade delivery", err)
+				}
+				// 关闭了服务，但是清理失败，依然设置为 false
+				u.setPropP2PUpdateEnable(false)
+			}
+		} else {
+			// 服务已关闭
+			u.setPropP2PUpdateEnable(false)
+		}
 	}
-	// 情况二：当upgrade服务开启但P2PUpdateEnable为false时，将P2PUpdateEnable设置为true
-	if v == system.UpgradeDeliveryEnable {
-		u.setPropP2PUpdateEnable(true)
-		return
+}
+
+// sourceFileHasDeliveryProtocol checks whether the given source file contains
+// any non-comment line with the "delivery://" protocol prefix, indicating that
+// delivery-based (P2P) update repositories are available.
+func sourceFileHasDeliveryProtocol(sourcePath string) bool {
+	if !utils2.IsFileExist(sourcePath) {
+		return false
 	}
-	// 情况三：当upgrade服务未开启但P2PUpdateEnable为true时，尝试拉起服务。若拉起失败则将P2PUpdateEnable设置为false
-	err = object.Call("org.deepin.upgradedelivery.StartService", 0).Err
+
+	data, err := os.ReadFile(sourcePath)
 	if err != nil {
-		logger.Warning(err)
-		u.setPropP2PUpdateEnable(false)
+		return false
 	}
+
+	// Check line by line, return true only if a non-comment line contains "delivery://"
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.Contains(line, "delivery://") {
+			return true
+		}
+	}
+	return false
 }
 
 type LocaleMirrorSource struct {
