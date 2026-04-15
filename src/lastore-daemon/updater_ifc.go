@@ -7,7 +7,6 @@ package main
 import (
 	"encoding/json"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -133,43 +132,63 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 }
 
 func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
-	if err := json.Unmarshal([]byte(limitConfig), &u.downloadSpeedLimitConfigObj); err != nil {
+	var limitConfigObj downloadSpeedLimitConfig
+	if err := json.Unmarshal([]byte(limitConfig), &limitConfigObj); err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
-	if u.setDownloadSpeedLimitTimer == nil {
-		u.setDownloadSpeedLimitTimer = time.AfterFunc(time.Second, func() {
-			config, err := json.Marshal(u.downloadSpeedLimitConfigObj)
-			if err != nil {
-				logger.Warning(err)
-				return
-			}
-			changed := u.setPropDownloadSpeedLimitConfig(string(config))
-			if changed {
-				logger.Infof("set changed speed limit: %v", limitConfig)
-				// When IsOnlineSpeedLimit is false, it means manual speed limit is set.
-				// Save to both configs to ensure the value persists after daemon restart.
-				if strings.Contains(limitConfig, "IsOnlineSpeedLimit") && !u.downloadSpeedLimitConfigObj.IsOnlineSpeedLimit {
-					err := u.config.SetLocalDownloadSpeedLimitConfig(string(config))
-					if err != nil {
-						logger.Warning(err)
-						return
-					}
-				} else {
-					err := u.config.SetDownloadSpeedLimitConfig(string(config))
-					if err != nil {
-						logger.Warning(err)
-						return
-					}
-				}
-				u.manager.ChangePrepareDistUpgradeJobOption()
-			}
-			logger.Info("update limit config")
-		})
-	} else {
-		u.setDownloadSpeedLimitTimer.Reset(time.Second)
+	if u.downloadSpeedLimitConfigObj.IsOnlineSpeedLimit {
+		// 在线限速优先级更高，如果通过dbus设置了一个本地限速，则不应该把在线限速的配置覆盖掉
+		return nil
+	}
+	// dbus设置数据本地限速，强制将IsOnlineSpeedLimit设置为false
+	limitConfigObj.IsOnlineSpeedLimit = false
+	if err := u.setDownloadSpeedLimit(limitConfigObj); err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	return nil
+}
+
+func (u *Updater) setDownloadSpeedLimit(limitConfigObj downloadSpeedLimitConfig) error {
+	u.PropsMu.Lock()
+
+	logger.Infof("set download limit %v --> %v", u.downloadSpeedLimitConfigObj, limitConfigObj)
+	u.downloadSpeedLimitConfigObj = limitConfigObj
+	config, err := json.Marshal(limitConfigObj)
+	if err != nil {
+		logger.Warning(err)
+		u.PropsMu.Unlock()
+		return err
+	}
+	changed := u.setPropDownloadSpeedLimitConfig(string(config))
+	if !changed {
+		u.PropsMu.Unlock()
+		return nil
+	}
+
+	if u.setDownloadSpeedLimitTimer != nil {
+		u.setDownloadSpeedLimitTimer.Stop()
 		logger.Info("reset limit timer")
 	}
+	configStr := string(config)
+	u.setDownloadSpeedLimitTimer = time.AfterFunc(time.Second, func() {
+		u.PropsMu.Lock()
+		if !u.downloadSpeedLimitConfigObj.IsOnlineSpeedLimit {
+			if err := u.config.SetLocalDownloadSpeedLimitConfig(configStr); err != nil {
+				logger.Warning(err)
+			}
+		} else {
+			if err := u.config.SetDownloadSpeedLimitConfig(configStr); err != nil {
+				logger.Warning(err)
+			}
+		}
+		u.manager.ChangePrepareDistUpgradeJobOption()
+		u.PropsMu.Unlock()
+		logger.Info("update limit config")
+	})
+
+	u.PropsMu.Unlock()
 	return nil
 }
 
