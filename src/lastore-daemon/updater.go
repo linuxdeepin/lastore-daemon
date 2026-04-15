@@ -24,6 +24,7 @@ import (
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/strv"
+	utils2 "github.com/linuxdeepin/go-lib/utils"
 )
 
 const (
@@ -126,6 +127,11 @@ func SetAPTSmartMirror(url string) error {
 }
 
 func (u *Updater) refreshUpgradeDeliveryService() {
+	// TODO: 公网更新传递是否一定开启PlatformUpdate
+	if !updateSourceSupportsP2P("/var/lib/lastore/platform.list") {
+		u.setPropP2PUpdateSupport(false)
+		return
+	}
 	// 检查upgrade服务是否被正常安装
 	_, err := u.service.NameHasOwner("org.deepin.upgradedelivery")
 	if err != nil {
@@ -167,6 +173,15 @@ func (u *Updater) refreshUpgradeDeliveryService() {
 		logger.Warning(err)
 		u.setPropP2PUpdateEnable(false)
 	}
+}
+
+func updateSourceSupportsP2P(sourcePath string) bool {
+	if !utils2.IsFileExist(sourcePath) {
+		return false
+	}
+
+	data, err := os.ReadFile(sourcePath)
+	return err == nil && strings.Contains(string(data), "delivery://")
 }
 
 type LocaleMirrorSource struct {
