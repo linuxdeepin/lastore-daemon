@@ -470,12 +470,10 @@ func (m *Manager) refreshThrottlingFromPlatform() error {
 
 	m.applyOnlineRateLimit(&downloadSpeed, m.updatePlatform.OnlineRateLimit.ServerTime)
 
-	downloadSpeedStr, err := json.Marshal(downloadSpeed)
-	if err != nil {
-		return fmt.Errorf("failed to marshal download speed limit")
+	logger.Infof("set download limit %v --> %v by platform", m.updater.DownloadSpeedLimitConfig, downloadSpeed)
+	if err := m.updater.setDownloadSpeedLimit(downloadSpeed); err != nil {
+		logger.Warningf("Failed to set download speed limit %v", err)
 	}
-	logger.Infof("set download limit %v --> %v by platform", m.config.DownloadSpeedLimitConfig, string(downloadSpeedStr))
-	m.updater.SetDownloadSpeedLimit(string(downloadSpeedStr))
 
 	return nil
 }

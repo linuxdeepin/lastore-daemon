@@ -133,6 +133,7 @@ func (v *Updater) emitPropChangedIdleDownloadConfig(value string) error {
 func (v *Updater) setPropDownloadSpeedLimitConfig(value string) (changed bool) {
 	if v.DownloadSpeedLimitConfig != value {
 		v.DownloadSpeedLimitConfig = value
+		logger.Infof("setPropDownloadSpeedLimitConfig: %s", value)
 		v.emitPropChangedDownloadSpeedLimitConfig(value)
 		return true
 	}
