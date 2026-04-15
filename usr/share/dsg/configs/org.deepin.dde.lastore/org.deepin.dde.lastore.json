@@ -324,7 +324,7 @@
       "visibility": "private"
     },
     "download-speed-limit":{
-      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"10240\",\"IsOnlineSpeedLimit\":false}",
+      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"1024\",\"IsOnlineSpeedLimit\":false}",
       "serial": 0,
       "flags": [
         "global"
@@ -335,7 +335,7 @@
       "visibility": "private"
     },
     "local-download-speed-limit":{
-      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"10240\",\"IsOnlineSpeedLimit\":false}",
+      "value": "{\"DownloadSpeedLimitEnabled\":false,\"LimitSpeed\":\"1024\",\"IsOnlineSpeedLimit\":false}",
       "serial": 0,
       "flags": [
         "global"
