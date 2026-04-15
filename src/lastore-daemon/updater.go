@@ -28,7 +28,7 @@ import (
 
 const (
 	p2pService        = "uos-p2p.service"
-	defaultSpeedLimit = 10240
+	defaultSpeedLimit = 1024
 )
 
 type ApplicationUpdateInfo struct {
