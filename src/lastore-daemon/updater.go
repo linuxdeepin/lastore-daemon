@@ -157,8 +157,13 @@ func (u *Updater) refreshUpgradeDeliveryService() {
 	u.setPropP2PUpdateSupport(true)
 	serviceStatus := ret.Value()
 
+	platformHasDelivery := false
+	if u.manager != nil && u.manager.updatePlatform != nil {
+		platformHasDelivery = u.manager.updatePlatform.HasDeliveryRepo()
+	}
+	shouldEnableService := shouldEnableUpgradeDeliveryService(u.config, platformHasDelivery)
 	// 应用 UpgradeDeliveryEnabled 配置
-	if u.config.UpgradeDeliveryEnabled {
+	if shouldEnableService {
 		// 配置启用：期望服务开启
 		if serviceStatus != system.UpgradeDeliveryEnable {
 			// 服务未开启，尝试启动
@@ -221,6 +226,16 @@ func sourceFileHasDeliveryProtocol(sourcePath string) bool {
 		}
 	}
 	return false
+}
+
+func shouldEnableUpgradeDeliveryService(cfg *Config, platformHasDelivery bool) bool {
+	if cfg == nil {
+		return false
+	}
+	if cfg.UpgradeDeliveryEnabled {
+		return true
+	}
+	return cfg.IntranetUpdate && cfg.PlatformUpdate && platformHasDelivery
 }
 
 type LocaleMirrorSource struct {
