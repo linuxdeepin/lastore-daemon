@@ -155,8 +155,13 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	}
 	prepareUpdateSource()
 	m.reloadOemConfig(true)
-	system.UpdateP2pDefaultSourceDir(system.SystemUpdate, m.updater.P2PUpdateEnable)
-	system.UpdateP2pDefaultSourceDir(system.SecurityUpdate, m.updater.P2PUpdateEnable)
+	repos := m.updatePlatform.GetPlatformRepoSources()
+	if err := system.UpdateP2pDefaultSourceDir(system.SystemUpdate, m.updater.P2PUpdateEnable, repos); err != nil {
+		logger.Warning(err)
+	}
+	if err := system.UpdateP2pDefaultSourceDir(system.SecurityUpdate, m.updater.P2PUpdateEnable, repos); err != nil {
+		logger.Warning(err)
+	}
 	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job

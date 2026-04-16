@@ -72,3 +72,16 @@ func TestGenPlatformReposFromRepoInfosKeepsDeliverySource(t *testing.T) {
 		t.Fatalf("repos[0] = %q, want %q", repos[0], want)
 	}
 }
+
+func TestHasDeliveryRepo(t *testing.T) {
+	manager := &UpdatePlatformManager{
+		repoInfos: []repoInfo{
+			{Source: "deb https://packages.example.com/desktop beige main"},
+			{Source: "deb delivery://packages.example.com/apps beige main"},
+		},
+	}
+
+	if !manager.HasDeliveryRepo() {
+		t.Fatal("expected delivery repo to be detected")
+	}
+}
