@@ -180,7 +180,7 @@ const (
 	dSettingsKeyAutoClean                            = "auto-clean"
 	dSettingsKeyMirrorSource                         = "mirror-source"
 	dSettingsKeyUpdateNotify                         = "update-notify"
-	dSettingsKeyCheckInterval                        = "check-interval"
+	DSettingsKeyCheckInterval                        = "check-interval"
 	dSettingsKeyCleanInterval                        = "clean-interval"
 	dSettingsKeyUpdateMode                           = "update-mode"
 	dSettingsKeyCheckUpdateMode                      = "check-update-mode"
@@ -205,7 +205,7 @@ const (
 	dSettingsKeyUpdateStatus                         = "update-status"
 	DSettingsKeyPlatformUpdate                       = "platform-update"
 	DSettingsKeyPlatformUrl                          = "platform-url"
-	dSettingsKeyStartCheckRange                      = "start-check-range"
+	DSettingsKeyStartCheckRange                      = "start-check-range"
 	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
 	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
 	dSettingsKeyUpdateTime                           = "update-time"
@@ -330,7 +330,7 @@ func getConfigFromDSettings() *Config {
 		c.UpdateNotify = v.Value().(bool)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckInterval)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyCheckInterval)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -637,7 +637,7 @@ func getConfigFromDSettings() *Config {
 	}
 
 	var checkRange []int64
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyStartCheckRange)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyStartCheckRange)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -1053,7 +1053,7 @@ func (c *Config) SetIdleDownloadConfig(idleConfig string) error {
 
 func (c *Config) SetCheckInterval(interval time.Duration) error {
 	c.CheckInterval = interval
-	return c.save(dSettingsKeyCheckInterval, interval)
+	return c.save(DSettingsKeyCheckInterval, interval)
 }
 
 func (c *Config) SetCleanInterval(interval time.Duration) error {
@@ -1231,7 +1231,7 @@ func (c *Config) SetStartCheckRange(checkRange []int) error {
 		variants = append(variants, dbus.MakeVariant(int64(item)))
 	}
 
-	return c.save(dSettingsKeyStartCheckRange, variants)
+	return c.save(DSettingsKeyStartCheckRange, variants)
 }
 
 const (
@@ -1264,4 +1264,11 @@ func (c *Config) save(key string, v interface{}) error {
 	}
 	logger.Info("not exist lastore dsettings")
 	return system.EncodeJson(c.filePath, c)
+}
+
+func (c *Config) ResetDSettings(key string) error {
+	if c.dsLastoreManager != nil {
+		return c.dsLastoreManager.Reset(0, key)
+	}
+	return nil
 }
