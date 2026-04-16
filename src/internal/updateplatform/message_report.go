@@ -34,7 +34,7 @@ import (
 	"github.com/linuxdeepin/go-lib/log"
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
-	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	Cfg "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/ratelimit"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
@@ -83,7 +83,7 @@ type StatusMessage struct {
 }
 
 type UpdatePlatformManager struct {
-	config                            *Config
+	config                            *Cfg.Config
 	allowPostSystemUpgradeMessageType system.UpdateType
 	preBuild                          string // 进行系统更新前的版本号，如20.1060.11018.100.100，本地os-baseline获取
 	preBaseline                       string // 更新前的基线号，从baseline获取，本地os-baseline获取
@@ -162,7 +162,7 @@ const (
 	KeyLayout   string = "15:04"
 )
 
-func NewUpdatePlatformManager(c *Config, updateToken bool) *UpdatePlatformManager {
+func NewUpdatePlatformManager(c *Cfg.Config, updateToken bool) *UpdatePlatformManager {
 	platformUrl := c.PlatformUrl
 	if len(platformUrl) == 0 {
 		platformUrl = os.Getenv("UPDATE_PLATFORM_URL")
@@ -596,6 +596,9 @@ func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetVersion.string(), err.Error())
 	}
+	if len(m.Token) == 0 {
+		m.Token = UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
+	}
 	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
 	request.Header.Set("X-Packages", base64.RawStdEncoding.EncodeToString([]byte(getClientPackageInfo(m.config.ClientPackageName))))
 	return client.Do(request)
@@ -927,7 +930,7 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) err
 
 func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) error {
 	var err error
-	if (m.config.PlatformDisabled & DisabledVersion) == 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledVersion) == 0 {
 		err = m.genUpdatePolicyByToken(updateInRelease)
 	}
 	// 根据配置更新Tp
@@ -1567,16 +1570,16 @@ func (m *UpdatePlatformManager) UpdateAllPlatformDataSync() error {
 	m.SelectPkgs = make(map[string]system.PackageInfo)
 	m.FreezePkgs = make(map[string]system.PackageInfo)
 	m.PurgePkgs = make(map[string]system.PackageInfo)
-	if (m.config.PlatformDisabled & DisabledUpdateLog) == 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledUpdateLog) == 0 {
 		syncFuncList = append(syncFuncList, m.updateLogMetaSync) // 日志
 	}
-	if (m.config.PlatformDisabled & DisabledTargetPkgLists) == 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledTargetPkgLists) == 0 {
 		syncFuncList = append(syncFuncList, m.updateTargetPkgMetaSync) // 目标版本信息
 	}
-	if (m.config.PlatformDisabled&DisabledCurrentPkgLists) == 0 && m.preBaseline != "" {
+	if (m.config.PlatformDisabled&Cfg.DisabledCurrentPkgLists) == 0 && m.preBaseline != "" {
 		syncFuncList = append(syncFuncList, m.updateCurrentPreInstalledPkgMetaSync) // 基线版本信息
 	}
-	if (m.config.PlatformDisabled & DisabledPkgCVEs) == 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledPkgCVEs) == 0 {
 		syncFuncList = append(syncFuncList, m.updateCVEMetaDataSync) // cve信息
 	}
 	for _, syncFunc := range syncFuncList {
@@ -1609,7 +1612,7 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	if body.ExecAt == 0 {
 		body.ExecAt = time.Now().UnixMilli()
 	}
-	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledProcess) != 0 {
 		logger.Warning("platform is disabled")
 		return
 	}
@@ -1656,7 +1659,7 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 
 // PostStatusMessage 将检查\下载\安装过程中所有异常状态和每个阶段成功的正常状态上报
 func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUpload bool) {
-	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledProcess) != 0 {
 		return
 	}
 
@@ -1744,7 +1747,7 @@ func tarFiles(files []string, outFile string) error {
 
 // PostUpdateLogFiles 将更新日志上传
 func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
-	if (m.config.PlatformDisabled & DisabledProcess) != 0 {
+	if (m.config.PlatformDisabled & Cfg.DisabledProcess) != 0 {
 		return
 	}
 	hardwareId := GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
@@ -1956,7 +1959,7 @@ func (m *UpdatePlatformManager) PrepareCheckScripts() {
 	}
 }
 
-func (m *UpdatePlatformManager) SaveCache(c *Config) {
+func (m *UpdatePlatformManager) SaveCache(c *Cfg.Config) {
 	cache := platformCacheContent{}
 	cache.CoreListPkgs = m.TargetCorePkgs
 	cache.BaselinePkgs = m.BaselinePkgs
@@ -2281,19 +2284,29 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 const checkPolicyCacheFile = "/tmp/checkpolicy.cache"
 
 func (m *UpdatePlatformManager) CheckPolicyChanged() (bool, error) {
+	logger.Infof("Check policy changed: requestUrl=%s", m.requestUrl)
 	response, err := m.genVersionResponse()
 	if err != nil {
 		return false, fmt.Errorf("do request failed: %w", err)
 	}
 	defer response.Body.Close()
 
+	if response.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("request failed with status: %d", response.StatusCode)
+	}
+
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return false, fmt.Errorf("read response body failed: %w", err)
 	}
 
-	if response.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("request failed with status: %d", response.StatusCode)
+	unRegisted, err := m.tryToUnRegisterConsole(body)
+	if unRegisted && err == nil {
+		// 反注册成功，直接退出，但是需要触发重新检查
+		return true, nil
+	}
+	if err != nil {
+		logger.Warning(err)
 	}
 
 	sum := sha256.Sum256(body)
@@ -2341,21 +2354,56 @@ func (m *UpdatePlatformManager) saveCheckPolicyCache(sum string) error {
 	defer writeFile.Close()
 
 	if _, err := writeFile.WriteString(sum); err != nil {
-		logger.Warning("failed to write sum:", err)
+		logger.Warningf("failed to write sum: %v", err)
 		return err
 	}
 	if _, err := writeFile.WriteString("\n"); err != nil {
-		logger.Warning("failed to write newline:", err)
+		logger.Warningf("failed to write newline: %v", err)
 		return err
 	}
 	if _, err := writeFile.WriteString(time.Now().Format(time.RFC3339)); err != nil {
-		logger.Warning("failed to write time:", err)
+		logger.Warningf("failed to write time: %v", err)
 		return err
 	}
 	if _, err := writeFile.WriteString("\n"); err != nil {
-		logger.Warning("failed to write newline:", err)
+		logger.Warningf("failed to write newline: %v", err)
 		return err
 	}
 
 	return nil
+}
+
+func (m *UpdatePlatformManager) tryToUnRegisterConsole(body []byte) (bool, error) {
+	var response tokenMessage
+	if err := json.Unmarshal(body, &response); err != nil {
+		logger.Warningf("failed to parse json %v", string(body))
+		return false, err
+	}
+
+	if response.Code == 416 && utils.IsFileExist("/usr/lib/iup-daemon/uninstall") {
+		logger.Infof("platform returned code %d, executing uninstall script", response.Code)
+		cmd := exec.Command("/usr/lib/iup-daemon/uninstall")
+		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			logger.Warningf("failed to exec uninstall. output:%v", string(output))
+			return false, err
+		}
+
+		// 反注册相当于从内网平台切换成了公网，因此需要清理CheckInterval和StartCheckRange和lastCheckTime
+		if err := m.config.SetLastCheckTime(time.Unix(0, 0)); err != nil {
+			logger.Warningf("failed to set last check time: %v", err)
+		}
+		// TODO: 此处只是重置dsettings，合理的做法是恢复到上一次公网的情况
+		if err := m.config.ResetDSettings(Cfg.DSettingsKeyCheckInterval); err != nil {
+			logger.Warningf("failed to reset check interval: %v", err)
+		}
+		if err := m.config.ResetDSettings(Cfg.DSettingsKeyStartCheckRange); err != nil {
+			logger.Warningf("failed to reset start check range: %v", err)
+		}
+
+		logger.Infof("uninstall script executed successfully. output: %v", string(output))
+		return true, nil
+	}
+	return false, nil
 }
