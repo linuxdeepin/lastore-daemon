@@ -11,10 +11,102 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
 )
+
+var (
+	tempSourceDirMu   sync.RWMutex
+	tempSourceDirPath string
+)
+
+func SetTempSourceDir(tempDir string) {
+	tempSourceDirMu.Lock()
+	defer tempSourceDirMu.Unlock()
+	tempSourceDirPath = tempDir
+	logger.Infof("SetTempSourceDir: %s", tempDir)
+}
+
+func ClearTempSourceDir() {
+	tempSourceDirMu.Lock()
+	defer tempSourceDirMu.Unlock()
+	tempSourceDirPath = ""
+	logger.Info("ClearTempSourceDir")
+}
+
+func RefreshSymlinksForSourceDir(sourceDir string) {
+	tempSourceDirMu.RLock()
+	tempDir := tempSourceDirPath
+	tempSourceDirMu.RUnlock()
+
+	if tempDir == "" {
+		return
+	}
+
+	files, err := os.ReadDir(tempDir)
+	if err != nil {
+		logger.Warningf("RefreshSymlinksForSourceDir: failed to read tempDir %s: %v", tempDir, err)
+		return
+	}
+
+	sourceFiles, err := os.ReadDir(sourceDir)
+	if err != nil {
+		logger.Warningf("RefreshSymlinksForSourceDir: failed to read sourceDir %s: %v", sourceDir, err)
+		return
+	}
+
+	sourceFileMap := make(map[string]bool)
+	for _, f := range sourceFiles {
+		if strings.HasSuffix(f.Name(), ".list") {
+			sourceFileMap[f.Name()] = true
+		}
+	}
+
+	for _, f := range files {
+		linkPath := filepath.Join(tempDir, f.Name())
+		if utils.IsSymlink(linkPath) {
+			targetPath, err := os.Readlink(linkPath)
+			if err != nil {
+				logger.Warningf("RefreshSymlinksForSourceDir: failed to read link %s: %v", linkPath, err)
+				continue
+			}
+
+			if strings.HasPrefix(targetPath, sourceDir) {
+				fileName := filepath.Base(targetPath)
+				newTargetPath := filepath.Join(sourceDir, fileName)
+
+				if !utils.IsFileExist(newTargetPath) {
+					if sourceFileMap[fileName] {
+						os.Remove(linkPath)
+						if err := os.Symlink(newTargetPath, linkPath); err != nil {
+							logger.Warningf("RefreshSymlinksForSourceDir: failed to create symlink: %v", err)
+						} else {
+							logger.Infof("RefreshSymlinksForSourceDir: updated symlink %s -> %s", linkPath, newTargetPath)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	for _, f := range sourceFiles {
+		fileName := f.Name()
+		if !strings.HasSuffix(fileName, ".list") {
+			continue
+		}
+		linkPath := filepath.Join(tempDir, fileName)
+		if _, err := os.Lstat(linkPath); os.IsNotExist(err) {
+			newTargetPath := filepath.Join(sourceDir, fileName)
+			if err := os.Symlink(newTargetPath, linkPath); err != nil {
+				logger.Warningf("RefreshSymlinksForSourceDir: failed to create symlink for %s: %v", fileName, err)
+			} else {
+				logger.Infof("RefreshSymlinksForSourceDir: created symlink %s -> %s", linkPath, newTargetPath)
+			}
+		}
+	}
+}
 
 type UpdateType uint64
 
@@ -173,25 +265,22 @@ func UpdateSystemDefaultSourceDir(sourceList []string) error {
 	return nil
 }
 
-func UpdateP2pDefaultSourceDir(updateType UpdateType, upgradeDeliveryEnabled bool) {
+func UpdateP2pDefaultSourceDir(updateType UpdateType, upgradeDeliveryEnabled bool, platformRepos []string) error {
 	if !upgradeDeliveryEnabled {
-		return
+		return nil
 	}
-	var sourceDir string
-	switch updateType {
-	case SystemUpdate:
-		sourceDir = SoftLinkSystemSourceDir
-	case SecurityUpdate:
-		sourceDir = SecuritySourceDir
+	logger.Infof("UpdateP2pDefaultSourceDir: updateType=%v, platformRepos=%v", updateType, platformRepos)
+	sourceDir := GetCategorySourceMap()[updateType]
+	p2pSource, err := ioutil.TempFile("/tmp", "p2pSource-*.list")
+	if err != nil {
+		return fmt.Errorf("create temp file for p2p source failed: %v", err)
 	}
-	p2pSource, err := ioutil.TempFile("/tmp", "p2pSource.*.list")
 	defer os.Remove(p2pSource.Name())
 	//从SystemSource.d或SecuritySource.d中读取每个文件内容并将协议替换成delivery协议后存放到/tmp中
 	//这么做为了保证替换协议的原子性
 	files, err := ioutil.ReadDir(sourceDir)
 	if err != nil {
-		logger.Warningf("Error writing dir: %s err:%v", sourceDir, err)
-		return
+		return fmt.Errorf("Error writing dir: %s err: %w", sourceDir, err)
 	}
 	for _, file := range files {
 		var content []byte
@@ -208,39 +297,103 @@ func UpdateP2pDefaultSourceDir(updateType UpdateType, upgradeDeliveryEnabled boo
 			}
 			content, err = ioutil.ReadFile(targetPath)
 			if err != nil {
-				logger.Warningf("Error reading file: %v\n", err)
-				return
+				return fmt.Errorf("error reading file: %w", err)
 			}
 		} else {
 			content, err = ioutil.ReadFile(filePath)
 			if err != nil {
-				logger.Warningf("Error reading file: %v\n", err)
-				return
+				return fmt.Errorf("error reading file: %w", err)
 			}
 		}
-		var newContent string
-		newContent = strings.ReplaceAll(string(content), "https://", "delivery://")
+		newContent := replaceMatchedReposWithDelivery(string(content), platformRepos)
 		_, err = p2pSource.Write([]byte(newContent))
 		if err != nil {
-			logger.Warningf("Error writing file: %v\n", err)
-			return
+			return fmt.Errorf("Error writing file: %w", err)
 		}
 	}
 	//所有协议均正常替换后重新创建SystemSource.d或SecuritySource.d，再讲/tmp中的文件拷贝过去
 	err = os.RemoveAll(sourceDir)
 	if err != nil {
 		logger.Warning(err)
-		return
+		return fmt.Errorf("failed to remove %s: %w", sourceDir, err)
 	}
 	err = os.MkdirAll(sourceDir, 0755)
 	if err != nil {
 		logger.Warning(err)
-		return
+		return fmt.Errorf("failed to create %s: %w", sourceDir, err)
 	}
 	err = utils.MoveFile(p2pSource.Name(), filepath.Join(sourceDir, filepath.Base(p2pSource.Name())))
 	if err != nil {
 		logger.Warning(err)
 	}
+	RefreshSymlinksForSourceDir(sourceDir)
+	return nil
+}
+
+func replaceMatchedReposWithDelivery(content string, platformRepos []string) string {
+	matchedURLs := make(map[string]struct{})
+	for _, repo := range platformRepos {
+		urlPath := extractURLPathFromLine(repo)
+		if urlPath != "" {
+			matchedURLs[urlPath] = struct{}{}
+		}
+	}
+	if len(matchedURLs) == 0 {
+		return content
+	}
+
+	var lines []string
+	for _, line := range strings.Split(content, "\n") {
+		urlPath := extractURLPathFromLine(line)
+		if _, ok := matchedURLs[urlPath]; ok && urlPath != "" {
+			lines = append(lines, replaceRepoSchemeWithDelivery(line))
+			continue
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func extractURLPathFromLine(line string) string {
+	fields := strings.Fields(line)
+	for _, field := range fields {
+		if strings.Contains(field, "://") {
+			return extractURLPath(field)
+		}
+	}
+	return ""
+}
+
+func extractURLPath(urlField string) string {
+	idx := strings.Index(urlField, "://")
+	if idx == -1 {
+		return ""
+	}
+	rest := urlField[idx+3:]
+	return strings.TrimSuffix(rest, "/")
+}
+
+func replaceRepoSchemeWithDelivery(line string) string {
+	fields := strings.Fields(line)
+	if len(fields) < 2 || fields[0] != "deb" {
+		return line
+	}
+	for i := 1; i < len(fields); i++ {
+		if strings.HasPrefix(fields[i], "[") {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(fields[i], "https://"):
+			fields[i] = "delivery://" + strings.TrimSuffix(strings.TrimPrefix(fields[i], "https://"), "/")
+			return strings.Join(fields, " ")
+		case strings.HasPrefix(fields[i], "http://"):
+			fields[i] = "delivery://" + strings.TrimSuffix(strings.TrimPrefix(fields[i], "http://"), "/")
+			return strings.Join(fields, " ")
+		case strings.HasPrefix(fields[i], "delivery://"):
+			return line
+		}
+	}
+	return line
 }
 
 func UpdateSecurityDefaultSourceDir(sourceList []string) error {
@@ -406,12 +559,15 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			var beforeDoRealErr error
 			var sourceDir string
 			// #nosec G301
+			logger.Infof("sourcePathList: %v", sourcePathList)
 			sourceDir, beforeDoRealErr = os.MkdirTemp("/tmp", "*Source.d")
 			if beforeDoRealErr != nil {
 				logger.Warning(beforeDoRealErr)
 				return beforeDoRealErr
 			}
+			SetTempSourceDir(sourceDir)
 			unref := func() {
+				ClearTempSourceDir()
 				err := os.RemoveAll(sourceDir)
 				if err != nil {
 					logger.Warning(err)
@@ -449,6 +605,7 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			// 创建对应的软链接
 			for _, filePath := range allSourceFilePaths {
 				linkPath := filepath.Join(sourceDir, filepath.Base(filePath))
+				logger.Infof("filePath: %s --> linkPath: %s", filePath, linkPath)
 				beforeDoRealErr = os.Symlink(filePath, linkPath)
 				if beforeDoRealErr != nil {
 					return fmt.Errorf("create symlink for %q failed: %v", filePath, beforeDoRealErr)

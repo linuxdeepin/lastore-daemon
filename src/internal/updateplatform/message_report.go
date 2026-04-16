@@ -242,6 +242,32 @@ func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs []string) map[string]CEVIn
 	return cveInfos
 }
 
+func (m *UpdatePlatformManager) HasDeliveryRepo() bool {
+	for _, repo := range m.repoInfos {
+		if strings.HasPrefix(repo.Source, "delivery://") {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *UpdatePlatformManager) GetPlatformRepoSources() []string {
+	var repos []string
+	for _, repo := range m.repoInfos {
+		if strings.HasPrefix(repo.Source, "deb ") {
+			repos = append(repos, repo.Source)
+			continue
+		}
+
+		suffix := "main community commercial"
+		if m.config != nil && m.config.PlatformRepoComponents != "" {
+			suffix = m.config.PlatformRepoComponents
+		}
+		repos = append(repos, fmt.Sprintf("deb %s %s %s", repo.Uri, repo.CodeName, suffix))
+	}
+	return repos
+}
+
 func genPreBuild() string {
 	var preBuild string
 	infoMap, err := GetOSVersionInfo(CacheVersion)
@@ -923,6 +949,16 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) err
 	if updateInRelease {
 		m.genRepositoryFromPlatform()
 		m.checkInReleaseFromPlatform()
+		if m.config.UpgradeDeliveryEnabled && !m.config.IntranetUpdate {
+			repos := m.GetPlatformRepoSources()
+			logger.Infof("UpdateP2pDefaultSourceDir: repos=%v", repos)
+			if err := system.UpdateP2pDefaultSourceDir(system.SystemUpdate, true, repos); err != nil {
+				logger.Warning(err)
+			}
+			if err := system.UpdateP2pDefaultSourceDir(system.SecurityUpdate, true, repos); err != nil {
+				logger.Warning(err)
+			}
+		}
 	}
 
 	return nil
