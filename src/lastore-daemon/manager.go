@@ -769,6 +769,7 @@ func (m *Manager) handleAutoCheckEvent() error {
 }
 
 func (m *Manager) handleAutoCheckWithPlatform() error {
+	logger.Infof("handle AutoCheck with platform")
 	needUpdate, err := m.checkPlatformPolicy()
 	if err != nil {
 		logger.Warningf("check platform policy failed: %v", err)
@@ -784,6 +785,7 @@ func (m *Manager) handleAutoCheckWithPlatform() error {
 			return err
 		}
 	} else {
+		logger.Infof("platform policy no update needed, updating auto check timer")
 		if err := m.updateAutoCheckSystemUnit(); err != nil {
 			logger.Warning(err)
 		}
