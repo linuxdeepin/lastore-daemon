@@ -16,6 +16,8 @@ const UPGRADE_DELIVERY_OBJECT_PATH = "/org/deepin/upgradedelivery"
 const UPGRADE_DELIVERY_INTERFACE = "org.deepin.upgradedelivery"
 
 const DefaultRateLimit = 10 * 1024 // 10 kb/s
+const MinRateLimit = 10 * 1024     // 10 kb/s
+const MaxRateLimit = 999999 * 1024 // 999999 kb/s
 
 // SyncLimit 服务器端限速配置信息
 type SyncLimit struct {
@@ -238,6 +240,24 @@ type LocalRateLimitConfig struct {
 	Global *RateInfo
 	Busy   *RateInfo
 	Free   *RateInfo
+}
+
+func ValidateRateInfo(rate *RateInfo) {
+	if rate == nil {
+		return
+	}
+	if rate.LimitRate < MinRateLimit || rate.LimitRate > MaxRateLimit {
+		rate.LimitRate = DefaultRateLimit
+	}
+	if rate.CurrentRate < MinRateLimit || rate.CurrentRate > MaxRateLimit {
+		rate.CurrentRate = DefaultRateLimit
+	}
+}
+
+func (c *LocalRateLimitConfig) Validate() {
+	ValidateRateInfo(c.Global)
+	ValidateRateInfo(c.Busy)
+	ValidateRateInfo(c.Free)
 }
 
 func GetLocalRateLimitFromConfig(globalLimit, peakLimit, offPeakLimit string) *LocalRateLimitConfig {
