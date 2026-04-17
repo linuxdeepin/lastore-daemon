@@ -2090,19 +2090,21 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 	localUploadRateLimit := ratelimit.GetLocalRateLimitFromConfig(m.config.DeliveryLocalUploadGlobalLimit, m.config.DeliveryLocalUploadPeakLimit, m.config.DeliveryLocalUploadOffPeakLimit)
 	localDownloadRateLimit := ratelimit.GetLocalRateLimitFromConfig(m.config.DeliveryLocalDownloadGlobalLimit, m.config.DeliveryLocalDownloadPeakLimit, m.config.DeliveryLocalDownloadOffPeakLimit)
 	if localDownloadRateLimit.Global == nil {
-		localDownloadRateLimit.Global = &ratelimit.RateInfo{ // 本地不限速
+		localDownloadRateLimit.Global = &ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeNo,
 			LimitRate:   int64(ratelimit.DefaultRateLimit),
 			CurrentRate: int64(ratelimit.DefaultRateLimit),
 		}
 	}
 	if localUploadRateLimit.Global == nil {
-		localUploadRateLimit.Global = &ratelimit.RateInfo{ // 本地不限速
+		localUploadRateLimit.Global = &ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeNo,
 			LimitRate:   int64(ratelimit.DefaultRateLimit),
 			CurrentRate: int64(ratelimit.DefaultRateLimit),
 		}
 	}
+	localDownloadRateLimit.Validate()
+	localUploadRateLimit.Validate()
 
 	loggerUpload, err := json.Marshal(localUploadRateLimit)
 	if err != nil {
