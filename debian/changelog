@@ -1,3 +1,11 @@
+lastore-daemon (6.2.52) unstable; urgency=medium
+
+  * chore: log failure detail of source update check (#339)
+  * fix: check source update environment for intranet only (#340)
+  * fix: remove mirror url "tuna", "bfsu", "ustc" (#376)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 17 Apr 2026 17:58:58 +0800
+
 lastore-daemon (6.2.51) unstable; urgency=medium
 
   * feat: lastore更新支持p2p协议的流量优化
