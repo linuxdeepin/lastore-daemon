@@ -48,18 +48,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "TUNA",
-    "name": "[CN] Tsinghua University",
-    "url": "http://mirrors.tuna.tsinghua.edu.cn/deepin/",
-    "name_locale": {
-      "zh_CN": "[CN] 清华大学",
-      "zh_TW": "[CN] 清華大學 "
-    },
-    "weight": 60000,
-    "country": "CN",
-    "adjust_delay": 0
-  },
-  {
     "id": "HUST",
     "name": "[CN] HUST",
     "url": "http://mirrors.hust.edu.cn/deepin/",
@@ -68,18 +56,6 @@
       "zh_TW": "[CN] 華中科技大學"
     },
     "weight": 50000,
-    "country": "CN",
-    "adjust_delay": 0
-  },
-  {
-    "id": "USTC",
-    "name": "[CN] USTC",
-    "url": "http://mirrors.ustc.edu.cn/deepin/",
-    "name_locale": {
-      "zh_CN": "[CN] 中国科学技术大学",
-      "zh_TW": "[CN] 中國科學技術大學"
-    },
-    "weight": 40000,
     "country": "CN",
     "adjust_delay": 0
   },
@@ -426,18 +402,6 @@
     "name_locale": {
       "zh_CN": "淡江大学",
       "zh_TW": "淡江大学"
-    },
-    "weight": 59,
-    "country": "CN",
-    "adjust_delay": 0
-  },
-  {
-    "id": "bfsu-edu",
-    "name": "北京外国语大学",
-    "url": "http://mirrors.bfsu.edu.cn/deepin/",
-    "name_locale": {
-      "zh_CN": "北京外国语大学",
-      "zh_TW": "北京外國語大學"
     },
     "weight": 59,
     "country": "CN",
