@@ -1386,12 +1386,20 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 }
 
 func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
-	var repos []string
-	for _, repo := range m.repoInfos {
+	repos := genPlatformReposFromRepoInfos(m.repoInfos, m.config.PlatformRepoComponents, m.config.UpgradeDeliveryEnabled, m.config.IntranetUpdate)
+	err := os.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
+	if err != nil {
+		logger.Warning("update source list file err")
+	}
 
+}
+
+func genPlatformReposFromRepoInfos(repoInfos []repoInfo, platformRepoComponents string, upgradeDeliveryEnabled bool, intranetUpdate bool) []string {
+	var repos []string
+	for _, repo := range repoInfos {
 		// If the public network has Delivery Optimization enabled,
 		// then it is necessary to change http(s):// to delivery://.
-		if m.config.UpgradeDeliveryEnabled && !m.config.IntranetUpdate {
+		if upgradeDeliveryEnabled && !intranetUpdate {
 			httpPrefix := "http://"
 			httpsPrefix := "https://"
 			deliveryPrefix := "delivery://"
@@ -1406,8 +1414,8 @@ func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 			prefix := "deb"
 			// v25上应该是这个
 			suffix := "main community commercial"
-			if m.config.PlatformRepoComponents != "" {
-				suffix = m.config.PlatformRepoComponents
+			if platformRepoComponents != "" {
+				suffix = platformRepoComponents
 			}
 			codeName := repo.CodeName
 			// 如果有cdn，则使用cdn，效率更高
@@ -1418,11 +1426,7 @@ func (m *UpdatePlatformManager) genDepositoryFromPlatform() {
 			repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, suffix))
 		}
 	}
-	err := os.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
-	if err != nil {
-		logger.Warning("update source list file err")
-	}
-
+	return repos
 }
 
 func getAptAuthConf(domain string) (user, password string) {
