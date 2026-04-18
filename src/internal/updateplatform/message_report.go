@@ -244,7 +244,7 @@ func (m *UpdatePlatformManager) GetCVEUpdateLogs(pkgs []string) map[string]CEVIn
 
 func (m *UpdatePlatformManager) HasDeliveryRepo() bool {
 	for _, repo := range m.repoInfos {
-		if strings.HasPrefix(repo.Source, "delivery://") {
+		if strings.Contains(repo.Source, "delivery://") {
 			return true
 		}
 	}
