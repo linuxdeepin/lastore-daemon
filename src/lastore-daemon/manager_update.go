@@ -155,13 +155,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 	}
 	prepareUpdateSource()
 	m.reloadOemConfig(true)
-	repos := m.updatePlatform.GetPlatformRepoSources()
-	if err := system.UpdateP2pDefaultSourceDir(system.SystemUpdate, m.updater.P2PUpdateEnable, repos); err != nil {
-		logger.Warning(err)
-	}
-	if err := system.UpdateP2pDefaultSourceDir(system.SecurityUpdate, m.updater.P2PUpdateEnable, repos); err != nil {
-		logger.Warning(err)
-	}
 	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 	m.jobManager.dispatch() // 解决 bug 59351问题（防止CreatJob获取到状态为end但是未被删除的job）
 	var job *Job
@@ -364,7 +357,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				_ = os.Setenv("https_proxy", environ["https_proxy"])
 				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
 				// 从更新平台获取数据:系统更新和安全更新流程都包含
-				err = m.updatePlatform.GenUpdatePolicyByToken(true)
+				err = m.updatePlatform.GenUpdatePolicyByToken()
 				if err != nil {
 					if m.config.PlatformUpdate {
 						job.retry = 0
@@ -377,9 +370,27 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						return nil
 					}
 				}
-				if m.updater != nil {
-					m.updater.refreshUpgradeDeliveryService()
+				if m.updater == nil {
+					return errors.New("Manager.updater is nil")
 				}
+
+				// 刷新P2P下载服务状态，判断是否启用P2P更新
+				m.updater.refreshUpgradeDeliveryService()
+				useP2PUpdate := m.updater.P2PUpdateSupport && m.updater.P2PUpdateEnable
+				if m.config.PlatformUpdate {
+					// 从更新平台同步仓库源配置和InRelease，若启用P2P则替换为delivery协议
+					m.updatePlatform.SyncRepoAndInRelease(useP2PUpdate)
+				} else if useP2PUpdate {
+					// 公网并且启用P2P时，将系统更新和安全更新的APT源的http(s)协议统一替换为delivery协议
+					repos := m.updatePlatform.GetPlatformRepoSources()
+					if err := system.UpdateP2pDefaultSourceDir(system.SystemUpdate, repos); err != nil {
+						logger.Warning(err)
+					}
+					if err := system.UpdateP2pDefaultSourceDir(system.SecurityUpdate, repos); err != nil {
+						logger.Warning(err)
+					}
+				}
+
 				if updateplatform.IsForceUpdate(m.updatePlatform.Tp) && m.updatePlatform.Tp != updateplatform.UpdateRegularly {
 					m.stopTimerUnit(lastoreRegularlyUpdate)
 				}
@@ -405,7 +416,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						job.retry = 0
 						return &system.JobError{
 							ErrType:   system.ErrorPlatformUnreachable,
-							ErrDetail: "failed to get update info by update platform" + err.Error(),
+							ErrDetail: "failed to get update info by update platform: " + err.Error(),
 						}
 					} else {
 						return nil
