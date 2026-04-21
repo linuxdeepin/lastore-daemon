@@ -104,7 +104,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 		AutoInstallUpdates:          config.AutoInstallUpdates,
 		AutoInstallUpdateType:       config.AutoInstallUpdateType,
 		IdleDownloadConfig:          config.IdleDownloadConfig,
-		DownloadSpeedLimitConfig:    config.DownloadSpeedLimitConfig,
+		DownloadSpeedLimitConfig:    getStartupDownloadSpeedLimitConfig(config),
 		ClassifiedUpdatablePackages: config.ClassifiedUpdatablePackages,
 		systemdManager:              systemd1.NewManager(service.Conn()),
 	}
@@ -118,6 +118,23 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	}
 	u.refreshUpgradeDeliveryService()
 	return u
+}
+
+func getStartupDownloadSpeedLimitConfig(config *Config) string {
+	startupConfig := strings.TrimSpace(config.DownloadSpeedLimitConfig)
+	if startupConfig != "" {
+		var persistedConfig downloadSpeedLimitConfig
+		if err := json.Unmarshal([]byte(startupConfig), &persistedConfig); err == nil && persistedConfig.DownloadSpeedLimitEnabled {
+			return startupConfig
+		}
+	}
+
+	localConfig := strings.TrimSpace(config.LocalDownloadSpeedLimitConfig)
+	if localConfig != "" {
+		return localConfig
+	}
+
+	return startupConfig
 }
 
 func SetAPTSmartMirror(url string) error {
