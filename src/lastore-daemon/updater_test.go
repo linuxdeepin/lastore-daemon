@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 )
 
 func TestSourceFileHasDeliveryProtocol(t *testing.T) {
@@ -58,5 +60,58 @@ func TestSourceFileHasDeliveryProtocolReturnsFalseForMissingSource(t *testing.T)
 
 	if sourceFileHasDeliveryProtocol(sourcePath) {
 		t.Fatal("sourceFileHasDeliveryProtocol() = true, want false")
+	}
+}
+
+func TestGetStartupDownloadSpeedLimitConfig(t *testing.T) {
+	localConfig := `{"DownloadSpeedLimitEnabled":true,"LimitSpeed":"2048","IsOnlineSpeedLimit":false}`
+	remoteConfig := `{"DownloadSpeedLimitEnabled":true,"LimitSpeed":"4096","IsOnlineSpeedLimit":true}`
+	defaultConfig := `{"DownloadSpeedLimitEnabled":false,"LimitSpeed":"1024","IsOnlineSpeedLimit":false}`
+
+	tests := []struct {
+		name string
+		cfg  config.Config
+		want string
+	}{
+		{
+			name: "prefer local persisted config when startup config is not online speed limit",
+			cfg: config.Config{
+				DownloadSpeedLimitConfig:      defaultConfig,
+				LocalDownloadSpeedLimitConfig: localConfig,
+			},
+			want: localConfig,
+		},
+		{
+			name: "keep remote config when online speed limit is active",
+			cfg: config.Config{
+				DownloadSpeedLimitConfig:      remoteConfig,
+				LocalDownloadSpeedLimitConfig: localConfig,
+			},
+			want: remoteConfig,
+		},
+		{
+			name: "fallback to local config when startup config is invalid",
+			cfg: config.Config{
+				DownloadSpeedLimitConfig:      "{invalid json}",
+				LocalDownloadSpeedLimitConfig: localConfig,
+			},
+			want: localConfig,
+		},
+		{
+			name: "fallback to startup config when local config is empty",
+			cfg: config.Config{
+				DownloadSpeedLimitConfig: defaultConfig,
+			},
+			want: defaultConfig,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getStartupDownloadSpeedLimitConfig(&tt.cfg)
+			if got != tt.want {
+				t.Fatalf("getStartupDownloadSpeedLimitConfig() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
