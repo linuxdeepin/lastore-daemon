@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	p2pService        = "uos-p2p.service"
-	defaultSpeedLimit = 1024
+	p2pService         = "uos-p2p.service"
+	defaultSpeedLimit  = 1024
+	deliveryMethodPath = "/usr/lib/apt/methods/delivery"
 )
 
 type ApplicationUpdateInfo struct {
@@ -153,6 +154,11 @@ func (u *Updater) refreshUpgradeDeliveryService() {
 			u.setPropP2PUpdateSupport(false)
 			return
 		}
+	}
+	if !utils2.IsFileExist(deliveryMethodPath) {
+		logger.Debugf("upgrade delivery apt method %s not found", deliveryMethodPath)
+		u.setPropP2PUpdateSupport(false)
+		return
 	}
 	// 检查 upgrade delivery 服务是否被正常安装
 	_, err := u.service.NameHasOwner("org.deepin.upgradedelivery")

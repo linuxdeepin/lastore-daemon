@@ -265,10 +265,9 @@ func UpdateSystemDefaultSourceDir(sourceList []string) error {
 	return nil
 }
 
-func UpdateP2pDefaultSourceDir(updateType UpdateType, upgradeDeliveryEnabled bool, platformRepos []string) error {
-	if !upgradeDeliveryEnabled {
-		return nil
-	}
+// UpdateP2pDefaultSourceDir 根据updateType更新对应的P2P下载默认源目录
+// 将源目录中的仓库协议替换为delivery协议，用于P2P下载更新
+func UpdateP2pDefaultSourceDir(updateType UpdateType, platformRepos []string) error {
 	logger.Infof("UpdateP2pDefaultSourceDir: updateType=%v, platformRepos=%v", updateType, platformRepos)
 	sourceDir := GetCategorySourceMap()[updateType]
 	p2pSource, err := ioutil.TempFile("/tmp", "p2pSource-*.list")

@@ -41,6 +41,8 @@ import (
 
 var logger = log.NewLogger("lastore/messageReport")
 
+const defaultPlatformRepoComponents = "main community commercial"
+
 type ProcessEvent struct {
 	TaskID       int    `json:"taskID"`
 	EventType    int    `json:"eventType"`
@@ -259,11 +261,11 @@ func (m *UpdatePlatformManager) GetPlatformRepoSources() []string {
 			continue
 		}
 
-		suffix := "main community commercial"
+		components := defaultPlatformRepoComponents
 		if m.config != nil && m.config.PlatformRepoComponents != "" {
-			suffix = m.config.PlatformRepoComponents
+			components = m.config.PlatformRepoComponents
 		}
-		repos = append(repos, fmt.Sprintf("deb %s %s %s", repo.Uri, repo.CodeName, suffix))
+		repos = append(repos, fmt.Sprintf("deb %s %s %s", repo.Uri, repo.CodeName, components))
 	}
 	return repos
 }
@@ -907,7 +909,7 @@ func IsForceUpdate(tp UpdateTp) bool {
 }
 
 // GenUpdatePolicyByToken 检查更新时将token数据发送给更新平台，获取本次更新信息
-func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) error {
+func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
 	response, err := m.genVersionResponse()
 	if err != nil {
 		return fmt.Errorf("failed get version data %v", err)
@@ -945,29 +947,19 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken(updateInRelease bool) err
 	m.UpdateSourceList()
 	m.UpdateBaselineCache()
 	m.saveTaskId()
-	// 生成仓库和InRelease
-	if updateInRelease {
-		m.genRepositoryFromPlatform()
-		m.checkInReleaseFromPlatform()
-		if m.config.UpgradeDeliveryEnabled && !m.config.IntranetUpdate {
-			repos := m.GetPlatformRepoSources()
-			logger.Infof("UpdateP2pDefaultSourceDir: repos=%v", repos)
-			if err := system.UpdateP2pDefaultSourceDir(system.SystemUpdate, true, repos); err != nil {
-				logger.Warning(err)
-			}
-			if err := system.UpdateP2pDefaultSourceDir(system.SecurityUpdate, true, repos); err != nil {
-				logger.Warning(err)
-			}
-		}
-	}
-
 	return nil
 }
 
-func (m *UpdatePlatformManager) GenUpdatePolicyByToken(updateInRelease bool) error {
+// SyncRepoAndInRelease 从更新平台同步仓库源配置和InRelease到本地
+func (m *UpdatePlatformManager) SyncRepoAndInRelease(useP2PUpdate bool) {
+	m.genRepositoryFromPlatform(useP2PUpdate)
+	m.checkInReleaseFromPlatform()
+}
+
+func (m *UpdatePlatformManager) GenUpdatePolicyByToken() error {
 	var err error
 	if (m.config.PlatformDisabled & Cfg.DisabledVersion) == 0 {
-		err = m.genUpdatePolicyByToken(updateInRelease)
+		err = m.genUpdatePolicyByToken()
 	}
 	// 根据配置更新Tp
 	switch m.Tp {
@@ -1448,13 +1440,12 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 	return nil
 }
 
-func (m *UpdatePlatformManager) genRepositoryFromPlatform() {
-	repos := genPlatformReposFromRepoInfos(m.repoInfos, m.config.PlatformRepoComponents, m.config.UpgradeDeliveryEnabled, m.config.IntranetUpdate)
+func (m *UpdatePlatformManager) genRepositoryFromPlatform(useP2PUpdate bool) {
+	repos := genPlatformReposFromRepoInfos(m.repoInfos, m.config.PlatformRepoComponents, useP2PUpdate, m.config.IntranetUpdate)
 	err := os.WriteFile(system.PlatFormSourceFile, []byte(strings.Join(repos, "\n")), 0644)
 	if err != nil {
 		logger.Warning("update source list file err:", err)
 	}
-
 }
 
 func genPlatformReposFromRepoInfos(repoInfos []repoInfo, platformRepoComponents string, upgradeDeliveryEnabled bool, intranetUpdate bool) []string {
@@ -1476,9 +1467,9 @@ func genPlatformReposFromRepoInfos(repoInfos []repoInfo, platformRepoComponents 
 		} else {
 			prefix := "deb"
 			// v25上应该是这个
-			suffix := "main community commercial"
+			components := defaultPlatformRepoComponents
 			if platformRepoComponents != "" {
-				suffix = platformRepoComponents
+				components = platformRepoComponents
 			}
 			codeName := repo.CodeName
 			// 如果有cdn，则使用cdn，效率更高
@@ -1486,7 +1477,7 @@ func genPlatformReposFromRepoInfos(repoInfos []repoInfo, platformRepoComponents 
 			// if repo.Cdn != "" {
 			// 	uri = repo.Cdn
 			// }
-			repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, suffix))
+			repos = append(repos, fmt.Sprintf("%s %s %s %s", prefix, uri, codeName, components))
 		}
 	}
 	return repos
