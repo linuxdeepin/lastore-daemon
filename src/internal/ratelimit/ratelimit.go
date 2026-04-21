@@ -47,6 +47,7 @@ const (
 	RateLimitTypeRemote = 2 // 远程设置限速(服务器下发策略)
 )
 
+// 当RateInfo中的LimitType为不限速时，LimitRate和CurrentRate需要设置成一个有效值即可，默认情况设置成DefaultRateLimit即可满足要求
 type RateInfo struct {
 	LimitType   int       // 限速类型(CLimitTypeNo,CLimitTypeLocal,CLimitTypeRemote)
 	StartTime   time.Time // 限速开始时间
@@ -127,7 +128,8 @@ func SetIPFSRateLimit(uploadLimitRate, downloadLimitRate IPFSLimitRate) error {
 	return nil
 }
 
-// SetIPFSDownloadRateLimit sets the download rate limit for IPFS. rate is in kilobits per second (kb/s).
+// SetIPFSDownloadRateLimit sets the download rate limit for IPFS.
+// rate is in kilobits per second (kb/s). If rate is -1, it means no rate limit.
 func SetIPFSDownloadRateLimit(rate int) error {
 	sysBus, err := dbus.SystemBus()
 	if err != nil {
@@ -140,7 +142,8 @@ func SetIPFSDownloadRateLimit(rate int) error {
 	return nil
 }
 
-// SetIPFSUploadRateLimit sets the upload rate limit for IPFS. rate is in kilobits per second (kb/s).
+// SetIPFSUploadRateLimit sets the upload rate limit for IPFS.
+// rate is in kilobits per second (kb/s). If rate is -1, it means no rate limit.
 func SetIPFSUploadRateLimit(rate int) error {
 	sysBus, err := dbus.SystemBus()
 	if err != nil {
