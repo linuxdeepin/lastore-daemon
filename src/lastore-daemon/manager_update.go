@@ -752,6 +752,13 @@ func (m *Manager) refreshUpdateInfos(sync bool) {
 			}
 			m.inhibitAutoQuitCountSub()
 		}()
+		if len(m.updater.UpdatablePackages) == 0 {
+			// 没有可升级应用时，清空定时更新时间，避免影响后续的更新策略识别
+			m.updatePlatform.UpdateTime = time.Unix(0, 0)
+			if err := m.config.SetInstallUpdateTime(""); err != nil {
+				logger.Warningf("failed to clear install update time: %v", err)
+			}
+		}
 		if !m.updatePlatform.UpdateNowForce && !m.updatePlatform.UpdateTime.IsZero() && len(m.updater.UpdatablePackages) > 0 {
 			timeStr := m.updatePlatform.UpdateTime.Format(TimeOnly)
 			if timeStr != m.updateTime {
