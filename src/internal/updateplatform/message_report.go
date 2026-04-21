@@ -1079,6 +1079,26 @@ type PreInstalledPkgMeta struct {
 	Packages          packageLists `json:"packages"`          // "基线软件包清单"
 }
 
+func isJSONNull(data json.RawMessage) bool {
+	return bytes.Equal(bytes.TrimSpace(data), []byte("null"))
+}
+
+func (m *UpdatePlatformManager) resetTargetPkgMeta() {
+	m.PreUpgradeCheck = nil
+	m.MidUpgradeCheck = nil
+	m.PostUpgradeCheck = nil
+	m.PreUpdateCheck = nil
+	m.PostUpdateCheck = nil
+	m.PreDownloadCheck = nil
+	m.PostDownloadCheck = nil
+	m.PreBackupCheck = nil
+	m.PostBackupCheck = nil
+	m.TargetCorePkgs = make(map[string]system.PackageInfo)
+	m.SelectPkgs = make(map[string]system.PackageInfo)
+	m.FreezePkgs = make(map[string]system.PackageInfo)
+	m.PurgePkgs = make(map[string]system.PackageInfo)
+}
+
 // 从更新平台获取升级目标版本的软件包清单
 func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	response, err := m.genTargetPkgListsResponse()
@@ -1090,10 +1110,17 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 		return fmt.Errorf("failed get target pkg list data %v", err)
 	}
 
+	if isJSONNull(data) {
+		m.resetTargetPkgMeta()
+		logger.Warning("Target package list data is null")
+		return nil
+	}
+
 	pkgs := getTargetPkgListData(data)
 	if pkgs == nil {
 		return errors.New("failed get target pkg list data")
 	}
+
 	m.PreUpgradeCheck = pkgs.PreCheck
 	m.MidUpgradeCheck = pkgs.MidCheck
 	m.PostUpgradeCheck = pkgs.PostCheck
