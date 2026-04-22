@@ -236,7 +236,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	}
 	if m.config.IntranetUpdate {
 		msg := gettext.Tr("New version available! The download of the update package will begin shortly")
-		go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+		if totalNeedDownloadSize > 0 {
+			// 只有下载大小大于0时才发送通知
+			go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
+		}
 		m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
 			TaskID:       1,
 			EventType:    updateplatform.StartDownload,
