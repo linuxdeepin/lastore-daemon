@@ -193,7 +193,13 @@ func (u *Updater) setDownloadSpeedLimit(limitConfigObj downloadSpeedLimitConfig)
 }
 
 func (u *Updater) SetP2PUpdateEnable(sender dbus.Sender, enable bool) *dbus.Error {
-	err := polkit.CheckAuth(polkitActionChangeUpgradeDelivery, string(sender), nil)
+	var action string
+	if enable {
+		action = polkitActionEnableUpgradeDelivery
+	} else {
+		action = polkitActionDisableUpgradeDelivery
+	}
+	err := polkit.CheckAuth(action, string(sender), nil)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
