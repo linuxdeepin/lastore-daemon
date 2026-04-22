@@ -31,7 +31,7 @@ const (
 func (m *Manager) setEffectiveOnlineRateLimit(nowTime string) {
 	downloadSpeed := m.updater.downloadSpeedLimitConfigObj
 	m.applyOnlineRateLimit(&downloadSpeed, nowTime)
-	logger.Infof("set download limit %v --> %v by platform", m.updater.DownloadSpeedLimitConfig, downloadSpeed)
+	logger.Infof("set download limit %+v --> %+v by platform", m.updater.DownloadSpeedLimitConfig, downloadSpeed)
 	if err := m.updater.setDownloadSpeedLimit(downloadSpeed); err != nil {
 		logger.Warning(err)
 	}
