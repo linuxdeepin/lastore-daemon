@@ -599,8 +599,12 @@ func checkSenderNsMntValid(pid uint32) bool {
 	return strings.TrimSpace(c) == _initProcNsMnt
 }
 
-const polkitActionChangeOwnData = "org.deepin.dde.accounts.user-administration"
-const polkitActionChangeUpgradeDelivery = "com.deepin.lastore.doUpgradeDelivery"
+const (
+	polkitActionChangeOwnData          = "org.deepin.dde.accounts.user-administration"
+	polkitActionChangeUpgradeDelivery  = "com.deepin.lastore.doUpgradeDelivery"
+	polkitActionEnableUpgradeDelivery  = "com.deepin.lastore.enableUpgradeDelivery"
+	polkitActionDisableUpgradeDelivery = "com.deepin.lastore.disableUpgradeDelivery"
+)
 
 func checkInvokePermission(service *dbusutil.Service, sender dbus.Sender) error {
 	uid, err := service.GetConnUID(string(sender))
