@@ -489,11 +489,69 @@ func (m *Manager) refreshThrottlingFromPlatform() error {
 
 	m.applyOnlineRateLimit(&downloadSpeed, m.updatePlatform.OnlineRateLimit.ServerTime)
 
-	logger.Infof("set download limit %v --> %v by platform", m.updater.DownloadSpeedLimitConfig, downloadSpeed)
+	logger.Infof("set download limit %+v --> %+v by platform", m.updater.DownloadSpeedLimitConfig, downloadSpeed)
 	if err := m.updater.setDownloadSpeedLimit(downloadSpeed); err != nil {
 		logger.Warningf("Failed to set download speed limit %v", err)
 	}
 
+	if downloadSpeed.IsOnlineSpeedLimit {
+		// 如果启用了在线限速，禁用本地限速
+		if err := m.disableLocalSpeedLimitConfig(); err != nil {
+			logger.Warningf("Failed to disable local speed limit %v", err)
+		}
+	} else {
+		// 如果启用了本地限速，禁用在线限速
+		if err := m.disableOnlineSpeedLimitConfig(); err != nil {
+			logger.Warningf("Failed to disable online speed limit %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) disableOnlineSpeedLimitConfig() error {
+	var downloadSpeed downloadSpeedLimitConfig
+	if err := json.Unmarshal([]byte(m.config.DownloadSpeedLimitConfig), &downloadSpeed); err != nil {
+		downloadSpeed = downloadSpeedLimitConfig{
+			DownloadSpeedLimitEnabled: true,
+			LimitSpeed:                strconv.FormatInt(defaultSpeedLimit, 10),
+			IsOnlineSpeedLimit:        true,
+		}
+	}
+	if !downloadSpeed.DownloadSpeedLimitEnabled {
+		return nil
+	}
+	downloadSpeed.DownloadSpeedLimitEnabled = false
+	jsonStr, err := json.Marshal(downloadSpeed)
+	if err != nil {
+		return fmt.Errorf("failed to marshal download speed limit config: %w", err)
+	}
+	if err := m.config.SetDownloadSpeedLimitConfig(string(jsonStr)); err != nil {
+		return fmt.Errorf("failed to set download speed limit config: %w", err)
+	}
+	return nil
+}
+
+func (m *Manager) disableLocalSpeedLimitConfig() error {
+	var downloadSpeed downloadSpeedLimitConfig
+	if err := json.Unmarshal([]byte(m.config.LocalDownloadSpeedLimitConfig), &downloadSpeed); err != nil {
+		downloadSpeed = downloadSpeedLimitConfig{
+			DownloadSpeedLimitEnabled: true,
+			LimitSpeed:                strconv.FormatInt(defaultSpeedLimit, 10),
+			IsOnlineSpeedLimit:        false,
+		}
+	}
+	if !downloadSpeed.DownloadSpeedLimitEnabled {
+		return nil
+	}
+	downloadSpeed.DownloadSpeedLimitEnabled = false
+	jsonStr, err := json.Marshal(downloadSpeed)
+	if err != nil {
+		return fmt.Errorf("failed to marshal local download speed limit config: %w", err)
+	}
+	if err := m.config.SetLocalDownloadSpeedLimitConfig(string(jsonStr)); err != nil {
+		return fmt.Errorf("failed to set local download speed limit config: %w", err)
+	}
 	return nil
 }
 
