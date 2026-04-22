@@ -233,10 +233,20 @@ func (m *Manager) initDSettingsChangedHandle() {
 			logger.Info("PlatformUrl changed to:", platformUrl)
 		}
 	})
+	// incrementalUpdate状态需要通过IntranetUpdate、UpgradeDeliveryEnabled以及IncrementalUpdate的组合来确定
+	// 因此当IntranetUpdate、UpgradeDeliveryEnabled以及IncrementalUpdate任意一个变化时，都需要更新incrementalUpdate状态
+	// 同时需要通过m.config.UseIncrementalUpdate()来获取最新的incrementalUpdate状态
 	m.config.ConnectConfigChanged(config.DSettingsKeyIncrementalUpdate, func(oldValue, newValue interface{}) {
-		incrementalUpdate := newValue.(bool)
+		rawIncrementalUpdate := newValue.(bool)
+		incrementalUpdate := m.config.UseIncrementalUpdate()
 		m.UpdateIncrementalUpdate(incrementalUpdate)
-		logger.Info("IncrementalUpdate changed to:", incrementalUpdate)
+		logger.Infof("IncrementalUpdate changed to %v with raw IncrementalUpdate=%v", incrementalUpdate, rawIncrementalUpdate)
+	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyUpgradeDeliveryEnabled, func(oldValue, newValue interface{}) {
+		upgradeDeliveryEnabled := newValue.(bool)
+		incrementalUpdate := m.config.UseIncrementalUpdate()
+		m.UpdateIncrementalUpdate(incrementalUpdate)
+		logger.Infof("IncrementalUpdate changed to %v with UpgradeDeliveryEnabled=%v", incrementalUpdate, upgradeDeliveryEnabled)
 	})
 	m.config.ConnectConfigChanged(config.DSettingsKeyAutoDownloadUpdates, func(oldValue, newValue interface{}) {
 		autoDownloadUpdates := newValue.(bool)
@@ -258,6 +268,10 @@ func (m *Manager) initDSettingsChangedHandle() {
 			}
 			m.isAutoCheckTimerFirstRun = false
 		}
+
+		incrementalUpdate := m.config.UseIncrementalUpdate()
+		m.UpdateIncrementalUpdate(incrementalUpdate)
+		logger.Infof("IncrementalUpdate changed to %v with IntranetUpdate=%v", incrementalUpdate, intranetUpdate)
 	})
 }
 
