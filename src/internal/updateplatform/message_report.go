@@ -516,8 +516,8 @@ type repoInfo struct {
 }
 
 type ClientPollSetting struct {
-	CheckPolicyInterval int   `json:"checkPolicyInterval"`
-	StartCheckRange     []int `json:"startCheckRange"`
+	CheckPolicyInterval int   `json:"checkPolicyInterval"` // 检查策略间隔，单位秒
+	StartCheckRange     []int `json:"startCheckRange"`     // 开始检查范围，单位秒
 }
 
 type updateMessage struct {
@@ -935,13 +935,22 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
 		m.UpdateTime, _ = time.Parse(time.RFC3339, msg.Policy.Data.UpdateTime)
 	}
 	m.TimerHasChanged = false
-	if !utils.IsElementEqual(m.config.CheckInterval, msg.ClientPollSetting.CheckPolicyInterval*1000*1000*1000) && msg.ClientPollSetting.CheckPolicyInterval > 0 {
-		m.config.SetCheckInterval(time.Duration(msg.ClientPollSetting.CheckPolicyInterval) * time.Second)
-		m.TimerHasChanged = true
+	targetCheckInterval := time.Duration(msg.ClientPollSetting.CheckPolicyInterval) * time.Second
+	if !utils.IsElementEqual(m.config.CheckInterval, targetCheckInterval) && msg.ClientPollSetting.CheckPolicyInterval > 0 {
+		logger.Infof("Check interval %v --> %v", m.config.CheckInterval, targetCheckInterval)
+		if err := m.config.SetCheckInterval(targetCheckInterval); err != nil {
+			logger.Warningf("failed to set check interval: %v", err)
+		} else {
+			m.TimerHasChanged = true
+		}
 	}
 	if !utils.IsElementEqual(m.config.StartCheckRange, msg.ClientPollSetting.StartCheckRange) && msg.ClientPollSetting.StartCheckRange != nil {
-		m.TimerHasChanged = true
-		m.config.SetStartCheckRange(msg.ClientPollSetting.StartCheckRange)
+		logger.Infof("Start check range %v --> %v", m.config.StartCheckRange, msg.ClientPollSetting.StartCheckRange)
+		if err := m.config.SetStartCheckRange(msg.ClientPollSetting.StartCheckRange); err != nil {
+			logger.Warningf("failed to set start check range: %v", err)
+		} else {
+			m.TimerHasChanged = true
+		}
 	}
 
 	m.UpdateSourceList()
