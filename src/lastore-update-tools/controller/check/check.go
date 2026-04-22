@@ -119,7 +119,7 @@ func CheckDynHook(checkType int8) error {
 		for _, hookFile := range hookFiles {
 			hookPath := filepath.Join(hookDir, hookFile)
 			logger.Infof("Executing hook: %s", hookPath)
-			output, err := runcmd.RunnerOutput(60, hookPath)
+			output, err := runcmd.RunnerOutputEnv(60, hookPath, []string{"IMMUTABLE_DISABLE_REMOUNT=false"})
 			if err != nil {
 				return fmt.Errorf("hook execution failed: %s\nOutput:\n%s\nError:%s", hookPath, output, err.Error())
 			}
