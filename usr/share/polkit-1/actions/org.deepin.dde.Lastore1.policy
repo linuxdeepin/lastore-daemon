@@ -45,4 +45,40 @@
             <message xml:lang="zh_HK">操作優化傳遞需認證</message>
             <annotate key="org.freedesktop.policykit.imply">org.deepin.upgradedelivery.change-status</annotate>
         </action>
+        <action id="com.deepin.lastore.enableUpgradeDelivery">
+            <description>Check Authentication</description>
+            <message>Turn on Delivery Optimization requires permission</message>
+            <defaults>
+                <allow_any>no</allow_any>
+                <allow_inactive>no</allow_inactive>
+                <allow_active>auth_admin_keep</allow_active>
+            </defaults>
+            <description xml:lang="en_US">Check Authentication</description>
+            <message xml:lang="en_US">Turn on Delivery Optimization requires permission</message>
+            <description xml:lang="zh_CN">Check Authentication</description>
+            <message xml:lang="zh_CN">开启优化传递需认证</message>
+            <description xml:lang="zh_TW">Check Authentication</description>
+            <message xml:lang="zh_TW">開啟最佳化傳遞需認證</message>
+            <description xml:lang="zh_HK">Check Authentication</description>
+            <message xml:lang="zh_HK">開啟優化傳遞需認證</message>
+            <annotate key="org.freedesktop.policykit.imply">org.deepin.upgradedelivery.change-status</annotate>
+        </action>
+        <action id="com.deepin.lastore.disableUpgradeDelivery">
+            <description>Check Authentication</description>
+            <message>Turn off Delivery Optimization requires permission</message>
+            <defaults>
+                <allow_any>no</allow_any>
+                <allow_inactive>no</allow_inactive>
+                <allow_active>auth_admin_keep</allow_active>
+            </defaults>
+            <description xml:lang="en_US">Check Authentication</description>
+            <message xml:lang="en_US">Turn off Delivery Optimization requires permission</message>
+            <description xml:lang="zh_CN">Check Authentication</description>
+            <message xml:lang="zh_CN">关闭优化传递需认证</message>
+            <description xml:lang="zh_TW">Check Authentication</description>
+            <message xml:lang="zh_TW">關閉最佳化傳遞需認證</message>
+            <description xml:lang="zh_HK">Check Authentication</description>
+            <message xml:lang="zh_HK">關閉優化傳遞需認證</message>
+            <annotate key="org.freedesktop.policykit.imply">org.deepin.upgradedelivery.change-status</annotate>
+        </action>
 </policyconfig>
