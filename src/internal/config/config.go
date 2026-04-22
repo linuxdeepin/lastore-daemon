@@ -214,7 +214,7 @@ const (
 	dSettingsKeyUpdateProcessUpload                  = "update-process-upload"
 	dSettingsKeyEnableCoreList                       = "enable-core-list"
 	dSettingsKeyClientPackageName                    = "client-package-name"
-	dSettingsKeyUpgradeDeliveryEnabled               = "upgrade-delivery-enabled"
+	DSettingsKeyUpgradeDeliveryEnabled               = "upgrade-delivery-enabled"
 	dSettingsKeySystemCustomSource                   = "system-custom-source"
 	dSettingsKeySecurityCustomSource                 = "security-custom-source"
 	dSettingsKeySystemRepoType                       = "system-repo-type"
@@ -706,7 +706,7 @@ func getConfigFromDSettings() *Config {
 	}
 
 	updateUpgradeDeliveryEnabled := func() {
-		v, err = c.dsLastoreManager.Value(0, dSettingsKeyUpgradeDeliveryEnabled)
+		v, err = c.dsLastoreManager.Value(0, DSettingsKeyUpgradeDeliveryEnabled)
 		if err != nil {
 			logger.Warning(err)
 			c.UpgradeDeliveryEnabled = false
@@ -882,8 +882,21 @@ func getConfigFromDSettings() *Config {
 				}
 				c.dsettingsChangedCbMapMu.Unlock()
 			}
-		case dSettingsKeyUpgradeDeliveryEnabled:
-			updateUpgradeDeliveryEnabled()
+		case DSettingsKeyUpgradeDeliveryEnabled:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyUpgradeDeliveryEnabled)
+			if err != nil {
+				logger.Warningf("failed to get value for %s: %v", DSettingsKeyUpgradeDeliveryEnabled, err)
+			} else {
+				oldValue := c.UpgradeDeliveryEnabled
+				newValue := v.Value().(bool)
+				c.UpgradeDeliveryEnabled = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
+			}
 		case DSettingsKeyLastoreDaemonStatus:
 			oldStatus := c.lastoreDaemonStatus
 			updateLastoreDaemonStatus()
@@ -1214,7 +1227,7 @@ func (c *Config) SetSystemRepoType(typ RepoType) error {
 
 func (c *Config) SetUpgradeDeliveryEnabled(enable bool) error {
 	c.UpgradeDeliveryEnabled = enable
-	return c.save(dSettingsKeyUpgradeDeliveryEnabled, enable)
+	return c.save(DSettingsKeyUpgradeDeliveryEnabled, enable)
 }
 
 func (c *Config) SetSecurityRepoType(typ RepoType) error {
