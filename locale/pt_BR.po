@@ -79,6 +79,8 @@ msgstr "O download das atualizações falhou. Libere %g GB de espaço em disco."
 msgid ""
 "New version available! The download of the update package will begin shortly"
 msgstr ""
+"Nova versão disponível! O download do pacote de atualização começará em "
+"breve"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
@@ -123,7 +125,7 @@ msgstr "Dispensar"
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "Download concluído. O computador será atualizado às %s"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
@@ -131,7 +133,7 @@ msgstr "Nova versão disponível!"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
-msgstr ""
+msgstr "Nova versão disponível! Acesse o centro de controle para verificar"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
@@ -144,11 +146,12 @@ msgstr "Falha ao verificar se há atualizações. Libere espaço para continuar.
 #: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
 msgstr ""
+"O temporizador foi alterado. Reinicie para que as mudanças tenham efeito"
 
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr ""
+msgstr "O computador será atualizado às %s"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
@@ -156,7 +159,7 @@ msgstr "Fazendo backup e instalando atualizações..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "Iniciando a atualização. Não desligue o computador"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
