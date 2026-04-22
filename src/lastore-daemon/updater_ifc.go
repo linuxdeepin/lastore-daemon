@@ -153,7 +153,7 @@ func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
 func (u *Updater) setDownloadSpeedLimit(limitConfigObj downloadSpeedLimitConfig) error {
 	u.PropsMu.Lock()
 
-	logger.Infof("set download limit %v --> %v", u.downloadSpeedLimitConfigObj, limitConfigObj)
+	logger.Infof("set download limit %+v --> %+v", u.downloadSpeedLimitConfigObj, limitConfigObj)
 	u.downloadSpeedLimitConfigObj = limitConfigObj
 	config, err := json.Marshal(limitConfigObj)
 	if err != nil {
@@ -175,17 +175,18 @@ func (u *Updater) setDownloadSpeedLimit(limitConfigObj downloadSpeedLimitConfig)
 	u.setDownloadSpeedLimitTimer = time.AfterFunc(time.Second, func() {
 		u.PropsMu.Lock()
 		if !u.downloadSpeedLimitConfigObj.IsOnlineSpeedLimit {
+			logger.Info("update local speed limit config")
 			if err := u.config.SetLocalDownloadSpeedLimitConfig(configStr); err != nil {
 				logger.Warning(err)
 			}
 		} else {
+			logger.Info("update online speed limit config")
 			if err := u.config.SetDownloadSpeedLimitConfig(configStr); err != nil {
 				logger.Warning(err)
 			}
 		}
 		u.manager.ChangePrepareDistUpgradeJobOption()
 		u.PropsMu.Unlock()
-		logger.Info("update limit config")
 	})
 
 	u.PropsMu.Unlock()
