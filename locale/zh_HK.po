@@ -2,190 +2,212 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 # Translators:
 # Wyatt <wkyung@outlook.com>, 2025
 # Philip CHEUNG, 2025
 # deepiner, 2025
 # Gary Wang <wzc782970009@gmail.com>, 2025
-# 
+#
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-05-24 10:32+0800\n"
+"POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
 "Last-Translator: Gary Wang <wzc782970009@gmail.com>, 2025\n"
-"Language-Team: Chinese (Hong Kong) (https://app.transifex.com/linuxdeepin/teams/3617/zh_HK/)\n"
+"Language-Team: Chinese (Hong Kong) (https://app.transifex.com/linuxdeepin/"
+"teams/3617/zh_HK/)\n"
+"Language: zh_HK\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: zh_HK\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: ../src/lastore-daemon/inhibitor.go:45
+#: ../src/lastore-daemon/inhibitor.go:44
 msgid "Installing updates..."
 msgstr "正在安裝更新..."
 
-#: ../src/lastore-daemon/inhibitor.go:47
+#: ../src/lastore-daemon/inhibitor.go:46
 msgid "Tasks are running..."
 msgstr "任務正在進行..."
 
-#: ../src/lastore-daemon/inhibitor.go:49
+#: ../src/lastore-daemon/inhibitor.go:48
 msgid "Preventing from shutting down"
 msgstr "正在阻止關機..."
 
-#: ../src/lastore-daemon/main.go:170 ../src/lastore-daemon/main.go:174
+#: ../src/lastore-daemon/main.go:195 ../src/lastore-daemon/main.go:199
 msgid "Control Center"
 msgstr "控制中心"
 
-#: ../src/lastore-daemon/main.go:172
+#: ../src/lastore-daemon/main.go:197
 msgid "App Store"
 msgstr "應用商店"
 
-#: ../src/lastore-daemon/manager.go:333
+#: ../src/lastore-daemon/manager.go:485
 msgid "Removed successfully"
 msgstr "卸載成功"
 
-#: ../src/lastore-daemon/manager.go:338
+#: ../src/lastore-daemon/manager.go:490
 msgid "Failed to remove the app"
 msgstr "卸載失敗"
 
-#: ../src/lastore-daemon/manager.go:341
+#: ../src/lastore-daemon/manager.go:493
 msgid "Retry"
 msgstr "重試"
 
-#: ../src/lastore-daemon/manager.go:343
+#: ../src/lastore-daemon/manager.go:495
 msgid "Cancel"
 msgstr "取消"
 
-#: ../src/lastore-daemon/manager.go:441
+#: ../src/lastore-daemon/manager.go:529
 msgid "Package cache wiped"
 msgstr "已成功清理軟件包緩存 "
 
-#: ../src/lastore-daemon/manager_check.go:44
+#: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "正在檢查和安裝更新..."
 
-#: ../src/lastore-daemon/manager_download.go:78
-#: ../src/lastore-daemon/manager_download.go:172
+#: ../src/lastore-daemon/manager_download.go:92
+#: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %g GB disk space first."
 msgstr "更新包下載失敗，請釋放%g GB空間"
 
-#: ../src/lastore-daemon/manager_download.go:136
+#: ../src/lastore-daemon/manager_download.go:124
+msgid ""
+"New version available! The download of the update package will begin shortly"
+msgstr "檢測到新的更新任務，即將開始下載更新包"
+
+#: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
 msgstr "檢查到有新系統版本，正在為您下載..."
 
-#: ../src/lastore-daemon/manager_download.go:139
-#: ../src/lastore-daemon/manager_download.go:184
-#: ../src/lastore-daemon/manager_update.go:134
-#: ../src/lastore-daemon/manager_update.go:160
+#: ../src/lastore-daemon/manager_download.go:157
+#: ../src/lastore-daemon/manager_download.go:224
+#: ../src/lastore-daemon/manager_update.go:238
+#: ../src/lastore-daemon/manager_update.go:294
 msgid "View"
 msgstr "檢視"
 
-#: ../src/lastore-daemon/manager_download.go:177
-#: ../src/lastore-daemon/manager_upgrade.go:500
+#: ../src/lastore-daemon/manager_download.go:212
+#: ../src/lastore-daemon/manager_upgrade.go:672
 msgid "Updates failed: damaged files. Please update again."
 msgstr "部分文件損壞，此次更新失敗，請重新更新"
 
-#: ../src/lastore-daemon/manager_download.go:178
-#: ../src/lastore-daemon/manager_upgrade.go:501
+#: ../src/lastore-daemon/manager_download.go:213
+#: ../src/lastore-daemon/manager_upgrade.go:673
 msgid "Try Again"
 msgstr "重試"
 
-#: ../src/lastore-daemon/manager_download.go:183
+#: ../src/lastore-daemon/manager_download.go:223
 msgid "Downloading updates failed. Please check your network."
 msgstr "更新包下載失敗，請檢查網絡設定"
 
-#: ../src/lastore-daemon/manager_download.go:200
-msgid ""
-"Downloading completed. You can install updates when shutdown or reboot."
+#: ../src/lastore-daemon/manager_download.go:287
+msgid "Downloading completed. You can install updates when shutdown or reboot."
 msgstr "更新包已下載完成，您可以在關機或重啟時安裝更新"
 
-#: ../src/lastore-daemon/manager_download.go:203
+#: ../src/lastore-daemon/manager_download.go:290
 msgid "Update Now"
 msgstr "立即更新"
 
-#: ../src/lastore-daemon/manager_download.go:205
+#: ../src/lastore-daemon/manager_download.go:292
 msgid "Dismiss"
 msgstr "忽略"
 
-#: ../src/lastore-daemon/manager_update.go:133
+#: ../src/lastore-daemon/manager_download.go:300
+#, c-format
+msgid "Downloading completed. The computer will be updated at %s"
+msgstr "更新包下載完成，將於%s開始更新。"
+
+#: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
 msgstr "檢查到有新系統版本"
 
-#: ../src/lastore-daemon/manager_update.go:159
+#: ../src/lastore-daemon/manager_update.go:243
+msgid "New version available! Please go to control-center to check"
+msgstr "檢測到新的更新任務，請進入控制中心查看"
+
+#: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
 msgstr "檢測更新失敗，請檢查網絡設定"
 
-#: ../src/lastore-daemon/manager_update.go:165
+#: ../src/lastore-daemon/manager_update.go:299
 msgid "Failed to check for updates. Please clean up your disk first."
 msgstr "檢測更新失敗，請清理磁盤空間"
 
-#: ../src/lastore-daemon/manager_upgrade.go:53
+#: ../src/lastore-daemon/manager_update.go:370
+msgid "timer has changed. Please reboot to take effect"
+msgstr "終端更新管理設定已刷新，重啟後生效"
+
+#: ../src/lastore-daemon/manager_update.go:703
+#, c-format
+msgid "The computer will be updated at %s"
+msgstr "系統將於%s更新"
+
+#: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
 msgstr "備份和安裝更新中..."
 
-#: ../src/lastore-daemon/manager_upgrade.go:135
-#: ../src/lastore-daemon/manager_upgrade.go:158
-#: ../src/lastore-daemon/manager_upgrade.go:192
+#: ../src/lastore-daemon/manager_upgrade.go:204
+msgid "Start to update. Please do not shutdown"
+msgstr "系統開始更新，更新完成前請不要關閉電腦"
+
+#: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
 msgstr "備份失敗"
 
-#: ../src/lastore-daemon/manager_upgrade.go:136
-#: ../src/lastore-daemon/manager_upgrade.go:159
-#: ../src/lastore-daemon/manager_upgrade.go:193
-msgid "Proceed to Update"
-msgstr "繼續更新"
-
-#: ../src/lastore-daemon/manager_upgrade.go:159
-#: ../src/lastore-daemon/manager_upgrade.go:193
+#: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Back Up Again"
 msgstr "重新備份"
 
-#: ../src/lastore-daemon/manager_upgrade.go:415
+#: ../src/lastore-daemon/manager_upgrade.go:268
+msgid "Proceed to Update"
+msgstr "繼續更新"
+
+#: ../src/lastore-daemon/manager_upgrade.go:605
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr "電池電量低於60%，為保障更新成功，請及時接入電源"
 
-#: ../src/lastore-daemon/manager_upgrade.go:507
+#: ../src/lastore-daemon/manager_upgrade.go:683
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr "磁盤空間不足，此次更新失敗，請嘗試重啟，以避免影響系統正常使用"
 
-#: ../src/lastore-daemon/manager_upgrade.go:508
-#: ../src/lastore-daemon/manager_upgrade.go:521
+#: ../src/lastore-daemon/manager_upgrade.go:684
+#: ../src/lastore-daemon/manager_upgrade.go:701
 msgid "Reboot"
 msgstr "重啟"
 
-#: ../src/lastore-daemon/manager_upgrade.go:512
+#: ../src/lastore-daemon/manager_upgrade.go:688
 msgid "Updates failed: insufficient disk space."
 msgstr "磁盤空間不足，此次更新失敗"
 
-#: ../src/lastore-daemon/manager_upgrade.go:520
+#: ../src/lastore-daemon/manager_upgrade.go:700
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr "此次更新失敗，請嘗試重啟，以避免影響系統正常使用"
 
-#: ../src/lastore-daemon/manager_upgrade.go:525
+#: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
 msgstr "此次更新失敗"
 
-#: ../src/lastore-daemon/manager_upgrade.go:589
+#: ../src/lastore-daemon/manager_upgrade.go:795
 msgid "Updates successful"
 msgstr "更新成功 "
 
-#: ../src/lastore-daemon/manager_upgrade.go:590
+#: ../src/lastore-daemon/manager_upgrade.go:796
 msgid "Restart the computer to use the system and applications properly."
 msgstr "為了您能夠正常地使用系統和應用，更新後請重新啟動系統"
 
-#: ../src/lastore-daemon/manager_upgrade.go:591
+#: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Later"
 msgstr "稍後重啟"
 
-#: ../src/lastore-daemon/manager_upgrade.go:591
+#: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Now"
 msgstr "立即重啟"
