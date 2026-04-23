@@ -129,7 +129,7 @@ msgstr "检查到有新系统版本"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
-msgstr "检测到新的更新任务，双击托盘更新图标或进入控制中心查看"
+msgstr "检测到新的更新任务，请进入控制中心查看"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
