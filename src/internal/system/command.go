@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -32,7 +33,9 @@ type Command struct {
 	cmdMu    sync.Mutex
 	ExitCode int
 
-	pipe *os.File
+	pipe    *os.File
+	stderrR *os.File
+	stderrW *os.File
 
 	Indicator                 Indicator
 	DeliveryIndicator         DeliveryIndicator
@@ -89,7 +92,12 @@ func (c *Command) Start() error {
 		_ = ww.Close()
 	}()
 
-	// Print command start information
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		_ = rr.Close()
+		return fmt.Errorf("aptCommand.Start stderr pipe: %v", err)
+	}
+
 	cmdStr := strings.Join(c.Cmd.Args, " ")
 	c.Indicator(JobProgressInfo{
 		OnlyLog:     true,
@@ -98,17 +106,24 @@ func (c *Command) Start() error {
 
 	c.Cmd.ExtraFiles = append(c.Cmd.ExtraFiles, ww)
 
+	c.stderrR = stderrR
+	c.stderrW = stderrW
+	c.Cmd.Stderr = io.MultiWriter(&c.Stderr, stderrW)
+
 	c.cmdMu.Lock()
 	err = c.Cmd.Start()
 	c.cmdMu.Unlock()
 	if err != nil {
 		_ = rr.Close()
+		_ = stderrR.Close()
+		_ = stderrW.Close()
 		return err
 	}
 
 	c.pipe = rr
 
 	go c.updateProgress()
+	go c.updateStderr()
 
 	go func() {
 		_ = c.Wait()
@@ -143,7 +158,16 @@ func (c *Command) atExit() {
 		logger.Warning("failed to close pipe:", err)
 	}
 
-	// Print command end information with status
+	err = c.stderrR.Close()
+	if err != nil {
+		logger.Warning("failed to close stderrR:", err)
+	}
+
+	err = c.stderrW.Close()
+	if err != nil {
+		logger.Warning("failed to close stderrW:", err)
+	}
+
 	var statusStr string
 	switch c.ExitCode {
 	case ExitSuccess:
@@ -195,7 +219,6 @@ func (c *Command) atExit() {
 				Error:      err,
 			})
 		} else {
-			// 解析错误后，确定错误为非阻塞性错误，那么认为是成功
 			c.Indicator(JobProgressInfo{
 				JobId:      c.JobId,
 				Status:     SucceedStatus,
@@ -277,27 +300,36 @@ func (c *Command) updateProgress() {
 			return
 		}
 
+		info, err := c.ParseProgressInfo(c.JobId, line)
+		if err != nil {
+			logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
+			c.Indicator(JobProgressInfo{
+				OnlyLog:     true,
+				OriginalLog: line,
+			})
+			continue
+		}
+		info.OriginalLog = line
+		c.Cancelable = info.Cancelable
+		c.Indicator(info)
+	}
+}
+
+func (c *Command) updateStderr() {
+	b := bufio.NewReader(c.stderrR)
+	for {
+		line, err := b.ReadString('\n')
+		if err != nil {
+			return
+		}
+
 		if strings.Contains(line, "102 Status") {
 			deliveryInfo, err := c.ParseDeliveryDownloadInfo(c.JobId, line)
 			if err != nil {
-				logger.Errorf("aptCommand.updateProgress %v -> %v\n", deliveryInfo, err)
+				logger.Errorf("aptCommand.updateStderr %v -> %v\n", deliveryInfo, err)
 				continue
 			}
 			c.DeliveryIndicator(deliveryInfo)
-			continue
-		} else {
-			info, err := c.ParseProgressInfo(c.JobId, line)
-			if err != nil {
-				logger.Errorf("aptCommand.updateProgress %v -> %v\n", info, err)
-				c.Indicator(JobProgressInfo{
-					OnlyLog:     true,
-					OriginalLog: line,
-				})
-				continue
-			}
-			info.OriginalLog = line
-			c.Cancelable = info.Cancelable
-			c.Indicator(info)
 		}
 	}
 }
