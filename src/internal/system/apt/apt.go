@@ -137,7 +137,6 @@ func newAPTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn sy
 		Cancelable:                true,
 	}
 	cmd.Stdout = &r.Stdout
-	cmd.Stderr = &r.Stderr
 
 	cmdSet.AddCMD(r)
 	return r
