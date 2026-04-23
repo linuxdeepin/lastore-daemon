@@ -160,6 +160,7 @@ func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
 
 	proto := normalizeDownloadProto(info.Proto)
 	if proto != j.Proto {
+		logger.Infof("emitPropChangedProto %s -> %s\n", j.Proto, proto)
 		j.Proto = proto
 		if j.service != nil {
 			_ = j.emitPropChangedProto(proto)

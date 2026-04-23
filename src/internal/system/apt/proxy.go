@@ -76,8 +76,8 @@ func parseDeliveryDownloadInfo(id, line string) (system.JobDeliveryDownloadInfo,
 			if len(kv) != 2 {
 				continue
 			}
-			key := kv[0]
-			value := kv[1]
+			key := strings.TrimSpace(kv[0])
+			value := strings.TrimSpace(kv[1])
 
 			if key != "IsFinish" && key != "Speed" && key != "Proto" {
 				continue
@@ -93,9 +93,10 @@ func parseDeliveryDownloadInfo(id, line string) (system.JobDeliveryDownloadInfo,
 				proto = value
 			}
 		}
+
+		jobDeliveryDownloadInfo.Proto = proto
 		if !isFinish {
 			jobDeliveryDownloadInfo.Speed = speed
-			jobDeliveryDownloadInfo.Proto = proto
 		} else {
 			jobDeliveryDownloadInfo.Speed = -1
 		}
