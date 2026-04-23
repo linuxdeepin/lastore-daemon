@@ -21,7 +21,6 @@ BusName=org.deepin.dde.Lastore1
 CacheDirectory=lastore
 ExecStart=/usr/libexec/lastore-daemon/lastore-daemon
 NoNewPrivileges=true
-PrivateIPC=true
 ProtectClock=true
 RuntimeDirectory=lastore
 RuntimeDirectoryMode=0750
