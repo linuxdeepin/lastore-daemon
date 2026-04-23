@@ -486,7 +486,7 @@ type Version struct {
 }
 
 type AllDayRateLimit struct {
-	Bps    int  `json:"bps"`
+	Bps    int  `json:"bps"` // unit: KB/s
 	Enable bool `json:"enable"`
 }
 
@@ -494,7 +494,7 @@ type PeakOrNotTimeRateLimit struct {
 	Enable    bool   `json:"enable"`
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
-	Bps       int    `json:"bps"`
+	Bps       int    `json:"bps"` // unit: KB/s
 }
 
 type Policy struct {

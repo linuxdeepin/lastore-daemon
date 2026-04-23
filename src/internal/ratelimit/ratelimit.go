@@ -15,9 +15,9 @@ const UPGRADE_DELIVERY_SERVICE = "org.deepin.upgradedelivery"
 const UPGRADE_DELIVERY_OBJECT_PATH = "/org/deepin/upgradedelivery"
 const UPGRADE_DELIVERY_INTERFACE = "org.deepin.upgradedelivery"
 
-const DefaultRateLimit = 10 * 1024 // 10 kb/s
-const MinRateLimit = 10 * 1024     // 10 kb/s
-const MaxRateLimit = 999999 * 1024 // 999999 kb/s
+const DefaultRateLimit = 10 * 1024 // 10KB/s unit: bytes per second
+const MinRateLimit = 10 * 1024     // 10KB/s unit: bytes per second
+const MaxRateLimit = 999999 * 1024 // 999999KB/s unit: bytes per second
 
 // SyncLimit 服务器端限速配置信息
 type SyncLimit struct {
@@ -30,7 +30,7 @@ type SyncLimit struct {
 type RateLimitWithTime struct {
 	StartTime string `json:"s,omitempty"` // 限制开始时间,format 22:00:00
 	EndTime   string `json:"e,omitempty"` // 限制结束时间
-	RateLimit int    `json:"r,omitempty"` // 最大下载速率 (单位: kb/s)
+	RateLimit int    `json:"r,omitempty"` // 最大下载速率 (单位: KB/s)
 	Type      int    `json:"t,omitempty"` // 忙闲，1：选择，2：不选择
 }
 
@@ -52,14 +52,14 @@ type RateInfo struct {
 	LimitType   int       // 限速类型(CLimitTypeNo,CLimitTypeLocal,CLimitTypeRemote)
 	StartTime   time.Time // 限速开始时间
 	EndTime     time.Time // 限速结束时间
-	LimitRate   int64     // 限制速率(不限速前设置的速率值)
-	CurrentRate int64     // 当前限制速率(实际限速速率：限速时，两者一致，不限速时，CurrentRate为最大限速速率)
+	LimitRate   int64     // 限制速率(不限速前设置的速率值)    unit: bytes per second
+	CurrentRate int64     // 当前限制速率(实际限速速率：限速时，两者一致，不限速时，CurrentRate为最大限速速率)  unit: bytes per second
 }
 
 type RateInfoEvent struct {
 	RateInfo       // 生效速率信息
 	RateType int   // 类型(gloabl、busy、free)
-	Speed    int64 // 速度
+	Speed    int64 // 速度  unit: bytes per second
 }
 
 type IPFSLimitRate struct {
@@ -129,7 +129,7 @@ func SetIPFSRateLimit(uploadLimitRate, downloadLimitRate IPFSLimitRate) error {
 }
 
 // SetIPFSDownloadRateLimit sets the download rate limit for IPFS.
-// rate is in kilobits per second (kb/s). If rate is -1, it means no rate limit.
+// rate is in kilobytes per second (KB/s). If rate is -1, it means no rate limit.
 func SetIPFSDownloadRateLimit(rate int) error {
 	sysBus, err := dbus.SystemBus()
 	if err != nil {
@@ -143,7 +143,7 @@ func SetIPFSDownloadRateLimit(rate int) error {
 }
 
 // SetIPFSUploadRateLimit sets the upload rate limit for IPFS.
-// rate is in kilobits per second (kb/s). If rate is -1, it means no rate limit.
+// rate is in kilobytes per second (KB/s). If rate is -1, it means no rate limit.
 func SetIPFSUploadRateLimit(rate int) error {
 	sysBus, err := dbus.SystemBus()
 	if err != nil {
@@ -216,8 +216,8 @@ func convertRateLimitWithTimeToRateInfo(rlwt *RateLimitWithTime) *RateInfo {
 	var rateInfo RateInfo
 	if rlwt.Type == 1 {
 		rateInfo.LimitType = RateLimitTypeRemote
-		rateInfo.LimitRate = int64(rlwt.RateLimit) * 1024   // kb ---> byte
-		rateInfo.CurrentRate = int64(rlwt.RateLimit) * 1024 // kb ---> byte
+		rateInfo.LimitRate = int64(rlwt.RateLimit) * 1024   // KB/s ---> byte/s
+		rateInfo.CurrentRate = int64(rlwt.RateLimit) * 1024 // KB/s ---> byte/s
 	} else {
 		rateInfo.LimitType = RateLimitTypeNo
 		rateInfo.LimitRate = DefaultRateLimit

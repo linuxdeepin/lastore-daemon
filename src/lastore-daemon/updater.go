@@ -48,13 +48,13 @@ type idleDownloadConfig struct {
 
 type downloadSpeedLimitConfig struct {
 	DownloadSpeedLimitEnabled bool
-	LimitSpeed                string
+	LimitSpeed                string // unit: KB/s
 	IsOnlineSpeedLimit        bool
 }
 
 type speedLimitConfig struct {
 	SpeedLimitEnabled  bool
-	LimitSpeed         string
+	LimitSpeed         string // unit: KB/s
 	IsOnlineSpeedLimit bool
 }
 
