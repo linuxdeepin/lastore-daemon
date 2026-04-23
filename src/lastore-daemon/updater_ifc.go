@@ -248,16 +248,16 @@ func (u *Updater) SetDeliveryDownloadSpeedLimit(limitConfig string) *dbus.Error 
 			return dbusutil.ToError(err)
 		}
 		rateLimit := int(limitRate)
-		if rateLimit < ratelimit.MinRateLimit || rateLimit > ratelimit.MaxRateLimit {
-			rateLimit = int(ratelimit.DefaultRateLimit)
+		if rateLimit*1024 < ratelimit.MinRateLimit || rateLimit*1024 > ratelimit.MaxRateLimit {
+			rateLimit = int(ratelimit.DefaultRateLimit) / 1024
 		}
 		if err := ratelimit.SetIPFSDownloadRateLimit(rateLimit); err != nil {
 			return dbusutil.ToError(err)
 		}
 		rateInfo = ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeLocal,
-			LimitRate:   int64(rateLimit),
-			CurrentRate: int64(rateLimit),
+			LimitRate:   int64(rateLimit) * 1024,
+			CurrentRate: int64(rateLimit) * 1024,
 		}
 	} else {
 		if err := ratelimit.SetIPFSDownloadRateLimit(-1); err != nil {
@@ -294,16 +294,16 @@ func (u *Updater) SetDeliveryUploadSpeedLimit(limitConfig string) *dbus.Error {
 			return dbusutil.ToError(err)
 		}
 		rateLimit := int(limitRate)
-		if rateLimit < ratelimit.MinRateLimit || rateLimit > ratelimit.MaxRateLimit {
-			rateLimit = int(ratelimit.DefaultRateLimit)
+		if rateLimit*1024 < ratelimit.MinRateLimit || rateLimit*1024 > ratelimit.MaxRateLimit {
+			rateLimit = int(ratelimit.DefaultRateLimit) / 1024
 		}
 		if err := ratelimit.SetIPFSUploadRateLimit(rateLimit); err != nil {
 			return dbusutil.ToError(err)
 		}
 		rateInfo = ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeLocal,
-			LimitRate:   int64(rateLimit),
-			CurrentRate: int64(rateLimit),
+			LimitRate:   int64(rateLimit) * 1024,
+			CurrentRate: int64(rateLimit) * 1024,
 		}
 	} else {
 		if err := ratelimit.SetIPFSUploadRateLimit(-1); err != nil {
