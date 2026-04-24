@@ -404,7 +404,9 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						logger.Warning("updatePlatform gen download speed limit failed", err)
 					}
 
-					if err := m.updatePlatform.UpdateDeliverySpeedLimit(); err != nil {
+					if err := m.updatePlatform.GenIpfsConfig(); err != nil {
+						logger.Warningf("failed to gen ipfs config: %v", err)
+					} else if err := m.updatePlatform.UpdateDeliverySpeedLimit(); err != nil {
 						logger.Warningf("failed to update delivery speed limit: %v", err)
 					}
 				}
