@@ -43,6 +43,11 @@ var logger = log.NewLogger("lastore/messageReport")
 
 const defaultPlatformRepoComponents = "main community commercial"
 
+var setIPFSRateLimit = ratelimit.SetIPFSRateLimit
+
+const defaultDownloadSpeedLimitConfig = `{"DownloadSpeedLimitEnabled":false,"LimitSpeed":"1024","IsOnlineSpeedLimit":false}`
+const defaultDeliveryRateLimitConfig = `{"LimitType":0,"StartTime":"0001-01-01T00:00:00Z","EndTime":"0001-01-01T00:00:00Z","LimitRate":10240,"CurrentRate":10240}`
+
 type ProcessEvent struct {
 	TaskID       int    `json:"taskID"`
 	EventType    int    `json:"eventType"`
@@ -2141,10 +2146,6 @@ func updateNoLimitConfigIfChanged(currentValue string, setFunc func(string) erro
 }
 
 func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
-	if err := m.GenIpfsConfig(); err != nil {
-		return fmt.Errorf("failed to gen ipfs config: %w", err)
-	}
-
 	if m.IPFSConfig.UploadLimit == nil || m.IPFSConfig.DownloadLimit == nil {
 		return nil
 	}
@@ -2199,7 +2200,7 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 		uploadLimitRate.FreeLimitLocal = localUploadRateLimit.Free
 	}
 
-	if err := ratelimit.SetIPFSRateLimit(uploadLimitRate, downloadLimitRate); err != nil {
+	if err := setIPFSRateLimit(uploadLimitRate, downloadLimitRate); err != nil {
 		return fmt.Errorf("failed to set ipfs rate limit: %w", err)
 	}
 
@@ -2354,6 +2355,51 @@ func (m *UpdatePlatformManager) UpdateDeliverySpeedLimit() error {
 	return nil
 }
 
+func (m *UpdatePlatformManager) UpdateDeliverySpeedLimitWithConfig(ipfsConfig ratelimit.IPFSConfig) error {
+	m.IPFSConfig = ipfsConfig
+	return m.UpdateDeliverySpeedLimit()
+}
+
+func noRemoteIPFSLimitConfig() ratelimit.IPFSConfig {
+	return ratelimit.IPFSConfig{
+		UploadLimit:   defaultNoRemoteSyncLimit(),
+		DownloadLimit: defaultNoRemoteSyncLimit(),
+	}
+}
+
+func defaultNoRemoteSyncLimit() *ratelimit.SyncLimit {
+	return &ratelimit.SyncLimit{
+		AllDayRateLimit:   defaultNoRemoteRateLimitWithTime(),
+		BusyTimeRateLimit: defaultNoRemoteRateLimitWithTime(),
+		FreeTimeRateLimit: defaultNoRemoteRateLimitWithTime(),
+	}
+}
+
+func defaultNoRemoteRateLimitWithTime() *ratelimit.RateLimitWithTime {
+	return &ratelimit.RateLimitWithTime{
+		RateLimit: ratelimit.DefaultRateLimit,
+		Type:      ratelimit.RateLimitTypeNo,
+	}
+}
+
+func resetSpeedLimitConfigToDefaults(c *Cfg.Config) {
+	c.UpgradeDeliveryEnabled = true
+	c.DownloadSpeedLimitConfig = defaultDownloadSpeedLimitConfig
+	c.LocalDownloadSpeedLimitConfig = defaultDownloadSpeedLimitConfig
+	c.DeliveryRemoteDownloadGlobalLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryRemoteUploadGlobalLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryRemoteDownloadPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryRemoteUploadPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryRemoteDownloadOffPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryRemoteUploadOffPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryLocalDownloadGlobalLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryLocalUploadGlobalLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryLocalDownloadPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryLocalUploadPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryLocalDownloadOffPeakLimit = defaultDeliveryRateLimitConfig
+	c.DeliveryLocalUploadOffPeakLimit = defaultDeliveryRateLimitConfig
+}
+
 const checkPolicyCacheFile = "/tmp/checkpolicy.cache"
 
 func (m *UpdatePlatformManager) CheckPolicyChanged() (bool, error) {
@@ -2463,20 +2509,45 @@ func (m *UpdatePlatformManager) tryToUnRegisterConsole(body []byte) (bool, error
 			return false, err
 		}
 
-		// 反注册相当于从内网平台切换成了公网，因此需要清理CheckInterval和StartCheckRange和lastCheckTime
-		if err := m.config.SetLastCheckTime(time.Unix(0, 0)); err != nil {
-			logger.Warningf("failed to set last check time: %v", err)
-		}
-		// TODO: 此处只是重置dsettings，合理的做法是恢复到上一次公网的情况
-		if err := m.config.ResetDSettings(Cfg.DSettingsKeyCheckInterval); err != nil {
-			logger.Warningf("failed to reset check interval: %v", err)
-		}
-		if err := m.config.ResetDSettings(Cfg.DSettingsKeyStartCheckRange); err != nil {
-			logger.Warningf("failed to reset start check range: %v", err)
-		}
+		m.resetIntranetUpdateSettingsAfterUnregister()
 
 		logger.Infof("uninstall script executed successfully. output: %v", string(output))
 		return true, nil
 	}
 	return false, nil
+}
+
+func (m *UpdatePlatformManager) resetIntranetUpdateSettingsAfterUnregister() {
+	if m == nil || m.config == nil {
+		return
+	}
+
+	// 反注册相当于从内网平台切换成公网，必须同步恢复持久化配置和当前进程内配置。
+	if err := m.config.SetLastCheckTime(time.Unix(0, 0)); err != nil {
+		logger.Warningf("failed to set last check time: %v", err)
+	}
+
+	for _, key := range []string{
+		Cfg.DSettingsKeyCheckInterval,
+		Cfg.DSettingsKeyStartCheckRange,
+		Cfg.DSettingsKeyDownloadSpeedLimit,
+		Cfg.DSettingsKeyUpgradeDeliveryEnabled,
+		Cfg.DSettingsKeyIntranetUpdate,
+		Cfg.DSettingsKeyPlatformUpdate,
+		Cfg.DSettingsKeyDeliveryRemoteDownloadGlobalLimit,
+		Cfg.DSettingsKeyDeliveryRemoteUploadGlobalLimit,
+		Cfg.DSettingsKeyDeliveryRemoteDownloadPeakLimit,
+		Cfg.DSettingsKeyDeliveryRemoteUploadPeakLimit,
+		Cfg.DSettingsKeyDeliveryRemoteDownloadOffPeakLimit,
+		Cfg.DSettingsKeyDeliveryRemoteUploadOffPeakLimit,
+	} {
+		if err := m.config.ResetDSettings(key); err != nil {
+			logger.Warningf("failed to reset %s: %v", key, err)
+		}
+	}
+	resetSpeedLimitConfigToDefaults(m.config)
+
+	if err := m.UpdateDeliverySpeedLimitWithConfig(noRemoteIPFSLimitConfig()); err != nil {
+		logger.Warningf("failed to reset delivery speed limit: %v", err)
+	}
 }
