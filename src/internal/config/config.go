@@ -199,7 +199,7 @@ const (
 	dSettingsKeyIdleDownloadConfig                   = "idle-download-config"
 	dSettingsKeySystemSourceList                     = "system-sources"
 	dSettingsKeyNonUnknownList                       = "non-unknown-sources"
-	dSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
+	DSettingsKeyDownloadSpeedLimit                   = "download-speed-limit"
 	dSettingsKeyLocalDownloadSpeedLimit              = "local-download-speed-limit"
 	DSettingsKeyLastoreDaemonStatus                  = "lastore-daemon-status"
 	dSettingsKeyUpdateStatus                         = "update-status"
@@ -223,12 +223,12 @@ const (
 	DSettingsKeyIncrementalUpdate                    = "incremental-update"
 	DSettingsKeyIntranetUpdate                       = "intranet-update"
 	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
-	dSettingsKeyDeliveryRemoteDownloadGlobalLimit    = "delivery-remote-download-global-limit"
-	dSettingsKeyDeliveryRemoteUploadGlobalLimit      = "delivery-remote-upload-global-limit"
-	dSettingsKeyDeliveryRemoteDownloadPeakLimit      = "delivery-remote-download-peak-limit"
-	dSettingsKeyDeliveryRemoteUploadPeakLimit        = "delivery-remote-upload-peak-limit"
-	dSettingsKeyDeliveryRemoteDownloadOffPeakLimit   = "delivery-remote-download-offpeak-limit"
-	dSettingsKeyDeliveryRemoteUploadOffPeakLimit     = "delivery-remote-upload-offpeak-limit"
+	DSettingsKeyDeliveryRemoteDownloadGlobalLimit    = "delivery-remote-download-global-limit"
+	DSettingsKeyDeliveryRemoteUploadGlobalLimit      = "delivery-remote-upload-global-limit"
+	DSettingsKeyDeliveryRemoteDownloadPeakLimit      = "delivery-remote-download-peak-limit"
+	DSettingsKeyDeliveryRemoteUploadPeakLimit        = "delivery-remote-upload-peak-limit"
+	DSettingsKeyDeliveryRemoteDownloadOffPeakLimit   = "delivery-remote-download-offpeak-limit"
+	DSettingsKeyDeliveryRemoteUploadOffPeakLimit     = "delivery-remote-upload-offpeak-limit"
 	dSettingsKeyDeliveryLocalDownloadGlobalLimit     = "delivery-local-download-global-limit"
 	dSettingsKeyDeliveryLocalUploadGlobalLimit       = "delivery-local-upload-global-limit"
 	dSettingsKeyDeliveryLocalDownloadPeakLimit       = "delivery-local-download-peak-limit"
@@ -484,7 +484,7 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDownloadSpeedLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDownloadSpeedLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -498,42 +498,42 @@ func getConfigFromDSettings() *Config {
 		c.LocalDownloadSpeedLimitConfig = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDeliveryRemoteDownloadGlobalLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDeliveryRemoteDownloadGlobalLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.DeliveryRemoteDownloadGlobalLimit = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDeliveryRemoteUploadGlobalLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDeliveryRemoteUploadGlobalLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.DeliveryRemoteUploadGlobalLimit = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDeliveryRemoteDownloadPeakLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDeliveryRemoteDownloadPeakLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.DeliveryRemoteDownloadPeakLimit = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDeliveryRemoteUploadPeakLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDeliveryRemoteUploadPeakLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.DeliveryRemoteUploadPeakLimit = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDeliveryRemoteDownloadOffPeakLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDeliveryRemoteDownloadOffPeakLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.DeliveryRemoteDownloadOffPeakLimit = v.Value().(string)
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyDeliveryRemoteUploadOffPeakLimit)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyDeliveryRemoteUploadOffPeakLimit)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -1101,7 +1101,7 @@ func (c *Config) SetLastCheckTime(lastCheckTime time.Time) error {
 
 func (c *Config) SetDownloadSpeedLimitConfig(config string) error {
 	c.DownloadSpeedLimitConfig = config
-	return c.save(dSettingsKeyDownloadSpeedLimit, config)
+	return c.save(DSettingsKeyDownloadSpeedLimit, config)
 }
 
 func (c *Config) SetLocalDownloadSpeedLimitConfig(config string) error {
@@ -1111,32 +1111,32 @@ func (c *Config) SetLocalDownloadSpeedLimitConfig(config string) error {
 
 func (c *Config) SetDeliveryRemoteDownloadGlobalLimit(config string) error {
 	c.DeliveryRemoteDownloadGlobalLimit = config
-	return c.save(dSettingsKeyDeliveryRemoteDownloadGlobalLimit, config)
+	return c.save(DSettingsKeyDeliveryRemoteDownloadGlobalLimit, config)
 }
 
 func (c *Config) SetDeliveryRemoteUploadGlobalLimit(config string) error {
 	c.DeliveryRemoteUploadGlobalLimit = config
-	return c.save(dSettingsKeyDeliveryRemoteUploadGlobalLimit, config)
+	return c.save(DSettingsKeyDeliveryRemoteUploadGlobalLimit, config)
 }
 
 func (c *Config) SetDeliveryRemoteDownloadPeakLimit(config string) error {
 	c.DeliveryRemoteDownloadPeakLimit = config
-	return c.save(dSettingsKeyDeliveryRemoteDownloadPeakLimit, config)
+	return c.save(DSettingsKeyDeliveryRemoteDownloadPeakLimit, config)
 }
 
 func (c *Config) SetDeliveryRemoteUploadPeakLimit(config string) error {
 	c.DeliveryRemoteUploadPeakLimit = config
-	return c.save(dSettingsKeyDeliveryRemoteUploadPeakLimit, config)
+	return c.save(DSettingsKeyDeliveryRemoteUploadPeakLimit, config)
 }
 
 func (c *Config) SetDeliveryRemoteDownloadOffPeakLimit(config string) error {
 	c.DeliveryRemoteDownloadOffPeakLimit = config
-	return c.save(dSettingsKeyDeliveryRemoteDownloadOffPeakLimit, config)
+	return c.save(DSettingsKeyDeliveryRemoteDownloadOffPeakLimit, config)
 }
 
 func (c *Config) SetDeliveryRemoteUploadOffPeakLimit(config string) error {
 	c.DeliveryRemoteUploadOffPeakLimit = config
-	return c.save(dSettingsKeyDeliveryRemoteUploadOffPeakLimit, config)
+	return c.save(DSettingsKeyDeliveryRemoteUploadOffPeakLimit, config)
 }
 
 func (c *Config) SetDeliveryLocalDownloadGlobalLimit(config string) error {
