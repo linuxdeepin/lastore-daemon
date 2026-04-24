@@ -108,6 +108,7 @@ func TestUpdateTargetPkgMetaSyncClearsTargetPkgMetaWhenDataIsNull(t *testing.T) 
 	manager := &UpdatePlatformManager{
 		requestUrl:     server.URL,
 		targetBaseline: "test-baseline",
+		Token:          "abcd",
 		PreUpgradeCheck: []ShellCheck{
 			{Name: "pre-upgrade.sh", Shell: "ZWNobyBwcmU="},
 		},
@@ -160,6 +161,7 @@ func TestUpdateTargetPkgMetaSyncReturnsErrorForInvalidTargetPkgListData(t *testi
 	manager := &UpdatePlatformManager{
 		requestUrl:     server.URL,
 		targetBaseline: "test-baseline",
+		Token:          "abcd",
 	}
 
 	if err := manager.updateTargetPkgMetaSync(); err == nil {

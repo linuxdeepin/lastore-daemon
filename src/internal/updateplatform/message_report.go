@@ -615,6 +615,13 @@ var Urls = map[requestType]requestContent{
 
 const secret = "DflXyFwTmaoGmbDkVj8uD62XGb01pkJn"
 
+func (m *UpdatePlatformManager) getToken() string {
+	if len(m.Token) == 0 {
+		m.Token = UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
+	}
+	return m.Token
+}
+
 func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
 	policyUrl := m.requestUrl + Urls[GetVersion].path
 	client := &http.Client{
@@ -624,10 +631,7 @@ func (m *UpdatePlatformManager) genVersionResponse() (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetVersion.string(), err.Error())
 	}
-	if len(m.Token) == 0 {
-		m.Token = UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
-	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	request.Header.Set("X-Packages", base64.RawStdEncoding.EncodeToString([]byte(getClientPackageInfo(m.config.ClientPackageName))))
 	return client.Do(request)
 }
@@ -641,7 +645,7 @@ func (m *UpdatePlatformManager) genThrottlingResponse() (*http.Response, error) 
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetThrottling.string(), err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	return client.Do(request)
 }
 
@@ -658,7 +662,7 @@ func (m *UpdatePlatformManager) genTargetPkgListsResponse() (*http.Response, err
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetTargetPkgLists.string(), err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	return client.Do(request)
 }
 
@@ -674,7 +678,7 @@ func (m *UpdatePlatformManager) genCurrentPkgListsResponse() (*http.Response, er
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetCurrentPkgLists.string(), err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	return client.Do(request)
 }
 
@@ -690,7 +694,7 @@ func (m *UpdatePlatformManager) genCVEInfoResponse(syncTime string) (*http.Respo
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetPkgCVEs.string(), err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	return client.Do(request)
 }
 
@@ -707,7 +711,7 @@ func (m *UpdatePlatformManager) genUpdateLogResponse() (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%v new request failed: %v ", GetUpdateLog.string(), err.Error())
 	}
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	return client.Do(request)
 }
 
@@ -760,7 +764,7 @@ func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath s
 	request.Header.Set("X-Baseline", m.targetBaseline)
 	request.Header.Set("X-Time", xTime)
 	request.Header.Set("X-Sign", sign)
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	logger.Debug("genPostProcessResponse:", request.Header)
 	return client.Do(request)
 }
@@ -1712,7 +1716,7 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 	request.Header.Set("X-MachineID", hardwareId)
 	request.Header.Set("X-CurrentBaseline", m.preBaseline)
 	request.Header.Set("X-Baseline", m.targetBaseline)
-	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.Token)))
+	request.Header.Set("X-Repo-Token", base64.RawStdEncoding.EncodeToString([]byte(m.getToken())))
 	response, err := client.Do(request)
 	if err != nil {
 		logger.Warningf("post process event msg failed:%v", err)
