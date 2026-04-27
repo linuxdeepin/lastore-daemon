@@ -372,6 +372,7 @@ func (v *Manager) emitPropChangedSystemOnChanging(value bool) error {
 
 func (v *Manager) setPropDownloadLimitOnChanging(value bool) (changed bool) {
 	if v.DownloadLimitOnChanging != value {
+		logger.Infof("Emit DownloadLimitOnChanging prop changed: %v --> %v", v.DownloadLimitOnChanging, value)
 		v.DownloadLimitOnChanging = value
 		v.emitPropChangedDownloadLimitOnChanging(value)
 		return true

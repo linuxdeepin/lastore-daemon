@@ -499,6 +499,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				return nil
 			},
 		})
+		j.setAfterHooks(map[string]func() error{
+			string(system.RunningStatus): func() error {
+				// reset DownloadLimitOnChanging
+				m.jobManager.DownloadLimitOnChanging = false
+				m.setPropDownloadLimitOnChanging(false)
+				return nil
+			},
+		})
 	}
 
 	if err = m.jobManager.addJob(job); err != nil {
