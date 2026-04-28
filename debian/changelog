@@ -1,3 +1,64 @@
+lastore-daemon (6.2.53) unstable; urgency=medium
+
+  * fix: track delivery download finished state with IsFinished field
+  * fix: normalize p2p/delivery protocol to 'delivery'
+  * feat: add ListMirrorSources & SetMirrorSource interface (#399)
+  * fix: reset DownloadLimitOnChanging when preparing dist upgrade
+  * fix: reset intranet update settings after unregister (#396)
+  * fix: extract token initialization into getToken method
+  * fix: separate stderr and stdout processing for delivery info
+  * fix: sync translations with pot (#394)
+  * fix: remove PrivateIPC of lastore-daemon service to address potential hidden issue (#393)
+  * fix: fix speed limit unit conversion logic
+  * fix: update incrementalUpdate when related configs change
+  * feat: add mutual exclusion between online and local speed limit configs
+  * fix: preserve writable remount for dynamic hooks
+  * fix: split upgrade delivery toggle permissions
+  * fix: improve error handling and add download notification check
+  * fix: gate delivery repos on runtime support
+  * fix: clear install update time when no upgradable apps
+  * fix: restore local download speed limit config on startup (#384)
+  * fix: validate rate limit before setting and clarify -1 means no limit
+  * fix: ignore null target package list data (#382)
+  * fix: use Contains instead of HasPrefix for delivery repo detection
+  * fix: enable upgrade delivery by default
+  * fix: Institute valid configurations within the D-Bus interface.
+  * fix: derive P2P update support from delivery repo prefix
+  * fix: Terminal unregistration process
+  * fix: Prevent local rate-limiting config from overriding remote config.
+  * Revert "feat: enable upgrade delivery by default (#366)" (#373)
+  * fix: set download speed and prototype (#369)
+  * fix: set default speed limit to 1024 (#368)
+  * fix(ratelimit): pass nil for unlimited rate via D-Bus instead of MaxRate
+  * fix: Readjust the timer trigger logic for peak and off-peak time switching.
+  * feat: enable upgrade delivery by default (#366)
+  * fix: not hide notify when starting to update for intranet update (#364)
+  * fix: remove environment check before source update (#363)
+  * fix(system): Fix Cancelable flag error for check_system job on failure
+  * fix: check updatable packages before send notify (#362)
+  * Fix: Repair randomized timer for first-time intranet updates
+  * fix: enable incremental update only when `UpgradeDeliveryEnabled` is set to `false`. (#359)
+  * fix: change http to delivery if delivery enabled
+  * fix: enable force update even target baseline not changed (#356)
+  * fix: Speed limit logic failure.
+  * fix: set install update notify expire timeout as default (#355)
+  * fix: automatic update check timer cycle anomaly (#354)
+  * fix: update backing up notification message (#353)
+  * feat: delivery speed limit
+  * fix: prepare_dist_upgrade type job cannot enter end state
+  * fix: add cpu key for loong arch (#350)
+  * fix: use event type PostUpgradeCheck for postcheck error (#349)
+  * fix: update ExecAt precision to milliseconds (#348)
+  * fix: Remove the UpgradeDeliveryEnabled property.
+  * feat(dbus): sync Lastore1.Updater XML introspection with implementation (#346)
+  * chore: remove dbus interface SetShutdownForceUpdate (#345)
+  * fix: Add hot update mechanism to specific configurations
+  * chore: reporting detail of executing hooks
+  * fix: Timer name validation error for lastoreCronCheck
+  * feat: Implement support for online and local rate limiting
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Tue, 28 Apr 2026 19:52:22 +0800
+
 lastore-daemon (6.2.52) unstable; urgency=medium
 
   * chore: log failure detail of source update check (#339)
@@ -153,7 +214,7 @@ lastore-daemon (6.2.36) unstable; urgency=medium
   * fix: prevent persistent notification when update download fails due to full disk (#247)
   * fix: Adapt the maximum speed limit logic for incremental updates.
   * chore: improve error reporting for update-remote command (#245)
-  * fix: Remove deprecated app uninstall tracking functionality (#244) 
+  * fix: Remove deprecated app uninstall tracking functionality (#244)
 
  -- xiamengliang <xiamengliang@uniontech.com>  Fri, 31 Oct 2025 13:34:27 +0800
 
@@ -724,241 +785,241 @@ lastore-daemon (5.4.4) stable; urgency=medium
 
 lastore-daemon (0.9.18.6) stable; urgency=low
 
-  * Rebuild Version 0.9.18.6 
+  * Rebuild Version 0.9.18.6
 
  -- TagBuilder <tagbuilder@deepin.com>  Wed, 22 Jun 2016 01:18:35 +0000
 
 lastore-daemon (0.9.18.6-3) stable; urgency=low
 
-  * Rebuild Version 0.9.18.6 
+  * Rebuild Version 0.9.18.6
 
  -- TagBuilder <tagbuilder@deepin.com>  Tue, 21 Jun 2016 12:42:57 +0000
 
 lastore-daemon (0.9.18.6-2) stable; urgency=low
 
-  * Rebuild Version 0.9.18.6 
+  * Rebuild Version 0.9.18.6
 
  -- TagBuilder <tagbuilder@deepin.com>  Fri, 17 Jun 2016 09:19:00 +0000
 
 lastore-daemon (0.9.18.6-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.18.6 
+  * Autobuild Tag 0.9.18.6
 
  -- TagBuilder <tagbuilder@deepin.com>  Fri, 17 Jun 2016 03:13:30 +0000
 
 lastore-daemon (0.9.18.5-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.18.5 
+  * Autobuild Tag 0.9.18.5
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 31 May 2016 05:54:21 +0000
 
 lastore-daemon (0.9.18.4-4) stable; urgency=low
 
-  * Rebuild Version 0.9.18.4 
+  * Rebuild Version 0.9.18.4
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 17 May 2016 10:17:40 +0000
 
 lastore-daemon (0.9.18.4-3) stable; urgency=low
 
-  * Rebuild Version 0.9.18.4 
+  * Rebuild Version 0.9.18.4
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 17 May 2016 10:09:34 +0000
 
 lastore-daemon (0.9.18.4-2) stable; urgency=low
 
-  * Rebuild Version 0.9.18.4 
+  * Rebuild Version 0.9.18.4
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 17 May 2016 09:50:05 +0000
 
 lastore-daemon (0.9.18.4-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.18.4 
+  * Autobuild Tag 0.9.18.4
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 17 May 2016 09:32:30 +0000
 
 lastore-daemon (0.9.18.3-3) stable; urgency=low
 
-  * Rebuild Version 0.9.18.3 
+  * Rebuild Version 0.9.18.3
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Thu, 21 Apr 2016 14:30:57 +0000
 
 lastore-daemon (0.9.18.3-2) stable; urgency=low
 
-  * Rebuild Version 0.9.18.3 
+  * Rebuild Version 0.9.18.3
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Thu, 21 Apr 2016 09:39:11 +0000
 
 lastore-daemon (0.9.18.3-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.18.3 
+  * Autobuild Tag 0.9.18.3
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Wed, 13 Apr 2016 17:34:19 +0000
 
 lastore-daemon (0.9.18.2-2) stable; urgency=low
 
-  * Rebuild Version 0.9.18.2 
+  * Rebuild Version 0.9.18.2
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Wed, 30 Mar 2016 14:00:30 +0000
 
 lastore-daemon (0.9.18.2-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.18.2 
+  * Autobuild Tag 0.9.18.2
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Fri, 25 Mar 2016 11:06:06 +0000
 
 lastore-daemon (0.9.18-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.18 
+  * Autobuild Tag 0.9.18
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 01 Mar 2016 14:38:46 +0000
 
 lastore-daemon (0.9.17-2) unstable; urgency=low
 
-  * Rebuild Version 0.9.17 
+  * Rebuild Version 0.9.17
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 23 Feb 2016 17:31:10 +0000
 
 lastore-daemon (0.9.17-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.17 
+  * Autobuild Tag 0.9.17
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 23 Feb 2016 17:11:50 +0000
 
 lastore-daemon (0.9.16-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.16 
+  * Autobuild Tag 0.9.16
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Thu, 07 Jan 2016 11:27:42 +0000
 
 lastore-daemon (0.9.15-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.15 
+  * Autobuild Tag 0.9.15
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Thu, 31 Dec 2015 11:16:51 +0000
 
 lastore-daemon (0.9.14-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.14 
+  * Autobuild Tag 0.9.14
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 29 Dec 2015 17:30:04 +0000
 
 lastore-daemon (0.9.13-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.13 
+  * Autobuild Tag 0.9.13
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 29 Dec 2015 11:30:56 +0000
 
 lastore-daemon (0.9.12-2) unstable; urgency=low
 
-  * Rebuild Version 0.9.12 
+  * Rebuild Version 0.9.12
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 29 Dec 2015 09:52:40 +0000
 
 lastore-daemon (0.9.12-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.12 
+  * Autobuild Tag 0.9.12
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 29 Dec 2015 09:04:10 +0000
 
 lastore-daemon (0.9.10-1) unstable; urgency=low
 
-  * Autobuild Tag 0.9.10 
+  * Autobuild Tag 0.9.10
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Mon, 28 Dec 2015 15:27:50 +0000
 
 lastore-daemon (0.9.9-2) stable; urgency=low
 
-  * Rebuild Version 0.9.9 
+  * Rebuild Version 0.9.9
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Mon, 28 Dec 2015 15:08:18 +0000
 
 lastore-daemon (0.9.9-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.9 
+  * Autobuild Tag 0.9.9
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Mon, 28 Dec 2015 09:00:37 +0000
 
 lastore-daemon (0.9.8-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.8 
+  * Autobuild Tag 0.9.8
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Fri, 25 Dec 2015 12:14:19 +0000
 
 lastore-daemon (0.9.7-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.7 
+  * Autobuild Tag 0.9.7
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 22 Dec 2015 19:48:08 +0000
 
 lastore-daemon (0.9.6-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.6 
+  * Autobuild Tag 0.9.6
 
  -- TagBuilder <tagbuilder@linuxdeepin.com>  Tue, 22 Dec 2015 17:33:02 +0000
 
 lastore-daemon (0.9.5-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.5 
+  * Autobuild Tag 0.9.5
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Fri, 18 Dec 2015 07:19:45 +0000
 
 lastore-daemon (0.9.4-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.4 
+  * Autobuild Tag 0.9.4
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Tue, 15 Dec 2015 17:24:28 +0000
 
 lastore-daemon (0.9.3-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.3 
+  * Autobuild Tag 0.9.3
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Tue, 15 Dec 2015 14:02:58 +0000
 
 lastore-daemon (0.9.2-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.2 
+  * Autobuild Tag 0.9.2
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Mon, 14 Dec 2015 16:02:09 +0000
 
 lastore-daemon (0.9.1-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.1 
+  * Autobuild Tag 0.9.1
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Wed, 09 Dec 2015 23:10:54 +0000
 
 lastore-daemon (0.9.0-1) stable; urgency=low
 
-  * Autobuild Tag 0.9.0 
+  * Autobuild Tag 0.9.0
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Wed, 09 Dec 2015 09:12:31 +0000
 
 lastore-daemon (0.8.9-1) stable; urgency=low
 
-  * Autobuild Tag 0.8.9 
+  * Autobuild Tag 0.8.9
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Mon, 07 Dec 2015 12:22:09 +0000
 
 lastore-daemon (0.8.8-1) stable; urgency=low
 
-  * Autobuild Tag 0.8.8 
+  * Autobuild Tag 0.8.8
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Wed, 25 Nov 2015 11:12:57 +0000
 
 lastore-daemon (0.8.7-1) stable; urgency=low
 
-  * Autobuild Tag 0.8.7 
+  * Autobuild Tag 0.8.7
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Tue, 24 Nov 2015 15:11:36 +0000
 
 lastore-daemon (0.8.6-1) stable; urgency=low
 
-  * Autobuild Tag 0.8.6 
+  * Autobuild Tag 0.8.6
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Mon, 23 Nov 2015 10:43:04 +0000
 
 lastore-daemon (0.8.5-1) stable; urgency=low
 
-  * Autobuild Tag 0.8.5 
+  * Autobuild Tag 0.8.5
 
  -- TagBuilder <tabbuilder@linuxdeepin.com>  Mon, 23 Nov 2015 08:46:21 +0000
 
