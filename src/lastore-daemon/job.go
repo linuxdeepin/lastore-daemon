@@ -145,7 +145,7 @@ func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
 	}
 
 	j.DeliverySpeed = info.Speed
-	j.hasDeliveryDownloadInfo = true
+	j.hasDeliveryDownloadInfo = !info.IsFinished
 
 	speed := info.Speed
 	if speed < 0 {
@@ -222,6 +222,7 @@ func (j *Job) updateInfo(info system.JobProgressInfo) bool {
 	if !j.hasDeliveryDownloadInfo {
 		if isDownloadProtocolJob(j.Type) && j.Proto != "http" {
 			changed = true
+			logger.Infof("change proto: %s -> http\n", j.Proto)
 			j.Proto = "http"
 			if j.service != nil {
 				_ = j.emitPropChangedProto(j.Proto)
