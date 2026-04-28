@@ -70,6 +70,17 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 	return nil
 }
 
+func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
+	u.service.DelayAutoQuit()
+	return u.listMirrorSources(lang), nil
+}
+
+// SetMirrorSource sets the mirror source used to download packages.
+func (u *Updater) SetMirrorSource(id string) *dbus.Error {
+	u.service.DelayAutoQuit()
+	return dbusutil.ToError(u.setMirrorSource(id))
+}
+
 func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 	u.service.DelayAutoQuit()
 	if u.UpdateNotify == enable {
