@@ -68,6 +68,7 @@ type JobDeliveryDownloadInfo struct {
 	DownloadedSize int64
 	Speed          int64
 	Progress       float64
+	IsFinished     bool
 }
 
 type JobProgressInfo struct {
