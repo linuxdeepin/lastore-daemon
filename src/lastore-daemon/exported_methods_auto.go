@@ -181,6 +181,12 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			OutArgs: []string{"interval", "checkTime"},
 		},
 		{
+			Name:    "ListMirrorSources",
+			Fn:      v.ListMirrorSources,
+			InArgs:  []string{"lang"},
+			OutArgs: []string{"mirrorSources"},
+		},
+		{
 			Name:   "SetAutoCheckUpdates",
 			Fn:     v.SetAutoCheckUpdates,
 			InArgs: []string{"enable"},
@@ -214,6 +220,11 @@ func (v *Updater) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "SetInstallUpdateTime",
 			Fn:     v.SetInstallUpdateTime,
 			InArgs: []string{"timeStr"},
+		},
+		{
+			Name:   "SetMirrorSource",
+			Fn:     v.SetMirrorSource,
+			InArgs: []string{"id"},
 		},
 		{
 			Name:   "SetP2PUpdateEnable",

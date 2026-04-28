@@ -12,6 +12,37 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 )
 
+func TestUpdaterExportedMethodsIncludeSetMirrorSource(t *testing.T) {
+	methods := (&Updater{}).GetExportedMethods()
+	for _, method := range methods {
+		if method.Name != "SetMirrorSource" {
+			continue
+		}
+		if len(method.InArgs) != 1 || method.InArgs[0] != "id" {
+			t.Fatalf("SetMirrorSource InArgs = %v, want [id]", method.InArgs)
+		}
+		return
+	}
+	t.Fatal("SetMirrorSource is not exported")
+}
+
+func TestUpdaterExportedMethodsIncludeListMirrorSources(t *testing.T) {
+	methods := (&Updater{}).GetExportedMethods()
+	for _, method := range methods {
+		if method.Name != "ListMirrorSources" {
+			continue
+		}
+		if len(method.InArgs) != 1 || method.InArgs[0] != "lang" {
+			t.Fatalf("ListMirrorSources InArgs = %v, want [lang]", method.InArgs)
+		}
+		if len(method.OutArgs) != 1 || method.OutArgs[0] != "mirrorSources" {
+			t.Fatalf("ListMirrorSources OutArgs = %v, want [mirrorSources]", method.OutArgs)
+		}
+		return
+	}
+	t.Fatal("ListMirrorSources is not exported")
+}
+
 func TestSourceFileHasDeliveryProtocol(t *testing.T) {
 	tests := []struct {
 		name    string

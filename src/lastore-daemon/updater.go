@@ -144,6 +144,35 @@ func SetAPTSmartMirror(url string) error {
 		0644) // #nosec G306
 }
 
+func (u *Updater) setMirrorSource(id string) error {
+	if id == "" || u.MirrorSource == id {
+		return nil
+	}
+
+	found := false
+	for _, m := range u.listMirrorSources("") {
+		if m.Id != id {
+			continue
+		}
+		found = true
+		if m.Url == "" {
+			return system.NotFoundError("empty url")
+		}
+		if err := SetAPTSmartMirror(m.Url); err != nil {
+			logger.Warningf("SetMirrorSource(%q) failed:%v\n", id, err)
+			return err
+		}
+	}
+	if !found {
+		return system.NotFoundError("invalid mirror source id")
+	}
+	if err := u.config.SetMirrorSource(id); err != nil {
+		return err
+	}
+	u.setPropMirrorSource(u.config.MirrorSource)
+	return nil
+}
+
 // refreshUpgradeDeliveryService 刷新升级传递服务的状态，同步配置与实际服务状态。
 // 该函数检查 P2P 更新源支持情况，并根据 UpgradeDeliveryEnabled 配置
 // 启动或关闭升级传递服务，确保 P2PUpdateEnable 属性与配置一致。
@@ -265,6 +294,32 @@ type LocaleMirrorSource struct {
 	Id   string
 	Url  string
 	Name string
+}
+
+func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
+	var raws []system.MirrorSource
+	_ = system.DecodeJson(filepath.Join(system.VarLibDir, "mirrors.json"), &raws)
+
+	makeLocaleMirror := func(lang string, m system.MirrorSource) LocaleMirrorSource {
+		ms := LocaleMirrorSource{
+			Id:   m.Id,
+			Url:  m.Url,
+			Name: m.Name,
+		}
+		if v, ok := m.NameLocale[lang]; ok {
+			ms.Name = v
+		}
+		return ms
+	}
+
+	var r []LocaleMirrorSource
+	for _, raw := range raws {
+		if raw.Weight < 0 {
+			continue
+		}
+		r = append(r, makeLocaleMirror(lang, raw))
+	}
+	return r
 }
 
 // 设置更新时间的接口
