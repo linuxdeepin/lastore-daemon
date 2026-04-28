@@ -292,7 +292,7 @@ func normalizeDownloadProto(proto string) string {
 	case "http", "https":
 		return "http"
 	case "p2p", "delivery":
-		return "p2p"
+		return "delivery"
 	default:
 		return proto
 	}
