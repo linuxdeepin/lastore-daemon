@@ -143,10 +143,9 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			if err1 != nil {
 				logger.Warning(err1)
 			}
-			err1 = m.updateAutoCheckSystemUnit()
-			if err1 != nil {
-				logger.Warning(err1)
-			}
+		}
+		if err := m.updateAutoCheckSystemUnit(); err != nil {
+			logger.Warning(err)
 		}
 	}()
 	environ, err = makeEnvironWithSender(m, sender)

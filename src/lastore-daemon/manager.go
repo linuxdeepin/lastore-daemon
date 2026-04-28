@@ -770,48 +770,12 @@ func (m *Manager) handleAutoCheckEvent() error {
 		return nil
 	}
 
-	if m.config.PlatformUpdate {
-		return m.handleAutoCheckWithPlatform()
-	}
-
 	_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 	if err != nil {
 		logger.Warning(err)
 		return err
 	}
 	return nil
-}
-
-func (m *Manager) handleAutoCheckWithPlatform() error {
-	logger.Infof("handle AutoCheck with platform")
-	needUpdate, err := m.checkPlatformPolicy()
-	if err != nil {
-		logger.Warningf("check platform policy failed: %v", err)
-		if _, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0])); err != nil {
-			logger.Warning(err)
-		}
-		return err
-	}
-
-	if needUpdate {
-		if _, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0])); err != nil {
-			logger.Warning(err)
-			return err
-		}
-	} else {
-		logger.Infof("platform policy no update needed, updating auto check timer")
-		if err := m.updateAutoCheckSystemUnit(); err != nil {
-			logger.Warning(err)
-		}
-	}
-	return nil
-}
-
-func (m *Manager) checkPlatformPolicy() (bool, error) {
-	if !m.config.PlatformUpdate {
-		return true, nil
-	}
-	return m.updatePlatform.CheckPolicyChanged()
 }
 
 func (m *Manager) handleAutoCleanEvent() error {
