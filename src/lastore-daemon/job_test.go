@@ -5,10 +5,11 @@
 package main
 
 import (
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
 func TestJob(t *testing.T) {
@@ -57,8 +58,8 @@ func TestJobDeliveryDownloadInfoUpdatesSpeedAndNormalizedProto(t *testing.T) {
 	}{
 		{name: "http", proto: "http", wantProto: "http"},
 		{name: "https", proto: "https", wantProto: "http"},
-		{name: "p2p", proto: "p2p", wantProto: "p2p"},
-		{name: "delivery", proto: "delivery", wantProto: "p2p"},
+		{name: "p2p", proto: "p2p", wantProto: "delivery"},
+		{name: "delivery", proto: "delivery", wantProto: "delivery"},
 	}
 
 	for _, tt := range tests {
