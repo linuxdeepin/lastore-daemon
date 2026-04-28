@@ -95,6 +95,7 @@ func parseDeliveryDownloadInfo(id, line string) (system.JobDeliveryDownloadInfo,
 		}
 
 		jobDeliveryDownloadInfo.Proto = proto
+		jobDeliveryDownloadInfo.IsFinished = isFinish
 		if !isFinish {
 			jobDeliveryDownloadInfo.Speed = speed
 		} else {
