@@ -801,31 +801,39 @@ func (m *UpdatePlatformManager) genIpfsConfigResponse() (*http.Response, error) 
 	return client.Do(request)
 }
 
-func getResponseData(response *http.Response, reqType requestType) (json.RawMessage, error) {
+// getResponseData 解析 HTTP 响应数据，提取响应体中的 JSON 数据
+// response: HTTP 响应对象
+// reqType: 请求类型，用于日志记录
+// 返回值:
+//   - json.RawMessage: 解析后的 JSON 数据
+//   - bool: 请求结果，成功时为 true，失败时为 false
+//   - int: 错误码，成功时为响应中的 Code 字段，失败时为错误码
+//   - error: 错误信息，成功时为 nil
+func getResponseData(response *http.Response, reqType requestType) (json.RawMessage, bool, int, error) {
 	if http.StatusOK == response.StatusCode {
 		respData, err := io.ReadAll(response.Body)
 		if err != nil {
-			return nil, fmt.Errorf("%v failed to read response body: %v ", response.Request.RequestURI, err.Error())
+			return nil, false, 0, fmt.Errorf("%v failed to read response body: %v ", response.Request.RequestURI, err.Error())
 		}
 		logger.Debugf("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 		msg := &tokenMessage{}
 		err = json.Unmarshal(respData, msg)
 		if err != nil {
 			logger.Warningf("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
-			return nil, fmt.Errorf("%v failed to Unmarshal respData to tokenMessage: %v ", reqType.string(), err.Error())
+			return nil, false, 0, fmt.Errorf("%v failed to Unmarshal respData to tokenMessage: %v ", reqType.string(), err.Error())
 		}
 		if !msg.Result {
 			logger.Warningf("%v request for %v respData:%s ", reqType.string(), response.Request.URL, string(respData))
 			errorMsg := &tokenErrorMessage{}
 			err = json.Unmarshal(respData, errorMsg)
 			if err != nil {
-				return nil, fmt.Errorf("%v request for %s", reqType.string(), response.Request.RequestURI)
+				return nil, false, 0, fmt.Errorf("%v request for %s", reqType.string(), response.Request.RequestURI)
 			}
-			return nil, fmt.Errorf("%v request for %s err:%s", reqType.string(), response.Request.RequestURI, errorMsg.Msg)
+			return nil, false, errorMsg.Code, fmt.Errorf("%v request for %s err:%s", reqType.string(), response.Request.RequestURI, errorMsg.Msg)
 		}
-		return msg.Data, nil
+		return msg.Data, msg.Result, msg.Code, nil
 	} else {
-		return nil, fmt.Errorf("request for %s failed, response code=%d", response.Request.URL, response.StatusCode)
+		return nil, false, 0, fmt.Errorf("request for %s failed, response code=%d", response.Request.URL, response.StatusCode)
 	}
 }
 
@@ -919,18 +927,11 @@ func IsForceUpdate(tp UpdateTp) bool {
 
 // GenUpdatePolicyByToken 检查更新时将token数据发送给更新平台，获取本次更新信息
 func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
-	response, err := m.genVersionResponse()
+	msg, err := m.getUpdateMessage()
 	if err != nil {
-		return fmt.Errorf("failed get version data %v", err)
+		return err
 	}
-	data, err := getResponseData(response, GetVersion)
-	if err != nil {
-		return fmt.Errorf("failed get version data %v", err)
-	}
-	msg := getVersionData(data)
-	if msg == nil {
-		return errors.New("failed get version data")
-	}
+
 	m.targetBaseline = msg.Version.Baseline
 	m.targetVersion = msg.Version.Version
 	m.systemTypeFromPlatform = msg.SystemType
@@ -966,6 +967,40 @@ func (m *UpdatePlatformManager) genUpdatePolicyByToken() error {
 	m.UpdateBaselineCache()
 	m.saveTaskId()
 	return nil
+}
+
+func (m *UpdatePlatformManager) getUpdateMessage() (*updateMessage, error) {
+	return m.getUpdateMessageWithRetry(0)
+}
+
+func (m *UpdatePlatformManager) getUpdateMessageWithRetry(retryCount int) (*updateMessage, error) {
+	const maxRetry = 3
+	if retryCount > maxRetry {
+		return nil, errors.New("max retry count exceeded for getUpdateMessage")
+	}
+
+	response, err := m.genVersionResponse()
+	if err != nil {
+		return nil, fmt.Errorf("failed get version data %v", err)
+	}
+	data, _, code, err := getResponseData(response, GetVersion)
+	if err != nil {
+		if code == 416 {
+			unRegisted, unregErr := m.tryToUnRegisterConsole()
+			if unRegisted && unregErr == nil {
+				logger.Infof("unregister console success, will trigger recheck")
+				time.Sleep(5 * time.Second)
+				return m.getUpdateMessageWithRetry(retryCount + 1)
+			}
+			return nil, fmt.Errorf("unregister console failed: %w", unregErr)
+		}
+		return nil, fmt.Errorf("failed get version data %v", err)
+	}
+	msg := getVersionData(data)
+	if msg == nil {
+		return nil, errors.New("failed get version data")
+	}
+	return msg, nil
 }
 
 // SyncRepoAndInRelease 从更新平台同步仓库源配置和InRelease到本地
@@ -1032,7 +1067,7 @@ func (m *UpdatePlatformManager) GenThrottlingByToken() error {
 	if err != nil {
 		return fmt.Errorf("failed get throttling data %v", err)
 	}
-	data, err := getResponseData(response, GetThrottling)
+	data, _, _, err := getResponseData(response, GetThrottling)
 	if err != nil {
 		return fmt.Errorf("failed get throttling data %v", err)
 	}
@@ -1050,7 +1085,7 @@ func (m *UpdatePlatformManager) GenIpfsConfig() error {
 	if err != nil {
 		return fmt.Errorf("failed to get ipfs config: %w", err)
 	}
-	data, err := getResponseData(response, GetIPFSConfig)
+	data, _, _, err := getResponseData(response, GetIPFSConfig)
 	if err != nil {
 		return fmt.Errorf("failed to get ipfs config data: %w", err)
 	}
@@ -1115,7 +1150,7 @@ func (m *UpdatePlatformManager) updateTargetPkgMetaSync() error {
 	if err != nil {
 		return fmt.Errorf("failed get target pkg list data %v", err)
 	}
-	data, err := getResponseData(response, GetTargetPkgLists)
+	data, _, _, err := getResponseData(response, GetTargetPkgLists)
 	if err != nil {
 		return fmt.Errorf("failed get target pkg list data %v", err)
 	}
@@ -1225,7 +1260,7 @@ func (m *UpdatePlatformManager) updateCurrentPreInstalledPkgMetaSync() error {
 	if err != nil {
 		return fmt.Errorf("failed get current pkg list data %v", err)
 	}
-	data, err := getResponseData(response, GetCurrentPkgLists)
+	data, _, _, err := getResponseData(response, GetCurrentPkgLists)
 	if err != nil {
 		return fmt.Errorf("failed get current pkg list data %v", err)
 	}
@@ -1311,7 +1346,7 @@ func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
 	if err != nil {
 		return fmt.Errorf("failed get cve meta info %v", err)
 	}
-	data, err := getResponseData(response, GetPkgCVEs)
+	data, _, _, err := getResponseData(response, GetPkgCVEs)
 	if err != nil {
 		return fmt.Errorf("failed get cve meta info %v", err)
 	}
@@ -1376,7 +1411,7 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 		logger.Warning(err)
 		return nil
 	}
-	data, err := getResponseData(response, GetUpdateLog)
+	data, _, _, err := getResponseData(response, GetUpdateLog)
 	if err != nil {
 		logger.Warning(err)
 		return nil
@@ -1727,7 +1762,7 @@ func (m *UpdatePlatformManager) PostProcessEventMessage(body ProcessEvent) {
 		logger.Warningf("post process event msg failed:%v", err)
 		return
 	}
-	_, err = getResponseData(response, PostProcessEvent)
+	_, _, _, err = getResponseData(response, PostProcessEvent)
 	if err != nil {
 		logger.Warningf("get post process event msg response failed:%v", err)
 	}
@@ -1763,7 +1798,7 @@ func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUp
 		logger.Warningf("post status message failed:%v", err)
 		return
 	}
-	data, err := getResponseData(response, PostProcess)
+	data, _, _, err := getResponseData(response, PostProcess)
 	if err != nil {
 		logger.Warningf("get post status response failed:%v", err)
 		return
@@ -1845,7 +1880,7 @@ func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
 		logger.Warningf("post status message failed:%v", err)
 		return
 	}
-	data, err := getResponseData(response, PostProcess)
+	data, _, _, err := getResponseData(response, PostProcess)
 	if err != nil {
 		logger.Warningf("get post status response failed:%v", err)
 		return
@@ -2400,107 +2435,10 @@ func resetSpeedLimitConfigToDefaults(c *Cfg.Config) {
 	c.DeliveryLocalUploadOffPeakLimit = defaultDeliveryRateLimitConfig
 }
 
-const checkPolicyCacheFile = "/tmp/checkpolicy.cache"
-
-func (m *UpdatePlatformManager) CheckPolicyChanged() (bool, error) {
-	logger.Infof("Check policy changed: requestUrl=%s", m.requestUrl)
-	response, err := m.genVersionResponse()
-	if err != nil {
-		return false, fmt.Errorf("do request failed: %w", err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("request failed with status: %d", response.StatusCode)
-	}
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return false, fmt.Errorf("read response body failed: %w", err)
-	}
-
-	unRegisted, err := m.tryToUnRegisterConsole(body)
-	if unRegisted && err == nil {
-		// 反注册成功，直接退出，但是需要触发重新检查
-		return true, nil
-	}
-	if err != nil {
-		logger.Warning(err)
-	}
-
-	sum := sha256.Sum256(body)
-	newSum := hex.EncodeToString(sum[:])
-
-	oldSum, _ := m.getCheckPolicyCache()
-
-	if oldSum != newSum {
-		logger.Infof("CheckPolicyChanged: oldSum=%s, newSum=%s", oldSum, newSum)
-		m.saveCheckPolicyCache(newSum)
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (m *UpdatePlatformManager) getCheckPolicyCache() (string, time.Time) {
-	readFile, err := os.Open(checkPolicyCacheFile)
-	if err != nil {
-		return "", time.Time{}
-	}
-	defer readFile.Close()
-
-	reader := bufio.NewReader(readFile)
-	var sum string
-	var checkTime time.Time
-
-	data, _, err := reader.ReadLine()
-	if err == nil {
-		sum = string(data)
-	}
-	data, _, err = reader.ReadLine()
-	if err == nil {
-		checkTime, _ = time.Parse(time.RFC3339, string(data))
-	}
-
-	return sum, checkTime
-}
-
-func (m *UpdatePlatformManager) saveCheckPolicyCache(sum string) error {
-	writeFile, err := os.OpenFile(checkPolicyCacheFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer writeFile.Close()
-
-	if _, err := writeFile.WriteString(sum); err != nil {
-		logger.Warningf("failed to write sum: %v", err)
-		return err
-	}
-	if _, err := writeFile.WriteString("\n"); err != nil {
-		logger.Warningf("failed to write newline: %v", err)
-		return err
-	}
-	if _, err := writeFile.WriteString(time.Now().Format(time.RFC3339)); err != nil {
-		logger.Warningf("failed to write time: %v", err)
-		return err
-	}
-	if _, err := writeFile.WriteString("\n"); err != nil {
-		logger.Warningf("failed to write newline: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-func (m *UpdatePlatformManager) tryToUnRegisterConsole(body []byte) (bool, error) {
-	var response tokenMessage
-	if err := json.Unmarshal(body, &response); err != nil {
-		logger.Warningf("failed to parse json %v", string(body))
-		return false, err
-	}
-
-	if response.Code == 416 && utils.IsFileExist("/usr/lib/iup-daemon/uninstall") {
-		logger.Infof("platform returned code %d, executing uninstall script", response.Code)
+// 416 indicates uninstallation is required
+func (m *UpdatePlatformManager) tryToUnRegisterConsole() (bool, error) {
+	if utils.IsFileExist("/usr/lib/iup-daemon/uninstall") {
+		logger.Infof("executing uninstall script")
 		cmd := exec.Command("/usr/lib/iup-daemon/uninstall")
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
 		output, err := cmd.CombinedOutput()

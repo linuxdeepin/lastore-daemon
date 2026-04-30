@@ -279,11 +279,14 @@ func (m *Manager) initDSettingsChangedHandle() {
 	m.config.ConnectConfigChanged(config.DSettingsKeyIntranetUpdate, func(oldValue, newValue interface{}) {
 		intranetUpdate := newValue.(bool)
 		if intranetUpdate {
+			// 当intranet变化的时候，往往还伴随着checkInerval等配置的变化，此处需要等待几秒钟，等待所有配置均更新完成后，再刷新定时器
+			time.Sleep(5 * time.Second)
 			// 当开启内网更新时，将上次检查时间设置为0，并重新触发lastoreAutoCheck定时器
 			if err := m.config.SetLastCheckTime(time.Unix(0, 0)); err != nil {
 				logger.Warningf("SetLastCheckTime failed: %v", err)
 			}
 			m.isAutoCheckTimerFirstRun = true
+			logger.Infof("update auto check timer with first run")
 			if err := m.updateAutoCheckSystemUnit(); err != nil {
 				logger.Warningf("updateAutoCheckSystemUnit failed: %v", err)
 			}
@@ -799,48 +802,12 @@ func (m *Manager) handleAutoCheckEvent() error {
 		return nil
 	}
 
-	if m.config.PlatformUpdate {
-		return m.handleAutoCheckWithPlatform()
-	}
-
 	_, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0]))
 	if err != nil {
 		logger.Warning(err)
 		return err
 	}
 	return nil
-}
-
-func (m *Manager) handleAutoCheckWithPlatform() error {
-	logger.Infof("handle AutoCheck with platform")
-	needUpdate, err := m.checkPlatformPolicy()
-	if err != nil {
-		logger.Warningf("check platform policy failed: %v", err)
-		if _, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0])); err != nil {
-			logger.Warning(err)
-		}
-		return err
-	}
-
-	if needUpdate {
-		if _, err := m.updateSource(dbus.Sender(m.service.Conn().Names()[0])); err != nil {
-			logger.Warning(err)
-			return err
-		}
-	} else {
-		logger.Infof("platform policy no update needed, updating auto check timer")
-		if err := m.updateAutoCheckSystemUnit(); err != nil {
-			logger.Warning(err)
-		}
-	}
-	return nil
-}
-
-func (m *Manager) checkPlatformPolicy() (bool, error) {
-	if !m.config.PlatformUpdate {
-		return true, nil
-	}
-	return m.updatePlatform.CheckPolicyChanged()
 }
 
 func (m *Manager) handleAutoCleanEvent() error {
