@@ -143,16 +143,33 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			if err1 != nil {
 				logger.Warning(err1)
 			}
-			err1 = m.updateAutoCheckSystemUnit()
-			if err1 != nil {
-				logger.Warning(err1)
-			}
+		}
+		if err := m.updateAutoCheckSystemUnit(); err != nil {
+			logger.Warning(err)
 		}
 	}()
+
 	environ, err = makeEnvironWithSender(m, sender)
 	if err != nil {
 		return nil, err
 	}
+
+	_ = os.Setenv("http_proxy", environ["http_proxy"])
+	_ = os.Setenv("https_proxy", environ["https_proxy"])
+	// 检查任务开始后,从更新平台获取仓库、更新注记等信息
+	// 从更新平台获取数据:系统更新和安全更新流程都包含
+	if err := m.updatePlatform.GenUpdatePolicyByToken(); err != nil {
+		if m.config.PlatformUpdate {
+			return nil, &system.JobError{
+				ErrType:   system.ErrorPlatformUnreachable,
+				ErrDetail: "failed to get update policy by token" + err.Error(),
+			}
+		} else {
+			logger.Warningf("updatePlatform gen token failed: %v", err)
+			return nil, nil
+		}
+	}
+
 	prepareUpdateSource()
 	m.reloadOemConfig(true)
 	m.updatePlatform.Token = updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
@@ -352,23 +369,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				if m.config.IntranetUpdate {
 					// 独立客户端为了减少更新平台的瞬时负载，采取0-58秒内随机开始检查更新任务
 					time.Sleep(time.Duration(rand.Intn(59)) * time.Second)
-				}
-				_ = os.Setenv("http_proxy", environ["http_proxy"])
-				_ = os.Setenv("https_proxy", environ["https_proxy"])
-				// 检查任务开始后,从更新平台获取仓库、更新注记等信息
-				// 从更新平台获取数据:系统更新和安全更新流程都包含
-				err = m.updatePlatform.GenUpdatePolicyByToken()
-				if err != nil {
-					if m.config.PlatformUpdate {
-						job.retry = 0
-						return &system.JobError{
-							ErrType:   system.ErrorPlatformUnreachable,
-							ErrDetail: "failed to get update policy by token" + err.Error(),
-						}
-					} else {
-						logger.Warningf("updatePlatform gen token failed: %v", err)
-						return nil
-					}
 				}
 				if m.updater == nil {
 					return errors.New("Manager.updater is nil")
