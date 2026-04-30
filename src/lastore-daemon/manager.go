@@ -89,6 +89,7 @@ type Manager struct {
 	inhibitAutoQuitCount int32
 	autoQuitCountMu      sync.Mutex
 	lastoreUnitCacheMu   sync.Mutex
+	hardwareDataMu       sync.Mutex
 
 	loginManager  login1.Manager
 	sysDBusDaemon ofdbus.DBus
@@ -212,6 +213,26 @@ func (m *Manager) initDbusSignalListen() {
 	m.sysPower.InitSignalExt(m.signalLoop, true)
 }
 
+func (m *Manager) syncHardwareRelatedData() {
+	m.hardwareDataMu.Lock()
+	defer m.hardwareDataMu.Unlock()
+
+	logger.Info("syncing hardware related data...")
+
+	includeDiskInfo := m.config.IncludeDiskInfo
+	getHardwareIdByHelper := m.config.GetHardwareIdByHelper
+
+	token := updateplatform.UpdateTokenConfigFile(includeDiskInfo, getHardwareIdByHelper)
+	if m.updatePlatform != nil {
+		m.updatePlatform.Token = token
+	}
+
+	hardwareId := updateplatform.GetHardwareId(includeDiskInfo, getHardwareIdByHelper)
+	m.setPropHardwareId(hardwareId)
+
+	logger.Infof("sync completed")
+}
+
 func (m *Manager) initDSettingsChangedHandle() {
 	m.config.ConnectConfigChanged(config.DSettingsKeyLastoreDaemonStatus, func(oldValue, newValue interface{}) {
 		oldStatus := oldValue.(config.LastoreDaemonStatus)
@@ -272,6 +293,14 @@ func (m *Manager) initDSettingsChangedHandle() {
 		incrementalUpdate := m.config.UseIncrementalUpdate()
 		m.UpdateIncrementalUpdate(incrementalUpdate)
 		logger.Infof("IncrementalUpdate changed to %v with IntranetUpdate=%v", incrementalUpdate, intranetUpdate)
+	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyIncludeDiskInfo, func(oldValue, newValue interface{}) {
+		logger.Infof("IncludeDiskInfo changed: %v -> %v", oldValue, newValue)
+		m.syncHardwareRelatedData()
+	})
+	m.config.ConnectConfigChanged(config.DSettingsKeyGetHardwareIdByHelper, func(oldValue, newValue interface{}) {
+		logger.Infof("GetHardwareIdByHelper changed: %v -> %v", oldValue, newValue)
+		m.syncHardwareRelatedData()
 	})
 }
 

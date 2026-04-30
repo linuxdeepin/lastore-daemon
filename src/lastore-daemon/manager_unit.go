@@ -19,7 +19,6 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -408,11 +407,7 @@ func (m *Manager) delHandleSystemEvent(sender dbus.Sender, eventType string) err
 		}()
 	case OsVersionChanged:
 		logger.Info("enter update token from OsVersionChanged")
-		if m.config.IntranetUpdate {
-			updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
-		} else {
-			go updateplatform.UpdateTokenConfigFile(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
-		}
+		m.syncHardwareRelatedData()
 	case InitIdleDownload:
 		m.updater.initIdleDownloadConfig()
 	case AutoDownload:

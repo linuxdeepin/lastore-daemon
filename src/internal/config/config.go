@@ -206,7 +206,7 @@ const (
 	DSettingsKeyPlatformUpdate                       = "platform-update"
 	DSettingsKeyPlatformUrl                          = "platform-url"
 	DSettingsKeyStartCheckRange                      = "start-check-range"
-	dSettingsKeyIncludeDiskInfo                      = "include-disk-info"
+	DSettingsKeyIncludeDiskInfo                      = "include-disk-info"
 	dSettingsKeyPostUpgradeOnCalendar                = "post-upgrade-on-calendar"
 	dSettingsKeyUpdateTime                           = "update-time"
 	dSettingsKeyPlatformDisabled                     = "platform-disabled"
@@ -222,7 +222,7 @@ const (
 	dSettingsKeyPlatformRepoComponents               = "platform-repo-components"
 	DSettingsKeyIncrementalUpdate                    = "incremental-update"
 	DSettingsKeyIntranetUpdate                       = "intranet-update"
-	dSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
+	DSettingsKeyGetHardwareIdByHelper                = "hardware-id-from-helper"
 	DSettingsKeyDeliveryRemoteDownloadGlobalLimit    = "delivery-remote-download-global-limit"
 	DSettingsKeyDeliveryRemoteUploadGlobalLimit      = "delivery-remote-upload-global-limit"
 	DSettingsKeyDeliveryRemoteDownloadPeakLimit      = "delivery-remote-download-peak-limit"
@@ -656,7 +656,7 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncludeDiskInfo)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncludeDiskInfo)
 	if err != nil {
 		logger.Warning(err)
 		c.IncludeDiskInfo = true
@@ -748,7 +748,7 @@ func getConfigFromDSettings() *Config {
 		c.SecurityRepoType = RepoType(v.Value().(string))
 	}
 
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyGetHardwareIdByHelper)
+	v, err = c.dsLastoreManager.Value(0, DSettingsKeyGetHardwareIdByHelper)
 	if err != nil {
 		logger.Warning(err)
 	} else {
@@ -838,19 +838,35 @@ func getConfigFromDSettings() *Config {
 				}
 				c.dsettingsChangedCbMapMu.Unlock()
 			}
-		case dSettingsKeyGetHardwareIdByHelper:
-			v, err = c.dsLastoreManager.Value(0, dSettingsKeyGetHardwareIdByHelper)
+		case DSettingsKeyGetHardwareIdByHelper:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyGetHardwareIdByHelper)
 			if err != nil {
 				logger.Warning(err)
 			} else {
-				c.GetHardwareIdByHelper = v.Value().(bool)
+				oldValue := c.GetHardwareIdByHelper
+				newValue := v.Value().(bool)
+				c.GetHardwareIdByHelper = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
 			}
-		case dSettingsKeyIncludeDiskInfo:
-			v, err = c.dsLastoreManager.Value(0, dSettingsKeyIncludeDiskInfo)
+		case DSettingsKeyIncludeDiskInfo:
+			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncludeDiskInfo)
 			if err != nil {
 				logger.Warning(err)
 			} else {
-				c.IncludeDiskInfo = v.Value().(bool)
+				oldValue := c.IncludeDiskInfo
+				newValue := v.Value().(bool)
+				c.IncludeDiskInfo = newValue
+				c.dsettingsChangedCbMapMu.Lock()
+				cb := c.dsettingsChangedCbMap[key]
+				if cb != nil {
+					go cb(oldValue, newValue)
+				}
+				c.dsettingsChangedCbMapMu.Unlock()
 			}
 		case DSettingsKeyIncrementalUpdate:
 			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncrementalUpdate)
