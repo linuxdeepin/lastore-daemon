@@ -6,6 +6,7 @@ package updateplatform
 
 import (
 	"bufio"
+	"bytes"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -524,7 +525,7 @@ var _tokenUpdateMu sync.Mutex
 
 // UpdateTokenConfigFile 更新 99lastore-token.conf 文件的内容
 func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) string {
-	logger.Debugf("UpdateTokenConfigFile includeDiskInfo: %v, getHardwareIdByHelper: %v", includeDiskInfo, getHardwareIdByHelper)
+	logger.Infof("UpdateTokenConfigFile includeDiskInfo: %v, getHardwareIdByHelper: %v", includeDiskInfo, getHardwareIdByHelper)
 	logger.Debug("start updateTokenConfigFile")
 	_tokenUpdateMu.Lock()
 	defer _tokenUpdateMu.Unlock()
@@ -552,8 +553,12 @@ func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) str
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	// TODO: may need to use chattr command to set tokenPath as immutable
-	err := os.WriteFile(tokenPath, tokenContent, 0644) // #nosec G306
+	existingContent, err := os.ReadFile(tokenPath)
+	if err == nil && bytes.Equal(existingContent, tokenContent) {
+		logger.Debug("token content unchanged, skip writing")
+		return token
+	}
+	err = os.WriteFile(tokenPath, tokenContent, 0644)
 	if err != nil {
 		logger.Warning(err)
 	}
