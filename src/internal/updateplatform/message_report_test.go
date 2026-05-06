@@ -289,6 +289,12 @@ func TestResetIntranetUpdateSettingsAfterUnregisterEnablesDeliveryAndDisablesSpe
 		if rateInfo.LimitType != ratelimit.RateLimitTypeNo {
 			t.Fatalf("%s LimitType = %d, want %d", name, rateInfo.LimitType, ratelimit.RateLimitTypeNo)
 		}
+		if rateInfo.LimitRate != ratelimit.DefaultRateLimit {
+			t.Fatalf("%s LimitRate = %d, want %d", name, rateInfo.LimitRate, ratelimit.DefaultRateLimit)
+		}
+		if rateInfo.CurrentRate != ratelimit.DefaultRateLimit {
+			t.Fatalf("%s CurrentRate = %d, want %d", name, rateInfo.CurrentRate, ratelimit.DefaultRateLimit)
+		}
 	}
 	assertNoIPFSLimitRate(t, "upload", gotUpload)
 	assertNoIPFSLimitRate(t, "download", gotDownload)

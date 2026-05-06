@@ -15,9 +15,9 @@ const UPGRADE_DELIVERY_SERVICE = "org.deepin.upgradedelivery"
 const UPGRADE_DELIVERY_OBJECT_PATH = "/org/deepin/upgradedelivery"
 const UPGRADE_DELIVERY_INTERFACE = "org.deepin.upgradedelivery"
 
-const DefaultRateLimit = 10 * 1024 // 10KB/s unit: bytes per second
-const MinRateLimit = 10 * 1024     // 10KB/s unit: bytes per second
-const MaxRateLimit = 999999 * 1024 // 999999KB/s unit: bytes per second
+const DefaultRateLimit = 10240 * 1024 // 10240KB/s unit: bytes per second
+const MinRateLimit = 10 * 1024        // 10KB/s unit: bytes per second
+const MaxRateLimit = 999999 * 1024    // 999999KB/s unit: bytes per second
 
 // SyncLimit 服务器端限速配置信息
 type SyncLimit struct {

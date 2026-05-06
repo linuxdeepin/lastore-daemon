@@ -46,7 +46,7 @@ const defaultPlatformRepoComponents = "main community commercial"
 var setIPFSRateLimit = ratelimit.SetIPFSRateLimit
 
 const defaultDownloadSpeedLimitConfig = `{"DownloadSpeedLimitEnabled":false,"LimitSpeed":"1024","IsOnlineSpeedLimit":false}`
-const defaultDeliveryRateLimitConfig = `{"LimitType":0,"StartTime":"0001-01-01T00:00:00Z","EndTime":"0001-01-01T00:00:00Z","LimitRate":10240,"CurrentRate":10240}`
+const defaultDeliveryRateLimitConfig = `{"LimitType":0,"StartTime":"0001-01-01T00:00:00Z","EndTime":"0001-01-01T00:00:00Z","LimitRate":10485760,"CurrentRate":10485760}`
 
 type ProcessEvent struct {
 	TaskID       int    `json:"taskID"`
