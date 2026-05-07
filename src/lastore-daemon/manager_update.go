@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -497,8 +498,8 @@ func (m *Manager) refreshThrottlingFromPlatform() error {
 	}
 
 	if downloadSpeed.IsOnlineSpeedLimit {
-		// 如果启用了在线限速，禁用本地限速
-		if err := m.disableLocalSpeedLimitConfig(); err != nil {
+		// 如果启用了在线限速，禁用本地限速，并将本地限速速度同步为平台下发的限速值
+		if err := m.disableLocalSpeedLimitConfig(downloadSpeed.LimitSpeed); err != nil {
 			logger.Warningf("Failed to disable local speed limit %v", err)
 		}
 	} else {
@@ -534,7 +535,7 @@ func (m *Manager) disableOnlineSpeedLimitConfig() error {
 	return nil
 }
 
-func (m *Manager) disableLocalSpeedLimitConfig() error {
+func (m *Manager) disableLocalSpeedLimitConfig(limitSpeed string) error {
 	var downloadSpeed downloadSpeedLimitConfig
 	if err := json.Unmarshal([]byte(m.config.LocalDownloadSpeedLimitConfig), &downloadSpeed); err != nil {
 		downloadSpeed = downloadSpeedLimitConfig{
@@ -543,10 +544,15 @@ func (m *Manager) disableLocalSpeedLimitConfig() error {
 			IsOnlineSpeedLimit:        false,
 		}
 	}
-	if !downloadSpeed.DownloadSpeedLimitEnabled {
-		return nil
+	oldDownloadSpeed := downloadSpeed
+	if limitSpeed != "" {
+		downloadSpeed.LimitSpeed = limitSpeed
 	}
 	downloadSpeed.DownloadSpeedLimitEnabled = false
+	downloadSpeed.IsOnlineSpeedLimit = false
+	if reflect.DeepEqual(downloadSpeed, oldDownloadSpeed) {
+		return nil
+	}
 	jsonStr, err := json.Marshal(downloadSpeed)
 	if err != nil {
 		return fmt.Errorf("failed to marshal local download speed limit config: %w", err)
