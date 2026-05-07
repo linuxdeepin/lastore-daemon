@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -144,5 +145,28 @@ func TestGetStartupDownloadSpeedLimitConfig(t *testing.T) {
 				t.Fatalf("getStartupDownloadSpeedLimitConfig() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDisableLocalSpeedLimitConfigSyncsPlatformSpeedOnly(t *testing.T) {
+	manager := &Manager{
+		config: &config.Config{
+			LocalDownloadSpeedLimitConfig: `{"DownloadSpeedLimitEnabled":true,"LimitSpeed":"888","IsOnlineSpeedLimit":false}`,
+		},
+	}
+
+	_ = manager.disableLocalSpeedLimitConfig("666")
+
+	var got downloadSpeedLimitConfig
+	if err := json.Unmarshal([]byte(manager.config.LocalDownloadSpeedLimitConfig), &got); err != nil {
+		t.Fatalf("LocalDownloadSpeedLimitConfig unmarshal error = %v", err)
+	}
+	want := downloadSpeedLimitConfig{
+		DownloadSpeedLimitEnabled: false,
+		LimitSpeed:                "666",
+		IsOnlineSpeedLimit:        false,
+	}
+	if got != want {
+		t.Fatalf("LocalDownloadSpeedLimitConfig = %+v, want %+v", got, want)
 	}
 }
