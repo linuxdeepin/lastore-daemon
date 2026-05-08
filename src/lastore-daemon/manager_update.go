@@ -167,7 +167,6 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 			}
 		} else {
 			logger.Warningf("updatePlatform gen token failed: %v", err)
-			return nil, nil
 		}
 	}
 
