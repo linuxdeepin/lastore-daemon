@@ -555,13 +555,14 @@ func (jm *JobManager) removeJob(jobId string, queueName string) error {
 }
 
 func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
+	// OnlyLog 类型基本上都不会设置JobId，将日志输出流程放到JobId判断之前来保证日志正常输出
+	if jm.jobDetailFn != nil && len(info.OriginalLog) > 0 {
+		jm.jobDetailFn(fmt.Sprintf("[%s] %s", time.Now().Format(time.DateTime), info.OriginalLog))
+	}
 	j := jm.findJobById(info.JobId)
 	if j == nil {
 		logger.Warningf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
-	}
-	if jm.jobDetailFn != nil && len(info.OriginalLog) > 0 {
-		jm.jobDetailFn(fmt.Sprintf("[%s] %s", time.Now().Format(time.DateTime), info.OriginalLog))
 	}
 	if info.OnlyLog {
 		return

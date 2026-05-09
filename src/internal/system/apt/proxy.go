@@ -264,7 +264,30 @@ func CheckPkgSystemError(lock bool, indicator system.Indicator) error {
 	if err == nil {
 		return nil
 	}
-	return parsePkgSystemError(outBuf.Bytes(), errBuf.Bytes())
+	if systemErr := parsePkgSystemError(outBuf.Bytes(), errBuf.Bytes()); systemErr != nil {
+		if jobErr, ok := systemErr.(*system.JobError); ok {
+			indicator(system.JobProgressInfo{
+				OnlyLog:     true,
+				OriginalLog: fmt.Sprintf("=== CheckPkg cmd failed: [%s] %s ===\n", jobErr.ErrType, jobErr.ErrDetail),
+			})
+		} else {
+			indicator(system.JobProgressInfo{
+				OnlyLog:     true,
+				OriginalLog: fmt.Sprintf("=== CheckPkg cmd failed: %s ===\n", errBuf.String()),
+			})
+		}
+		return systemErr
+	}
+
+	jobErr := &system.JobError{
+		ErrType:   system.ErrorUnknown,
+		ErrDetail: outBuf.String() + errBuf.String(),
+	}
+	indicator(system.JobProgressInfo{
+		OnlyLog:     true,
+		OriginalLog: fmt.Sprintf("=== CheckPkg cmd failed: [%s] %s ===\n", jobErr.ErrType, jobErr.ErrDetail),
+	})
+	return jobErr
 }
 
 func safeStart(c *system.Command) error {
