@@ -1,3 +1,12 @@
+lastore-daemon (6.2.55) unstable; urgency=medium
+
+  * fix: ensure error logs are output for OnlyLog type and unknown errors
+  * fix: continue updateSource when platform token generation fails with PlatformUpdate disabled
+  * fix: set default rate limit to 10240 (#408)
+  * fix: sync local HTTP speed when online limit is applied (#409)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Mon, 11 May 2026 08:49:45 +0800
+
 lastore-daemon (6.2.54) unstable; urgency=medium
 
   * refactor(timer): merge platform policy check into updateSource flow
