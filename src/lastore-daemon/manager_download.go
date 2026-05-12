@@ -172,8 +172,10 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 	// 不再处理needDownloadSize == 0的情况,因为有可能是其他仓库包含了该仓库的包,导致该仓库无需下载,可以直接继续后续流程,用来切换该仓库的状态
 	// 下载前检查/var分区的磁盘空间是否足够下载,
 	isInsufficientSpace := false
+	var spaceNum int
 	if totalNeedDownloadSize > 0 {
-		spaceNum, err := system.GetFreeSpace("/var")
+		var err error
+		spaceNum, err = system.GetFreeSpace("/var")
 		if err != nil {
 			logger.Warning(err)
 		} else {
@@ -187,7 +189,8 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			ErrDetail:    "You don't have enough free space to download",
 			IsCheckError: true,
 		}
-		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), totalNeedDownloadSize/(1000*1000*1000))
+		needFreeSize := totalNeedDownloadSize - float64(spaceNum)
+		msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %s disk space first."), formatSize(needFreeSize))
 		go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
 		logger.Warning(dbusError.Error())
 		errStr, _ := json.Marshal(dbusError)
@@ -330,8 +333,14 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 							size = totalNeedDownloadSize
 						}
 						if size > 0 {
-							msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %g GB disk space first."), size/(1000*1000*1000))
-							go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+							needFreeSize := size
+							if spaceNum, err := system.GetFreeSpace("/var"); err == nil {
+								needFreeSize = needFreeSize - float64(spaceNum)
+								if needFreeSize > 0 {
+									msg := fmt.Sprintf(gettext.Tr("Downloading updates failed. Please free up %s disk space first."), formatSize(needFreeSize))
+									go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutDefault)
+								}
+							}
 						}
 					} else if strings.Contains(errorContent.ErrType.String(), system.ErrorDamagePackage.String()) {
 						// 下载更新失败，需要apt-get clean后重新下载

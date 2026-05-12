@@ -76,9 +76,9 @@ msgstr "Проверка и установка обновлений..."
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
-"Не удалось загрузить обновления. Пожалуйста, освободите %g пространства на "
+"Не удалось загрузить обновления. Пожалуйста, освободите %s пространства на "
 "диске."
 
 #: ../src/lastore-daemon/manager_download.go:136

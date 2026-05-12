@@ -72,10 +72,10 @@ msgstr "Aktualisierungen werden geprüft und installiert ..."
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
 "Herunterladen von Aktualisierungen ist fehlgeschlagen. Bitte geben Sie "
-"zuerst %g GB Speicherplatz frei."
+"zuerst %s Speicherplatz frei."
 
 #: ../src/lastore-daemon/manager_download.go:136
 msgid "New version available! Downloading..."
