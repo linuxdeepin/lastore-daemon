@@ -6,7 +6,6 @@
 # Translators:
 # Wyatt <wkyung@outlook.com>, 2025
 # Philip CHEUNG, 2025
-# Gary Wang <wzc782970009@gmail.com>, 2025
 # deepiner, 2026
 # 
 #, fuzzy
@@ -71,8 +70,8 @@ msgstr ""
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
-msgstr "更新包下載失敗，請釋放%g GB空間"
+msgid "Downloading updates failed. Please free up %s disk space first."
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
