@@ -7,7 +7,6 @@
 # Hualet Wang (Hualet Wang) <mr.asianwang@gmail.com>, 2025
 # cxbii <mycxbii@gmail.com>, 2025
 # Maggie Liu <maggie.liufei@gmail.com>, 2025
-# Gary Wang <wzc782970009@gmail.com>, 2025
 # . ., 2026
 # deepiner, 2026
 # 
@@ -73,8 +72,8 @@ msgstr "检查和安装更新中..."
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
-msgstr "更新包下载失败，请释放%g GB空间"
+msgid "Downloading updates failed. Please free up %s disk space first."
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
