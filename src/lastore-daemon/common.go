@@ -600,7 +600,7 @@ func checkSenderNsMntValid(pid uint32) bool {
 }
 
 const (
-	polkitActionChangeOwnData          = "org.deepin.dde.accounts.user-administration"
+	polkitActionChangeOwnData          = "com.deepin.lastore.user-administration"
 	polkitActionChangeUpgradeDelivery  = "com.deepin.lastore.doUpgradeDelivery"
 	polkitActionEnableUpgradeDelivery  = "com.deepin.lastore.enableUpgradeDelivery"
 	polkitActionDisableUpgradeDelivery = "com.deepin.lastore.disableUpgradeDelivery"
