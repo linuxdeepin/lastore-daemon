@@ -71,10 +71,8 @@ msgstr "Bezig met afhandelen van updates…"
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
-"De updates kunnen niet worden gedownload. Maak minimaal %g GB schijfruimte "
-"vrij en probeer het opnieuw."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
