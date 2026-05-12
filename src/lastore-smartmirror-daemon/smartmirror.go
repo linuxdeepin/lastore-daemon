@@ -114,6 +114,13 @@ func (s *SmartMirror) SetEnable(enable bool) *dbus.Error {
 
 // Query the best source
 func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (url string, busErr *dbus.Error) {
+	// Ensure that both officialMirror and mirrorHost end with "/" to maintain URL concatenation consistency
+	if !strings.HasSuffix(officialMirror, "/") {
+		officialMirror += "/"
+	}
+	if !strings.HasSuffix(mirrorHost, "/") {
+		mirrorHost += "/"
+	}
 	logger.Debug("Query", original, officialMirror, mirrorHost)
 	s.service.DelayAutoQuit()
 	if !s.Enable {
