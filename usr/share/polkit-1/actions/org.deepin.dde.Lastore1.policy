@@ -81,4 +81,21 @@
             <message xml:lang="zh_HK">關閉優化傳遞需認證</message>
             <annotate key="org.freedesktop.policykit.imply">org.deepin.upgradedelivery.change-status</annotate>
         </action>
+        <action id="com.deepin.lastore.user-administration">
+            <description>Check Authentication</description>
+            <message>Authentication is required to perform this action</message>
+            <defaults>
+                <allow_any>no</allow_any>
+                <allow_inactive>no</allow_inactive>
+                <allow_active>auth_admin</allow_active>
+            </defaults>
+            <description xml:lang="en_US">Check Authentication</description>
+            <message xml:lang="en_US">Authentication is required to perform this action</message>
+            <description xml:lang="zh_CN">需要密码认证</description>
+            <message xml:lang="zh_CN">当前操作需要密码认证</message>
+            <description xml:lang="zh_TW">需要密碼認證</description>
+            <message xml:lang="zh_TW">當前操作需要密碼認證</message>
+            <description xml:lang="zh_HK">需要密碼認證</description>
+            <message xml:lang="zh_HK">當前操作需要密碼認證</message>
+        </action>
 </policyconfig>
