@@ -7,7 +7,6 @@
 # Gunash Kamzaevi <g.kamzaevi@iset.ge>, 2025
 # Nicat Məmmədov <n1c4t97@gmail.com>, 2025
 # deepiner, 2025
-# Gary Wang <wzc782970009@gmail.com>, 2025
 # Xəyyam Qocayev <xxmn77@gmail.com>, 2026
 # 
 #, fuzzy
@@ -72,10 +71,8 @@ msgstr "Yenilənmələr yoxlanılır və quraşdırılır..."
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
-"Yenilənmələrin endirilməsi mümkün olmadı. Öncə %g QB disk sahəsini "
-"təmizləyin."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
