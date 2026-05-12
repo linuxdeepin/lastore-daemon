@@ -316,7 +316,7 @@ func GetFreeSpace(diskPath string) (int, error) {
 		spaceStr = strings.TrimSpace(spaceStr)
 		spaceNum, err := strconv.Atoi(spaceStr)
 		if err == nil {
-			spaceNum = spaceNum * 1000
+			spaceNum = spaceNum * 1024
 			return spaceNum, nil
 		} else {
 			return 0, err

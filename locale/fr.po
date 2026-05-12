@@ -74,9 +74,9 @@ msgstr "Vérification et installation des mises à jour..."
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
-"Le téléchargement des mises à jour a échoué. Veuillez libérer %gGo d'espace "
+"Le téléchargement des mises à jour a échoué. Veuillez libérer %s d'espace "
 "disque au préalable."
 
 #: ../src/lastore-daemon/manager_download.go:136

@@ -685,6 +685,28 @@ func getFileSha256(filePath string) (string, error) {
 }
 
 // getContentSha256 calculates the SHA-256 hash of a string.
+func formatSize(bytes float64) string {
+	const (
+		KB = 1024.0
+		MB = KB * 1024
+		GB = MB * 1024
+		TB = GB * 1024
+	)
+	cap := uint64(bytes)
+	switch {
+	case cap < 1024:
+		return fmt.Sprintf("%dB", cap)
+	case cap < 1024*1024:
+		return fmt.Sprintf("%.2fKB", bytes/KB)
+	case cap < 1024*1024*1024:
+		return fmt.Sprintf("%.2fMB", bytes/MB)
+	case cap < 1024*1024*1024*1024:
+		return fmt.Sprintf("%.2fGB", bytes/GB)
+	default:
+		return fmt.Sprintf("%.2fTB", bytes/TB)
+	}
+}
+
 func getContentSha256(content string) string {
 	hash := sha256.New()
 	hash.Write([]byte(content))

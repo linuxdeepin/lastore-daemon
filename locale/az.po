@@ -72,9 +72,9 @@ msgstr "Yenilənmələr yoxlanılır və quraşdırılır..."
 #: ../src/lastore-daemon/manager_download.go:78
 #: ../src/lastore-daemon/manager_download.go:172
 #, c-format
-msgid "Downloading updates failed. Please free up %g GB disk space first."
+msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
-"Yenilənmələrin endirilməsi mümkün olmadı. Öncə %g QB disk sahəsini "
+"Yenilənmələrin endirilməsi mümkün olmadı. Öncə %s disk sahəsini "
 "təmizləyin."
 
 #: ../src/lastore-daemon/manager_download.go:136
