@@ -78,3 +78,94 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, configAfter.AppstoreRegion, configBefore.AppstoreRegion+"Test")
 	assert.Equal(t, configAfter.UpdateMode, configBefore.UpdateMode+1)
 }
+
+func withTestCachePaths(t *testing.T) {
+	t.Helper()
+
+	tempDir := t.TempDir()
+	prevOnline := onlineCachePath
+	prevClassified := classifiedCachePath
+	prevLegacyOnline := legacyOnlineCachePath
+	prevLegacyClassified := legacyClassifiedCachePath
+	onlineCachePath = tempDir + "/platform_cache.json"
+	classifiedCachePath = tempDir + "/classified_cache.json"
+	legacyOnlineCachePath = tempDir + "/legacy_platform_cache.json"
+	legacyClassifiedCachePath = tempDir + "/legacy_classified_cache.json"
+
+	t.Cleanup(func() {
+		onlineCachePath = prevOnline
+		classifiedCachePath = prevClassified
+		legacyOnlineCachePath = prevLegacyOnline
+		legacyClassifiedCachePath = prevLegacyClassified
+	})
+}
+
+func TestSetOnlineCacheRejectsSymlinkTarget(t *testing.T) {
+	withTestCachePaths(t)
+
+	targetFile, err := os.CreateTemp("", "lastore-online-cache-target-*")
+	require.NoError(t, err)
+	targetPath := targetFile.Name()
+	require.NoError(t, targetFile.Close())
+	t.Cleanup(func() {
+		_ = os.Remove(targetPath)
+	})
+
+	originalContent := []byte("original")
+	require.NoError(t, os.WriteFile(targetPath, originalContent, 0600))
+	require.NoError(t, os.Symlink(targetPath, onlineCachePath))
+
+	cfg := &Config{}
+	err = cfg.SetOnlineCache(`{"safe":true}`)
+	require.NoError(t, err)
+
+	assert.NoFileExists(t, onlineCachePath+".tmp-*")
+	content, readErr := os.ReadFile(onlineCachePath)
+	require.NoError(t, readErr)
+	assert.Equal(t, `{"safe":true}`, string(content))
+
+	content, readErr = os.ReadFile(targetPath)
+	require.NoError(t, readErr)
+	assert.Equal(t, originalContent, content)
+}
+
+func TestSetClassifiedUpdatablePackagesRejectsSymlinkTarget(t *testing.T) {
+	withTestCachePaths(t)
+
+	targetFile, err := os.CreateTemp("", "lastore-classified-cache-target-*")
+	require.NoError(t, err)
+	targetPath := targetFile.Name()
+	require.NoError(t, targetFile.Close())
+	t.Cleanup(func() {
+		_ = os.Remove(targetPath)
+	})
+
+	originalContent := []byte("original")
+	require.NoError(t, os.WriteFile(targetPath, originalContent, 0600))
+	require.NoError(t, os.Symlink(targetPath, classifiedCachePath))
+
+	cfg := &Config{}
+	err = cfg.SetClassifiedUpdatablePackages(map[string][]string{
+		"system": {"pkg1"},
+	})
+	require.NoError(t, err)
+
+	content, readErr := os.ReadFile(classifiedCachePath)
+	require.NoError(t, readErr)
+	assert.Contains(t, string(content), "system")
+
+	content, readErr = os.ReadFile(targetPath)
+	require.NoError(t, readErr)
+	assert.Equal(t, originalContent, content)
+}
+
+func TestReadCacheWithLegacyFallback(t *testing.T) {
+	withTestCachePaths(t)
+
+	legacyContent := []byte(`{"cached":true}`)
+	require.NoError(t, os.WriteFile(legacyOnlineCachePath, legacyContent, 0600))
+
+	content, err := readCacheWithLegacyFallback(onlineCachePath, legacyOnlineCachePath)
+	require.NoError(t, err)
+	assert.Equal(t, legacyContent, content)
+}

@@ -6,6 +6,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/linuxdeepin/go-lib/log"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
@@ -238,6 +240,13 @@ const (
 )
 
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
+
+var (
+	legacyOnlineCachePath     = "/tmp/platform_cache.json"
+	legacyClassifiedCachePath = "/tmp/classified_cache.json"
+	onlineCachePath           = "/var/lib/lastore/platform_cache.json"
+	classifiedCachePath       = "/var/lib/lastore/classified_cache.json"
+)
 
 func getConfigFromDSettings() *Config {
 	c := &Config{}
@@ -766,7 +775,7 @@ func getConfigFromDSettings() *Config {
 	}
 
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
-	content, err := os.ReadFile(classifiedCachePath)
+	content, err := readCacheWithLegacyFallback(classifiedCachePath, legacyClassifiedCachePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logger.Warning(err)
@@ -779,7 +788,7 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 
-	content, err = os.ReadFile(onlineCachePath)
+	content, err = readCacheWithLegacyFallback(onlineCachePath, legacyOnlineCachePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logger.Warning(err)
@@ -1263,11 +1272,6 @@ func (c *Config) SetStartCheckRange(checkRange []int) error {
 	return c.save(DSettingsKeyStartCheckRange, variants)
 }
 
-const (
-	onlineCachePath     = "/tmp/platform_cache.json"
-	classifiedCachePath = "/tmp/classified_cache.json"
-)
-
 func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) error {
 	content, err := json.Marshal(pkgMap)
 	if err != nil {
@@ -1275,12 +1279,23 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 		return err
 	}
 	c.ClassifiedUpdatablePackages = pkgMap
-	return os.WriteFile(classifiedCachePath, content, 0644)
+	return utils.WriteFileSecurely(classifiedCachePath, content, 0644)
 }
 
 func (c *Config) SetOnlineCache(cache string) error {
 	c.OnlineCache = cache
-	return os.WriteFile(onlineCachePath, []byte(cache), 0644)
+	return utils.WriteFileSecurely(onlineCachePath, []byte(cache), 0644)
+}
+
+func readCacheWithLegacyFallback(path, legacyPath string) ([]byte, error) {
+	content, err := os.ReadFile(path)
+	if err == nil || !errors.Is(err, os.ErrNotExist) {
+		return content, err
+	}
+	if legacyPath == "" {
+		return nil, err
+	}
+	return os.ReadFile(legacyPath)
 }
 
 func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {

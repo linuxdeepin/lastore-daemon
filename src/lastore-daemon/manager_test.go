@@ -6,11 +6,13 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/stretchr/testify/assert"
@@ -62,9 +64,16 @@ func Test_canAutoQuit(t *testing.T) {
 }
 
 func Test_saveUpdateSourceOnce(t *testing.T) {
+	tempDir := t.TempDir()
+	prevUnitCache := lastoreUnitCache
+	lastoreUnitCache = filepath.Join(tempDir, "lastoreUnitCache")
+	t.Cleanup(func() {
+		lastoreUnitCache = prevUnitCache
+	})
+
 	kf := keyfile.NewKeyFile()
 	kf.SetBool("RecordData", "UpdateSourceOnce", false)
-	err := kf.SaveToFile(lastoreUnitCache)
+	err := utils.SaveKeyFileSecurely(lastoreUnitCache, kf, 0644)
 	if err != nil {
 		logger.Warning(err)
 		return
@@ -77,4 +86,17 @@ func Test_saveUpdateSourceOnce(t *testing.T) {
 	assert.FileExists(t, lastoreUnitCache)
 	m.loadUpdateSourceOnce()
 	assert.Equal(t, true, m.updateSourceOnce)
+}
+
+func Test_saveUserAgentRecordContent(t *testing.T) {
+	tempDir := t.TempDir()
+	prevRecordPath := userAgentRecordPath
+	userAgentRecordPath = filepath.Join(tempDir, "lastoreAgentCache")
+	t.Cleanup(func() {
+		userAgentRecordPath = prevRecordPath
+	})
+
+	agents := newUserAgentMap()
+	agents.saveRecordContent(userAgentRecordPath)
+	assert.FileExists(t, userAgentRecordPath)
 }

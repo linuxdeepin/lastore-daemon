@@ -19,6 +19,7 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -26,11 +27,11 @@ import (
 )
 
 const (
-	lastoreUnitCache = "/tmp/lastoreUnitCache"
 	run              = "systemd-run"
-	lastoreDBusCmd   = "dbus-send --system --print-reply --dest=org.deepin.dde.Lastore1 /org/deepin/dde/Lastore1 org.deepin.dde.Lastore1.Manager.HandleSystemEvent"
 	deepinDaemonUser = "deepin-daemon"
 )
+
+var lastoreUnitCache = "/run/lastore/lastoreUnitCache"
 
 // isFirstBoot startOfflineTask执行前执行有效
 func isFirstBoot() bool {
@@ -176,7 +177,7 @@ func (m *Manager) startOfflineTask() {
 		kf.SetString("UnitName", string(name), fmt.Sprintf("%s.unit", name))
 	}
 
-	err := kf.SaveToFile(lastoreUnitCache)
+	err := utils.SaveKeyFileSecurely(lastoreUnitCache, kf, 0644)
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -194,7 +195,7 @@ func (m *Manager) saveUpdateSourceOnce() {
 		return
 	}
 	kf.SetBool("RecordData", "UpdateSourceOnce", true)
-	err = kf.SaveToFile(lastoreUnitCache)
+	err = utils.SaveKeyFileSecurely(lastoreUnitCache, kf, 0644)
 	if err != nil {
 		logger.Warning(err)
 	}

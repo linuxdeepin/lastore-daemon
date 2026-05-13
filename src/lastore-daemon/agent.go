@@ -21,7 +21,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
-const userAgentRecordPath = "/tmp/lastoreAgentCache"
+var userAgentRecordPath = "/run/lastore/lastoreAgentCache"
 
 type userAgentMap struct {
 	mu         sync.Mutex
@@ -324,7 +324,12 @@ func (m *userAgentMap) getAgentsInfo() *userAgentInfoMap {
 
 // 将agent数据序列化成JSON格式写入recordFilePath中
 func (m *userAgentMap) saveRecordContent(recordFilePath string) {
-	err := utils.WriteData(recordFilePath, m.getAgentsInfo())
+	content, err := json.Marshal(m.getAgentsInfo())
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = utils.WriteFileSecurely(recordFilePath, content, 0600)
 	if err != nil {
 		logger.Warning(err)
 	}
