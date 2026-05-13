@@ -125,6 +125,9 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 		}
 		for _, typ := range system.AllInstallUpdateType() {
 			if typ&mode != 0 {
+				if sizeMap[typ.JobType()] == 0 {
+					continue
+				}
 				// 使用dist-upgrade解决"有正在安装job时，依赖环境发生改变而导致检查依赖错误的问题"
 				partJob := NewJob(jm.service, genJobId(jobType), jobName, packageMap[typ.JobType()], system.PrepareDistUpgradeJobType, DownloadQueue, environ)
 				if utils.IsDir(system.GetCategorySourceMap()[typ]) {
@@ -150,6 +153,9 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 				partJob._InitProgressRange(holderSize/allDownloadSize, (holderSize+sizeMap[typ.JobType()])/allDownloadSize)
 				holderSize += sizeMap[typ.JobType()]
 			}
+		}
+		if len(jobList) == 0 {
+			return false, nil, fmt.Errorf("no downloadable packages found")
 		}
 		job = jobList[0]
 

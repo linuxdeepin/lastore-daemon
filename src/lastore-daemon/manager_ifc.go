@@ -487,7 +487,7 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 	if err != nil || allSize == system.SizeUnknown {
 		logger.Warningf("failed to get %v source size:%v", strings.Join(sourcePathList, " and "), err)
 	} else {
-		logger.Infof("%v size is:%v M", strings.Join(sourcePathList, " and "), int64(allSize/(1000*1000)))
+		logger.Infof("%v size is:%s", strings.Join(sourcePathList, " and "), formatSize(float64(allSize)))
 	}
 
 	return int64(allSize), dbusutil.ToError(err)
