@@ -72,6 +72,7 @@ msgstr "Es comproven i s'instal·len actualitzacions..."
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
+"Ha fallat baixar les actualitzacions. Allibereu primer %s d'espai al disc."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
