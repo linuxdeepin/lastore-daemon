@@ -18,9 +18,12 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 	"unsafe"
+
+	"github.com/linuxdeepin/go-lib/keyfile"
 )
 
 func RunCommand(prog string, args ...string) (string, error) {
@@ -178,4 +181,52 @@ func doUnsetEnvC(envName string) {
 	cname := C.CString(envName)
 	defer C.free(unsafe.Pointer(cname))
 	C.unsetenv(cname)
+}
+
+func WriteFileSecurely(path string, content []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+
+	tmpPath := tmpFile.Name()
+	cleanup := true
+	defer func() {
+		_ = tmpFile.Close()
+		if cleanup {
+			_ = os.Remove(tmpPath)
+		}
+	}()
+
+	if _, err = tmpFile.Write(content); err != nil {
+		return err
+	}
+	if err = tmpFile.Chmod(perm); err != nil {
+		return err
+	}
+	if err = tmpFile.Sync(); err != nil {
+		return err
+	}
+	if err = tmpFile.Close(); err != nil {
+		return err
+	}
+	if err = os.Rename(tmpPath, path); err != nil {
+		return err
+	}
+
+	cleanup = false
+	return nil
+}
+
+func SaveKeyFileSecurely(path string, kf *keyfile.KeyFile, perm os.FileMode) error {
+	var buf bytes.Buffer
+	if err := kf.SaveToWriter(&buf); err != nil {
+		return err
+	}
+	return WriteFileSecurely(path, buf.Bytes(), perm)
 }
