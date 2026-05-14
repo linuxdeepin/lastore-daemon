@@ -15,7 +15,7 @@ func (i *immutableManager) osTreeCmd(args []string) (out string, err error) {
 	if system.NormalFileExists(system.DeepinImmutableCtlPath) {
 		cmd := exec.Command(system.DeepinImmutableCtlPath, args...) // #nosec G204
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
-		cmd.Env = append(cmd.Env, originalLocaleEnvs...)
+		cmd.Env = append(cmd.Env, system.OriginalLocaleEnvs...)
 		logger.Info("run command:", cmd.Args)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout

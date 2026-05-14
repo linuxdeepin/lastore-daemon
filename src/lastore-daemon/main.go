@@ -65,7 +65,7 @@ func main() {
 	}
 
 	// Collect and clear locale environment variables
-	collectAndClearLocaleEnvs()
+	system.CollectAndClearLocaleEnvs()
 
 	gettext.InitI18n()
 	gettext.Textdomain("lastore-daemon")
