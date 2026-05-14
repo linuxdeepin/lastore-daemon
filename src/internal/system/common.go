@@ -19,6 +19,7 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/log"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 const (
@@ -39,11 +40,25 @@ type MirrorSource struct {
 
 var RepoInfos []RepositoryInfo
 var logger = log.NewLogger("lastore/system")
+var OriginalLocaleEnvs []string
 
 type RepositoryInfo struct {
 	Name   string `json:"name"`
 	Url    string `json:"url"`
 	Mirror string `json:"mirror"`
+}
+
+// CollectAndClearLocaleEnvs stores current locale envs for child processes that
+// still need them, then clears them from the daemon process environment.
+func CollectAndClearLocaleEnvs() {
+	OriginalLocaleEnvs = nil
+	for _, localeEnvName := range []string{"LC_ALL", "LANGUAGE", "LC_MESSAGES", "LANG"} {
+		localeEnvValue, exists := os.LookupEnv(localeEnvName)
+		if exists {
+			OriginalLocaleEnvs = append(OriginalLocaleEnvs, localeEnvName+"="+localeEnvValue)
+		}
+		_ = utils.UnsetEnv(localeEnvName)
+	}
 }
 
 func DecodeJson(fpath string, d interface{}) error {

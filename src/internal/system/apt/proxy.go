@@ -756,6 +756,14 @@ func (p *APTSystem) OsBackup(jobId string) error {
 	environ := map[string]string{
 		"IMMUTABLE_DISABLE_REMOUNT": "false",
 	}
+	for _, env := range system.OriginalLocaleEnvs {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		environ[parts[0]] = parts[1]
+	}
+
 	c.SetEnv(environ)
 	c.Indicator(system.JobProgressInfo{
 		JobId:         jobId,
