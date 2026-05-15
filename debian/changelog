@@ -1,3 +1,14 @@
+lastore-daemon (6.2.56) unstable; urgency=medium
+
+  * refactor(system): move locale env collection to system package for child process reuse (#419)
+  * feat(security): migrate cache files and add secure file writing (#417)
+  * fix(job_manager): skip zero-size packages and handle empty job list (#416)
+  * fix(smartmirror): update CDN mirror source URLs with /deepin/ path prefix
+  * feat(polkit): add custom action for user administration (#415)
+  * fix(disk): correct disk space calculation and improve size display (#413)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 15 May 2026 14:26:04 +0800
+
 lastore-daemon (6.2.55) unstable; urgency=medium
 
   * fix: ensure error logs are output for OnlyLog type and unknown errors
