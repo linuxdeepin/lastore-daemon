@@ -72,7 +72,7 @@ msgstr "Päivityksiä tarkistetaan ja asennetaan..."
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
-msgstr ""
+msgstr "Päivitysten lataaminen epäonnistui. Vapauta ensin %s levytilaa."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
