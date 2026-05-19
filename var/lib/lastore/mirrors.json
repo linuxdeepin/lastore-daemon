@@ -16,8 +16,8 @@
     "name": "[US] Linux Kernel Archives",
     "url": "http://mirrors.kernel.org/deepin/",
     "name_locale": {
-      "zh_CN": "[US] Linux Kernel Archives",
-      "zh_TW": "[US] Linux Kernel Archives"
+      "zh_CN": "[US] Linux 内核归档",
+      "zh_TW": "[US] Linux 內核歸檔"
     },
     "weight": 90000,
     "country": "US",
@@ -28,8 +28,8 @@
     "name": "[CN] Aliyun",
     "url": "http://mirrors.aliyun.com/deepin/",
     "name_locale": {
-      "zh_CN": "[CN] 阿里云 ",
-      "zh_TW": "[CN] 阿裏雲 "
+      "zh_CN": "[CN] 阿里云",
+      "zh_TW": "[CN] 阿裏雲"
     },
     "weight": 80000,
     "country": "CN",
@@ -100,8 +100,8 @@
     "name": "[DE] University of Erlangen-Nuremberg",
     "url": "http://ftp.uni-erlangen.de/deepin/",
     "name_locale": {
-      "zh_CN": "[DE] University of Erlangen-Nuremberg",
-      "zh_TW": "[DE] University of Erlangen-Nuremberg"
+      "zh_CN": "[DE] 埃尔朗根-纽伦堡大学",
+      "zh_TW": "[DE] 埃爾朗根-紐倫堡大學"
     },
     "weight": 18000,
     "country": "DE",
@@ -124,8 +124,8 @@
     "name": "[NL] NLUUG",
     "url": "https://ftp.nluug.nl/os/Linux/distr/deepin/",
     "name_locale": {
-      "zh_CN": "[NL] NLUUG",
-      "zh_TW": "[NL] NLUUG"
+      "zh_CN": "[NL] 荷兰 Unix 用户组",
+      "zh_TW": "[NL] 荷蘭 Unix 使用者群組"
     },
     "weight": 17000,
     "country": "NL",
@@ -133,7 +133,7 @@
   },
   {
     "id": "SNT",
-    "name": "[NT] Universiteit Twente",
+    "name": "[NL] Universiteit Twente",
     "url": "http://ftp.snt.utwente.nl/pub/os/linux/deepin/",
     "name_locale": {
       "zh_CN": "[NL] 特文特大学",
@@ -144,38 +144,14 @@
     "adjust_delay": 0
   },
   {
-    "id": "Zetup",
-    "name": "[SE] Zetup AB",
-    "url": "http://mirror.zetup.net/deepin/",
-    "name_locale": {
-      "zh_CN": "[SE] Zetup AB",
-      "zh_TW": "[SE] Zetup AB"
-    },
-    "weight": 15000,
-    "country": "SE",
-    "adjust_delay": 0
-  },
-  {
     "id": "Princeton University",
     "name": "Princeton University",
     "url": "http://mirror.math.princeton.edu/pub/deepin/",
     "name_locale": {
-      "zh_CN": "Princeton University",
-      "zh_TW": "Princeton University"
+      "zh_CN": "[US] 普林斯顿大学",
+      "zh_TW": "[US] 普林斯頓大學"
     },
     "weight": 13000,
-    "country": "US",
-    "adjust_delay": 0
-  },
-  {
-    "id": "xTom",
-    "name": "xTom",
-    "url": "https://mirrors.xtom.com/deepin/",
-    "name_locale": {
-      "zh_CN": "xTom",
-      "zh_TW": "xTom"
-    },
-    "weight": 12500,
     "country": "US",
     "adjust_delay": 0
   },
@@ -221,7 +197,7 @@
     "url": "http://kartolo.sby.datautama.net.id/deepin/",
     "name_locale": {
       "zh_CN": "[ID] Datautama Net Id Company",
-      "zh_TW": "[ID] Datautama Net Id Company "
+      "zh_TW": "[ID] Datautama Net Id Company"
     },
     "weight": 1350,
     "country": "ID",
@@ -244,8 +220,8 @@
     "name": "[JP] JAIST",
     "url": "http://ftp.jaist.ac.jp/pub/Linux/deepin/",
     "name_locale": {
-      "zh_CN": "[JP] JAIST",
-      "zh_TW": "[JP] JAIST"
+      "zh_CN": "[JP] 北陆先端科学技术大学院大学",
+      "zh_TW": "[JP] 北陸先端科學技術大學院大學"
     },
     "weight": 1200,
     "country": "JP",
@@ -256,8 +232,8 @@
     "name": "[JP] Tsukuba WIDE Public Mirror",
     "url": "http://ftp.tsukuba.wide.ad.jp/Linux/deepin/",
     "name_locale": {
-      "zh_CN": "[JP] Tsukuba WIDE Public Mirror",
-      "zh_TW": "[JP] Tsukuba WIDE Public Mirror"
+      "zh_CN": "[JP] 筑波大学 WIDE 公共镜像",
+      "zh_TW": "[JP] 筑波大學 WIDE 公共鏡像"
     },
     "weight": 800,
     "country": "JP",
@@ -269,7 +245,7 @@
     "url": "http://tux.rainside.sk/deepin/",
     "name_locale": {
       "zh_CN": "[SK] Rainside",
-      "zh_TW": "[SK] Rainside "
+      "zh_TW": "[SK] Rainside"
     },
     "weight": 451,
     "country": "SK",
@@ -364,8 +340,8 @@
     "name": "上海交通大学",
     "url": "http://ftp.sjtu.edu.cn/deepin/",
     "name_locale": {
-      "zh_CN": "上海交通大学",
-      "zh_TW": "上海交通大学"
+      "zh_CN": "[CN] 上海交通大学",
+      "zh_TW": "[CN] 上海交通大学"
     },
     "weight": 59,
     "country": "CN",
@@ -376,8 +352,8 @@
     "name": "兰州大学",
     "url": "http://mirror.lzu.edu.cn/deepin/",
     "name_locale": {
-      "zh_CN": "兰州大学",
-      "zh_TW": "兰州大学"
+      "zh_CN": "[CN] 兰州大学",
+      "zh_TW": "[CN] 兰州大學"
     },
     "weight": 59,
     "country": "CN",
@@ -388,8 +364,8 @@
     "name": "重庆大学",
     "url": "http://mirrors.cqu.edu.cn/deepin/",
     "name_locale": {
-      "zh_CN": "重庆大学",
-      "zh_TW": "重庆大学"
+      "zh_CN": "[CN] 重庆大学",
+      "zh_TW": "[CN] 重庆大學"
     },
     "weight": 59,
     "country": "CN",
@@ -400,8 +376,8 @@
     "name": "Tamkang University",
     "url": "http://ftp.tku.edu.tw/Linux/Deepin/deepin/",
     "name_locale": {
-      "zh_CN": "淡江大学",
-      "zh_TW": "淡江大学"
+      "zh_CN": "[CN] 淡江大学",
+      "zh_TW": "[CN] 淡江大學"
     },
     "weight": 59,
     "country": "CN",
@@ -496,8 +472,8 @@
     "name": "[BR] Federal University of Parana",
     "url": "http://deepin.c3sl.ufpr.br/deepin/",
     "name_locale": {
-      "zh_CN": "Federal University of Parana",
-      "zh_TW": "Federal University of Parana"
+      "zh_CN": "[BR] 巴拉那联邦大学",
+      "zh_TW": "[BR] 巴拉那聯邦大學"
     },
     "weight": 5000,
     "country": "BR",
@@ -508,8 +484,8 @@
     "name": "[CZ] Czech Linux Users' Group",
     "url": "http://ftp.linux.cz/pub/linux/deepin/",
     "name_locale": {
-      "zh_CN": "Czech Linux Users' Group",
-      "zh_TW": "Czech Linux Users' Group"
+      "zh_CN": "[CZ] 捷克 Linux 用户组",
+      "zh_TW": "[CZ] 捷克 Linux 使用者群組"
     },
     "weight": 5000,
     "country": "CZ",
@@ -520,23 +496,11 @@
     "name": "[CZ] Faculty of Informatics",
     "url": "http://ftp.fi.muni.cz/pub/linux/deepin/",
     "name_locale": {
-      "zh_CN": "Faculty of Informatics",
-      "zh_TW": "Faculty of Informatics"
+      "zh_CN": "[CZ] 马萨里克大学信息学院",
+      "zh_TW": "[CZ] 馬薩里克大學資訊學院"
     },
     "weight": 5000,
     "country": "CZ",
-    "adjust_delay": 0
-  },
-  {
-    "id": "dotsrc",
-    "name": "[DMK] dotsrc.org",
-    "url": "http://mirror.dotsrc.org/deepin/",
-    "name_locale": {
-      "zh_CN": "dotsrc.org",
-      "zh_TW": "dotsrc.org"
-    },
-    "weight": 5000,
-    "country": "DMK",
     "adjust_delay": 0
   },
   {
@@ -580,8 +544,8 @@
     "name": "[UA] IP-Connect",
     "url": "http://deepin.ip-connect.vn.ua/",
     "name_locale": {
-      "zh_CN": "Hostsuisse",
-      "zh_TW": "Hostsuisse"
+      "zh_CN": "IP-Connect",
+      "zh_TW": "IP-Connect"
     },
     "weight": 5000,
     "country": "UA",
