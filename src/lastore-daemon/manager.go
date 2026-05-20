@@ -154,6 +154,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 	go func() {
 		m.setPropHardwareId(updateplatform.GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper))
 	}()
+	m.initAgent() // 先初始化 userAgents
 	m.initDbusSignalListen()
 	m.initDSettingsChangedHandle()
 	m.syncThirdPartyDconfig()
@@ -934,6 +935,11 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 
 	uidStr := strconv.Itoa(int(userInfo.UID))
 
+	if m.userAgents == nil {
+		logger.Warning("userAgents not initialized, skipping addSession")
+		return
+	}
+
 	newlyAdded := m.userAgents.addSession(uidStr, session)
 	if newlyAdded {
 		m.watchSession(uidStr, session)
@@ -942,6 +948,10 @@ func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath
 
 func (m *Manager) handleSessionRemoved(sessionId string, sessionPath dbus.ObjectPath) {
 	logger.Debug("session removed", sessionId, sessionPath)
+	if m.userAgents == nil {
+		logger.Warning("userAgents not initialized, skipping removeSession")
+		return
+	}
 	m.userAgents.removeSession(sessionPath)
 }
 

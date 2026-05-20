@@ -97,7 +97,6 @@ func main() {
 		logger.Error("failed to new server manager and updater object:", err)
 		return
 	}
-	manager.initAgent()
 	manager.initPlatformManager()
 	if config.IntranetUpdate {
 		//不再依赖检查更新或者online定时器触发，而是直接创建
