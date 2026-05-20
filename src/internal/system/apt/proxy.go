@@ -315,8 +315,8 @@ func safeStart(c *system.Command) error {
 		}
 
 		// cmd run ok
-		// check rm dde?
-		if bytes.Contains(stdout.Bytes(), []byte("Remv dde ")) {
+		// check rm deepin-desktop-environment-core?
+		if bytes.Contains(stdout.Bytes(), []byte("Remv deepin-desktop-environment-core ")) {
 			c.IndicateFailed("removeDDE", "", true)
 			return
 		}
