@@ -73,6 +73,7 @@ msgstr "Шукаємо і встановлюємо оновлення…"
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
+"Не вдалося отримати оновлення. Будь ласка, звільніть на диску принаймні %s."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
