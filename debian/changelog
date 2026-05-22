@@ -1,3 +1,9 @@
+lastore-daemon (6.2.58) unstable; urgency=medium
+
+  * fix: resolve CVE logs only showing entries up to 2021
+
+ -- electricface <songwentai@uniontech.com>  Fri, 22 May 2026 15:30:00 +0800
+
 lastore-daemon (6.2.57) unstable; urgency=medium
 
   * fix(apt): extend core package protection to prevent accidental removal
