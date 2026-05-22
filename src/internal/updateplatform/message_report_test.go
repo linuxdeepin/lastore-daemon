@@ -316,3 +316,93 @@ func assertNoIPFSLimitRate(t *testing.T, name string, limit ratelimit.IPFSLimitR
 		}
 	}
 }
+
+func TestParseBinaryPackagesOldFormat(t *testing.T) {
+	pkgs := parseBinaryPackages("['postgresql-11', 'libpq5']")
+	if len(pkgs) != 2 || pkgs[0] != "postgresql-11" || pkgs[1] != "libpq5" {
+		t.Fatalf("expected [postgresql-11 libpq5], got %v", pkgs)
+	}
+}
+
+func TestParseBinaryPackagesJSONArray(t *testing.T) {
+	pkgs := parseBinaryPackages(`[{"name":"linux-libc-dev","version":"5.10.168-1"},{"name":"libtiff5","version":"4.1.0"}]`)
+	if len(pkgs) != 2 || pkgs[0] != "linux-libc-dev" || pkgs[1] != "libtiff5" {
+		t.Fatalf("expected [linux-libc-dev libtiff5], got %v", pkgs)
+	}
+}
+
+func TestParseBinaryPackagesStringEncodedJSON(t *testing.T) {
+	pkgs := parseBinaryPackages(`"[{\"name\":\"libtiff5\",\"version\":\"4.1.0\"}]"`)
+	if len(pkgs) != 1 || pkgs[0] != "libtiff5" {
+		t.Fatalf("expected [libtiff5], got %v", pkgs)
+	}
+}
+
+func TestParseBinaryPackagesNone(t *testing.T) {
+	pkgs := parseBinaryPackages("None")
+	if len(pkgs) != 0 {
+		t.Fatalf("expected empty, got %v", pkgs)
+	}
+}
+
+func TestParseBinaryPackagesEmpty(t *testing.T) {
+	pkgs := parseBinaryPackages("")
+	if len(pkgs) != 0 {
+		t.Fatalf("expected empty, got %v", pkgs)
+	}
+}
+
+func TestGetCVEUpdateLogsIncludesNewFormatCVEs(t *testing.T) {
+	CVEs = make(map[string]CEVInfo)
+	manager := &UpdatePlatformManager{cvePkgs: make(map[string][]string)}
+	cves := []CEVInfo{
+		{SyncTime: "2026-05-02T12:04:25+08:00", CveId: "CVE-2026-31431", Binary: `[{"name":"linux-libc-dev","version":"5.10"}]`},
+		{SyncTime: "2025-05-02T12:04:25+08:00", CveId: "CVE-2025-32728", Binary: `[{"name":"openssh-client","version":"8.2"}]`},
+		{SyncTime: "2024-05-02T12:04:25+08:00", CveId: "CVE-2021-3677", Binary: "['libpq5']"},
+	}
+	for _, cve := range cves {
+		CVEs[cve.CveId] = cve
+		for _, binary := range parseBinaryPackages(cve.Binary) {
+			manager.cvePkgs[binary] = append(manager.cvePkgs[binary], cve.CveId)
+		}
+	}
+
+	logs := manager.GetCVEUpdateLogs([]string{"linux-libc-dev", "openssh-client", "libpq5"})
+
+	if len(logs) != 3 {
+		t.Fatalf("expected 3 CVE logs, got %d", len(logs))
+	}
+	if _, ok := logs["CVE-2026-31431"]; !ok {
+		t.Fatal("expected CVE-2026-31431 in results")
+	}
+	if _, ok := logs["CVE-2025-32728"]; !ok {
+		t.Fatal("expected CVE-2025-32728 in results")
+	}
+	if _, ok := logs["CVE-2021-3677"]; !ok {
+		t.Fatal("expected CVE-2021-3677 in results")
+	}
+}
+
+func TestGetCVEUpdateLogsStringEncodedJSON(t *testing.T) {
+	CVEs = make(map[string]CEVInfo)
+	manager := &UpdatePlatformManager{cvePkgs: make(map[string][]string)}
+	cves := []CEVInfo{
+		{SyncTime: "2026-05-02T12:04:25+08:00", CveId: "CVE-2024-7006", Binary: `"[{\"name\":\"libtiff5\",\"version\":\"4.1.0\"}]"`},
+		{SyncTime: "2024-05-02T12:04:25+08:00", CveId: "CVE-2020-19143", Binary: "['libtiff5']"},
+	}
+	for _, cve := range cves {
+		CVEs[cve.CveId] = cve
+		for _, binary := range parseBinaryPackages(cve.Binary) {
+			manager.cvePkgs[binary] = append(manager.cvePkgs[binary], cve.CveId)
+		}
+	}
+
+	logs := manager.GetCVEUpdateLogs([]string{"libtiff5"})
+
+	if len(logs) != 2 {
+		t.Fatalf("expected 2 CVE logs, got %d", len(logs))
+	}
+	if _, ok := logs["CVE-2024-7006"]; !ok {
+		t.Fatal("expected CVE-2024-7006 in results")
+	}
+}
