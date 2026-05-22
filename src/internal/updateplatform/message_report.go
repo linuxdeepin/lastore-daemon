@@ -1325,6 +1325,51 @@ func loadLocalCVEData() []byte {
 	return data
 }
 
+type binaryObject struct {
+	Name string `json:"name"`
+}
+
+func parseBinaryPackages(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "None" || len(raw) == 0 {
+		return nil
+	}
+
+	// Try JSON object array: [{"name":"pkg", ...}]
+	decoded := raw
+	if strings.HasPrefix(decoded, "\"") {
+		var s string
+		if json.Unmarshal([]byte(decoded), &s) == nil {
+			decoded = s
+		}
+	}
+	if strings.HasPrefix(decoded, "[") {
+		var objs []binaryObject
+		if json.Unmarshal([]byte(decoded), &objs) == nil && len(objs) > 0 {
+			var pkgs []string
+			for _, o := range objs {
+				if o.Name != "" {
+					pkgs = append(pkgs, o.Name)
+				}
+			}
+			if len(pkgs) > 0 {
+				return pkgs
+			}
+		}
+	}
+
+	// Fall back to old Python-style list: ['pkg1', 'pkg2']
+	str := raw
+	str = strings.ReplaceAll(str, "[", "")
+	str = strings.ReplaceAll(str, "]", "")
+	str = strings.ReplaceAll(str, " ", "")
+	str = strings.ReplaceAll(str, "'", "")
+	if str == "None" || len(str) == 0 {
+		return nil
+	}
+	return strings.Split(str, ",")
+}
+
 func saveCEVData(meta CVEMeta) {
 	data, err := json.Marshal(meta)
 	if err != nil {
@@ -1361,22 +1406,9 @@ func (m *UpdatePlatformManager) updateCVEMetaDataSync() error {
 	m.cveDataTime = cves.DateTime
 	for _, cve := range cves.Cves {
 		CVEs[cve.CveId] = cve
-		str := cve.Binary
-		str = strings.ReplaceAll(str, "[", "")
-		str = strings.ReplaceAll(str, "]", "")
-		str = strings.ReplaceAll(str, " ", "")
-		str = strings.ReplaceAll(str, "'", "")
-		if str == "None" || len(str) == 0 {
-			continue
+		for _, binary := range parseBinaryPackages(cve.Binary) {
+			m.cvePkgs[binary] = append(m.cvePkgs[binary], cve.CveId)
 		}
-
-		binarys := strings.Split(str, ",")
-		if len(binarys) > 0 {
-			for _, binary := range binarys {
-				m.cvePkgs[binary] = append(m.cvePkgs[binary], cve.CveId)
-			}
-		}
-
 	}
 	return nil
 }
