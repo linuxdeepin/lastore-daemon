@@ -31,23 +31,6 @@ const (
 	methodCallerAppStore
 )
 
-func mapMethodCaller(execPath string, cmdLine string) methodCaller {
-	logger.Debug("execPath:", execPath, "cmdLine:", cmdLine)
-	switch execPath {
-	case appStoreDaemonPath, oldAppStoreDaemonPath:
-		return methodCallerAppStore
-	case controlCenterPath:
-		return methodCallerControlCenter
-	default:
-		switch cmdLine {
-		case controlCenterCmdLine:
-			return methodCallerControlCenter
-		default:
-			return methodCallerOtherCaller
-		}
-	}
-}
-
 func (m *Manager) updateSystemOnChanging(onChanging bool, caller methodCaller) {
 	if onChanging && m.inhibitFd == -1 {
 		var why string
