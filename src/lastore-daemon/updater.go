@@ -117,7 +117,7 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	if err != nil {
 		logger.Warning(err)
 	}
-	u.refreshUpgradeDeliveryService()
+	go u.refreshUpgradeDeliveryService()
 	return u
 }
 
