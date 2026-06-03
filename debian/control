@@ -45,7 +45,6 @@ Depends:
  ${shlibs:Depends},
 Recommends:
  deepin-default-settings,
- ${dist:Recommends},
 Description: daemon of lastore
  daemon of lastore - support dbus interface
 
