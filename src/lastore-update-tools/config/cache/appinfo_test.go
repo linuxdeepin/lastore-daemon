@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"testing"
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
@@ -48,7 +49,8 @@ func TestAppInfo(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile("/tmp/appinfo.json", jsonBytes, 0644)
+	outFile := filepath.Join(t.TempDir(), "appinfo.json")
+	err = ioutil.WriteFile(outFile, jsonBytes, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}

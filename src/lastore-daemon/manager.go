@@ -114,6 +114,9 @@ type Manager struct {
 	logTmpFile *os.File
 
 	isAutoCheckTimerFirstRun bool
+	allowCallServiceList    strv.Strv
+	// 特殊 uid 调用方直接放行，当前用于兼容 lightdm greeter 场景。
+	trustedCallerUIDs map[uint32]struct{}
 }
 
 /*
@@ -143,6 +146,7 @@ func NewManager(service *dbusutil.Service, updateApi system.System, c *config.Co
 		securitySourceConfig:    make(UpdateSourceConfig),
 		systemSourceConfig:      make(UpdateSourceConfig),
 		DownloadLimitOnChanging: false,
+		trustedCallerUIDs:       initTrustedCallerUIDs(),
 	}
 	m.reloadOemConfig(true)
 	m.signalLoop.Start()
@@ -206,6 +210,7 @@ func (m *Manager) initDbusSignalListen() {
 			if m.userAgents != nil {
 				m.userAgents.handleNameLost(name)
 			}
+			m.removeAllowCaller(name)
 		}
 	})
 	if err != nil {
@@ -384,12 +389,6 @@ func (m *Manager) delUpdatePackage(sender dbus.Sender, jobName string, packages 
 		return nil, fmt.Errorf("invalid packages arguments %q : %v", packages, err)
 	}
 
-	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine)
 	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
@@ -410,7 +409,6 @@ func (m *Manager) delUpdatePackage(sender dbus.Sender, jobName string, packages 
 		return nil, err
 	}
 
-	job.caller = caller
 	return job, err
 }
 
@@ -696,7 +694,7 @@ func (m *Manager) delFixError(sender dbus.Sender, errType string) (*Job, error) 
 
 func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	// 调用者判断
-	err := checkInvokePermission(m.service, pw.Sender)
+	err := m.checkInvokePermission(pw.Sender)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
@@ -757,7 +755,7 @@ func (m *Manager) syncThirdPartyDconfig() {
 
 func (m *Manager) checkUpdateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
 	// 调用者判断
-	err := checkInvokePermission(m.service, pw.Sender)
+	err := m.checkInvokePermission(pw.Sender)
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
@@ -1336,4 +1334,23 @@ func (m *Manager) processLogFds(message string) {
 
 	// 更新logFds，只保留有效的fd
 	m.logFds = validFds
+}
+
+func (m *Manager) checkInvokePermission(sender dbus.Sender) error {
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		return fmt.Errorf("failed to get sender conn uid:%v", err)
+	}
+	// isTrustedSender 内部自行管理 PropsMu.RLock，此处不再额外加锁，避免死锁。
+	trusted := m.isTrustedSender(uid, sender)
+
+	// 控制中心等前端可能经 deepin-security-loader 启动，先按 trusted sender 放行，其余调用方再走 polkit。
+	if !trusted {
+		err = polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+	}
+	return nil
 }

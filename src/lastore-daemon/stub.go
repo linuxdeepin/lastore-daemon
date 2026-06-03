@@ -32,7 +32,7 @@ func (*Updater) GetInterfaceName() string {
 
 func (m *Manager) updateJobList() {
 	list := m.jobManager.List()
-	var caller methodCaller
+	var isInstallLikeJob bool
 
 	m.PropsMu.RLock()
 	jobChanged := len(list) != len(m.jobList)
@@ -48,7 +48,7 @@ func (m *Manager) updateJobList() {
 		j2.PropsMu.RUnlock()
 		if !j2Cancelable {
 			systemOnChanging = true
-			caller = j2.caller
+			isInstallLikeJob = isInstallLikeJobType(j2.Type)
 		}
 
 		if jobChanged {
@@ -84,7 +84,7 @@ func (m *Manager) updateJobList() {
 
 	if systemOnChanging != m.SystemOnChanging {
 		m.SystemOnChanging = systemOnChanging
-		m.updateSystemOnChanging(systemOnChanging, caller)
+		m.updateSystemOnChanging(systemOnChanging, isInstallLikeJob)
 		_ = m.emitPropChangedSystemOnChanging(systemOnChanging)
 	}
 }

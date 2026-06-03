@@ -76,8 +76,15 @@ func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSo
 }
 
 // SetMirrorSource sets the mirror source used to download packages.
-func (u *Updater) SetMirrorSource(id string) *dbus.Error {
+func (u *Updater) SetMirrorSource(sender dbus.Sender, id string) *dbus.Error {
 	u.service.DelayAutoQuit()
+
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := u.manager.checkInvokePermission(sender)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+
 	return dbusutil.ToError(u.setMirrorSource(id))
 }
 

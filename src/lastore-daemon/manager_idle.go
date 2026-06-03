@@ -162,6 +162,7 @@ func (m *Manager) inhibitAutoQuitCountAdd() {
 
 func (m *Manager) loadLastoreCache() {
 	m.loadUpdateSourceOnce()
+	m.loadAllowCaller()
 }
 
 func (m *Manager) saveLastoreCache() {

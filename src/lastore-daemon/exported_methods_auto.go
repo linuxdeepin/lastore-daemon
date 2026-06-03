@@ -166,6 +166,11 @@ func (v *Manager) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:      v.UpdateSource,
 			OutArgs: []string{"job"},
 		},
+		{
+			Name:   "SetAllowCaller",
+			Fn:     v.SetAllowCaller,
+			InArgs: []string{"uniqueName"},
+		},
 		{ // 危险函数
 			Name:   "GetUpdateDetails",
 			Fn:     v.GetUpdateDetails,

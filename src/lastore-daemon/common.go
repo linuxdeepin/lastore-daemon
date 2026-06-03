@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -23,16 +22,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/linuxdeepin/dde-api/polkit"
 	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/procfs"
-	"github.com/linuxdeepin/go-lib/strv"
 )
 
 var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file|p2p|delivery)://[^ ]+)`)
@@ -270,82 +266,6 @@ func parseAutoDownloadRange(idleDownloadConfig idleDownloadConfig, now time.Time
 	return NewTimeRange(beginTime, endTime), nil
 }
 
-const (
-	appStoreDaemonPath    = "/usr/bin/deepin-app-store-daemon"
-	oldAppStoreDaemonPath = "/usr/bin/deepin-appstore-daemon"
-	printerPath           = "/usr/bin/dde-printer"
-	printerHelperPath     = "/usr/bin/dde-printer-helper"
-	sessionDaemonPath     = "/usr/lib/deepin-daemon/dde-session-daemon"
-	langSelectorPath      = "/usr/lib/deepin-daemon/langselector"
-	controlCenterPath     = "/usr/bin/dde-control-center"
-	controlCenterCmdLine  = "/usr/share/applications/dde-control-center.deskto" // 缺个 p 是因为 deepin-turbo 修改命令的时候 buffer 不够用, 所以截断了.
-	oldControlCenterPath  = "/usr/lib/x86_64-linux-gnu/dde-control-center/dde-control-center-old"
-	dataTransferPath      = "/usr/bin/deepin-data-transfer"
-	amDaemonPath          = "/usr/bin/dde-application-manager"
-	launcherPath          = "/usr/bin/dde-launcher"
-	amDaemonCompatPath    = "/usr/libexec/dde-application-wizard-daemon-compat"
-)
-
-// TODO delete
-var (
-	allowInstallPackageExecPaths = strv.Strv{
-		appStoreDaemonPath,
-		oldAppStoreDaemonPath,
-		printerPath,
-		printerHelperPath,
-		langSelectorPath,
-		controlCenterPath,
-		oldControlCenterPath,
-		dataTransferPath,
-	}
-	allowRemovePackageExecPaths = strv.Strv{
-		appStoreDaemonPath,
-		oldAppStoreDaemonPath,
-		sessionDaemonPath,
-		langSelectorPath,
-		controlCenterPath,
-		oldControlCenterPath,
-		amDaemonPath,
-		launcherPath,
-		amDaemonCompatPath,
-	}
-)
-
-// execPath和cmdLine可以有一个为空,其中一个存在即可作为判断调用者的依据
-func getExecutablePathAndCmdline(service *dbusutil.Service, sender dbus.Sender) (string, string, error) {
-	pid, err := service.GetConnPID(string(sender))
-	if err != nil {
-		return "", "", err
-	}
-
-	proc := procfs.Process(pid)
-	execPath, err := proc.Exe()
-	if err != nil {
-		// 当调用者在使用过程中发生了更新,则在获取该进程的exe时,会出现lstat xxx (deleted)此类的error,如果发生的是覆盖,则该路径依旧存在,因此增加以下判断
-		var pErr *os.PathError
-		ok := errors.As(err, &pErr)
-		if ok {
-			if os.IsNotExist(pErr.Err) {
-				errExecPath := strings.Replace(pErr.Path, "(deleted)", "", -1)
-				oldExecPath := strings.TrimSpace(errExecPath)
-				if system.NormalFileExists(oldExecPath) {
-					execPath = oldExecPath
-					err = nil
-				}
-			}
-		}
-	}
-
-	cmdLine, err1 := proc.Cmdline()
-	if err != nil && err1 != nil {
-		return "", "", errors.New(strings.Join([]string{
-			err.Error(),
-			err1.Error(),
-		}, ";"))
-	}
-	return execPath, strings.Join(cmdLine, " "), nil
-}
-
 // 根据类型过滤数据
 func getFilterPackages(infosMap map[string][]string, updateType system.UpdateType) []string {
 	var r []string
@@ -556,61 +476,12 @@ func getCoreListOnline() []string {
 	return pkgs
 }
 
-var _initProcNsMnt string
-var _once sync.Once
-
-// 通过判断/proc/pid/ns/mnt 和 /proc/1/ns/mnt是否相同，如果不相同，则进程exe字段不可信
-func checkSenderNsMntValid(pid uint32) bool {
-	_once.Do(func() {
-		out, err := os.Readlink("/proc/1/ns/mnt")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		_initProcNsMnt = strings.TrimSpace(out)
-	})
-	c, err := os.Readlink(fmt.Sprintf("/proc/%v/ns/mnt", pid))
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	defer func() {
-		fmt.Printf("pid 1 mnt ns is %v,pid %v mnt ns is %v\n", _initProcNsMnt, pid, strings.TrimSpace(c))
-	}()
-	return strings.TrimSpace(c) == _initProcNsMnt
-}
-
 const (
 	polkitActionChangeOwnData          = "com.deepin.lastore.user-administration"
 	polkitActionChangeUpgradeDelivery  = "com.deepin.lastore.doUpgradeDelivery"
 	polkitActionEnableUpgradeDelivery  = "com.deepin.lastore.enableUpgradeDelivery"
 	polkitActionDisableUpgradeDelivery = "com.deepin.lastore.disableUpgradeDelivery"
 )
-
-func checkInvokePermission(service *dbusutil.Service, sender dbus.Sender) error {
-	uid, err := service.GetConnUID(string(sender))
-	if err != nil {
-		return fmt.Errorf("failed to get sender conn uid:%v", err)
-	}
-	if uid != 0 {
-		execPath, cmdLine, err := getExecutablePathAndCmdline(service, sender)
-		if err != nil {
-			logger.Warning(err)
-			return polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
-		}
-		caller := mapMethodCaller(execPath, cmdLine)
-		if methodCallerControlCenter == caller {
-			return nil
-		} else {
-			logger.Infof("not allow %v  call this method ,need check auth by polkit", caller)
-			return polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
-		}
-
-	} else {
-		logger.Info("caller's uid is 0,allow to call this method")
-		return nil
-	}
-}
 
 type UpdateSourceConfig map[config.RepoType]*RepoInfo
 type RepoInfo struct {
