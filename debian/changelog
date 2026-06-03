@@ -1,3 +1,11 @@
+lastore-daemon (6.2.59) unstable; urgency=medium
+
+  * Revert "feat(packaging): add delivery packages as recommends for Professional…" (#431)
+  * fix(updater): run refreshUpgradeDeliveryService asynchronously to avoid blocking initialization
+  * feat(packaging): add delivery packages as recommends for Professional edition
+
+ -- xml <xiamengliang@uniontech.com>  Wed, 03 Jun 2026 17:35:37 +0800
+
 lastore-daemon (6.2.58) unstable; urgency=medium
 
   * fix: resolve CVE logs only showing entries up to 2021
