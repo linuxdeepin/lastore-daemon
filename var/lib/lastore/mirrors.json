@@ -360,18 +360,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "KDDI",
-    "name": "KDDI R&D Laboratories Inc.",
-    "url": "http://www.ftp.ne.jp/Linux/packages/deepin/deepin/",
-    "name_locale": {
-      "zh_CN": "KDDI R&D Laboratories Inc.",
-      "zh_TW": "KDDI R&D Laboratories Inc."
-    },
-    "weight": 58,
-    "country": "JP",
-    "adjust_delay": 0
-  },
-  {
     "id": "Tuxinator",
     "name": "Tuxinator",
     "url": "http://mirror2.tuxinator.org/deepin/",
