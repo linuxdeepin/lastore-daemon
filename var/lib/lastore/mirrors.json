@@ -348,6 +348,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "nyist",
+    "name": "南阳理工学院",
+    "url": "https://mirror.nyist.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 南阳理工学院",
+      "zh_TW": "[CN] 南陽理工學院"
+    },
+    "weight": 59,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
     "id": "Tuxinator",
     "name": "Tuxinator",
     "url": "https://mirror2.tuxinator.org/deepin/",
