@@ -108,18 +108,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "Crete",
-    "name": "[GR] University of Crete",
-    "url": "https://ftp.cc.uoc.gr/mirrors/linux/deepin/packages/",
-    "name_locale": {
-      "zh_CN": "[GR] 克里特大学",
-      "zh_TW": "[GR] 克裡特大學"
-    },
-    "weight": 17500,
-    "country": "GR",
-    "adjust_delay": 0
-  },
-  {
     "id": "NLUUG",
     "name": "[NL] NLUUG",
     "url": "https://ftp.nluug.nl/os/Linux/distr/deepin/",
