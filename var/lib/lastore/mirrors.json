@@ -372,18 +372,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "GR",
-    "name": "[GR]University of Crete Computer Center ",
-    "url": "http://ftp.cc.uoc.gr/mirrors/linux/deepin/packages/",
-    "name_locale": {
-      "zh_CN": "[GR]克里特大学计算机中心",
-      "zh_TW": "[GR]克裏特大學計算機中心"
-    },
-    "weight": -1,
-    "country": "GR",
-    "adjust_delay": 0
-  },
-  {
     "id": "GTlib",
     "name": "[US] Georgia Institute of Technology",
     "url": "http://www.gtlib.gatech.edu/pub/deepin/",
