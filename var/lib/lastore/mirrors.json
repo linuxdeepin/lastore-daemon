@@ -372,6 +372,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "freedif",
+    "name": "[SG] Freedif Open Source Mirror",
+    "url": "https://mirror.freedif.org/deepin/deepin/",
+    "name_locale": {
+      "zh_CN": "[SG] Freedif 开源镜像站",
+      "zh_TW": "[SG] Freedif 開源鏡像站"
+    },
+    "weight": 59,
+    "country": "SG",
+    "adjust_delay": 0
+  },
+  {
     "id": "Tuxinator",
     "name": "Tuxinator",
     "url": "https://mirror2.tuxinator.org/deepin/",
