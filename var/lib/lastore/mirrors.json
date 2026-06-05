@@ -360,6 +360,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "qlu",
+    "name": "齐鲁工业大学",
+    "url": "https://mirrors.qlu.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 齐鲁工业大学",
+      "zh_TW": "[CN] 齊魯工業大學"
+    },
+    "weight": 59,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
     "id": "Tuxinator",
     "name": "Tuxinator",
     "url": "https://mirror2.tuxinator.org/deepin/",
