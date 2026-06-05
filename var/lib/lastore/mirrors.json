@@ -252,18 +252,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "Quantum Mirror",
-    "name": "Quantum Mirror",
-    "url": "http://quantum-mirror.hu/mirrors/pub/deepin/",
-    "name_locale": {
-      "zh_CN": "Quantum Mirror",
-      "zh_TW": "Quantum Mirror"
-    },
-    "weight": 91,
-    "country": "HU",
-    "adjust_delay": 0
-  },
-  {
     "id": "Alpix",
     "name": "Alpix",
     "url": "http://mirror.alpix.eu/deepin/",
