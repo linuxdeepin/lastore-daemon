@@ -360,18 +360,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "tku",
-    "name": "Tamkang University",
-    "url": "http://ftp.tku.edu.tw/Linux/Deepin/deepin/",
-    "name_locale": {
-      "zh_CN": "[CN] 淡江大学",
-      "zh_TW": "[CN] 淡江大學"
-    },
-    "weight": 59,
-    "country": "CN",
-    "adjust_delay": 0
-  },
-  {
     "id": "KDDI",
     "name": "KDDI R&D Laboratories Inc.",
     "url": "http://www.ftp.ne.jp/Linux/packages/deepin/deepin/",
