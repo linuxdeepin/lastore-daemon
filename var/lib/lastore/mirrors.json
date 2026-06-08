@@ -468,6 +468,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "cicku",
+    "name": "CICKU Mirror",
+    "url": "https://mirrors.cicku.me/deepin/",
+    "name_locale": {
+      "zh_CN": "CICKU镜像站",
+      "zh_TW": "CICKU镜像站"
+    },
+    "weight": 5000,
+    "country": "US",
+    "adjust_delay": 0
+  },
+  {
     "id": "CLUG",
     "name": "[CZ] Czech Linux Users' Group",
     "url": "https://ftp.linux.cz/pub/linux/deepin/",
