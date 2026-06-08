@@ -108,6 +108,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "NETERRA",
+    "name": "[BG] Neterra Telecommunications",
+    "url": "https://mirrors.neterra.net/deepin/",
+    "name_locale": {
+      "zh_CN": "[BG] Neterra Telecommunications",
+      "zh_TW": "[BG] Neterra Telecommunications"
+    },
+    "weight": 17000,
+    "country": "BG",
+    "adjust_delay": 0
+  },
+  {
     "id": "NLUUG",
     "name": "[NL] NLUUG",
     "url": "https://ftp.nluug.nl/os/Linux/distr/deepin/",
