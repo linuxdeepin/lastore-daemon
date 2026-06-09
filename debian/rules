@@ -5,11 +5,16 @@ export GOPATH := /usr/share/gocode
 export SECURITY_BUILD_OPTIONS = -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -z noexecstack -pie -fPIC -z now -ftrapv
 
 SYSTYPE=$(shell grep Type= /etc/deepin-version|cut -d= -f 2)
+EDITION=$(shell grep EditionName= /etc/os-version | cut -d= -f 2)
 
 depend_ostree = true
 
 ifdef depend_ostree
 	DistDepends += ostree,
+endif
+
+ifneq ($(EDITION), Community)
+	DistRecommends += uos-upgrade-delivery, uos-apt-delivery,
 endif
 
 ifneq ($(DEB_BUILD_ARCH), mips64el)
@@ -28,10 +33,8 @@ override_dh_auto_test:
 
 endif
 
-ifdef DistDepends
 override_dh_gencontrol:
-	dh_gencontrol -- -Vdist:Depends="$(DistDepends)"
-endif
+	dh_gencontrol -- -Vdist:Depends="$(DistDepends)" -Vdist:Recommends="$(DistRecommends)"
 
 override_dh_installsystemd:
 	dh_installsystemd -r --no-restart-after-upgrade --no-start
