@@ -215,7 +215,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				})
 
 				checkType := dut.PreBackupCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -247,7 +247,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				inhibit(false)
 
 				checkType := dut.PostBackupCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -291,7 +291,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 
 				checkType := dut.PostBackupCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -484,7 +484,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 				logger.Info("update UUID:", uuid)
 				m.updatePlatform.CreateJobPostMsgInfo(uuid, job.updateTyp)
 				checkType := dut.PreUpgradeCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -530,7 +530,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 		endJob.setPreHooks(map[string]func() error{
 			string(system.SucceedStatus): func() error {
 				checkType := dut.MidUpgradeCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{

@@ -21,7 +21,7 @@ var logger = log.NewLogger("lastore/dut")
 
 // CheckSystem performs a system check of the specified type with given options
 // and returns a JobError if any issues are found.
-func CheckSystem(typ CheckType, options map[string]string) *system.JobError {
+func CheckSystem(typ CheckType, options map[string]string, indicator system.Indicator) *system.JobError {
 	logger.Debugf("CheckSystem check type: %s, options: %+v", typ.String(), options)
 
 	// 参数验证
@@ -68,6 +68,14 @@ func CheckSystem(typ CheckType, options map[string]string) *system.JobError {
 	if checkError == nil {
 		logger.Info("checkError is nil")
 		return nil
+	}
+
+	// 通过 indicator 记录错误日志，使 processLogFds 能被调用
+	if indicator != nil {
+		indicator(system.JobProgressInfo{
+			OnlyLog:     true,
+			OriginalLog: checkError.Error(),
+		})
 	}
 
 	if jobErr, ok := checkError.(*system.JobError); ok {

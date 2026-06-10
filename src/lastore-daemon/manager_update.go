@@ -277,7 +277,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				job.setPropProgress(1.0)
 
 				checkType := dut.PostUpdateCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -334,7 +334,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				}()
 
 				checkType := dut.PostUpdateCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -428,7 +428,7 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 				m.updater.setPropUpdateTarget(m.updatePlatform.GetUpdateTarget()) // 更新目标 历史版本控制中心获取UpdateTarget,获取更新日志
 
 				checkType := dut.PreUpdateCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
