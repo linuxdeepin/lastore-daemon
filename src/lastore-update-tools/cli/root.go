@@ -44,6 +44,8 @@ func initCheckEnv() error {
 		}
 	}
 
+	check.SetDynHookTimeout(RootCoreConfig.DynHookTimeout)
+
 	if UpdateMetaConfigPath == "" {
 		logger.Errorf("update meta config path is empty")
 		return &system.JobError{

@@ -72,7 +72,7 @@ func (p *DutSystem) CheckSystem(jobId string, checkType string, environ map[stri
 	// environ parameter is ignored here
 	fn := system.NewFunction(jobId, p.Indicator, func() error {
 		// only postCheck can be handled here, checkType is ignored
-		systemErr := CheckSystem(PostUpgradeCheck, options)
+		systemErr := CheckSystem(PostUpgradeCheck, options, p.Indicator)
 		if systemErr != nil {
 			return systemErr
 		}

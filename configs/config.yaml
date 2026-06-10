@@ -1,3 +1,4 @@
 CacheList: caches.yaml
 Base: /var/lib/lastore/check/
 DebugMode: false
+DynHookTimeout: 1800

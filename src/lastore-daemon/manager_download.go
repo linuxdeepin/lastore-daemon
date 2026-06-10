@@ -289,7 +289,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 		j.setPreHooks(map[string]func() error{
 			string(system.RunningStatus): func() error {
 				checkType := dut.PreDownloadCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -384,7 +384,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 				}()
 
 				checkType := dut.PostDownloadCheck
-				if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+				if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 					logger.Warning(systemErr)
 					go func(err *system.JobError) {
 						m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{
@@ -450,7 +450,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					}()
 
 					checkType := dut.PostDownloadCheck
-					if systemErr := dut.CheckSystem(checkType, nil); systemErr != nil {
+					if systemErr := dut.CheckSystem(checkType, nil, m.jobManager.handleJobProgressInfo); systemErr != nil {
 						logger.Warning(systemErr)
 						go func(err *system.JobError) {
 							m.updatePlatform.PostProcessEventMessage(updateplatform.ProcessEvent{

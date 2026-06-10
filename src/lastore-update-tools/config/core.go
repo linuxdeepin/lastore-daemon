@@ -11,10 +11,11 @@ import (
 )
 
 type CoreConfig struct {
-	CacheList  string `json:"CacheList" yaml:"CacheList"`                 // cachelist
-	Base       string `json:"Base" yaml:"Base"`                           // work base
-	DebugMode  bool   `json:"DebugMode" yaml:"DebugMode" default:"false"` // Debug Mode
-	ApiVersion string `json:"ApiVersion" yaml:"ApiVersion" default:"1.0"` // ApiVersion
+	CacheList      string `json:"CacheList" yaml:"CacheList"`                             // cachelist
+	Base           string `json:"Base" yaml:"Base"`                                       // work base
+	DebugMode      bool   `json:"DebugMode" yaml:"DebugMode" default:"false"`             // Debug Mode
+	ApiVersion     string `json:"ApiVersion" yaml:"ApiVersion" default:"1.0"`             // ApiVersion
+	DynHookTimeout int    `json:"DynHookTimeout" yaml:"DynHookTimeout" default:"1800"`    // dyn hook timeout in seconds
 }
 
 func (ts *CoreConfig) LoaderCfg(path string) error {

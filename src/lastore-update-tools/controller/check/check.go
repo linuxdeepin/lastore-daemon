@@ -18,6 +18,17 @@ import (
 
 var CheckBaseDir = "/var/lib/lastore/check/"
 
+// DynHookTimeout is the timeout in seconds for executing dynamic hook scripts.
+// Default is 1800 seconds (30 minutes). Can be overridden via configuration.
+var DynHookTimeout int = 1800
+
+// SetDynHookTimeout sets the timeout for dynamic hook execution.
+func SetDynHookTimeout(seconds int) {
+	if seconds > 0 {
+		DynHookTimeout = seconds
+	}
+}
+
 var logger = log.NewLogger("lastore/update-tools/check")
 
 var sysRealArch string
@@ -119,11 +130,12 @@ func CheckDynHook(checkType int8) error {
 		for _, hookFile := range hookFiles {
 			hookPath := filepath.Join(hookDir, hookFile)
 			logger.Infof("Executing hook: %s", hookPath)
-			output, err := runcmd.RunnerOutputEnv(60, hookPath, []string{"IMMUTABLE_DISABLE_REMOUNT=false"})
+			_, err := runcmd.RunnerOutputEnv(DynHookTimeout, hookPath, []string{"IMMUTABLE_DISABLE_REMOUNT=false"})
 			if err != nil {
-				return fmt.Errorf("hook execution failed: %s\nOutput:\n%s\nError:%s", hookPath, output, err.Error())
+				// only keep error related info, otherwise the log may be compressed
+				return fmt.Errorf("hook execution failed: %s\nError:%s", hookPath, err.Error())
 			}
-			logger.Infof("Hook executed successfully: %s\nOutput:\n%s", hookPath, output)
+			logger.Infof("Hook executed successfully: %s\n", hookPath)
 		}
 		return nil
 	}
