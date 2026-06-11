@@ -35,7 +35,6 @@ type Job struct {
 	PolicyTyp int
 
 	Status system.Status
-	caller methodCaller
 
 	Progress    float64
 	Description string

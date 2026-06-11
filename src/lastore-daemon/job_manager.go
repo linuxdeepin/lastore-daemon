@@ -254,6 +254,20 @@ func (jm *JobManager) CreateJob(jobName, jobType string, packages []string, envi
 	return false, job, jm.markReady(job)
 }
 
+func isInstallLikeJobType(jobType string) bool {
+	switch jobType {
+	case system.InstallJobType,
+		system.OnlyInstallJobType,
+		system.SystemUpgradeJobType,
+		system.SecurityUpgradeJobType,
+		system.UnknownUpgradeJobType,
+		system.AppStoreUpgradeJobType:
+		return true
+	default:
+		return false
+	}
+}
+
 func (jm *JobManager) markStart(job *Job) error {
 	jm.markDirty()
 

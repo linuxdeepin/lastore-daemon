@@ -374,12 +374,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 	if !system.IsAuthorized() {
 		return nil, errors.New("not authorized, don't allow to exec upgrade")
 	}
-	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
-	if err != nil {
-		logger.Warning(err)
-		return nil, dbusutil.ToError(err)
-	}
-	caller := mapMethodCaller(execPath, cmdLine) // TODO 需要对调用者进行鉴权
+
 	m.ensureUpdateSourceOnce()
 	environ, err := makeEnvironWithSender(m, sender)
 	if err != nil {
@@ -426,7 +421,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 			logger.Infof("%v is exist", system.DistUpgradeJobType)
 			return JobExistError
 		}
-		job.caller = caller
 
 		if utils.IsDir(path) {
 			job.option = map[string]string{

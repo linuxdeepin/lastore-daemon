@@ -80,33 +80,17 @@ func (m *Manager) HandleSystemEvent(sender dbus.Sender, eventType string) *dbus.
 func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
-	if err != nil {
-		logger.Warning(err)
-		return "/", dbusutil.ToError(err)
-	}
 
-	uid, err := m.service.GetConnUID(string(sender))
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := m.checkInvokePermission(sender)
 	if err != nil {
-		logger.Warning(err)
 		return "/", dbusutil.ToError(err)
-	}
-	if !allowInstallPackageExecPaths.Contains(execPath) &&
-		uid != 0 {
-		// 白名单未通过时需要管理员鉴权
-		err = polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
-		if err != nil {
-			err = fmt.Errorf("%q is not in allowed install package paths.And the caller not pass the authentication, don't allow to install packages %v", execPath, packages)
-			logger.Warning(err)
-			return "/", dbusutil.ToError(err)
-		}
 	}
 
 	jobObj, err := m.installPackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	jobObj.next.caller = mapMethodCaller(execPath, cmdLine)
 	return jobObj.getPath(), nil
 }
 
@@ -291,31 +275,17 @@ func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.
 func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages string) (job dbus.ObjectPath,
 	busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	//execPath, cmdLine, err := getExecutablePathAndCmdline(m.service, sender)
-	//if err != nil {
-	//	logger.Warning(err)
-	//	return "/", dbusutil.ToError(err)
-	//}
-	//
-	//uid, err := m.service.GetConnUID(string(sender))
-	//if err != nil {
-	//	logger.Warning(err)
-	//	return "/", dbusutil.ToError(err)
-	//}
-	//
-	//if !allowRemovePackageExecPaths.Contains(execPath) &&
-	//	uid != 0 {
-	//	err = fmt.Errorf("%q is not allowed to remove packages", execPath)
-	//	logger.Warning(err)
-	//	return "/", dbusutil.ToError(err)
-	//}
-	// TODO
-	// 鉴权或者给 dde-launcher 加 loader 启动,或者是否可以给 dde-launcher setgid and set group deepin-daemon
+
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+
 	jobObj, err := m.removePackage(sender, jobName, packages)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
 	}
-	//jobObj.caller = mapMethodCaller(execPath, cmdLine)
 	return jobObj.getPath(), nil
 }
 
@@ -370,6 +340,12 @@ func (m *Manager) UnRegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbu
 
 func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+
 	jobObj, err := m.updateSource(sender)
 	if err != nil {
 		logger.Warning(err)
@@ -381,6 +357,13 @@ func (m *Manager) UpdateSource(sender dbus.Sender) (job dbus.ObjectPath, busErr 
 
 func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, needBackup bool) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+
 	return m.distUpgradePartly(sender, mode, needBackup)
 }
 
@@ -396,14 +379,17 @@ func (m *Manager) DistUpgradePartly(sender dbus.Sender, mode system.UpdateType, 
 func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *dbus.Error {
 	supportOption := len(strings.TrimSpace(option)) > 0
 
-	// TODO
-	// 应该只有 dde-lock 会调用
-	// 用鉴权方案或者给 dde-lock 增加 group
+	// 锁屏前端可能经 deepin-security-loader 启动，先按 trusted sender 放行，其余调用方再走 polkit。
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
 	logger.Info("start PrepareFullScreenUpgrade")
 
 	if supportOption {
 		opt := fullUpgradeOption{}
-		err := json.Unmarshal([]byte(option), &opt)
+		err = json.Unmarshal([]byte(option), &opt)
 		if err != nil {
 			logger.Warning(err)
 			return dbusutil.ToError(err)
@@ -423,49 +409,51 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		_ = os.WriteFile(optionFilePathTemp, content, 0644)
 	}
 
-	for {
+	terminate := func() error {
 		pid, err := m.service.GetConnPID(string(sender))
 		if err != nil {
 			logger.Warning(err)
-			break
+			return err
 		}
 		sessionPath, err := m.loginManager.GetSessionByPID(0, pid)
 		if err != nil {
 			logger.Warning(err)
-			break
+			return err
 		}
 		session, err := login1.NewSession(m.service.Conn(), sessionPath)
 		if err != nil {
 			logger.Warning(err)
-			break
+			return err
 		}
 		seatPath, err := session.Seat().Get(0)
 		if err != nil {
 			logger.Warning(err)
-			break
+			return err
 		}
 		seat, err := login1.NewSeat(m.service.Conn(), seatPath.Path)
 		if err != nil {
 			logger.Warning(err)
-			break
+			return err
 		}
 		err = seat.Terminate(0)
 		if err != nil {
 			logger.Warning(err)
-			break
+			return err
 		} else {
 			logger.Info("terminate seat")
 			return nil
 		}
 	}
-
-	// 如果上述方法出错，需要采用重启display-manager方案，此时所有图形session也都会退出
-	_, err := m.systemd.RestartUnit(0, "display-manager.service", "replace")
+	err = terminate()
 	if err != nil {
-		logger.Warning(err)
-		return dbusutil.ToError(err)
+		// 如果上述方法出错，需要采用重启lightdm方案，此时所有图形session也都会退出
+		_, err = m.systemd.RestartUnit(0, "display-manager.service", "replace")
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		logger.Info("RestartUnit display-manager")
 	}
-	logger.Info("RestartUnit display-manager")
 	return nil
 }
 
@@ -494,6 +482,13 @@ func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.E
 
 func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.UpdateType) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+
 	jobObj, err := m.prepareDistUpgrade(sender, mode, initiatorUser)
 	if err != nil {
 		logger.Warning(err)
@@ -514,29 +509,6 @@ func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 }
 
 func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
-	checkExecPath := func() error {
-		// 只有dde-update可以设置
-		execPath, _, err := getExecutablePathAndCmdline(m.service, sender)
-		if err != nil {
-			logger.Warning(err)
-			return err
-		}
-		if strings.Contains(execPath, "dde-update") ||
-			strings.Contains(execPath, "dde-rollback") {
-			return nil
-		} else {
-			err = fmt.Errorf("%v not allow to call this method", execPath)
-			logger.Warning(err)
-			return err
-		}
-	}
-	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil || uid != 0 {
-		err = checkExecPath()
-		if err != nil {
-			return dbusutil.ToError(err)
-		}
-	}
 	args := []string{
 		"-f",
 	}
@@ -547,7 +519,7 @@ func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 	logger.Info(cmd.String())
 	var errBuffer bytes.Buffer
 	cmd.Stderr = &errBuffer
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		logger.Warning(err)
 		logger.Warning(errBuffer.String())
@@ -559,9 +531,8 @@ func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
 // SetUpdateSources 设置系统、安全更新的仓库
 func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateType, repoType config.RepoType, repoConfig []string, isReset bool) *dbus.Error {
 	// 管理员鉴权
-	err := checkInvokePermission(m.service, sender)
+	err := m.checkInvokePermission(sender)
 	if err != nil {
-		logger.Warning(err)
 		return dbusutil.ToError(err)
 	}
 
@@ -699,5 +670,17 @@ func (m *Manager) GetUpdateDetails(sender dbus.Sender, fd dbus.UnixFD, realTime 
 			return dbusutil.ToError(err)
 		}
 	}
+	return nil
+}
+
+func (m *Manager) SetAllowCaller(uniqueName string) *dbus.Error {
+	logger.Infof("try to add allow caller unique name: %q", uniqueName)
+	err := m.addAllowCaller(uniqueName)
+	logger.Infof("current allow caller list is :%+v", m.allowCallServiceList)
+	if err != nil {
+		logger.Warning(err)
+		return dbusutil.ToError(err)
+	}
+	logger.Infof("all allow sender is :%+v", m.allowCallServiceList)
 	return nil
 }
