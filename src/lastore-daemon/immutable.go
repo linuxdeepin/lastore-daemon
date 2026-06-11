@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
@@ -71,8 +72,19 @@ func newImmutableManager(indicator system.Indicator) *immutableManager {
 	return &immutableManager{indicator: indicator}
 }
 
-func (i *immutableManager) osTreeRefresh() error {
-	_, err := i.osTreeCmd([]string{"admin", "deploy", "--refresh", "-w"})
+// checkFullMergeSupport checks if deepin-immutable-ctl supports the --full-merge option
+func (i *immutableManager) checkFullMergeSupport() bool {
+	cmd := exec.Command(system.DeepinImmutableCtlPath, "admin", "deploy", "-h")
+	output, _ := cmd.CombinedOutput()
+	return strings.Contains(string(output), "--full-merge")
+}
+
+func (i *immutableManager) osTreeRefresh(fullMerge bool) error {
+	args := []string{"admin", "deploy", "--refresh", "-w"}
+	if fullMerge && i.checkFullMergeSupport() {
+		args = append(args, "--full-merge")
+	}
+	_, err := i.osTreeCmd(args)
 	if err != nil {
 		return err
 	}
