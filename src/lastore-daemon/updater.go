@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,6 +139,25 @@ func getStartupDownloadSpeedLimitConfig(config *Config) string {
 	return startupConfig
 }
 
+// validateMirrorURL 验证镜像源 URL（只允许 http/https）
+func validateMirrorURL(rawURL string) error {
+	if rawURL == "" {
+		return fmt.Errorf("URL is empty")
+	}
+
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL format: %v", err)
+	}
+
+	// 只允许 http/https
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("unsupported scheme: %s (only http/https allowed)", parsed.Scheme)
+	}
+
+	return nil
+}
+
 func SetAPTSmartMirror(url string) error {
 	return os.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
 		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
@@ -157,6 +177,10 @@ func (u *Updater) setMirrorSource(id string) error {
 		found = true
 		if m.Url == "" {
 			return system.NotFoundError("empty url")
+		}
+		if err := validateMirrorURL(m.Url); err != nil {
+			logger.Warningf("invalid mirror URL %q: %v", m.Url, err)
+			return fmt.Errorf("invalid mirror URL: %v", err)
 		}
 		if err := SetAPTSmartMirror(m.Url); err != nil {
 			logger.Warningf("SetMirrorSource(%q) failed:%v\n", id, err)
