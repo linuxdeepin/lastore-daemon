@@ -1013,15 +1013,24 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 		if app == updateNotifyShowOptional {
 			app = updateNotifyShow
 		}
-		actionsArg := "["
-		if len(actions) != 0 {
-			actionsArg = actionsArg + `"` + strings.Join(actions, `","`) + `"`
-		}
-		actionsArg = actionsArg + "]"
+		actionsJSON, _ := json.Marshal(actions)
+		actionsArg := string(actionsJSON)
 
 		var hintsList []string
 		for key, value := range hints {
-			hintsList = append(hintsList, `"`+key+`":<"`+value.Value().(string)+`">`)
+			s, ok := value.Value().(string)
+			if !ok {
+				logger.Warningf(
+					"unexpected hint value type: key=%s type=%T",
+					key,
+					value.Value(),
+				)
+				continue
+			}
+
+			keyJSON, _ := json.Marshal(key)
+			valueJSON, _ := json.Marshal(s)
+			hintsList = append(hintsList, string(keyJSON)+`:<`+string(valueJSON)+`>`)
 		}
 		hintsArg := "{" + strings.Join(hintsList, `,`) + "}"
 		timeout := expireTimeout

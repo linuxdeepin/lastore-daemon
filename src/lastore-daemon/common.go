@@ -439,6 +439,38 @@ const (
 	coreListPkgName = "deepin-package-list"
 )
 
+// containsPathTraversal 检查 dpkg-deb -c 输出中是否存在路径穿越
+// dpkg-deb -c 输出格式: perms owner/group size date time path
+func containsPathTraversal(dpkgOutput string) bool {
+	lines := strings.Split(dpkgOutput, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// 提取路径：最后一个空格分隔的字段
+		fields := strings.Fields(line)
+		if len(fields) < 6 {
+			continue
+		}
+		entryPath := fields[len(fields)-1]
+
+		// 检查绝对路径
+		if path.IsAbs(entryPath) {
+			logger.Warningf("deb contains absolute path: %s", entryPath)
+			return true
+		}
+
+		// 检查路径穿越：清理后以 ../ 开头或包含 ../
+		cleaned := path.Clean(entryPath)
+		if cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+			logger.Warningf("deb contains path traversal: %s (cleaned: %s)", entryPath, cleaned)
+			return true
+		}
+	}
+	return false
+}
+
 // 下载并解压coreList
 func downloadAndDecompressCoreList() (string, error) {
 	downloadPackages := []string{coreListPkgName}
@@ -470,12 +502,24 @@ func downloadAndDecompressCoreList() (string, error) {
 	}
 	var debFile string
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), coreListPkgName) && strings.HasSuffix(file.Name(), ".deb") {
-			debFile = filepath.Join(downloadPkg, file.Name())
+		name := file.Name()
+
+		if strings.HasPrefix(name, coreListPkgName) && strings.HasSuffix(name, ".deb") {
+			debFile = filepath.Join(downloadPkg, name)
 			break
 		}
 	}
 	if debFile != "" {
+		// 解压前检查包内容，防止路径穿越
+		checkCmd := exec.Command("dpkg-deb", "-c", debFile)
+		checkOutput, err := checkCmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("failed to inspect deb contents: %v", err)
+		}
+		if containsPathTraversal(string(checkOutput)) {
+			return "", fmt.Errorf("deb package %s contains path traversal entries", debFile)
+		}
+
 		tmpDir, err := os.MkdirTemp("/tmp", coreListPkgName+".XXXXXX")
 		if err != nil {
 			return "", err
