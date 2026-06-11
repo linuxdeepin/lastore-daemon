@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -76,6 +78,14 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	var createJobErr error
 	var startJobErr error
 	var mode system.UpdateType
+
+	uid, err := m.service.GetConnUID(string(sender))
+	if err != nil {
+		logger.Warning("GetConnUID failed:", err)
+		return "", dbusutil.ToError(err)
+	}
+	refreshFullMerge := needRefreshFullMerge(uid)
+	logger.Debug("Refresh full merge enabled:", refreshFullMerge)
 	// 非离线安装需要过滤可更新的选项
 	mode = m.statusManager.GetCanDistUpgradeMode(origin) // 正在安装的状态会包含其中,会在创建job中找到对应job(由于不追加安装,因此直接返回之前的job)
 	if mode == 0 {
@@ -85,7 +95,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	if updateplatform.IsForceUpdate(m.updatePlatform.Tp) {
 		mode = origin
 	}
-	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false)
+	upgradeJob, createJobErr = m.distUpgrade(sender, mode, false, false, refreshFullMerge)
 	if createJobErr != nil {
 		if errors.Is(createJobErr, JobExistError) {
 			// job exist, retry dist upgrade
@@ -171,7 +181,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	m.updateJobList()
 	// 将job的状态修改为pause,并添加到队列中,但是不开始
 	upgradeJob.Status = system.PausedStatus
-	err := m.jobManager.addJob(upgradeJob)
+	err = m.jobManager.addJob(upgradeJob)
 	if err != nil {
 		logger.Warning(err)
 		return "", dbusutil.ToError(err)
@@ -367,7 +377,8 @@ func buildDistUpgradePartlyCommand(mode system.UpdateType, needBackup bool) stri
 }
 
 // distUpgrade needAdd true: 返回的job已经被add到jobManager中；false: 返回的job需要被调用者add
-func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAdd bool, needChangeGrub bool) (*Job, error) {
+func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType,
+	needAdd, needChangeGrub, refreshFullMerge bool) (*Job, error) {
 	m.checkDpkgCapabilityOnce.Do(func() {
 		m.supportDpkgScriptIgnore = checkSupportDpkgScriptIgnore()
 	})
@@ -552,7 +563,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType, needAd
 					})
 				}
 				if m.statusManager.abStatus == system.HasBackedUp {
-					if err := m.immutableManager.osTreeRefresh(); err != nil {
+					if err := m.immutableManager.osTreeRefresh(refreshFullMerge); err != nil {
 						logger.Warning("ostree deploy refresh failed,", err)
 					}
 				}
@@ -985,4 +996,15 @@ func getPackagesPathList(typ system.UpdateType, listPath string) []string {
 		}
 	}
 	return res
+}
+
+// needRefreshFullMerge checks whether the full merge refresh option should be enabled.
+// Full merge is only needed during modal upgrades, which are identified by the
+// DBus caller being the lightdm user.
+func needRefreshFullMerge(uid uint32) bool {
+	u, err := user.LookupId(strconv.Itoa(int(uid)))
+	if err != nil {
+		return false
+	}
+	return u.Username == lightdmUserName
 }
