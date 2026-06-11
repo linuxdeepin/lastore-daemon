@@ -57,6 +57,13 @@ func (m *Manager) CleanJob(jobId string) *dbus.Error {
 
 func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return "/", dbusutil.ToError(err)
+	}
+
 	jobObj, err := m.delFixError(sender, errType)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
