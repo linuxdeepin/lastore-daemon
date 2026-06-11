@@ -35,6 +35,20 @@ var _urlReg = regexp.MustCompile(`^[ ]*deb .*((?:https?|ftp|file|p2p|delivery):/
 
 const lastoreGatherInfo = "lastoreGatherInfo"
 
+// allowedProxyKeys 代理环境变量白名单，防止 Session Agent 注入恶意环境变量（如 LD_PRELOAD）导致提权
+var allowedProxyKeys = map[string]bool{
+	"http_proxy":  true,
+	"https_proxy": true,
+	"ftp_proxy":   true,
+	"no_proxy":    true,
+	"all_proxy":   true,
+	"HTTP_PROXY":  true,
+	"HTTPS_PROXY": true,
+	"FTP_PROXY":   true,
+	"NO_PROXY":    true,
+	"ALL_PROXY":   true,
+}
+
 // 获取list文件或list.d文件夹中所有list文件的未被屏蔽的仓库地址
 func getUpgradeUrls(path string) []string {
 	var upgradeUrls []string
@@ -103,10 +117,16 @@ func makeEnvironWithSender(m *Manager, sender dbus.Sender) (map[string]string, e
 	var err error
 	agent := m.userAgents.getActiveLastoreAgent()
 	if agent != nil {
-		environ, err = agent.GetManualProxy(0)
+		proxyEnviron, err := agent.GetManualProxy(0)
 		if err != nil {
 			logger.Warning(err)
-			environ = make(map[string]string)
+		} else {
+			// 只保留白名单中的代理环境变量，防止注入 LD_PRELOAD 等恶意变量导致提权
+			for key, value := range proxyEnviron {
+				if allowedProxyKeys[key] {
+					environ[key] = value
+				}
+			}
 		}
 	}
 	pid, err := m.service.GetConnPID(string(sender))

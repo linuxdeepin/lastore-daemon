@@ -17,6 +17,32 @@ import (
 	"syscall"
 )
 
+// allowedChildEnvKeys 允许传递给子进程的环境变量白名单
+// 防止恶意环境变量（如 LD_PRELOAD）注入导致提权
+var allowedChildEnvKeys = map[string]bool{
+	// 代理相关
+	"http_proxy":  true,
+	"https_proxy": true,
+	"ftp_proxy":   true,
+	"all_proxy":   true,
+	"no_proxy":    true,
+	"HTTP_PROXY":  true,
+	"HTTPS_PROXY": true,
+	"FTP_PROXY":   true,
+	"NO_PROXY":    true,
+	"ALL_PROXY":   true,
+	// 显示相关
+	"DISPLAY":    true,
+	"XAUTHORITY": true,
+	// 语言相关
+	"DEEPIN_LASTORE_LANG": true,
+	// PackageKit 相关
+	"PACKAGEKIT_CALLER_UID": true,
+	// 磐石相关
+	"IMMUTABLE_DISABLE_REMOUNT":           true,
+	"DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION": true,
+}
+
 type CommandSet interface {
 	AddCMD(cmd *Command)
 	RemoveCMD(id string)
@@ -58,7 +84,6 @@ func (c *Command) SetEnv(envVarMap map[string]string) {
 		return
 	}
 
-	// Create a map from existing environment variables
 	envMap := make(map[string]string)
 	for _, env := range os.Environ() {
 		pair := strings.SplitN(env, "=", 2)
@@ -67,12 +92,13 @@ func (c *Command) SetEnv(envVarMap map[string]string) {
 		}
 	}
 
-	// Update with new values, overwriting existing keys
+	// 只更新白名单中的环境变量，阻止 LD_PRELOAD 等恶意变量注入
 	for key, value := range envVarMap {
-		envMap[key] = value
+		if allowedChildEnvKeys[key] {
+			envMap[key] = value
+		}
 	}
 
-	// Convert back to slice
 	envVarSlice := make([]string, 0, len(envMap))
 	for key, value := range envMap {
 		envVarSlice = append(envVarSlice, key+"="+value)
