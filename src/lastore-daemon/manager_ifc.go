@@ -14,7 +14,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/dde-api/polkit"
@@ -581,16 +580,23 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 			return dbusutil.ToError(errors.New("custom repo config is invalid"))
 		}
 		// 使用apt-get check 检查仓库时候合规
-		tmpList := fmt.Sprintf("/tmp/custom_repo_%v", time.Now().Unix())
-		err = os.WriteFile(tmpList, []byte(strings.Join(repoConfig, "\n")), 0600)
+		tmpFile, err := os.CreateTemp("/tmp", "custom_repo_*")
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			o, err := exec.Command("/usr/bin/apt-get", "check", "-o", "Debug::NoLocking=1",
-				"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", tmpList), "-o", "Dir::Etc::SourceParts=/dev/null").CombinedOutput()
+			tmpList := tmpFile.Name()
+			defer os.Remove(tmpList)
+			_, err = tmpFile.Write([]byte(strings.Join(repoConfig, "\n")))
+			tmpFile.Close()
 			if err != nil {
-				logger.Warning("apt-get check error", string(o))
-				return dbusutil.ToError(fmt.Errorf("repo format error:%v", string(o)))
+				logger.Warning(err)
+			} else {
+				o, err := exec.Command("/usr/bin/apt-get", "check", "-o", "Debug::NoLocking=1",
+					"-o", fmt.Sprintf("Dir::Etc::sourcelist=%v", tmpList), "-o", "Dir::Etc::SourceParts=/dev/null").CombinedOutput()
+				if err != nil {
+					logger.Warning("apt-get check error", string(o))
+					return dbusutil.ToError(fmt.Errorf("repo format error:%v", string(o)))
+				}
 			}
 		}
 	}
