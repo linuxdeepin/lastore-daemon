@@ -562,12 +562,6 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType,
 						EventContent: fmt.Sprintf("%v success", checkType),
 					})
 				}
-				if m.statusManager.abStatus == system.HasBackedUp {
-					if err := m.immutableManager.osTreeRefresh(refreshFullMerge); err != nil {
-						logger.Warning("ostree deploy refresh failed,", err)
-					}
-				}
-
 				if mode&system.SystemUpdate != 0 {
 					recordUpgradeLog(uuid, system.SystemUpdate, m.updatePlatform.SystemUpdateLogs, upgradeRecordPath)
 				}
@@ -575,7 +569,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType,
 				if mode&system.SecurityUpdate != 0 {
 					recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.updater.getUpdatablePackagesByType(system.SecurityUpdate)), upgradeRecordPath)
 				}
-				_ = m.preUpgradeCmdSuccessHook(job, needChangeGrub, mode, uuid)
+				_ = m.preUpgradeCmdSuccessHook(job, mode, uuid, refreshFullMerge)
 				return nil
 			},
 			string(system.FailedStatus): func() error {
@@ -807,7 +801,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 	return nil
 }
 
-func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode system.UpdateType, uuid string) error {
+func (m *Manager) preUpgradeCmdSuccessHook(job *Job, mode system.UpdateType, uuid string, refreshFullMerge bool) error {
 	if !m.config.GetPlatformStatusDisable(config.DisabledRebootCheck) {
 		// 设置重启后的检查项;重启后需要检查时,需要将本次job的uuid记录到检查配置中,无需检查时只要将uuid直接记录到 upgradeJobMetaInfo 中即可
 		err := m.setRebootCheckOption(mode, uuid)
@@ -817,6 +811,13 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, needChangeGrub bool, mode s
 	} else {
 		m.handleAfterUpgradeSuccess(mode, job.Description, uuid)
 	}
+	// Perform immutable system refresh at the end of the upgrade process
+	if m.statusManager.abStatus == system.HasBackedUp {
+		if err := m.immutableManager.osTreeRefresh(refreshFullMerge); err != nil {
+			logger.Warning("ostree deploy refresh failed,", err)
+		}
+	}
+
 	m.statusManager.SetUpdateStatus(mode, system.Upgraded)
 	job.setPropProgress(1.00)
 	if m.config.IntranetUpdate {
