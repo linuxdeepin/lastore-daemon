@@ -5,9 +5,6 @@
     "use-dsettings": {
       "value": false,
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "UseDSettings",
       "description": "",
       "permissions": "readwrite",
@@ -16,9 +13,6 @@
     "version": {
       "value": "1.1",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "Version",
       "description": "",
       "permissions": "readonly",
@@ -222,17 +216,6 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
-    "allow-install-remove-pkg-exec-paths": {
-      "value": [],
-      "serial": 0,
-      "flags": [
-        "global"
-      ],
-      "name": "AllowInstallRemovePkgExecPaths",
-      "description": "",
-      "permissions": "readwrite",
-      "visibility": "private"
-    },
     "auto-install-updates": {
       "value": false,
       "serial": 0,
@@ -304,9 +287,6 @@
     "system-sources": {
       "value": ["/etc/apt/sources.list","/etc/apt/sources.list.d/deepin-unstable-source.list","/etc/apt/sources.list.d/hwe.list"],
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "SystemSources",
       "description": "",
       "permissions": "readwrite",
@@ -512,9 +492,6 @@
     "upgrade-delivery-enabled": {
       "value": true,
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "UpgradeDeliveryEnabled",
       "description": "upgrade delivery enabled",
       "name[zh_CN]": "传递优化服务开机是否可用",
@@ -525,9 +502,6 @@
     "system-custom-source": {
       "value": [],
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "SystemCustomSource",
       "name[zh_CN]": "系统更新自定义仓库",
       "description": "system custom source",
@@ -538,9 +512,6 @@
     "security-custom-source": {
       "value": [],
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "SecurityCustomSource",
       "name[zh_CN]": "安全更新自定义仓库",
       "description": "security custom source",
@@ -551,9 +522,6 @@
     "system-repo-type": {
       "value": "UOS_DEFAULT",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "SystemRepoType",
       "name[zh_CN]": "系统更新仓库类型",
       "description": "system repo type",
@@ -564,9 +532,6 @@
     "security-repo-type": {
       "value": "UOS_DEFAULT",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "SecurityRepoType",
       "name[zh_CN]": "安全更新仓库类型",
       "description": "security repo type",
@@ -603,9 +568,6 @@
     "incremental-update": {
       "value": true,
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "IncrementalUpdate",
       "description": "Enable incremental update",
       "permissions": "readwrite",
@@ -614,9 +576,6 @@
     "intranet-update": {
       "value": false,
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "IntranetUpdate",
       "name[zh_CN]": "内网升级",
       "description[zh_CN]": "从内网升级平台获取更新",
@@ -627,9 +586,6 @@
     "delivery-remote-download-global-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryRemoteDownloadGlobalLimit",
       "name[zh_CN]": "远程下载全局限速",
       "description[zh_CN]": "传递优化远程下载全局限速配置",
@@ -640,9 +596,6 @@
     "delivery-remote-upload-global-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryRemoteUploadGlobalLimit",
       "name[zh_CN]": "远程上传全局限速",
       "description[zh_CN]": "传递优化远程上传全局限速配置",
@@ -653,9 +606,6 @@
     "delivery-remote-download-peak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryRemoteDownloadPeakLimit",
       "name[zh_CN]": "远程下载忙时限速",
       "description[zh_CN]": "传递优化远程下载忙时限速配置",
@@ -666,9 +616,6 @@
     "delivery-remote-upload-peak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryRemoteUploadPeakLimit",
       "name[zh_CN]": "远程上传忙时限速",
       "description[zh_CN]": "传递优化远程上传忙时限速配置",
@@ -679,9 +626,6 @@
     "delivery-remote-download-offpeak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryRemoteDownloadOffPeakLimit",
       "name[zh_CN]": "远程下载闲时限速",
       "description[zh_CN]": "传递优化远程下载闲时限速配置",
@@ -692,9 +636,6 @@
     "delivery-remote-upload-offpeak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryRemoteUploadOffPeakLimit",
       "name[zh_CN]": "远程上传闲时限速",
       "description[zh_CN]": "传递优化远程上传闲时限速配置",
@@ -705,9 +646,6 @@
     "delivery-local-download-global-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryLocalDownloadGlobalLimit",
       "name[zh_CN]": "本地下载全局限速",
       "description[zh_CN]": "传递优化本地下载全局限速配置",
@@ -718,9 +656,6 @@
     "delivery-local-upload-global-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryLocalUploadGlobalLimit",
       "name[zh_CN]": "本地上传全局限速",
       "description[zh_CN]": "传递优化本地上传全局限速配置",
@@ -731,9 +666,6 @@
     "delivery-local-download-peak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryLocalDownloadPeakLimit",
       "name[zh_CN]": "本地下载忙时限速",
       "description[zh_CN]": "传递优化本地下载忙时限速配置",
@@ -744,9 +676,6 @@
     "delivery-local-upload-peak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryLocalUploadPeakLimit",
       "name[zh_CN]": "本地上传忙时限速",
       "description[zh_CN]": "传递优化本地上传忙时限速配置",
@@ -757,9 +686,6 @@
     "delivery-local-download-offpeak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryLocalDownloadOffPeakLimit",
       "name[zh_CN]": "本地下载闲时限速",
       "description[zh_CN]": "传递优化本地下载闲时限速配置",
@@ -770,9 +696,6 @@
     "delivery-local-upload-offpeak-limit": {
       "value": "{\"LimitType\":0,\"StartTime\":\"0001-01-01T00:00:00Z\",\"EndTime\":\"0001-01-01T00:00:00Z\",\"LimitRate\":10485760,\"CurrentRate\":10485760}",
       "serial": 0,
-      "flags": [
-        "global"
-      ],
       "name": "DeliveryLocalUploadOffPeakLimit",
       "name[zh_CN]": "本地上传闲时限速",
       "description[zh_CN]": "传递优化本地上传闲时限速配置",
