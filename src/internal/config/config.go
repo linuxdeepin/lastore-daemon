@@ -71,16 +71,15 @@ type Config struct {
 	IntranetUpdate        bool
 
 	// 缓存大小超出限制时的清理时间间隔
-	CleanIntervalCacheOverLimit    time.Duration
-	AppstoreRegion                 string
-	LastCheckTime                  time.Time
-	LastCleanTime                  time.Time
-	LastCheckCacheSizeTime         time.Time
-	Repository                     string
-	MirrorsUrl                     string
-	AllowInstallRemovePkgExecPaths []string
-	AutoInstallUpdates             bool
-	AutoInstallUpdateType          system.UpdateType
+	CleanIntervalCacheOverLimit time.Duration
+	AppstoreRegion              string
+	LastCheckTime               time.Time
+	LastCleanTime               time.Time
+	LastCheckCacheSizeTime      time.Time
+	Repository                  string
+	MirrorsUrl                  string
+	AutoInstallUpdates          bool
+	AutoInstallUpdateType       system.UpdateType
 
 	AllowPostSystemUpgradeMessageVersion []string // 只有数组内的系统版本被允许发送更新完成的数据
 
@@ -193,7 +192,6 @@ const (
 	dSettingsKeyLastCheckCacheSizeTime               = "last-check-cache-size-time"
 	dSettingsKeyRepository                           = "repository"
 	dSettingsKeyMirrorsUrl                           = "mirrors-url"
-	dSettingsKeyAllowInstallRemovePkgExecPaths       = "allow-install-remove-pkg-exec-paths"
 	dSettingsKeyAutoInstallUpdates                   = "auto-install-updates"
 	dSettingsKeyAutoInstallUpdateType                = "auto-install-update-type"
 	dSettingsKeyAllowPostSystemUpgradeMessageVersion = "allow-post-system-upgrade-message-version"
@@ -423,15 +421,6 @@ func getConfigFromDSettings() *Config {
 		logger.Warning(err)
 	} else {
 		c.MirrorsUrl = v.Value().(string)
-	}
-
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAllowInstallRemovePkgExecPaths)
-	if err != nil {
-		logger.Warning(err)
-	} else {
-		for _, s := range v.Value().([]dbus.Variant) {
-			c.AllowInstallRemovePkgExecPaths = append(c.AllowInstallRemovePkgExecPaths, s.Value().(string))
-		}
 	}
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyAutoInstallUpdates)
@@ -963,7 +952,6 @@ func (c *Config) json2DSettings(oldConfig *Config) {
 	_ = c.SetCleanInterval(oldConfig.CleanInterval)
 	_ = c.SetRepository(oldConfig.Repository)
 	_ = c.SetMirrorsUrl(oldConfig.MirrorsUrl)
-	_ = c.SetAllowInstallRemovePkgExecPaths(append(oldConfig.AllowInstallRemovePkgExecPaths, c.AllowInstallRemovePkgExecPaths...))
 }
 
 func (c *Config) ConnectConfigChanged(key string, cb func(interface{}, interface{})) {
@@ -1107,11 +1095,6 @@ func (c *Config) SetRepository(repository string) error {
 func (c *Config) SetMirrorsUrl(mirrorsUrl string) error {
 	c.MirrorsUrl = mirrorsUrl
 	return c.save(dSettingsKeyMirrorsUrl, mirrorsUrl)
-}
-
-func (c *Config) SetAllowInstallRemovePkgExecPaths(paths []string) error {
-	c.AllowInstallRemovePkgExecPaths = paths
-	return c.save(dSettingsKeyAllowInstallRemovePkgExecPaths, paths)
 }
 
 // func (c *Config) SetNeedDownloadSize(size float64) error {
