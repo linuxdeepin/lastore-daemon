@@ -62,6 +62,17 @@
       "permissions": "readwrite",
       "visibility": "private"
     },
+    "install-package-support-auth": {
+      "value": true,
+      "serial": 0,
+      "flags": [
+        "global"
+      ],
+      "name": "InstallPackageSupportAuth",
+      "description": "Indicates that other applications can call this project's DBus interface to install packages",
+      "permissions": "readonly",
+      "visibility": "public"
+    },
     "mirror-source": {
       "value": "default",
       "serial": 0,
