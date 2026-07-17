@@ -1,3 +1,12 @@
+lastore-daemon (6.2.62) unstable; urgency=medium
+
+  * fix(dconfig): restore install-package-support-auth config entry
+  * fix(config): bump serial for dsettings keys after global flags
+    removal
+  * fix: remove redundant global flags from dsettings config
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 17 Jul 2026 15:11:51 +0800
+
 lastore-daemon (6.2.61) unstable; urgency=medium
 
   * fix(upgrade): move osTreeRefresh after post-upgrade hooks to prevent rollback
