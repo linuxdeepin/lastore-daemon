@@ -623,7 +623,11 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 }
 
 func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error {
-	var err error
+	err := m.checkInvokePermission(sender)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+
 	if confirm {
 		needReboot := m.immutableManager.osTreeNeedRebootAfterRollback()
 		err = m.immutableManager.osTreeRollback()
