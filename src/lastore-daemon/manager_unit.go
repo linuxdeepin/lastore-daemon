@@ -311,7 +311,7 @@ func (m *Manager) handleAbortAutoDownload() {
 	}
 
 	logger.Debug("Abort auto download")
-	err := m.CleanJob(system.PrepareDistUpgradeJobType)
+	err := m.cleanJob(system.PrepareDistUpgradeJobType)
 	if err != nil {
 		logger.Warning(err)
 	}

@@ -341,7 +341,7 @@ func (m *Manager) distUpgradePartly(sender dbus.Sender, origin system.UpdateType
 	defer func() {
 		// 没有开始更新提前结束时，需要处理抑制锁和job
 		if startJobErr != nil {
-			err = m.CleanJob(upgradeJob.Id)
+			err = m.cleanJob(upgradeJob.Id)
 			if err != nil {
 				logger.Warning(err)
 			}

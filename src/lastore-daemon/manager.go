@@ -623,6 +623,18 @@ func (m *Manager) removePackage(sender dbus.Sender, jobName string, packages str
 	return job, nil
 }
 
+func (m *Manager) cleanJob(jobId string) error {
+	m.do.Lock()
+	err := m.jobManager.CleanJob(jobId)
+	// 在clean后需要执行一次dispatch,将end状态的job清除,防止重新创建时出现异常
+	m.jobManager.dispatch()
+	m.do.Unlock()
+	if err != nil {
+		logger.Warningf("CleanJob %q error: %v\n", jobId, err)
+	}
+	return err
+}
+
 func (m *Manager) cleanArchives(needNotify bool) (*Job, error) {
 	var jobName string
 	if needNotify {
