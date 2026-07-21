@@ -350,6 +350,12 @@ func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
 func (u *Updater) SetInstallUpdateTime(sender dbus.Sender, timeStr string) *dbus.Error {
 	logger.Info("SetInstallUpdateTime", timeStr)
 
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	err := u.manager.checkInvokePermission(sender)
+	if err != nil {
+		return dbusutil.ToError(err)
+	}
+
 	if len(timeStr) == 0 {
 		u.config.SetInstallUpdateTime(updateplatform.KeyNow)
 	} else if timeStr == updateplatform.KeyNow || timeStr == updateplatform.KeyShutdown {
@@ -367,7 +373,7 @@ func (u *Updater) SetInstallUpdateTime(sender dbus.Sender, timeStr string) *dbus
 		u.config.SetInstallUpdateTime(updateTime.Format(time.RFC3339))
 	}
 
-	_, err := u.manager.updateSource(sender) // 自动检查更新按照控制中心更新配置进行检查
+	_, err = u.manager.updateSource(sender) // 自动检查更新按照控制中心更新配置进行检查
 	if err != nil {
 		logger.Warning(err)
 		return dbusutil.ToError(err)
