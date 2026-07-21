@@ -394,10 +394,16 @@ func (u *Updater) setClassifiedUpdatablePackages(infosMap map[string][]string) {
 }
 
 func (u *Updater) autoInstallUpdatesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	if err := u.manager.checkInvokePermission(pw.Sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	return dbusutil.ToError(u.config.SetAutoInstallUpdates(pw.Value.(bool)))
 }
 
 func (u *Updater) autoInstallUpdatesSuitesWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Error {
+	if err := u.manager.checkInvokePermission(pw.Sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	return dbusutil.ToError(u.config.SetAutoInstallUpdateType(system.UpdateType(pw.Value.(uint64))))
 }
 

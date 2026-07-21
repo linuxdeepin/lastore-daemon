@@ -114,7 +114,7 @@ type Manager struct {
 	logTmpFile *os.File
 
 	isAutoCheckTimerFirstRun bool
-	allowCallServiceList    strv.Strv
+	allowCallServiceList     strv.Strv
 	// 特殊 uid 调用方直接放行，当前用于兼容 lightdm greeter 场景。
 	trustedCallerUIDs map[uint32]struct{}
 }
@@ -278,7 +278,7 @@ func (m *Manager) initDSettingsChangedHandle() {
 	m.config.ConnectConfigChanged(config.DSettingsKeyAutoDownloadUpdates, func(oldValue, newValue interface{}) {
 		autoDownloadUpdates := newValue.(bool)
 		if m.updater != nil {
-			_ = m.updater.SetAutoDownloadUpdates(autoDownloadUpdates)
+			_ = m.updater.setAutoDownloadUpdates(autoDownloadUpdates)
 			logger.Info("AutoDownloadUpdates changed to:", autoDownloadUpdates)
 		}
 	})

@@ -22,8 +22,11 @@ func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string,
 	return
 }
 
-func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
+func (u *Updater) SetAutoCheckUpdates(sender dbus.Sender, enable bool) *dbus.Error {
 	u.service.DelayAutoQuit()
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	if u.AutoCheckUpdates == enable {
 		return nil
 	}
@@ -39,8 +42,15 @@ func (u *Updater) SetAutoCheckUpdates(enable bool) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
+func (u *Updater) SetAutoDownloadUpdates(sender dbus.Sender, enable bool) *dbus.Error {
 	u.service.DelayAutoQuit()
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
+	return dbusutil.ToError(u.setAutoDownloadUpdates(enable))
+}
+
+func (u *Updater) setAutoDownloadUpdates(enable bool) error {
 	if u.AutoDownloadUpdates == enable {
 		return nil
 	}
@@ -53,7 +63,7 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 		if err != nil {
 			logger.Warning(err)
 		} else {
-			err = u.SetIdleDownloadConfig(string(idleDownloadByte))
+			err = u.setIdleDownloadConfig(string(idleDownloadByte))
 			if err != nil {
 				logger.Warning(err)
 			}
@@ -62,7 +72,7 @@ func (u *Updater) SetAutoDownloadUpdates(enable bool) *dbus.Error {
 	// save the config to disk
 	err := u.config.SetAutoDownloadUpdates(enable)
 	if err != nil {
-		return dbusutil.ToError(err)
+		return err
 	}
 
 	u.AutoDownloadUpdates = enable
@@ -88,8 +98,11 @@ func (u *Updater) SetMirrorSource(sender dbus.Sender, id string) *dbus.Error {
 	return dbusutil.ToError(u.setMirrorSource(id))
 }
 
-func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
+func (u *Updater) SetUpdateNotify(sender dbus.Sender, enable bool) *dbus.Error {
 	u.service.DelayAutoQuit()
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	if u.UpdateNotify == enable {
 		return nil
 	}
@@ -105,12 +118,19 @@ func (u *Updater) SetUpdateNotify(enable bool) *dbus.Error {
 }
 
 // SetIdleDownloadConfig is used to set the idle download config
-func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
+func (u *Updater) SetIdleDownloadConfig(sender dbus.Sender, idleConfig string) *dbus.Error {
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
+	return dbusutil.ToError(u.setIdleDownloadConfig(idleConfig))
+}
+
+func (u *Updater) setIdleDownloadConfig(idleConfig string) error {
 	var idleDownloadConfigObj idleDownloadConfig
 	err := json.Unmarshal([]byte(idleConfig), &idleDownloadConfigObj)
 	if err != nil {
 		logger.Warning(err)
-		return dbusutil.ToError(err)
+		return err
 	}
 	// This dbus method may be called concurrently, need to add lock to ensure concurrent data safety
 	u.PropsMu.Lock()
@@ -149,7 +169,10 @@ func (u *Updater) SetIdleDownloadConfig(idleConfig string) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) SetDownloadSpeedLimit(limitConfig string) *dbus.Error {
+func (u *Updater) SetDownloadSpeedLimit(sender dbus.Sender, limitConfig string) *dbus.Error {
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	var limitConfigObj downloadSpeedLimitConfig
 	if err := json.Unmarshal([]byte(limitConfig), &limitConfigObj); err != nil {
 		logger.Warning(err)
