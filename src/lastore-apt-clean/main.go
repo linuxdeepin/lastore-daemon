@@ -27,6 +27,7 @@ import (
 )
 
 const maxElapsed = time.Hour * 24 * 6 // 6 days
+const binImmutableCtl = "deepin-immutable-ctl"
 
 var (
 	binDpkg      string
@@ -76,12 +77,21 @@ func main() {
 	}
 	findBins()
 
-	// 如果是增量更新，则调用deepin-immutable-ctl upgrade cleanup命令清理immutable系统的缓存deb包和ostree包分支
+	// Handle immutable system cache if incremental update is enabled
+	var immutableCache *immutableCacheOutput
 	cfg := config.NewConfig(path.Join("/var/lib/lastore", "config.json"))
 	if cfg.UseIncrementalUpdate() {
-		err := exec.Command("deepin-immutable-ctl", "upgrade", "clean").Run()
-		if err != nil {
-			logger.Debugf("failed to clean upgrade cache: %v", err)
+		if options.printJSON {
+			var err error
+			immutableCache, err = queryImmutableCacheSizes()
+			if err != nil {
+				logger.Debugf("failed to query immutable cache sizes: %v", err)
+			}
+		} else {
+			err := exec.Command(binImmutableCtl, "upgrade", "clean").Run()
+			if err != nil {
+				logger.Debugf("failed to clean immutable cache: %v", err)
+			}
 		}
 	}
 
@@ -92,6 +102,27 @@ func main() {
 		Files:     make(map[string][]*archiveInfo),
 		TotalSize: 0,
 	}
+
+	// Append immutable debtree cache files to the output
+	if immutableCache != nil {
+		const immutableDebtreeCacheDir = "/persistent/ostree/debtree/cache"
+		if files, ok := immutableCache.Files[immutableDebtreeCacheDir]; ok {
+			archiveFiles := make([]*archiveInfo, 0, len(files))
+			var dirTotalSize uint64
+			for _, f := range files {
+				archiveFiles = append(archiveFiles, &archiveInfo{
+					Name: f.Name,
+					Size: f.Size,
+				})
+				dirTotalSize += uint64(f.Size)
+			}
+			if len(archiveFiles) > 0 {
+				archivesInfos.Files[immutableDebtreeCacheDir] = archiveFiles
+				archivesInfos.TotalSize += dirTotalSize
+			}
+		}
+	}
+
 	for _, dirInfo := range _archivesDirInfos {
 		logger.Infof("dirInfo: %v", dirInfo)
 		var archivesInfo *archivesInfo
@@ -108,8 +139,6 @@ func main() {
 		if err != nil {
 			logger.Fatal(err)
 		}
-
-		// var testAgainDebInfoList []*debInfo
 
 		for _, entry := range fileInfoList {
 			logger.Infof("entry: %v", entry)
@@ -133,46 +162,27 @@ func main() {
 				delPolicy = DeleteImmediately
 			} else {
 				logger.Debugf("debInfo: %#v\n", debInfo)
-				// var testAgain bool
 				delPolicy, _ = shouldDelete(debInfo, cache)
-				// if testAgain {
-				// 	// 需要更多地判断
-				// 	debInfo.fileInfo = fileInfo
-				// 	testAgainDebInfoList = append(testAgainDebInfoList, debInfo)
-				// 	continue
-				// }
 			}
 			actWithPolicy(delPolicy, fileInfo, filename, archivesInfo)
 		}
 
-		// 更新治理管控之后，不一定从本地仓库更新，所以不能在通过这种方式获取备选版本和校验,防止包被误删
-		// t := time.Now()
-		// err = loadCandidateVersions(testAgainDebInfoList, dirInfo.configPath)
-		// logger.Debug("loadCandidateVersions cost:", time.Since(t))
-		// if err != nil {
-		// 	logger.Fatal("load candidate versions failed:", err)
-		// }
-
-		// for _, info := range testAgainDebInfoList {
-		// 	logger.Debug(">> ", info.fileInfo.Name())
-		// 	delPolicy := shouldDeleteTestAgain(info)
-		// 	actWithPolicy(delPolicy, info.fileInfo, info.filename, archivesInfo)
-		// }
 		if archivesInfo != nil {
 			archivesInfos.Files[archivesInfo.dir] = archivesInfo.Files
 			archivesInfos.TotalSize += archivesInfo.TotalSize
 		}
 	}
 
-	data, err := json.Marshal(archivesInfos)
-	if err != nil {
-		logger.Fatal(err)
+	if options.printJSON {
+		data, err := json.Marshal(archivesInfos)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		_, err = os.Stdout.Write(data)
+		if err != nil {
+			logger.Fatal(err)
+		}
 	}
-	_, err = os.Stdout.Write(data)
-	if err != nil {
-		logger.Fatal(err)
-	}
-
 }
 
 type archivesInfo struct {
@@ -204,6 +214,46 @@ func (ai *archivesInfo) addFileInfo(fileInfo os.FileInfo) {
 type archiveInfo struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+}
+
+// immutableCacheOutput parses the output of deepin-immutable-ctl upgrade clean --print-cache-sizes
+//
+// Example output:
+//
+//	{
+//	  "files": {
+//	    "/persistent/ostree/debtree/cache": [
+//	      {"name": "game-pp_5.3.2272.521_i386.deb", "size": 154281314},
+//	      {"name": "io.qt.qtcreator_8.0.2+szbt5_amd64.deb", "size": 26607790}
+//	    ],
+//	    "/persistent/ostree/repo": [],
+//	    "/sysroot/ostree/repo": []
+//	  },
+//	  "total": 180889104
+//	}
+type immutableCacheOutput struct {
+	Files map[string][]*immutableFileInfo `json:"files"`
+	Total uint64                          `json:"total"`
+}
+
+type immutableFileInfo struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}
+
+// queryImmutableCacheSizes queries deb package size info in the immutable system cache
+func queryImmutableCacheSizes() (*immutableCacheOutput, error) {
+	output, err := exec.Command(binImmutableCtl, "upgrade", "clean", "--print-cache-sizes").Output()
+	if err != nil {
+		return nil, err
+	}
+
+	var result immutableCacheOutput
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse immutable cache output: %v", err)
+	}
+	return &result, nil
 }
 
 func actWithPolicy(deletePolicy DeletePolicy, fileInfo os.FileInfo, filename string, archivesInfo *archivesInfo) {
