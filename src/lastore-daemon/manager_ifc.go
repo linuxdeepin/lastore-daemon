@@ -33,8 +33,11 @@ NOTE: Most of export function of Manager will hold the lock,
 so don't invoke they in inner functions
 */
 
-func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
+func (m *Manager) CleanArchives(sender dbus.Sender) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return "/", dbusutil.ToError(err)
+	}
 	jobObj, err := m.cleanArchives(false)
 	if err != nil {
 		return "/", dbusutil.ToError(err)
@@ -42,17 +45,12 @@ func (m *Manager) CleanArchives() (job dbus.ObjectPath, busErr *dbus.Error) {
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) CleanJob(jobId string) *dbus.Error {
+func (m *Manager) CleanJob(sender dbus.Sender, jobId string) *dbus.Error {
 	m.service.DelayAutoQuit()
-	m.do.Lock()
-	err := m.jobManager.CleanJob(jobId)
-	// 在clean后需要执行一次dispatch,将end状态的job清除,防止重新创建时出现异常
-	m.jobManager.dispatch()
-	m.do.Unlock()
-	if err != nil {
-		logger.Warningf("CleanJob %q error: %v\n", jobId, err)
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
 	}
-	return dbusutil.ToError(err)
+	return dbusutil.ToError(m.cleanJob(jobId))
 }
 
 func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectPath, busErr *dbus.Error) {
@@ -211,7 +209,11 @@ func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
 	return int64(size), dbusutil.ToError(err)
 }
 
-func (m *Manager) PauseJob(jobId string) *dbus.Error {
+func (m *Manager) PauseJob(sender dbus.Sender, jobId string) *dbus.Error {
+	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	m.do.Lock()
 	err := m.jobManager.PauseJob(jobId)
 	m.do.Unlock()
@@ -316,8 +318,11 @@ func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
 	return nil
 }
 
-func (m *Manager) StartJob(jobId string) *dbus.Error {
+func (m *Manager) StartJob(sender dbus.Sender, jobId string) *dbus.Error {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	m.do.Lock()
 	err := m.jobManager.MarkStart(jobId)
 	m.do.Unlock()
