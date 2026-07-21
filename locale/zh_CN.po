@@ -7,7 +7,6 @@
 # Hualet Wang (Hualet Wang) <mr.asianwang@gmail.com>, 2025
 # cxbii <mycxbii@gmail.com>, 2025
 # Maggie Liu <maggie.liufei@gmail.com>, 2025
-# . ., 2026
 # deepiner, 2026
 # 
 #, fuzzy
@@ -67,18 +66,18 @@ msgstr "已成功清理软件包缓存"
 
 #: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr "检查和安装更新中..."
+msgstr "正在检查和安装更新..."
 
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
-msgstr ""
+msgstr "更新包下载失败，请释放%s空间"
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
-msgstr "有新版本可用！安装包将很快开始下载。"
+msgstr "检测到新的更新任务，即将开始下载更新包"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
@@ -121,7 +120,7 @@ msgstr "忽略"
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr "下载已完成。计算机将在%s更新"
+msgstr "更新包下载完成，将于%s开始更新。"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
@@ -129,7 +128,7 @@ msgstr "检查到有新系统版本"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
-msgstr "有新版本可用！请前往控制中心查看。"
+msgstr "检测到新的更新任务，请进入控制中心查看"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
@@ -141,12 +140,12 @@ msgstr "检测更新失败，请清理磁盘空间"
 
 #: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
-msgstr ""
+msgstr "终端更新管理配置已刷新，重启后生效"
 
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr ""
+msgstr "系统将在%s更新"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
@@ -154,7 +153,7 @@ msgstr "备份和安装更新中..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr "更新已开始。请不要关机"
+msgstr "系统开始更新，更新完成前请不要关闭计算机"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
