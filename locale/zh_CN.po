@@ -2,14 +2,13 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# 
 # Translators:
 # Hualet Wang (Hualet Wang) <mr.asianwang@gmail.com>, 2025
 # cxbii <mycxbii@gmail.com>, 2025
 # Maggie Liu <maggie.liufei@gmail.com>, 2025
-# deepiner, 2025
-# Gary Wang <wzc782970009@gmail.com>, 2025
-#
+# deepiner, 2026
+# 
 #, fuzzy
 msgid ""
 msgstr ""
@@ -17,13 +16,12 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Gary Wang <wzc782970009@gmail.com>, 2025\n"
-"Language-Team: Chinese (China) (https://app.transifex.com/linuxdeepin/"
-"teams/3617/zh_CN/)\n"
-"Language: zh_CN\n"
+"Last-Translator: deepiner, 2026\n"
+"Language-Team: Chinese (China) (https://app.transifex.com/linuxdeepin/teams/3617/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: ../src/lastore-daemon/inhibitor.go:44
@@ -107,7 +105,8 @@ msgid "Downloading updates failed. Please check your network."
 msgstr "更新包下载失败，请检查网络设置"
 
 #: ../src/lastore-daemon/manager_download.go:287
-msgid "Downloading completed. You can install updates when shutdown or reboot."
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
 msgstr "更新包已下载完成，您可以在关机或重启时安装更新"
 
 #: ../src/lastore-daemon/manager_download.go:290
