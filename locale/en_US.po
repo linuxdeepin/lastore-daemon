@@ -2,10 +2,10 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# 
 # Translators:
-# deepiner, 2025
-#
+# deepiner, 2026
+# 
 #, fuzzy
 msgid ""
 msgstr ""
@@ -13,13 +13,12 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: deepiner, 2025\n"
-"Language-Team: English (United States) (https://app.transifex.com/"
-"linuxdeepin/teams/3617/en_US/)\n"
-"Language: en_US\n"
+"Last-Translator: deepiner, 2026\n"
+"Language-Team: English (United States) (https://app.transifex.com/linuxdeepin/teams/3617/en_US/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: en_US\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../src/lastore-daemon/inhibitor.go:44
@@ -64,19 +63,18 @@ msgstr "Package cache wiped"
 
 #: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr "Checking and installing updates..."
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
-msgstr "Downloading updates failed. Please free up %s disk space first."
+msgstr ""
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
 msgstr ""
-"New version available! The download of the update package will begin shortly"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
@@ -104,7 +102,8 @@ msgid "Downloading updates failed. Please check your network."
 msgstr "Downloading updates failed. Please check your network."
 
 #: ../src/lastore-daemon/manager_download.go:287
-msgid "Downloading completed. You can install updates when shutdown or reboot."
+msgid ""
+"Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
 "Downloading completed. You can install updates when shutdown or reboot."
 
@@ -119,7 +118,7 @@ msgstr "Dismiss"
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr "Downloading completed. The computer will be updated at %s"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
@@ -127,7 +126,7 @@ msgstr "New version available!"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
-msgstr "New version available! Please go to control-center to check"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
@@ -139,12 +138,12 @@ msgstr "Failed to check for updates. Please clean up your disk first."
 
 #: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
-msgstr "timer has changed. Please reboot to take effect"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr "The computer will be updated at %s"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
@@ -152,7 +151,7 @@ msgstr "Backing up and installing updates..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr "Start to update. Please do not shutdown"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
@@ -201,15 +200,15 @@ msgstr "Updates failed."
 
 #: ../src/lastore-daemon/manager_upgrade.go:795
 msgid "Updates successful"
-msgstr "Updates successful"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:796
 msgid "Restart the computer to use the system and applications properly."
-msgstr "Restart the computer to use the system and applications properly."
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Later"
-msgstr "Reboot Later"
+msgstr ""
 
 #: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Now"
