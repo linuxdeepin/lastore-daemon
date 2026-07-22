@@ -506,6 +506,9 @@ func (m *Manager) PrepareDistUpgradePartly(sender dbus.Sender, mode system.Updat
 
 func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, checkOrder uint32) (job dbus.ObjectPath, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return "", dbusutil.ToError(err)
+	}
 	job, err := m.checkUpgrade(sender, checkMode, checkType(checkOrder))
 	if err != nil {
 		logger.Warning(err)
