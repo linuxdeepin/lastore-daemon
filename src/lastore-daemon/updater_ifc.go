@@ -15,8 +15,11 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/ratelimit"
 )
 
-func (u *Updater) GetCheckIntervalAndTime() (interval float64, checkTime string, busErr *dbus.Error) {
+func (u *Updater) GetCheckIntervalAndTime(sender dbus.Sender) (interval float64, checkTime string, busErr *dbus.Error) {
 	u.service.DelayAutoQuit()
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return 0, "", dbusutil.ToError(err)
+	}
 	interval = u.config.CheckInterval.Hours()
 	checkTime = u.config.LastCheckTime.Format("2006-01-02 15:04:05.999999999 -0700 MST")
 	return
@@ -80,8 +83,11 @@ func (u *Updater) setAutoDownloadUpdates(enable bool) error {
 	return nil
 }
 
-func (u *Updater) ListMirrorSources(lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
+func (u *Updater) ListMirrorSources(sender dbus.Sender, lang string) (mirrorSources []LocaleMirrorSource, busErr *dbus.Error) {
 	u.service.DelayAutoQuit()
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return nil, dbusutil.ToError(err)
+	}
 	return u.listMirrorSources(lang), nil
 }
 
@@ -276,7 +282,10 @@ func (u *Updater) CleanTransmissionFiles(sender dbus.Sender) *dbus.Error {
 	return nil
 }
 
-func (u *Updater) SetDeliveryDownloadSpeedLimit(limitConfig string) *dbus.Error {
+func (u *Updater) SetDeliveryDownloadSpeedLimit(sender dbus.Sender, limitConfig string) *dbus.Error {
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	var speedLimitConfig speedLimitConfig
 	if err := json.Unmarshal([]byte(limitConfig), &speedLimitConfig); err != nil {
 		return dbusutil.ToError(err)
@@ -322,7 +331,10 @@ func (u *Updater) SetDeliveryDownloadSpeedLimit(limitConfig string) *dbus.Error 
 	return nil
 }
 
-func (u *Updater) SetDeliveryUploadSpeedLimit(limitConfig string) *dbus.Error {
+func (u *Updater) SetDeliveryUploadSpeedLimit(sender dbus.Sender, limitConfig string) *dbus.Error {
+	if err := u.manager.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	var speedLimitConfig speedLimitConfig
 	if err := json.Unmarshal([]byte(limitConfig), &speedLimitConfig); err != nil {
 		return dbusutil.ToError(err)
