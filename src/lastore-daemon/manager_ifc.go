@@ -68,8 +68,11 @@ func (m *Manager) FixError(sender dbus.Sender, errType string) (job dbus.ObjectP
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) GetArchivesInfo() (info string, busErr *dbus.Error) {
+func (m *Manager) GetArchivesInfo(sender dbus.Sender) (info string, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return "", dbusutil.ToError(err)
+	}
 	info, err := getArchiveInfo()
 	if err != nil {
 		return "", dbusutil.ToError(err)
@@ -111,17 +114,26 @@ func (m *Manager) InstallPackageFromRepo(sender dbus.Sender, jobName string, sou
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) PackageExists(pkgId string) (exist bool, busErr *dbus.Error) {
+func (m *Manager) PackageExists(sender dbus.Sender, pkgId string) (exist bool, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return false, dbusutil.ToError(err)
+	}
 	return system.QueryPackageInstalled(pkgId), nil
 }
 
-func (m *Manager) PackageInstallable(pkgId string) (installable bool, busErr *dbus.Error) {
+func (m *Manager) PackageInstallable(sender dbus.Sender, pkgId string) (installable bool, busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return false, dbusutil.ToError(err)
+	}
 	return system.QueryPackageInstallable(pkgId), nil
 }
 
-func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
+func (m *Manager) GetUpdateLogs(sender dbus.Sender, updateType system.UpdateType) (changeLogs string, busErr *dbus.Error) {
+	if err := m.checkInvokePermission(sender); err != nil {
+		return "", dbusutil.ToError(err)
+	}
 	res := make(map[system.UpdateType]interface{})
 	if updateType&system.SystemUpdate != 0 {
 		res[system.SystemUpdate] = m.updatePlatform.SystemUpdateLogs
@@ -152,12 +164,18 @@ func (m *Manager) GetUpdateLogs(updateType system.UpdateType) (changeLogs string
 //	ChangelogZh []string
 // }
 
-func (m *Manager) GetHistoryLogs() (changeLogs string, busErr *dbus.Error) {
+func (m *Manager) GetHistoryLogs(sender dbus.Sender) (changeLogs string, busErr *dbus.Error) {
+	if err := m.checkInvokePermission(sender); err != nil {
+		return "", dbusutil.ToError(err)
+	}
 	return getHistoryChangelog(upgradeRecordPath), nil
 }
 
-func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
+func (m *Manager) PackagesSize(sender dbus.Sender, packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return 0, dbusutil.ToError(err)
+	}
 	m.ensureUpdateSourceOnce()
 	var err error
 	var allPackageSize float64
@@ -180,8 +198,11 @@ func (m *Manager) PackagesSize(packages []string) (int64, *dbus.Error) {
 	return int64(allPackageSize), dbusutil.ToError(err)
 }
 
-func (m *Manager) PackagesDownloadSize(packages []string) (int64, *dbus.Error) {
+func (m *Manager) PackagesDownloadSize(sender dbus.Sender, packages []string) (int64, *dbus.Error) {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return 0, dbusutil.ToError(err)
+	}
 	m.ensureUpdateSourceOnce()
 	var err error
 	var size float64
@@ -297,8 +318,11 @@ func (m *Manager) RemovePackage(sender dbus.Sender, jobName string, packages str
 	return jobObj.getPath(), nil
 }
 
-func (m *Manager) SetAutoClean(enable bool) *dbus.Error {
+func (m *Manager) SetAutoClean(sender dbus.Sender, enable bool) *dbus.Error {
 	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	if m.AutoClean == enable {
 		return nil
 	}
@@ -488,7 +512,10 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	return nil
 }
 
-func (m *Manager) QueryAllSizeWithSource(mode system.UpdateType) (int64, *dbus.Error) {
+func (m *Manager) QueryAllSizeWithSource(sender dbus.Sender, mode system.UpdateType) (int64, *dbus.Error) {
+	if err := m.checkInvokePermission(sender); err != nil {
+		return 0, dbusutil.ToError(err)
+	}
 	var sourcePathList []string
 	for _, t := range system.AllInstallUpdateType() {
 		category := mode & t
@@ -543,6 +570,9 @@ func (m *Manager) CheckUpgrade(sender dbus.Sender, checkMode system.UpdateType, 
 }
 
 func (m *Manager) PowerOff(sender dbus.Sender, reboot bool) *dbus.Error {
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	args := []string{
 		"-f",
 	}
@@ -674,7 +704,10 @@ func (m *Manager) ConfirmRollback(sender dbus.Sender, confirm bool) *dbus.Error 
 	return nil
 }
 
-func (m *Manager) CanRollback() (bool, string, *dbus.Error) {
+func (m *Manager) CanRollback(sender dbus.Sender) (bool, string, *dbus.Error) {
+	if err := m.checkInvokePermission(sender); err != nil {
+		return false, "", dbusutil.ToError(err)
+	}
 	can, info := m.immutableManager.osTreeCanRollback()
 	return can, info, nil
 }
