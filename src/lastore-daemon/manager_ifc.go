@@ -22,7 +22,6 @@ import (
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/go-lib/gettext"
 	"github.com/linuxdeepin/go-lib/procfs"
-	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
@@ -397,7 +396,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 	if err != nil {
 		return dbusutil.ToError(err)
 	}
-	logger.Info("start PrepareFullScreenUpgrade")
+	logger.Infof("start PrepareFullScreenUpgrade with option: %s", option)
 
 	if supportOption {
 		opt := fullUpgradeOption{}
@@ -415,10 +414,30 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 			logger.Warning(err)
 			return dbusutil.ToError(err)
 		}
-		if utils2.IsSymlink(optionFilePathTemp) {
-			_ = os.RemoveAll(optionFilePathTemp)
+		tmpFile, err := os.CreateTemp("/tmp", "deepin_update_option_*.json")
+		if err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
 		}
-		_ = os.WriteFile(optionFilePathTemp, content, 0644)
+		tmpPath := tmpFile.Name()
+		if _, err := tmpFile.Write(content); err != nil {
+			_ = os.Remove(tmpPath)
+			tmpFile.Close()
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		tmpFile.Close()
+
+		if err := os.Chmod(tmpPath, 0644); err != nil {
+			_ = os.Remove(tmpPath)
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		if err := os.Rename(tmpPath, optionFilePathTemp); err != nil {
+			_ = os.Remove(tmpPath)
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
 	}
 
 	terminate := func() error {
