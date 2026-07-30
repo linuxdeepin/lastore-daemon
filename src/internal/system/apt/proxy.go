@@ -331,6 +331,34 @@ func safeStart(c *system.Command) error {
 	return nil
 }
 
+// pkgNameRegexp validates package name specifiers according to dpkg's
+// pkg_name_is_illegal() rules (lib/dpkg/parsehelp.c) and apt's package
+// specifier syntax.
+//
+// dpkg strict rules (scripts/Dpkg/Package.pm, deb-src-control.pod):
+//   - Must not be empty
+//   - First char: lowercase alphanumeric [a-z0-9]
+//   - Subsequent chars: [a-z0-9+.\-] (lowercase letters, digits, +, -, .)
+//
+// apt extensions (apt-pkg/cacheset.cc PackageFromPackageName):
+//   - ":arch" architecture suffix (arch chars: [a-zA-Z0-9-] per lib/dpkg/arch.c)
+//   - "=version" version selector (version chars: [a-zA-Z0-9.+~:*-])
+//
+// This prevents apt-get option injection: a package name starting with
+// '-' would be interpreted as an apt-get option rather than a package name.
+var pkgNameRegexp = regexp.MustCompile(`^[a-z0-9][a-z0-9+.\-]*(:[a-zA-Z0-9-]+)?(=[a-zA-Z0-9.+~:*-]+)?$`)
+
+// validatePackageNames ensures that all package names are valid apt
+// package specifiers and cannot be interpreted as apt-get options.
+func validatePackageNames(packages []string) error {
+	for _, pkg := range packages {
+		if !pkgNameRegexp.MatchString(pkg) {
+			return fmt.Errorf("invalid package name %q", pkg)
+		}
+	}
+	return nil
+}
+
 func OptionToArgs(options map[string]string) []string {
 	var args []string
 	for key, value := range options { // apt 命令执行参数
@@ -341,6 +369,9 @@ func OptionToArgs(options map[string]string) []string {
 }
 
 func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ map[string]string, args map[string]string) error {
+	if err := validatePackageNames(packages); err != nil {
+		return err
+	}
 	err := CheckPkgSystemError(false, p.Indicator)
 	if err != nil {
 		return err
@@ -351,6 +382,9 @@ func (p *APTSystem) DownloadPackages(jobId string, packages []string, environ ma
 }
 
 func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[string]string, args map[string]string) error {
+	if err := validatePackageNames(packages); err != nil {
+		return err
+	}
 	// 无需检查依赖错误
 	/*
 		err := CheckPkgSystemError(false)
@@ -387,6 +421,9 @@ func (p *APTSystem) DownloadSource(jobId string, packages []string, environ map[
 }
 
 func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]string) error {
+	if err := validatePackageNames(packages); err != nil {
+		return err
+	}
 	WaitDpkgLockRelease()
 	err := CheckPkgSystemError(true, p.Indicator)
 	if err != nil {
@@ -400,6 +437,9 @@ func (p *APTSystem) Remove(jobId string, packages []string, environ map[string]s
 }
 
 func (p *APTSystem) Install(jobId string, packages []string, environ map[string]string, args map[string]string) error {
+	if err := validatePackageNames(packages); err != nil {
+		return err
+	}
 	WaitDpkgLockRelease()
 	err := CheckPkgSystemError(true, p.Indicator)
 	if err != nil {
@@ -412,6 +452,9 @@ func (p *APTSystem) Install(jobId string, packages []string, environ map[string]
 }
 
 func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[string]string, args map[string]string) error {
+	if err := validatePackageNames(packages); err != nil {
+		return err
+	}
 	WaitDpkgLockRelease()
 	err := CheckPkgSystemError(true, p.Indicator)
 	if err != nil {
