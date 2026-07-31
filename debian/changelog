@@ -1,3 +1,11 @@
+lastore-daemon (6.2.64) unstable; urgency=medium
+
+  * fix(security): fix TOCTOU symlink race in PrepareFullScreenUpgrade
+  * fix(security): validate package names to prevent apt-get option injection
+  * fix: add permission check for CheckUpgrade D-Bus method (#456)
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Fri, 31 Jul 2026 16:35:29 +0800
+
 lastore-daemon (6.2.63) unstable; urgency=medium
 
   * fix(security): add caller verification for Updater sensitive methods
