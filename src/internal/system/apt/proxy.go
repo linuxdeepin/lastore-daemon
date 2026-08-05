@@ -760,12 +760,20 @@ func parseBackupJobError(stdErrStr string, stdOutStr string) *system.JobError {
 		}
 	}
 	if output.Code == 0 {
-		// success
-		return nil
+		// 如果命令退出码为非0,理论上output.Code就不应该为0
+		logger.Warningf("command exit code is not 0, but output.Code is 0: code=%d, message=%s", output.Code, output.Message)
+		output.Code = 1
 	}
 
-	errDetail := fmt.Sprintf("err code: %v, err message: %+v",
-		output.Error.Code, output.Error.Message)
+	// output.Error 可能为 nil（JSON 中缺少 error 字段），需做防护
+	var errDetail string
+	if output.Error != nil {
+		errDetail = fmt.Sprintf("err code: %v, err message: %+v",
+			output.Error.Code, output.Error.Message)
+	} else {
+		errDetail = fmt.Sprintf("err code: %v, err message: %s",
+			output.Code, output.Message)
+	}
 
 	return &system.JobError{
 		ErrType:   system.ErrorUnknown,
