@@ -231,12 +231,12 @@ func (c *Command) atExit() {
 			Cancelable: false,
 		})
 	case ExitFailure:
-		c.Indicator(JobProgressInfo{
-			OnlyLog:     true,
-			OriginalLog: c.Stderr.String(),
-		})
-		err := c.ParseJobError(c.Stderr.String(), c.Stdout.String())
-		if err != nil {
+		// 正常情况ParseJobError应该会返回一个非nil的JobError
+		if err := c.ParseJobError(c.Stderr.String(), c.Stdout.String()); err != nil {
+			c.Indicator(JobProgressInfo{
+				OnlyLog:     true,
+				OriginalLog: err.GetDetail(),
+			})
 			c.Indicator(JobProgressInfo{
 				JobId:      c.JobId,
 				Status:     FailedStatus,
@@ -245,6 +245,7 @@ func (c *Command) atExit() {
 				Error:      err,
 			})
 		} else {
+			// 理论上不应该走到这个流程上面来
 			c.Indicator(JobProgressInfo{
 				JobId:      c.JobId,
 				Status:     SucceedStatus,
