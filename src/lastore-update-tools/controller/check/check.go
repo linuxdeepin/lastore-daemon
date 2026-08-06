@@ -1,9 +1,7 @@
 package check
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -30,19 +28,6 @@ func SetDynHookTimeout(seconds int) {
 }
 
 var logger = log.NewLogger("lastore/update-tools/check")
-
-var sysRealArch string
-
-func init() {
-	cmd := exec.Command("/usr/bin/dpkg", "--print-architecture")
-
-	var output bytes.Buffer
-	cmd.Stdout = &output
-	err := cmd.Run()
-	if err == nil {
-		sysRealArch = strings.TrimSpace(output.String())
-	}
-}
 
 // DONE(heysion): 修改错误返回
 func LoadSysPkgInfo(pkgs map[string]*cache.AppTinyInfo) error {

@@ -92,6 +92,9 @@ func MainUpdater(c *cli.Context) (err error) {
 }
 
 func main() {
+	// 默认禁用不可变系统的 remount，仅对需要写 /usr 的子进程显式置为 false
+	_ = os.Setenv("IMMUTABLE_DISABLE_REMOUNT", "true")
+
 	// 清除语言相关环境变量
 	_ = utils.UnsetEnv("LC_ALL")
 	_ = utils.UnsetEnv("LANGUAGE")

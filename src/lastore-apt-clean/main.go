@@ -68,6 +68,9 @@ func findBins() {
 var _archivesDirInfos []*archivesDirInfo
 
 func main() {
+	// 默认禁用不可变系统的 remount，仅对需要写 /usr 的子进程显式置为 false
+	_ = os.Setenv("IMMUTABLE_DISABLE_REMOUNT", "true")
+
 	flag.Parse()
 	if options.printJSON {
 		// 让 logger 不在标准输出打印其他内容，只打印在系统日志中。

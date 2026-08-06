@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os/exec"
 	"path"
 	"reflect"
 	"regexp"
@@ -48,7 +47,6 @@ var (
 		// "SHA512",
 		// "Description",
 	}
-	sysRealArch string
 )
 
 var softwareFieldMap map[string]int
@@ -70,15 +68,6 @@ func init() {
 				softwareFieldMap[names[name]] = i
 			}
 		}
-	}
-
-	cmd := exec.Command("/usr/bin/dpkg", "--print-architecture")
-
-	var output bytes.Buffer
-	cmd.Stdout = &output
-	err := cmd.Run()
-	if err == nil {
-		sysRealArch = strings.TrimSpace(output.String())
 	}
 }
 
