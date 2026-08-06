@@ -569,8 +569,7 @@ func (m *Manager) distUpgrade(sender dbus.Sender, mode system.UpdateType,
 				if mode&system.SecurityUpdate != 0 {
 					recordUpgradeLog(uuid, system.SecurityUpdate, m.updatePlatform.GetCVEUpdateLogs(m.updater.getUpdatablePackagesByType(system.SecurityUpdate)), upgradeRecordPath)
 				}
-				_ = m.preUpgradeCmdSuccessHook(job, mode, uuid, refreshFullMerge)
-				return nil
+				return m.preUpgradeCmdSuccessHook(job, mode, uuid, refreshFullMerge)
 			},
 			string(system.FailedStatus): func() error {
 				_ = m.preFailedHook(job, mode, uuid)
@@ -814,7 +813,11 @@ func (m *Manager) preUpgradeCmdSuccessHook(job *Job, mode system.UpdateType, uui
 	// Perform immutable system refresh at the end of the upgrade process
 	if m.statusManager.abStatus == system.HasBackedUp {
 		if err := m.immutableManager.osTreeRefresh(refreshFullMerge); err != nil {
-			logger.Warning("ostree deploy refresh failed,", err)
+			logger.Warning("immutable-ctl admin deploy refresh failed:", err)
+			return &system.JobError{
+				ErrType:   system.ErrorImmutableRefreshFailed,
+				ErrDetail: err.Error(),
+			}
 		}
 	}
 
