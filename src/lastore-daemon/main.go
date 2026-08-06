@@ -45,6 +45,7 @@ var logger = log.NewLogger("lastore/lastore-daemon")
 //go:generate dbusutil-gen em -type Manager,Updater
 
 func main() {
+	_ = os.Setenv("IMMUTABLE_DISABLE_REMOUNT", "true")
 	flag.Parse()
 	service, err := dbusutil.NewSystemService()
 	if err != nil {
