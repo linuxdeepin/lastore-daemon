@@ -1,3 +1,18 @@
+lastore-daemon (6.2.65) unstable; urgency=medium
+
+  * fix(security): unify polkit auth via checkInvokePermission and drop
+    orphaned actions
+  * Revert "refactor(updateplatform): always use update platform logs"
+    (#465)
+  * fix(security): scope D-Bus deny rules to Manager interface (#464)
+  * fix(upgrade): fail jobs when immutable refresh fails
+  * fix(security): add caller verification for more Manager and Updater
+    methods
+  * refactor(updateplatform): always use update platform logs
+  * fix(system): prevent false success report when backup command fails
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 07 Aug 2026 13:06:11 +0800
+
 lastore-daemon (6.2.64) unstable; urgency=medium
 
   * fix(security): fix TOCTOU symlink race in PrepareFullScreenUpgrade
