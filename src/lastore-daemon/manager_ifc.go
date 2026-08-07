@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/linuxdeepin/dde-api/polkit"
 	agent "github.com/linuxdeepin/go-dbus-factory/session/org.deepin.dde.lastore1.agent"
 	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -104,6 +103,11 @@ func (m *Manager) InstallPackage(sender dbus.Sender, jobName string, packages st
 func (m *Manager) InstallPackageFromRepo(sender dbus.Sender, jobName string, sourceListPath string, repoListPath string, cachePath string, packageName []string) (jobPath dbus.ObjectPath,
 	busErr *dbus.Error) {
 	logger.Infof("enter InstallPackageFromRepo,jobName:%v, sourceListPath:%v, repoListPath:%v, cachePath:%v", jobName, sourceListPath, repoListPath, cachePath)
+
+	m.service.DelayAutoQuit()
+	if err := m.checkInvokePermission(sender); err != nil {
+		return "/", dbusutil.ToError(err)
+	}
 
 	jobObj, err := m.delInstallPackageFromRepo(sender, jobName, sourceListPath, repoListPath, cachePath, packageName)
 	if err != nil {
@@ -714,10 +718,7 @@ func (m *Manager) CanRollback(sender dbus.Sender) (bool, string, *dbus.Error) {
 
 func (m *Manager) GetUpdateDetails(sender dbus.Sender, fd dbus.UnixFD, realTime bool) (busErr *dbus.Error) {
 	m.service.DelayAutoQuit()
-	// default pass
-	err := polkit.CheckAuth("org.deepin.dde.lastore.doAction", string(sender), nil)
-	if err != nil {
-		logger.Warning(err)
+	if err := m.checkInvokePermission(sender); err != nil {
 		return dbusutil.ToError(err)
 	}
 	f := os.NewFile(uintptr(fd), "")
