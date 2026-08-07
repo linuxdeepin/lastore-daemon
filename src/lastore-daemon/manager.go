@@ -457,18 +457,6 @@ func (m *Manager) delInstallPackageFromRepo(sender dbus.Sender, jobName string, 
 		return nil, fmt.Errorf("make environ failed: %v", err)
 	}
 
-	uid, err := m.service.GetConnUID(string(sender))
-	if err != nil {
-		return nil, fmt.Errorf("get conn uid failed: %v", err)
-	}
-
-	if uid != 0 {
-		err := polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
-		if err != nil {
-			return nil, fmt.Errorf("check authorization failed: %v", err)
-		}
-	}
-
 	var canNotInstallError = errors.New("unable to install packages now")
 	_, isLock := system.CheckLock("/var/lib/dpkg/lock")
 	if isLock {
@@ -1367,7 +1355,7 @@ func (m *Manager) checkInvokePermission(sender dbus.Sender) error {
 
 	// 控制中心等前端可能经 deepin-security-loader 启动，先按 trusted sender 放行，其余调用方再走 polkit。
 	if !trusted {
-		err = polkit.CheckAuth(polkitActionChangeOwnData, string(sender), nil)
+		err = polkit.CheckAuth(polkitActionUserAdministration, string(sender), nil)
 		if err != nil {
 			logger.Warning(err)
 			return dbusutil.ToError(err)

@@ -541,7 +541,7 @@ func getCoreListOnline() []string {
 }
 
 const (
-	polkitActionChangeOwnData          = "com.deepin.lastore.user-administration"
+	polkitActionUserAdministration     = "com.deepin.lastore.user-administration"
 	polkitActionChangeUpgradeDelivery  = "com.deepin.lastore.doUpgradeDelivery"
 	polkitActionEnableUpgradeDelivery  = "com.deepin.lastore.enableUpgradeDelivery"
 	polkitActionDisableUpgradeDelivery = "com.deepin.lastore.disableUpgradeDelivery"
