@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1447,8 +1448,80 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 		logger.Warning(err)
 		return nil
 	}
-	// 强制使用更新平台日志
-	m.SystemUpdateLogs = getUpdateLogData(data)
+	forceLog := response.Header.Get("X-Force")
+	if forceLog == "true" {
+		// 强制使用更新平台日志
+		m.SystemUpdateLogs = getUpdateLogData(data)
+	} else {
+		// 根据本地环境判断是否使用更新平台日志
+		// m.targetVersion
+		m.SystemUpdateLogs = make([]UpdateLogMeta, 0)
+		osVersionInfoMap, err := GetOSVersionInfo(realVersion)
+		if err != nil {
+			logger.Warning("failed to get os-version:", err)
+			// 获取本地版本号失败，使用默认日志
+		} else {
+			minorVersion := osVersionInfoMap["MinorVersion"]
+			osBuild := osVersionInfoMap["OsBuild"]
+			osBuildSlice := strings.Split(osBuild, ".")
+			var secVersionStr string
+			if len(osBuildSlice) >= 3 {
+				var globalVersionStr string
+				var ok bool
+				// 社区版的version是minorVersion，直接可以显示小版本
+				if osVersionInfoMap["EditionName"] == "Community" {
+					ok = true
+				} else {
+					secVersionStr = osBuildSlice[1]
+					secVersionInt, err := strconv.Atoi(secVersionStr)
+					if err != nil {
+						logger.Warning(err)
+						return nil
+					}
+					realSecVersion := secVersionInt - 100
+					minorVersionInt, err := strconv.Atoi(minorVersion)
+					if err != nil {
+						logger.Warning(err)
+						return nil
+					}
+					globalVersion := minorVersionInt + realSecVersion
+					if globalVersion < 1000 {
+						logger.Warningf("system version is %v, not support compare with %v", globalVersion, m.targetVersion)
+						return nil
+					}
+					targetVersionInt, err := strconv.Atoi(m.targetVersion)
+					if err != nil {
+						logger.Warning(err)
+						return nil
+					}
+					if targetVersionInt > globalVersion {
+						ok = true
+					}
+					globalVersionStr = fmt.Sprintf("%v", globalVersion)
+				}
+				logData := getUpdateLogData(data)
+				if ok {
+					m.SystemUpdateLogs = logData
+				} else {
+					var lastLog UpdateLogMeta
+					if logData != nil && len(logData) > 0 {
+						lastLog = logData[0]
+					}
+
+					m.SystemUpdateLogs = append(m.SystemUpdateLogs, UpdateLogMeta{
+						Baseline:      lastLog.Baseline,
+						ShowVersion:   globalVersionStr,
+						CnLog:         "修复部分系统已知问题与缺陷",
+						EnLog:         "Fixing some of the system's known problems and defects",
+						LogType:       lastLog.LogType,
+						IsUnstable:    lastLog.IsUnstable,
+						SystemVersion: lastLog.SystemVersion,
+						PublishTime:   lastLog.PublishTime,
+					})
+				}
+			}
+		}
+	}
 	return nil
 }
 
