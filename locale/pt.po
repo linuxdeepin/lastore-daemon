@@ -207,22 +207,25 @@ msgstr "Falha nas atualizações: espaço insuficiente no disco."
 #: ../src/lastore-daemon/manager_upgrade.go:700
 msgid "Updates failed. Please reboot to avoid the effect on your system."
 msgstr ""
+"As atualizações falharam. Por favor reinicie para evitar afetar o seu "
+"sistema."
 
 #: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
-msgstr ""
+msgstr "As atualizações falharam."
 
 #: ../src/lastore-daemon/manager_upgrade.go:795
 msgid "Updates successful"
-msgstr ""
+msgstr "As atualizações foram bem sucedidas"
 
 #: ../src/lastore-daemon/manager_upgrade.go:796
 msgid "Restart the computer to use the system and applications properly."
 msgstr ""
+"Reinicie o computador para usar o sistema e as aplicações corretamente."
 
 #: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Later"
-msgstr ""
+msgstr "Reiniciar mais tarde"
 
 #: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Now"
