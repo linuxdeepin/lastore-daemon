@@ -161,15 +161,15 @@ msgstr "O computador será atualizado em %s"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
-msgstr ""
+msgstr "A fazer cópia de segurança e instalar atualizações..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "A iniciar atualização. Por favor não encerre"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
-msgstr ""
+msgstr "Cópia de segurança falhou!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Back Up Again"
