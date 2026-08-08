@@ -110,11 +110,14 @@ msgstr "Tente novamente"
 #: ../src/lastore-daemon/manager_download.go:223
 msgid "Downloading updates failed. Please check your network."
 msgstr ""
+"A transferência das atualizações falhou. Por favor verifique a sua rede."
 
 #: ../src/lastore-daemon/manager_download.go:287
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
+"Transferência completa. Pode instalar atualizações quando encerrar ou "
+"reiniciar."
 
 #: ../src/lastore-daemon/manager_download.go:290
 msgid "Update Now"
@@ -122,7 +125,7 @@ msgstr "Atualizar agora"
 
 #: ../src/lastore-daemon/manager_download.go:292
 msgid "Dismiss"
-msgstr ""
+msgstr "Dispensar"
 
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
