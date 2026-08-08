@@ -81,10 +81,12 @@ msgstr ""
 msgid ""
 "New version available! The download of the update package will begin shortly"
 msgstr ""
+"Nova versão disponível! A transferência do pacote de atualização irá iniciar"
+" brevemente"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "Nova versão disponível! A transferir..."
 
 #: ../src/lastore-daemon/manager_download.go:157
 #: ../src/lastore-daemon/manager_download.go:224
@@ -97,6 +99,8 @@ msgstr "Ver"
 #: ../src/lastore-daemon/manager_upgrade.go:672
 msgid "Updates failed: damaged files. Please update again."
 msgstr ""
+"As atualizações falharam: ficheiros danificados. Por favor atualize "
+"novamente."
 
 #: ../src/lastore-daemon/manager_download.go:213
 #: ../src/lastore-daemon/manager_upgrade.go:673
