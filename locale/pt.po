@@ -173,11 +173,11 @@ msgstr "Cópia de segurança falhou!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Back Up Again"
-msgstr ""
+msgstr "Fazer Cópia de Segurança Novamente"
 
 #: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Proceed to Update"
-msgstr ""
+msgstr "Continuar para Atualizar"
 
 #: ../src/lastore-daemon/manager_upgrade.go:605
 msgid ""
