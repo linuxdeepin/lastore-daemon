@@ -184,12 +184,16 @@ msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
+"A capacidade da bateria está abaixo dos 60%. Para obter atualizações com "
+"sucesso por favor ligue à corrente."
 
 #: ../src/lastore-daemon/manager_upgrade.go:683
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr ""
+"As atualizações falharam: espaço em disco insuficiente. Por favor reinicie "
+"para evitar afetar o seu sistema."
 
 #: ../src/lastore-daemon/manager_upgrade.go:684
 #: ../src/lastore-daemon/manager_upgrade.go:701
@@ -198,7 +202,7 @@ msgstr "Reiniciar"
 
 #: ../src/lastore-daemon/manager_upgrade.go:688
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "Falha nas atualizações: espaço insuficiente no disco."
 
 #: ../src/lastore-daemon/manager_upgrade.go:700
 msgid "Updates failed. Please reboot to avoid the effect on your system."
