@@ -4,11 +4,11 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Ricardo Simões <xmcorporation@gmail.com>, 2025
 # 00101f7862160fbf8a065655a48ad879_875972c <c486e5cdf80c8fbbc1127ec062b107b4_205162>, 2025
 # Maggie Liu <maggie.liufei@gmail.com>, 2025
 # deepiner, 2025
 # Hugo Carvalho <hugokarvalho@hotmail.com>, 2026
+# Ricardo Simões <xmcorporation@gmail.com>, 2026
 # 
 #, fuzzy
 msgid ""
@@ -17,7 +17,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Hugo Carvalho <hugokarvalho@hotmail.com>, 2026\n"
+"Last-Translator: Ricardo Simões <xmcorporation@gmail.com>, 2026\n"
 "Language-Team: Portuguese (https://app.transifex.com/linuxdeepin/teams/3617/pt/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -67,13 +67,15 @@ msgstr "Cache dos pacotes apagada"
 
 #: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "A verificar e instalar atualizações..."
 
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
 msgstr ""
+"A transferência de atualizações falhou. Por favor liberte %s de espaço em "
+"disco primeiro."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
