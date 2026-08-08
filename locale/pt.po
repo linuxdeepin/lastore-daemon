@@ -134,15 +134,16 @@ msgstr "Transferência completa. O computador será atualizado em %s"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
-msgstr ""
+msgstr "Nova versão disponível!"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
 msgstr ""
+"Nova versão disponível! Por favor vá ao Centro de Controlo para verificar"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
-msgstr ""
+msgstr "Falha ao verificar por atualizações. Por favor verifique a sua rede."
 
 #: ../src/lastore-daemon/manager_update.go:299
 msgid "Failed to check for updates. Please clean up your disk first."
