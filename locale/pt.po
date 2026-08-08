@@ -130,7 +130,7 @@ msgstr "Dispensar"
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "Transferência completa. O computador será atualizado em %s"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
