@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1425,6 +1424,20 @@ func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.PackageInfo {
 	return infos
 }
 
+// UpdateLogMeta 表示更新日志中一个版本的信息。
+//
+// 示例数据：
+//
+//	{
+//	  "baseline": "professional-v20-010",   // 基线号
+//	  "showVersion": "1060",                // 展示给终端的更新版本号
+//	  "cnLog": "<p>中文日志</p>",            // 中文日志
+//	  "enLog": "<p>english log</p>",        // 英文日志
+//	  "logType": 1,                         // 日志类型：1 系统更新，2 安全更新
+//	  "isUnstable": 1,                      // 日志范围：1 对外发布，2 内测，不传则默认值为 1
+//	  "systemVersion": "123123123",         // 系统版本，例如：1040
+//	  "publishTime": "2022-05-05T00:00:00+08:00" // 发布日期
+//	}
 type UpdateLogMeta struct {
 	Baseline      string    `json:"baseline"`
 	ShowVersion   string    `json:"showVersion"`
@@ -1438,91 +1451,48 @@ type UpdateLogMeta struct {
 
 // 如果更新日志无法获取到,不会返回错误,而是设置默认日志文案
 func (m *UpdatePlatformManager) updateLogMetaSync() error {
+	defaultLog := UpdateLogMeta{
+		Baseline:      m.targetBaseline,
+		ShowVersion:   m.targetVersion,
+		CnLog:         "修复部分系统已知问题与缺陷",
+		EnLog:         "Fixing some of the system's known problems and defects",
+		LogType:       1,
+		IsUnstable:    1,
+		SystemVersion: "",
+		PublishTime:   time.Now(),
+	}
+
 	response, err := m.genUpdateLogResponse()
 	if err != nil {
-		logger.Warning(err)
+		logger.Warningf("genUpdateLogResponse error: %v, use default log", err)
+		m.SystemUpdateLogs = []UpdateLogMeta{defaultLog}
 		return nil
 	}
 	data, _, _, err := getResponseData(response, GetUpdateLog)
 	if err != nil {
-		logger.Warning(err)
+		logger.Warningf("getResponseData error: %v, use default log", err)
+		m.SystemUpdateLogs = []UpdateLogMeta{defaultLog}
 		return nil
 	}
-	forceLog := response.Header.Get("X-Force")
-	if forceLog == "true" {
-		// 强制使用更新平台日志
-		m.SystemUpdateLogs = getUpdateLogData(data)
-	} else {
-		// 根据本地环境判断是否使用更新平台日志
-		// m.targetVersion
-		m.SystemUpdateLogs = make([]UpdateLogMeta, 0)
-		osVersionInfoMap, err := GetOSVersionInfo(realVersion)
-		if err != nil {
-			logger.Warning("failed to get os-version:", err)
-			// 获取本地版本号失败，使用默认日志
-		} else {
-			minorVersion := osVersionInfoMap["MinorVersion"]
-			osBuild := osVersionInfoMap["OsBuild"]
-			osBuildSlice := strings.Split(osBuild, ".")
-			var secVersionStr string
-			if len(osBuildSlice) >= 3 {
-				var globalVersionStr string
-				var ok bool
-				// 社区版的version是minorVersion，直接可以显示小版本
-				if osVersionInfoMap["EditionName"] == "Community" {
-					ok = true
-				} else {
-					secVersionStr = osBuildSlice[1]
-					secVersionInt, err := strconv.Atoi(secVersionStr)
-					if err != nil {
-						logger.Warning(err)
-						return nil
-					}
-					realSecVersion := secVersionInt - 100
-					minorVersionInt, err := strconv.Atoi(minorVersion)
-					if err != nil {
-						logger.Warning(err)
-						return nil
-					}
-					globalVersion := minorVersionInt + realSecVersion
-					if globalVersion < 1000 {
-						logger.Warningf("system version is %v, not support compare with %v", globalVersion, m.targetVersion)
-						return nil
-					}
-					targetVersionInt, err := strconv.Atoi(m.targetVersion)
-					if err != nil {
-						logger.Warning(err)
-						return nil
-					}
-					if targetVersionInt > globalVersion {
-						ok = true
-					}
-					globalVersionStr = fmt.Sprintf("%v", globalVersion)
-				}
-				logData := getUpdateLogData(data)
-				if ok {
-					m.SystemUpdateLogs = logData
-				} else {
-					var lastLog UpdateLogMeta
-					if logData != nil && len(logData) > 0 {
-						lastLog = logData[0]
-					}
-
-					m.SystemUpdateLogs = append(m.SystemUpdateLogs, UpdateLogMeta{
-						Baseline:      lastLog.Baseline,
-						ShowVersion:   globalVersionStr,
-						CnLog:         "修复部分系统已知问题与缺陷",
-						EnLog:         "Fixing some of the system's known problems and defects",
-						LogType:       lastLog.LogType,
-						IsUnstable:    lastLog.IsUnstable,
-						SystemVersion: lastLog.SystemVersion,
-						PublishTime:   lastLog.PublishTime,
-					})
-				}
-			}
-		}
+	m.SystemUpdateLogs = getUpdateLogData(data)
+	if !isValidUpdateLog(m.SystemUpdateLogs) {
+		logger.Warningf("update log is invalid, use default log")
+		m.SystemUpdateLogs = []UpdateLogMeta{defaultLog}
 	}
 	return nil
+}
+
+// isValidUpdateLog 判断更新日志是否有效：日志切片非空，且至少存在一条 EnLog 非空的日志
+func isValidUpdateLog(logs []UpdateLogMeta) bool {
+	if len(logs) == 0 {
+		return false
+	}
+	for _, log := range logs {
+		if log.EnLog != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *UpdatePlatformManager) genRepositoryFromPlatform(useP2PUpdate bool) {
