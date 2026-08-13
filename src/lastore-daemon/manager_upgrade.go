@@ -708,7 +708,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			if m.config.IntranetUpdate {
 				go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivateLong)
 			} else {
-				hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
+				hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant(actionShowUpdateModule)}
 				go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 			}
 		} else if strings.Contains(errType, system.ErrorInsufficientSpace.String()) {

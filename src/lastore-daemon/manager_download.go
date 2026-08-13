@@ -280,7 +280,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 					if m.config.IntranetUpdate {
 						go m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
 					} else {
-						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
+						hints := map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant(actionShowUpdateModule)}
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					}
 				})
@@ -347,12 +347,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 						cleanAllCache()
 						msg := gettext.Tr("Updates failed: damaged files. Please update again.")
 						action := []string{"retry", gettext.Tr("Try Again")}
-						var hints map[string]dbus.Variant
-						if m.config.IntranetUpdate {
-							hints = map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
-						} else {
-							hints = map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant("dde-control-center,-m,update")}
-						}
+						hints := map[string]dbus.Variant{"x-deepin-action-retry": dbus.MakeVariant(actionShowUpdateModule)}
 						go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 					} else if strings.Contains(errorContent.ErrType.String(), system.ErrorFetchFailed.String()) {
 						// 网络原因下载更新失败
@@ -440,7 +435,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 									m.sendNotify(updateNotifyShow, 0, "preferences-system", "", msg, nil, nil, system.NotifyExpireTimeoutPrivate)
 								}
 							} else {
-								hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant("dde-control-center,-m,update")}
+								hints := map[string]dbus.Variant{"x-deepin-action-updateNow": dbus.MakeVariant(actionShowUpdateModule)}
 
 								m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 							}
