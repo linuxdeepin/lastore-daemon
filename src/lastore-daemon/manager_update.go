@@ -244,13 +244,13 @@ func (m *Manager) updateSource(sender dbus.Sender) (*Job, error) {
 						action := []string{"view", gettext.Tr("View")}
 						var hints map[string]dbus.Variant
 						if m.config.IntranetUpdate {
-							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,updateprivate")}
+							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant(actionShowUpdateModule)}
 							if m.updatePlatform.Tp == updateplatform.NormalUpdate {
 								msg = gettext.Tr("New version available! Please go to control-center to check")
 								go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutPrivate)
 							}
 						} else {
-							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant("dde-control-center,-m,update")}
+							hints = map[string]dbus.Variant{"x-deepin-action-view": dbus.MakeVariant(actionShowUpdateModule)}
 							go m.sendNotify(updateNotifyShowOptional, 0, "preferences-system", "", msg, action, hints, system.NotifyExpireTimeoutDefault)
 						}
 					}

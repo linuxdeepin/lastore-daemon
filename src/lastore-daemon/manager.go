@@ -984,6 +984,10 @@ func (m *Manager) handleUserRemoved(uid uint32, userPath dbus.ObjectPath) {
 const (
 	updateNotifyShow         = "dde-control-center"          // 无论控制中心状态，都需要发送的通知
 	updateNotifyShowOptional = "dde-control-center-optional" // 根据控制中心更新模块焦点状态,选择性的发通知(由dde-session-daemon的lastore agent判断后控制)
+
+	// 通知中"查看/重试/立即更新"按钮的动作: 通过 DBus 调用控制中心打开更新页面
+	// Notification action for View/Retry/UpdateNow: open the update page via DBus
+	actionShowUpdateModule = "dbus-send,--session,--print-reply,--dest=org.deepin.dde.ControlCenter1,/org/deepin/dde/ControlCenter1,org.deepin.dde.ControlCenter1.ShowModule,string:update"
 )
 
 func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
