@@ -1,3 +1,13 @@
+lastore-daemon (6.2.66) unstable; urgency=medium
+
+  * fix: open update page via dbus in notifications (#471)
+  * i18n: Updates for project Deepin Desktop Environment (#468)
+  * fix: disable immutable remount for read-only dpkg/apt queries
+  * refactor(updateplatform): always use platform update logs with
+    default fallback
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 14 Aug 2026 14:43:05 +0800
+
 lastore-daemon (6.2.65) unstable; urgency=medium
 
   * fix(security): unify polkit auth via checkInvokePermission and drop
