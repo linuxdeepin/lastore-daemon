@@ -258,7 +258,12 @@ func (u *Updater) SetP2PUpdateEnable(sender dbus.Sender, enable bool) *dbus.Erro
 		return dbusutil.ToError(err)
 	}
 
-	u.setPropP2PUpdateEnable(enable)
+	if changed := u.setPropP2PUpdateEnable(enable); !enable && changed {
+		// 关闭更新传递后需要调用delivery的DisableService，保证更新传递服务正常退出
+		if err := u.disableDeliveryService(); err != nil {
+			logger.Warning(err)
+		}
+	}
 	return nil
 }
 
