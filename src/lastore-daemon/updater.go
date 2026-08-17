@@ -197,6 +197,18 @@ func (u *Updater) setMirrorSource(id string) error {
 	return nil
 }
 
+func (u *Updater) disableDeliveryService() error {
+	upgradeDeliveryObject := u.service.Conn().Object("org.deepin.upgradedelivery", "/org/deepin/upgradedelivery")
+	if err := upgradeDeliveryObject.Call("org.deepin.upgradedelivery.DisableService", 0).Err; err != nil {
+		return fmt.Errorf("failed to disable upgrade delivery service: %w", err)
+	}
+
+	if err := upgradeDeliveryObject.Call("org.deepin.upgradedelivery.Clear", 0).Err; err != nil {
+		return fmt.Errorf("failed to clear upgrade delivery: %w", err)
+	}
+	return nil
+}
+
 // refreshUpgradeDeliveryService 刷新升级传递服务的状态，同步配置与实际服务状态。
 // 该函数检查 P2P 更新源支持情况，并根据 UpgradeDeliveryEnabled 配置
 // 启动或关闭升级传递服务，确保 P2PUpdateEnable 属性与配置一致。
@@ -238,6 +250,7 @@ func (u *Updater) refreshUpgradeDeliveryService() {
 		platformHasDelivery = u.manager.updatePlatform.HasDeliveryRepo()
 	}
 	shouldEnableService := shouldEnableUpgradeDeliveryService(u.config, platformHasDelivery)
+	logger.Infof("delivery shouldEnableService=%+v, serviceStatus=%+v", shouldEnableService, serviceStatus)
 	// 应用 UpgradeDeliveryEnabled 配置
 	if shouldEnableService {
 		// 配置启用：期望服务开启
@@ -256,24 +269,12 @@ func (u *Updater) refreshUpgradeDeliveryService() {
 		}
 	} else {
 		// 配置禁用：期望服务关闭
-		if serviceStatus == system.UpgradeDeliveryEnable {
-			// 服务已开启，尝试关闭
-			err = upgradeDeliveryObject.Call("org.deepin.upgradedelivery.DisableService", 0).Err
-			if err != nil {
-				logger.Warning("failed to disable upgrade delivery service", err)
-				u.setPropP2PUpdateEnable(true)
-			} else {
-				err = upgradeDeliveryObject.Call("org.deepin.upgradedelivery.Clear", 0).Err
-				if err != nil {
-					logger.Warning("failed to clear upgrade delivery", err)
-				}
-				// 关闭了服务，但是清理失败，依然设置为 false
-				u.setPropP2PUpdateEnable(false)
-			}
-		} else {
-			// 服务已关闭
-			u.setPropP2PUpdateEnable(false)
+		// 由于之前调用了Status接口，upgradedelvery服务均会被拉起运行，
+		// 因此，无论状态是否是enable，此处都需要调用一次DisableService来保证upgradedelivery主动退出
+		if err := u.disableDeliveryService(); err != nil {
+			logger.Warning("failed to disable upgrade delivery service", err)
 		}
+		u.setPropP2PUpdateEnable(false)
 	}
 }
 
