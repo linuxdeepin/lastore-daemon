@@ -1,3 +1,10 @@
+lastore-daemon (6.2.67) unstable; urgency=medium
+
+  * fix(updater): ensure upgrade delivery service exits when p2p
+    disabled
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 21 Aug 2026 14:48:51 +0800
+
 lastore-daemon (6.2.66) unstable; urgency=medium
 
   * fix: open update page via dbus in notifications (#471)
