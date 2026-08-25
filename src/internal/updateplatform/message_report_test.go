@@ -406,3 +406,35 @@ func TestGetCVEUpdateLogsStringEncodedJSON(t *testing.T) {
 		t.Fatal("expected CVE-2024-7006 in results")
 	}
 }
+
+func TestIsMajorUpgrade(t *testing.T) {
+	tests := []struct {
+		name       string
+		oldVersion string
+		newVersion string
+		want       bool
+	}{
+		// 专业版：MinorVersion 为纯数字
+		{"professional: 2500 -> 2510 major", "2500", "2510", true},
+		{"professional: 2510 -> 2500 not major", "2510", "2500", false},
+		{"professional: 2500 -> 2500 equal", "2500", "2500", false},
+		// 社区版：MinorVersion 以 "." 分段，取第一段
+		{"community: 25.2.1 -> 26.1.0 major", "25.2.1", "26.1.0", true},
+		{"community: 26.1.0 -> 25.2.1 not major", "26.1.0", "25.2.1", false},
+		{"community: 25.2.1 -> 25.3.0 not major", "25.2.1", "25.3.0", false},
+		{"community: 25.2.1 -> 25.2.1 equal", "25.2.1", "25.2.1", false},
+		// 边界与异常
+		{"empty new version", "2500", "", false},
+		{"invalid old version", "abc", "2500", false},
+		{"invalid new version", "2500", "xyz", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isMajorUpgrade(tt.oldVersion, tt.newVersion)
+			if got != tt.want {
+				t.Fatalf("isMajorUpgrade(%q, %q) = %v, want %v", tt.oldVersion, tt.newVersion, got, tt.want)
+			}
+		})
+	}
+}

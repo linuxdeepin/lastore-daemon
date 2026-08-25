@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -342,6 +343,44 @@ func getTargetSystemType() string {
 
 func getTargetVersion() string {
 	return getGeneralValueFromKeyFile(cacheBaseline, "Version")
+}
+
+// IsMajorUpgrade 判断当前更新是否为大版本升级。
+// 取本地 MinorVersion 与目标 targetVersion 交由 isMajorUpgrade 统一比较，
+// 仅当目标首段数值大于本地首段数值时才视为大版本升级，相等或小于均不算。
+// 版本号格式由各发行版约定：专业版为纯数字(如 2500)，社区版为点分(如 25.2.1)，
+// 取首段后均可正确比较(2500->2510、25.2.1->26.1.0)。
+func (m *UpdatePlatformManager) IsMajorUpgrade() bool {
+	if m.targetVersion == "" {
+		return false
+	}
+
+	infoMap, err := GetOSVersionInfo(CacheVersion)
+	if err != nil {
+		logger.Warningf("IsMajorUpgrade: failed to get os version info: %v", err)
+		return false
+	}
+
+	return isMajorUpgrade(infoMap["MinorVersion"], m.targetVersion)
+}
+
+// isMajorUpgrade 判断两个版本号之间是否发生大版本跃迁。
+// 对 oldVersion 和 newVersion 均按 "." 分段并取第一段，转换为数字后比较大小，
+// 仅当 newVersion 对应数值大于 oldVersion 时返回 true。
+// 对于不含 "." 的版本号(如专业版 "2500")，SplitN 会直接返回原字符串，转换不受影响。
+func isMajorUpgrade(oldVersion, newVersion string) bool {
+	oldStr := strings.SplitN(oldVersion, ".", 2)[0]
+	newStr := strings.SplitN(newVersion, ".", 2)[0]
+
+	oldVal, err1 := strconv.Atoi(oldStr)
+	newVal, err2 := strconv.Atoi(newStr)
+	if err1 != nil || err2 != nil {
+		logger.Warningf("isMajorUpgrade: parse version failed, old %q new %q", oldStr, newStr)
+		return false
+	}
+
+	logger.Debugf("isMajorUpgrade: old %d, new %d", oldVal, newVal)
+	return newVal > oldVal
 }
 
 func getGeneralValueFromKeyFile(path, key string) string {

@@ -437,6 +437,7 @@ func (m *Manager) PrepareFullScreenUpgrade(sender dbus.Sender, option string) *d
 		opt.DoUpgrade = true
 		opt.PreGreeterCheck = false
 		opt.AfterGreeterCheck = false
+		opt.MajorUpgrade = m.updatePlatform.IsMajorUpgrade()
 		content, err := json.Marshal(opt)
 		if err != nil {
 			logger.Warning(err)

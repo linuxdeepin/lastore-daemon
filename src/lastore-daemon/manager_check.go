@@ -184,6 +184,7 @@ type fullUpgradeOption struct {
 	PreGreeterCheck   bool
 	AfterGreeterCheck bool
 	UUID              string
+	MajorUpgrade      bool // 是否为大版本升级
 }
 
 const (
@@ -199,6 +200,7 @@ func (m *Manager) setRebootCheckOption(mode system.UpdateType, uuid string) erro
 		PreGreeterCheck:   true,
 		AfterGreeterCheck: true,
 		UUID:              uuid,
+		MajorUpgrade:      m.updatePlatform.IsMajorUpgrade(),
 	}
 	content, err := json.Marshal(option)
 	if err != nil {
