@@ -297,17 +297,15 @@ func (u *Updater) SetDeliveryDownloadSpeedLimit(sender dbus.Sender, limitConfig 
 	}
 
 	var rateInfo ratelimit.RateInfo
+	var rateLimit int
 	if speedLimitConfig.SpeedLimitEnabled {
 		limitRate, err := strconv.ParseInt(speedLimitConfig.LimitSpeed, 10, 64)
 		if err != nil {
 			return dbusutil.ToError(err)
 		}
-		rateLimit := int(limitRate)
+		rateLimit = int(limitRate)
 		if rateLimit*1024 < ratelimit.MinRateLimit || rateLimit*1024 > ratelimit.MaxRateLimit {
 			rateLimit = int(ratelimit.DefaultRateLimit) / 1024
-		}
-		if err := ratelimit.SetIPFSDownloadRateLimit(rateLimit); err != nil {
-			return dbusutil.ToError(err)
 		}
 		rateInfo = ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeLocal,
@@ -315,14 +313,21 @@ func (u *Updater) SetDeliveryDownloadSpeedLimit(sender dbus.Sender, limitConfig 
 			CurrentRate: int64(rateLimit) * 1024,
 		}
 	} else {
-		if err := ratelimit.SetIPFSDownloadRateLimit(-1); err != nil {
-			return dbusutil.ToError(err)
-		}
+		rateLimit = -1
 		rateInfo = ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeNo,
 			LimitRate:   ratelimit.DefaultRateLimit,
 			CurrentRate: ratelimit.DefaultRateLimit,
 		}
+	}
+
+	// 如果下发的状态与当前状态一致，则不需要重复设置
+	if rateInfo.SameAsConfig(u.config.DeliveryLocalDownloadGlobalLimit) {
+		return nil
+	}
+
+	if err := ratelimit.SetIPFSDownloadRateLimit(rateLimit); err != nil {
+		return dbusutil.ToError(err)
 	}
 
 	rateInfoData, err := json.Marshal(rateInfo)
@@ -346,17 +351,15 @@ func (u *Updater) SetDeliveryUploadSpeedLimit(sender dbus.Sender, limitConfig st
 	}
 
 	var rateInfo ratelimit.RateInfo
+	var rateLimit int
 	if speedLimitConfig.SpeedLimitEnabled {
 		limitRate, err := strconv.ParseInt(speedLimitConfig.LimitSpeed, 10, 64)
 		if err != nil {
 			return dbusutil.ToError(err)
 		}
-		rateLimit := int(limitRate)
+		rateLimit = int(limitRate)
 		if rateLimit*1024 < ratelimit.MinRateLimit || rateLimit*1024 > ratelimit.MaxRateLimit {
 			rateLimit = int(ratelimit.DefaultRateLimit) / 1024
-		}
-		if err := ratelimit.SetIPFSUploadRateLimit(rateLimit); err != nil {
-			return dbusutil.ToError(err)
 		}
 		rateInfo = ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeLocal,
@@ -364,14 +367,21 @@ func (u *Updater) SetDeliveryUploadSpeedLimit(sender dbus.Sender, limitConfig st
 			CurrentRate: int64(rateLimit) * 1024,
 		}
 	} else {
-		if err := ratelimit.SetIPFSUploadRateLimit(-1); err != nil {
-			return dbusutil.ToError(err)
-		}
+		rateLimit = -1
 		rateInfo = ratelimit.RateInfo{
 			LimitType:   ratelimit.RateLimitTypeNo,
 			LimitRate:   ratelimit.DefaultRateLimit,
 			CurrentRate: ratelimit.DefaultRateLimit,
 		}
+	}
+
+	// 如果下发的状态与当前状态一致，则不需要重复设置
+	if rateInfo.SameAsConfig(u.config.DeliveryLocalUploadGlobalLimit) {
+		return nil
+	}
+
+	if err := ratelimit.SetIPFSUploadRateLimit(rateLimit); err != nil {
+		return dbusutil.ToError(err)
 	}
 	rateInfoData, err := json.Marshal(rateInfo)
 	if err != nil {

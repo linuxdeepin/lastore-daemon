@@ -56,6 +56,27 @@ type RateInfo struct {
 	CurrentRate int64     // 当前限制速率(实际限速速率：限速时，两者一致，不限速时，CurrentRate为最大限速速率)  unit: bytes per second
 }
 
+// SameAsConfig 判断当前限速状态与已存储的配置字符串是否一致，若一致则无需重复设置。
+// 对于不限速(RateLimitTypeNo)状态，仅比较 LimitType；
+// 对于本地限速(RateLimitTypeLocal)状态，需同时比较 LimitType 与 LimitRate。
+// 配置字符串为空或解析失败时视为不一致。
+func (r RateInfo) SameAsConfig(configStr string) bool {
+	if configStr == "" {
+		return false
+	}
+	var current RateInfo
+	if err := json.Unmarshal([]byte(configStr), &current); err != nil {
+		return false
+	}
+	switch r.LimitType {
+	case RateLimitTypeNo:
+		return current.LimitType == RateLimitTypeNo
+	case RateLimitTypeLocal:
+		return current.LimitType == RateLimitTypeLocal && current.LimitRate == r.LimitRate
+	}
+	return false
+}
+
 type RateInfoEvent struct {
 	RateInfo       // 生效速率信息
 	RateType int   // 类型(gloabl、busy、free)
