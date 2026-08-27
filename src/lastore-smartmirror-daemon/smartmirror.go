@@ -154,7 +154,7 @@ func (s *SmartMirror) route(original, officialMirror string) string {
 		return s.makeChoice(original, officialMirror)
 	} else if strings.Contains(original, "/dists/") && strings.HasSuffix(original, "Release") {
 		// Get Release from Release
-		url, _ := handleRequest(buildRequest(makeHeader(), "HEAD", original))
+		url, _ := handleRequest(buildRequest(makeHeader(), "GET", original))
 		return url
 	} else if strings.Contains(original, "/dists/") && strings.Contains(original, "/by-hash/") {
 		return s.makeChoice(original, officialMirror)
@@ -179,7 +179,7 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 		go func(mirror string) {
 			b := time.Now()
 			urlMirror := strings.Replace(original, officialMirror, mirror, 1)
-			v, statusCode := handleRequest(buildRequest(header, "HEAD", urlMirror))
+			v, statusCode := handleRequest(buildRequest(header, "GET", urlMirror))
 			report := Report{
 				Mirror:     mirror,
 				URL:        v,
@@ -232,7 +232,7 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 		logger.Info("end -----------------------\n")
 		s.mirrorQuality.reportList <- reportList
 		header := makeReportHeader(reportList)
-		handleRequest(buildRequest(header, "HEAD", original))
+		handleRequest(buildRequest(header, "GET", original))
 		close(detectReport)
 	}()
 
