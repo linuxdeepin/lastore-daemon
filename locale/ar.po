@@ -7,6 +7,7 @@
 # أشرف بصرى <ashrafmn2008@gmail.com>, 2025
 # AhmedAyman <ahmedayman321@yahoo.com>, 2025
 # Gary Wang <wzc782970009@gmail.com>, 2026
+# deepiner, 2026
 # 
 #, fuzzy
 msgid ""
@@ -15,7 +16,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-04 16:19+0800\n"
 "PO-Revision-Date: 2025-04-25 05:57+0000\n"
-"Last-Translator: Gary Wang <wzc782970009@gmail.com>, 2026\n"
+"Last-Translator: deepiner, 2026\n"
 "Language-Team: Arabic (https://app.transifex.com/linuxdeepin/teams/3617/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -25,15 +26,15 @@ msgstr ""
 
 #: ../src/lastore-daemon/inhibitor.go:44
 msgid "Installing updates..."
-msgstr ""
+msgstr "جارٍ تثبيت التحديثات..."
 
 #: ../src/lastore-daemon/inhibitor.go:46
 msgid "Tasks are running..."
-msgstr ""
+msgstr "هناك مهام قيد التشغيل..."
 
 #: ../src/lastore-daemon/inhibitor.go:48
 msgid "Preventing from shutting down"
-msgstr ""
+msgstr "يمنع إيقاف التشغيل"
 
 #: ../src/lastore-daemon/main.go:195 ../src/lastore-daemon/main.go:199
 msgid "Control Center"
@@ -41,15 +42,15 @@ msgstr "مركز التحكم"
 
 #: ../src/lastore-daemon/main.go:197
 msgid "App Store"
-msgstr ""
+msgstr "متجر التطبيقات"
 
 #: ../src/lastore-daemon/manager.go:485
 msgid "Removed successfully"
-msgstr ""
+msgstr "تمت الإزالة بنجاح"
 
 #: ../src/lastore-daemon/manager.go:490
 msgid "Failed to remove the app"
-msgstr ""
+msgstr "فشل إزالة التطبيق"
 
 #: ../src/lastore-daemon/manager.go:493
 msgid "Retry"
@@ -65,22 +66,22 @@ msgstr "تم مسح ذاكرة التخزين المؤقت للحزمة"
 
 #: ../src/lastore-daemon/manager_check.go:48
 msgid "Checking and installing updates..."
-msgstr ""
+msgstr "جارٍ التحقق من التحديثات وتثبيتها..."
 
 #: ../src/lastore-daemon/manager_download.go:92
 #: ../src/lastore-daemon/manager_download.go:206
 #, c-format
 msgid "Downloading updates failed. Please free up %s disk space first."
-msgstr ""
+msgstr "فشل تنزيل التحديثات. يرجى تحرير مساحة قرص %s أولاً."
 
 #: ../src/lastore-daemon/manager_download.go:124
 msgid ""
 "New version available! The download of the update package will begin shortly"
-msgstr ""
+msgstr "يتوفر إصدار جديد! سيبدأ تنزيل حزمة التحديث قريباً"
 
 #: ../src/lastore-daemon/manager_download.go:154
 msgid "New version available! Downloading..."
-msgstr ""
+msgstr "يتوفر إصدار جديد! جارٍ التنزيل..."
 
 #: ../src/lastore-daemon/manager_download.go:157
 #: ../src/lastore-daemon/manager_download.go:224
@@ -92,21 +93,22 @@ msgstr "عرض"
 #: ../src/lastore-daemon/manager_download.go:212
 #: ../src/lastore-daemon/manager_upgrade.go:672
 msgid "Updates failed: damaged files. Please update again."
-msgstr ""
+msgstr "فشل التحديث: الملفات تالفة. يرجى التحديث مرة أخرى."
 
 #: ../src/lastore-daemon/manager_download.go:213
 #: ../src/lastore-daemon/manager_upgrade.go:673
 msgid "Try Again"
-msgstr ""
+msgstr "إعادة المحاولة"
 
 #: ../src/lastore-daemon/manager_download.go:223
 msgid "Downloading updates failed. Please check your network."
-msgstr ""
+msgstr "فشل تنزيل التحديثات. يرجى التحقق من اتصال الشبكة."
 
 #: ../src/lastore-daemon/manager_download.go:287
 msgid ""
 "Downloading completed. You can install updates when shutdown or reboot."
 msgstr ""
+"اكتمل التنزيل. يمكنك تثبيت التحديثات عند إيقاف التشغيل أو إعادة التشغيل."
 
 #: ../src/lastore-daemon/manager_download.go:290
 msgid "Update Now"
@@ -114,69 +116,73 @@ msgstr "تحديث الآن"
 
 #: ../src/lastore-daemon/manager_download.go:292
 msgid "Dismiss"
-msgstr ""
+msgstr "تجاهل"
 
 #: ../src/lastore-daemon/manager_download.go:300
 #, c-format
 msgid "Downloading completed. The computer will be updated at %s"
-msgstr ""
+msgstr "اكتمل التنزيل. سيتم تحديث الحاسوب في %s"
 
 #: ../src/lastore-daemon/manager_update.go:237
 msgid "New version available!"
-msgstr ""
+msgstr "يتوفر إصدار جديد!"
 
 #: ../src/lastore-daemon/manager_update.go:243
 msgid "New version available! Please go to control-center to check"
-msgstr ""
+msgstr "يتوفر إصدار جديد! يرجى الذهاب إلى مركز التحكم للتحقق"
 
 #: ../src/lastore-daemon/manager_update.go:293
 msgid "Failed to check for updates. Please check your network."
-msgstr ""
+msgstr "فشل التحقق من التحديثات. يرجى التحقق من اتصال الشبكة."
 
 #: ../src/lastore-daemon/manager_update.go:299
 msgid "Failed to check for updates. Please clean up your disk first."
-msgstr ""
+msgstr "فشل التحقق من التحديثات. يرجى تنظيف القرص أولاً."
 
 #: ../src/lastore-daemon/manager_update.go:370
 msgid "timer has changed. Please reboot to take effect"
-msgstr ""
+msgstr "تم تغيير المؤقت. يرجى إعادة التشغيل ليصبح ساري المفعول"
 
 #: ../src/lastore-daemon/manager_update.go:703
 #, c-format
 msgid "The computer will be updated at %s"
-msgstr ""
+msgstr "سيتم تحديث الحاسوب في %s"
 
 #: ../src/lastore-daemon/manager_upgrade.go:104
 msgid "Backing up and installing updates..."
-msgstr ""
+msgstr "جارٍ النسخ الاحتياطي وتثبيت التحديثات..."
 
 #: ../src/lastore-daemon/manager_upgrade.go:204
 msgid "Start to update. Please do not shutdown"
-msgstr ""
+msgstr "بدء التحديث. يرجى عدم إيقاف التشغيل"
 
 #: ../src/lastore-daemon/manager_upgrade.go:267
 msgid "Backup failed!"
-msgstr ""
+msgstr "فشل النسخ الاحتياطي!"
 
 #: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Back Up Again"
-msgstr ""
+msgstr "النسخ الاحتياطي مرة أخرى"
 
 #: ../src/lastore-daemon/manager_upgrade.go:268
 msgid "Proceed to Update"
-msgstr ""
+msgstr "المتابعة للتحديث"
 
 #: ../src/lastore-daemon/manager_upgrade.go:605
 msgid ""
 "The battery capacity is lower than 60%. To get successful updates, please "
 "plug in."
 msgstr ""
+"سعة البطارية أقل من 60%. لضمان نجاح التحديثات، يرجى توصيل الجهاز بمصدر "
+"الطاقة."
 
 #: ../src/lastore-daemon/manager_upgrade.go:683
 msgid ""
 "Updates failed: insufficient disk space. Please reboot to avoid the effect "
 "on your system."
 msgstr ""
+"فشل التحديث: مساحة القرص غير كافية. يرجى إعادة التشغيل لتجنب التأثير على "
+"النظام."
 
 #: ../src/lastore-daemon/manager_upgrade.go:684
 #: ../src/lastore-daemon/manager_upgrade.go:701
@@ -185,27 +191,27 @@ msgstr "إعادة التشغيل"
 
 #: ../src/lastore-daemon/manager_upgrade.go:688
 msgid "Updates failed: insufficient disk space."
-msgstr ""
+msgstr "فشل التحديث: مساحة القرص غير كافية."
 
 #: ../src/lastore-daemon/manager_upgrade.go:700
 msgid "Updates failed. Please reboot to avoid the effect on your system."
-msgstr ""
+msgstr "فشل التحديث. يرجى إعادة التشغيل لتجنب التأثير على النظام."
 
 #: ../src/lastore-daemon/manager_upgrade.go:705
 msgid "Updates failed."
-msgstr ""
+msgstr "فشل التحديث."
 
 #: ../src/lastore-daemon/manager_upgrade.go:795
 msgid "Updates successful"
-msgstr ""
+msgstr "تم التحديث بنجاح"
 
 #: ../src/lastore-daemon/manager_upgrade.go:796
 msgid "Restart the computer to use the system and applications properly."
-msgstr ""
+msgstr "أعد تشغيل الحاسوب لاستخدام النظام والتطبيقات بشكل صحيح."
 
 #: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Later"
-msgstr ""
+msgstr "إعادة التشغيل لاحقاً"
 
 #: ../src/lastore-daemon/manager_upgrade.go:797
 msgid "Reboot Now"
