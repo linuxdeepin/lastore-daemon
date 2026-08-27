@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -65,6 +66,7 @@ func makeHeader() map[string]string {
 	return map[string]string{
 		"User-Agent": userAgent(),
 		"MID":        machineID(),
+		"Range":      "bytes=0-1023",
 	}
 }
 
@@ -109,6 +111,9 @@ func handleRequest(r *http.Request) (resultURL string, statusCode int) {
 	if err != nil {
 		return "", -2
 	}
+	// Read and discard a small amount of the body to allow connection reuse.
+	// Limit to 4KB to avoid downloading large files when the server ignores Range.
+	io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 	resp.Body.Close()
 
 	switch resp.StatusCode / 100 {
