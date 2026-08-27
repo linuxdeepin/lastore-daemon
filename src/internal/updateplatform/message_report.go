@@ -1478,18 +1478,19 @@ func (m *UpdatePlatformManager) GetSystemMeta() map[string]system.PackageInfo {
 //	  "publishTime": "2022-05-05T00:00:00+08:00" // 发布日期
 //	}
 type UpdateLogMeta struct {
-	Baseline      string    `json:"baseline"`
-	ShowVersion   string    `json:"showVersion"`
-	CnLog         string    `json:"cnLog"`
-	EnLog         string    `json:"enLog"`
-	LogType       int       `json:"logType"`
-	IsUnstable    int       `json:"isUnstable"`
-	SystemVersion string    `json:"systemVersion"`
-	PublishTime   time.Time `json:"publishTime"`
+	Baseline      string `json:"baseline"`
+	ShowVersion   string `json:"showVersion"`
+	CnLog         string `json:"cnLog"`
+	EnLog         string `json:"enLog"`
+	LogType       int    `json:"logType"`
+	IsUnstable    int    `json:"isUnstable"`
+	SystemVersion string `json:"systemVersion"`
+	PublishTime   string `json:"publishTime"`
 }
 
 // 如果更新日志无法获取到,不会返回错误,而是设置默认日志文案
 func (m *UpdatePlatformManager) updateLogMetaSync() error {
+	// 使用默认日志文案的时候，发布时间不显示
 	defaultLog := UpdateLogMeta{
 		Baseline:      m.targetBaseline,
 		ShowVersion:   m.targetVersion,
@@ -1498,7 +1499,6 @@ func (m *UpdatePlatformManager) updateLogMetaSync() error {
 		LogType:       1,
 		IsUnstable:    1,
 		SystemVersion: "",
-		PublishTime:   time.Now(),
 	}
 
 	response, err := m.genUpdateLogResponse()
