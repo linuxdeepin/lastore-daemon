@@ -1,3 +1,15 @@
+lastore-daemon (6.2.68) unstable; urgency=medium
+
+  * feat(dconfig): add deny-exec-whitelist config entry (#477)
+  * i18n: Translate locale/lastore-daemon.pot in ar (#479)
+  * refactor(updateplatform): 将PublishTime改为string类型,默认日志PublishTime设置为空
+  * fix(updater): skip redundant delivery speed limit settings when
+    state unchanged
+  * feat: add MajorUpgrade field to deepin_update_option.json for major
+    version upgrade detection
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 28 Aug 2026 15:16:09 +0800
+
 lastore-daemon (6.2.67) unstable; urgency=medium
 
   * fix(updater): ensure upgrade delivery service exits when p2p
