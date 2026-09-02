@@ -37,7 +37,7 @@
   },
   {
     "id": "HuaweiCloud",
-    "name": "[CN] 华为云",
+    "name": "[CN] Huawei Cloud",
     "url": "https://mirrors.huaweicloud.com/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 华为云",
@@ -325,7 +325,7 @@
   },
   {
     "id": "sjtu-edu",
-    "name": "上海交通大学",
+    "name": "[CN] Shanghai Jiao Tong University",
     "url": "https://ftp.sjtu.edu.cn/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 上海交通大学",
@@ -337,7 +337,7 @@
   },
   {
     "id": "lzu",
-    "name": "兰州大学",
+    "name": "[CN] Lanzhou University",
     "url": "https://mirror.lzu.edu.cn/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 兰州大学",
@@ -349,7 +349,7 @@
   },
   {
     "id": "cqu",
-    "name": "重庆大学",
+    "name": "[CN] Chongqing University",
     "url": "https://mirrors.cqu.edu.cn/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 重庆大学",
@@ -361,7 +361,7 @@
   },
   {
     "id": "nyist",
-    "name": "南阳理工学院",
+    "name": "[CN] Nanyang Institute of Technology",
     "url": "https://mirror.nyist.edu.cn/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 南阳理工学院",
@@ -373,7 +373,7 @@
   },
   {
     "id": "qlu",
-    "name": "齐鲁工业大学",
+    "name": "[CN] Qilu University of Technology",
     "url": "https://mirrors.qlu.edu.cn/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 齐鲁工业大学",
