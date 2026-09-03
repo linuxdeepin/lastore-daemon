@@ -5,11 +5,10 @@
 package main
 
 import (
-	"strings"
-	"testing"
-
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/stretchr/testify/assert"
+	"strings"
+	"testing"
 )
 
 func TestBuildUpgradeInfoRegexExtra(t *testing.T) {
@@ -73,4 +72,12 @@ func TestParseAptShowListEmptyExtra(t *testing.T) {
 	input := "no matching title here\n some line\n"
 	result := parseAptShowList(strings.NewReader(input), "The following packages have unmet dependencies:")
 	assert.Nil(t, result)
+}
+
+func TestGetSystemArchitectures_ReturnsNonEmpty(t *testing.T) {
+	archs := getSystemArchitectures()
+	// dpkg should be available in the test environment
+	assert.NotEmpty(t, archs)
+	// The first arch should be the primary architecture (e.g., amd64)
+	assert.NotEmpty(t, archs[0])
 }

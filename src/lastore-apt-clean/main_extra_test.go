@@ -5,10 +5,13 @@
 package main
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 func TestGetControlField(t *testing.T) {
@@ -44,11 +47,11 @@ func TestDebInfoPkgArch(t *testing.T) {
 
 func TestShouldDelete(t *testing.T) {
 	tests := []struct {
-		name        string
-		debInfo     *debInfo
-		cache       map[string]statusVersion
-		wantPolicy  DeletePolicy
-		wantTestAg  bool
+		name       string
+		debInfo    *debInfo
+		cache      map[string]statusVersion
+		wantPolicy DeletePolicy
+		wantTestAg bool
 	}{
 		{
 			name:       "not installed",
@@ -166,4 +169,362 @@ func TestCompareVersionsGt(t *testing.T) {
 	assert.True(t, compareVersionsGt("2.0", "1.0"))
 	assert.False(t, compareVersionsGt("1.0", "2.0"))
 	assert.False(t, compareVersionsGt("1.0", "1.0"))
+}
+
+func TestNewArchivesInfo(t *testing.T) {
+	ai := newArchivesInfo("/tmp/test")
+	assert.Equal(t, "/tmp/test", ai.dir)
+	assert.Nil(t, ai.Files)
+	assert.Equal(t, uint64(0), ai.TotalSize)
+}
+
+func TestArchivesInfoAddFileInfo(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("test content"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	ai := newArchivesInfo(tmpDir)
+	ai.addFileInfo(info)
+
+	require.Len(t, ai.Files, 1)
+	assert.Equal(t, "test.deb", ai.Files[0].Name)
+	assert.Equal(t, info.Size(), ai.Files[0].Size)
+	assert.Equal(t, uint64(info.Size()), ai.TotalSize)
+}
+
+func TestDeleteDeb(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "to-delete.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+	require.FileExists(t, tmpFile)
+
+	deleteDeb(tmpFile)
+	assert.NoFileExists(t, tmpFile)
+}
+
+func TestDeleteDebNonExistent(t *testing.T) {
+	tmpDir := t.TempDir()
+	nonExistent := filepath.Join(tmpDir, "nope.deb")
+	deleteDeb(nonExistent)
+}
+
+func TestGetChangeTime(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	ct := getChangeTime(info)
+	assert.WithinDuration(t, time.Now(), ct, 10*time.Second)
+}
+
+func TestActWithPolicyDeleteImmediately(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	origForce := options.forceDelete
+	defer func() { options.forceDelete = origForce }()
+	options.forceDelete = false
+
+	actWithPolicy(DeleteImmediately, info, tmpFile, nil)
+	assert.NoFileExists(t, tmpFile)
+}
+
+func TestActWithPolicyDeleteImmediatelyWithArchivesInfo(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	ai := newArchivesInfo(tmpDir)
+	actWithPolicy(DeleteImmediately, info, tmpFile, ai)
+	assert.FileExists(t, tmpFile)
+	require.Len(t, ai.Files, 1)
+}
+
+func TestActWithPolicyKeepNoForce(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	origForce := options.forceDelete
+	defer func() { options.forceDelete = origForce }()
+	options.forceDelete = false
+
+	actWithPolicy(Keep, info, tmpFile, nil)
+	assert.FileExists(t, tmpFile)
+}
+
+func TestActWithPolicyKeepWithForce(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	origForce := options.forceDelete
+	defer func() { options.forceDelete = origForce }()
+	options.forceDelete = true
+
+	actWithPolicy(Keep, info, tmpFile, nil)
+	assert.NoFileExists(t, tmpFile)
+}
+
+func TestActWithPolicyDeleteExpiredForce(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	origForce := options.forceDelete
+	defer func() { options.forceDelete = origForce }()
+	options.forceDelete = true
+
+	actWithPolicy(DeleteExpired, info, tmpFile, nil)
+	assert.NoFileExists(t, tmpFile)
+}
+
+func TestActWithPolicyDeleteExpiredRecent(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.deb")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+
+	info, err := os.Stat(tmpFile)
+	require.NoError(t, err)
+
+	origForce := options.forceDelete
+	defer func() { options.forceDelete = origForce }()
+	options.forceDelete = false
+
+	actWithPolicy(DeleteExpired, info, tmpFile, nil)
+	assert.FileExists(t, tmpFile)
+}
+
+func TestGetControlFieldNoMatch(t *testing.T) {
+	line := []byte("Version: 1.0")
+	key := []byte("Package: ")
+	_, err := getControlField(line, key)
+	assert.Error(t, err)
+}
+
+func TestDebInfoPkgArchAll(t *testing.T) {
+	di := &debInfo{pkg: "testpkg", arch: "all"}
+	assert.Equal(t, "testpkg:all", di.pkgArch())
+}
+
+func TestCompareVersionsGtWithEpoch(t *testing.T) {
+	assert.True(t, compareVersionsGt("1:1.0", "0:9.0"))
+	assert.False(t, compareVersionsGt("1.0", "1:0.1"))
+}
+
+func TestShouldDeleteNotInstalled(t *testing.T) {
+	cache := map[string]statusVersion{}
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	policy, testAgain := shouldDelete(di, cache)
+	assert.Equal(t, DeletePolicy(DeleteExpired), policy)
+	assert.True(t, testAgain)
+}
+
+func TestShouldDeleteInstalledNewer(t *testing.T) {
+	cache := map[string]statusVersion{
+		"testpkg:amd64": {status: "ii ", version: "1.0"},
+	}
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "2.0"}
+	policy, testAgain := shouldDelete(di, cache)
+	assert.Equal(t, DeletePolicy(DeleteExpired), policy)
+	assert.True(t, testAgain)
+}
+
+func TestShouldDeleteInstalledSameOrOlder(t *testing.T) {
+	cache := map[string]statusVersion{
+		"testpkg:amd64": {status: "ii ", version: "2.0"},
+	}
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	policy, testAgain := shouldDelete(di, cache)
+	assert.Equal(t, DeletePolicy(DeleteImmediately), policy)
+	assert.False(t, testAgain)
+}
+
+func TestShouldDeleteRemoved(t *testing.T) {
+	cache := map[string]statusVersion{
+		"testpkg:amd64": {status: "rc ", version: "1.0"},
+	}
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	policy, testAgain := shouldDelete(di, cache)
+	assert.Equal(t, DeletePolicy(DeleteImmediately), policy)
+	assert.False(t, testAgain)
+}
+
+func TestShouldDeleteUnknownStatus(t *testing.T) {
+	cache := map[string]statusVersion{
+		"testpkg:amd64": {status: "u ", version: "1.0"},
+	}
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	policy, testAgain := shouldDelete(di, cache)
+	assert.Equal(t, DeletePolicy(DeleteExpired), policy)
+	assert.False(t, testAgain)
+}
+
+func TestShouldDeleteEmptyStatus(t *testing.T) {
+	cache := map[string]statusVersion{
+		"testpkg:amd64": {status: "", version: "1.0"},
+	}
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	policy, testAgain := shouldDelete(di, cache)
+	assert.Equal(t, DeletePolicy(DeleteExpired), policy)
+	assert.False(t, testAgain)
+}
+
+func TestGetCandidateVersionArchAll(t *testing.T) {
+	_candidateCache["testpkg"] = "1.0"
+	defer delete(_candidateCache, "testpkg")
+
+	di := &debInfo{pkg: "testpkg", arch: "all"}
+	assert.Equal(t, "1.0", getCandidateVersion(di))
+}
+
+func TestGetCandidateVersionWithArch(t *testing.T) {
+	_candidateCache["testpkg:amd64"] = "2.0"
+	_candidateCache["testpkg"] = "1.0"
+	defer delete(_candidateCache, "testpkg:amd64")
+	defer delete(_candidateCache, "testpkg")
+
+	di := &debInfo{pkg: "testpkg", arch: "amd64"}
+	assert.Equal(t, "2.0", getCandidateVersion(di))
+}
+
+func TestGetCandidateVersionFallbackToPkgName(t *testing.T) {
+	_candidateCache["testpkg"] = "1.0"
+	defer delete(_candidateCache, "testpkg")
+
+	di := &debInfo{pkg: "testpkg", arch: "amd64"}
+	assert.Equal(t, "1.0", getCandidateVersion(di))
+}
+
+func TestGetCandidateVersionNotFound(t *testing.T) {
+	di := &debInfo{pkg: "notfound", arch: "amd64"}
+	assert.Equal(t, "", getCandidateVersion(di))
+}
+
+func TestShouldDeleteTestAgainNoCandidate(t *testing.T) {
+	_candidateCache = make(map[string]string)
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	assert.Equal(t, DeletePolicy(DeleteExpired), shouldDeleteTestAgain(di))
+}
+
+func TestShouldDeleteTestAgainVersionMismatch(t *testing.T) {
+	_candidateCache["testpkg:amd64"] = "2.0"
+	defer delete(_candidateCache, "testpkg:amd64")
+
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	assert.Equal(t, DeletePolicy(DeleteImmediately), shouldDeleteTestAgain(di))
+}
+
+func TestShouldDeleteTestAgainVersionMatch(t *testing.T) {
+	_candidateCache["testpkg:amd64"] = "1.0"
+	defer delete(_candidateCache, "testpkg:amd64")
+
+	di := &debInfo{pkg: "testpkg", arch: "amd64", version: "1.0"}
+	assert.Equal(t, DeletePolicy(Keep), shouldDeleteTestAgain(di))
+}
+
+func TestMustGetBin(t *testing.T) {
+	// dpkg should exist in the test environment
+	path := mustGetBin("dpkg")
+	assert.NotEmpty(t, path)
+}
+
+func TestFindBins(t *testing.T) {
+	findBins()
+	assert.NotEmpty(t, binDpkg)
+	assert.NotEmpty(t, binDpkgQuery)
+	assert.NotEmpty(t, binDpkgDeb)
+	assert.NotEmpty(t, binAptCache)
+}
+
+func TestCompareVersionsGtDpkg(t *testing.T) {
+	findBins()
+	// 2.0 > 1.0
+	assert.True(t, compareVersionsGtDpkg("2.0", "1.0"))
+	// 1.0 is not > 2.0
+	assert.False(t, compareVersionsGtDpkg("1.0", "2.0"))
+	// 1.0 is not > 1.0
+	assert.False(t, compareVersionsGtDpkg("1.0", "1.0"))
+}
+
+func TestCompareVersionsGtFast_ValidVersions(t *testing.T) {
+	gt, err := compareVersionsGtFast("2.0", "1.0")
+	assert.NoError(t, err)
+	assert.True(t, gt)
+}
+
+func TestCompareVersionsGtFast_EqualVersions(t *testing.T) {
+	gt, err := compareVersionsGtFast("1.0", "1.0")
+	assert.NoError(t, err)
+	assert.False(t, gt)
+}
+
+func TestCompareVersionsGtFast_LessThan(t *testing.T) {
+	gt, err := compareVersionsGtFast("1.0", "2.0")
+	assert.NoError(t, err)
+	assert.False(t, gt)
+}
+
+func TestCompareVersionsGtFast_InvalidVersion1(t *testing.T) {
+	_, err := compareVersionsGtFast("invalid-version-!!!", "1.0")
+	assert.Error(t, err)
+}
+
+func TestCompareVersionsGtFast_InvalidVersion2(t *testing.T) {
+	_, err := compareVersionsGtFast("1.0", "invalid-version-!!!")
+	assert.Error(t, err)
+}
+
+func TestCompareVersionsGt_WithFast(t *testing.T) {
+	assert.True(t, compareVersionsGt("2.0", "1.0"))
+	assert.False(t, compareVersionsGt("1.0", "2.0"))
+	assert.False(t, compareVersionsGt("1.0", "1.0"))
+}
+
+func TestCompareVersionsGt_ComplexVersions(t *testing.T) {
+	assert.True(t, compareVersionsGt("1.0.1-1", "1.0.0-1"))
+	assert.True(t, compareVersionsGt("1:1.0", "1.0"))
+	assert.False(t, compareVersionsGt("1.0-1", "1.0-2"))
+}
+
+func TestCompareVersionsGt_FallbackToDpkg(t *testing.T) {
+	// When debVersion.Parse fails, compareVersionsGt falls back to dpkg --compare-versions
+	// Just verify it doesn't panic and returns a bool
+	assert.NotPanics(t, func() {
+		_ = compareVersionsGt("\x00invalid", "1.0")
+	})
+}
+
+func TestCompareVersionsGtFast_WithEpoch(t *testing.T) {
+	gt, err := compareVersionsGtFast("2:1.0", "1:1.0")
+	assert.NoError(t, err)
+	assert.True(t, gt)
+}
+
+func TestCompareVersionsGtFast_WithRevision(t *testing.T) {
+	gt, err := compareVersionsGtFast("1.0-2", "1.0-1")
+	assert.NoError(t, err)
+	assert.True(t, gt)
 }
