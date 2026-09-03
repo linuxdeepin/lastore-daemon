@@ -192,6 +192,16 @@ const (
 	optionFilePathTemp = "/tmp/deepin_update_option.json"
 )
 
+// isMajorUpgradeForMode 判断指定更新模式下是否需要标记为大版本升级。
+// 仅当更新包含系统仓库更新(SystemUpdate)时才根据版本号判断；
+// 若仅为安全更新或三方源更新等非系统更新，则直接返回 false。
+func (m *Manager) isMajorUpgradeForMode(mode system.UpdateType) bool {
+	if mode&system.SystemUpdate == 0 {
+		return false
+	}
+	return m.updatePlatform.IsMajorUpgrade()
+}
+
 func (m *Manager) setRebootCheckOption(mode system.UpdateType, uuid string) error {
 	option := &fullUpgradeOption{
 		DoUpgrade:         false,
@@ -200,7 +210,7 @@ func (m *Manager) setRebootCheckOption(mode system.UpdateType, uuid string) erro
 		PreGreeterCheck:   true,
 		AfterGreeterCheck: true,
 		UUID:              uuid,
-		MajorUpgrade:      m.updatePlatform.IsMajorUpgrade(),
+		MajorUpgrade:      m.isMajorUpgradeForMode(mode),
 	}
 	content, err := json.Marshal(option)
 	if err != nil {
