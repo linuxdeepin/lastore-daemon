@@ -1,5 +1,9 @@
 lastore-daemon (6.2.69) unstable; urgency=medium
 
+  * fix: comment out TestGetDiskSize_ReturnsResult (#489)
+  * refactor: make system helpers injectable for tests (#488)
+  * test: fix test failure (#487)
+  * test: improve unit test coverage for lastore-daemon (#486)
   * test: improve unit test coverage for lastore-daemon (#483)
   * fix: use English names for mirror sources in mirrors.json
   * fix(updater): only mark major upgrade for system updates
