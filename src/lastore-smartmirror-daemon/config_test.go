@@ -6,6 +6,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,4 +39,39 @@ func TestConfig(t *testing.T) {
 	configAfter := newConfig(tmpfile.Name())
 	require.NotNil(t, configAfter)
 	assert.Equal(t, configAfter.Enable, !configBefore.Enable)
+}
+
+func TestConfigSave(t *testing.T) {
+	dir := t.TempDir()
+	fpath := filepath.Join(dir, "config.json")
+
+	c := newConfig(fpath)
+	require.NotNil(t, c)
+	require.True(t, c.Enable) // default
+
+	err := c.setEnable(false)
+	require.NoError(t, err)
+
+	reloaded := newConfig(fpath)
+	require.NotNil(t, reloaded)
+	assert.False(t, reloaded.Enable)
+}
+
+func TestNewConfigNonexistent(t *testing.T) {
+	dir := t.TempDir()
+	c := newConfig(filepath.Join(dir, "does-not-exist.json"))
+	require.NotNil(t, c)
+	assert.True(t, c.Enable)
+	assert.Equal(t, filepath.Join(dir, "does-not-exist.json"), c.filePath)
+}
+
+func TestConfigSaveRemoveError(t *testing.T) {
+	// c.filePath is a non-empty directory, so os.Remove fails with an error
+	// that is NOT os.ErrNotExist, exercising the logger.Warning branch.
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keep.txt"), []byte("x"), 0644))
+
+	c := newConfig(dir)
+	err := c.save()
+	assert.Error(t, err)
 }

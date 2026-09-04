@@ -312,3 +312,30 @@ func TestSameAsConfig(t *testing.T) {
 		})
 	}
 }
+func TestSetIPFSRateLimitSystemBusError(t *testing.T) {
+	// Force dbus.SystemBus() to fail fast at connect (nonexistent socket).
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
+
+	// Fully populate all six limit-rate pointers with LimitType == RateLimitTypeNo,
+	// which exercises every nil-out conditional plus the two json.Marshal calls.
+	noLimit := &RateInfo{LimitType: RateLimitTypeNo, LimitRate: DefaultRateLimit, CurrentRate: DefaultRateLimit}
+	upload := IPFSLimitRate{
+		GlobalLimitRemote: noLimit,
+		GlobalLimitLocal:  &RateInfo{LimitType: RateLimitTypeLocal, LimitRate: DefaultRateLimit, CurrentRate: DefaultRateLimit},
+		BusyLimitRemote:   noLimit,
+		BusyLimitLocal:    noLimit,
+		FreeLimitRemote:   noLimit,
+		FreeLimitLocal:    noLimit,
+	}
+	download := IPFSLimitRate{
+		GlobalLimitRemote: noLimit,
+		GlobalLimitLocal:  &RateInfo{LimitType: RateLimitTypeLocal, LimitRate: DefaultRateLimit, CurrentRate: DefaultRateLimit},
+		BusyLimitRemote:   noLimit,
+		BusyLimitLocal:    noLimit,
+		FreeLimitRemote:   noLimit,
+		FreeLimitLocal:    noLimit,
+	}
+
+	err := SetIPFSRateLimit(upload, download)
+	assert.Error(t, err)
+}

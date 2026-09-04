@@ -4,9 +4,12 @@
 package pkg_recommend
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsSupportedLocaleTrue(t *testing.T) {
@@ -32,4 +35,32 @@ func TestGetSupportedLangInfos(t *testing.T) {
 		}
 		assert.True(t, found, "en_US.UTF-8 should be in supported lang infos")
 	}
+}
+func TestGetLangInfosFromFile(t *testing.T) {
+	t.Run("valid json", func(t *testing.T) {
+		dir := t.TempDir()
+		fpath := filepath.Join(dir, "lang.json")
+		content := `{"LanguageList":[{"Locale":"en_US","Description":"English","LangCode":"en","CountryCode":"US"}]}`
+		require.NoError(t, os.WriteFile(fpath, []byte(content), 0644))
+
+		infos, err := getLangInfosFromFile(fpath)
+		require.NoError(t, err)
+		require.Len(t, infos, 1)
+		assert.Equal(t, "en_US", infos[0].Locale)
+		assert.Equal(t, "en", infos[0].LangCode)
+	})
+
+	t.Run("nonexistent file", func(t *testing.T) {
+		_, err := getLangInfosFromFile("/nonexistent/lang_info.json")
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		dir := t.TempDir()
+		fpath := filepath.Join(dir, "bad.json")
+		require.NoError(t, os.WriteFile(fpath, []byte("{invalid"), 0644))
+
+		_, err := getLangInfosFromFile(fpath)
+		assert.Error(t, err)
+	})
 }

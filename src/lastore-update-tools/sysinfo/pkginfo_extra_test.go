@@ -54,3 +54,8 @@ func TestGetCurrInstPkgStat(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
+
+func TestGetSysPkgStateAndVersionNotFound(t *testing.T) {
+	_, _, err := GetSysPkgStateAndVersion("__nonexistent_pkg_xyz_123__")
+	assert.Error(t, err)
+}

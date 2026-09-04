@@ -440,3 +440,62 @@ func TestDiffPackagesSoftwareOverlap(t *testing.T) {
 	assert.Len(t, ownr, 1)
 	assert.Equal(t, "git", ownr[0].Package)
 }
+
+func TestSoftwareStringError(t *testing.T) {
+	sw := Software{Package: "bad\x01value"}
+	s := sw.String()
+	assert.Equal(t, "错误的Value值", s)
+}
+
+func TestMakeStanzaAppInfoMissingEachField(t *testing.T) {
+	base := Stanza{
+		"Package":       "vim",
+		"Version":       "1.0",
+		"Architecture":  "amd64",
+		"Filename":      "pool/main/v/vim/vim.deb",
+		"SHA256":        "abc123",
+		"Size":          "1024",
+		"Installed-Size": "2048",
+	}
+	for _, field := range []string{"Package", "Version", "Architecture", "Filename", "SHA256"} {
+		t.Run("missing-"+field, func(t *testing.T) {
+			s := Stanza{}
+			for k, v := range base {
+				s[k] = v
+			}
+			delete(s, field)
+			ok, _ := makeStanzaAppInfo(s)
+			assert.False(t, ok, "missing %s should return false", field)
+		})
+	}
+}
+
+func TestMakeStanzaAppInfoNoSizeFields(t *testing.T) {
+	s := Stanza{
+		"Package":      "vim",
+		"Version":      "1.0",
+		"Architecture": "amd64",
+		"Filename":     "pool/main/v/vim/vim.deb",
+		"SHA256":       "abc123",
+	}
+	ok, info := makeStanzaAppInfo(s)
+	assert.True(t, ok)
+	assert.Equal(t, -1, info.DebSize)
+	assert.Equal(t, -1, info.InstalledSize)
+}
+
+func TestMakeStanzaAppInfoInvalidSizeNegative(t *testing.T) {
+	s := Stanza{
+		"Package":       "vim",
+		"Version":       "1.0",
+		"Architecture":  "amd64",
+		"Filename":      "vim.deb",
+		"SHA256":        "abc",
+		"Size":          "-5",
+		"Installed-Size": "-9",
+	}
+	ok, info := makeStanzaAppInfo(s)
+	assert.True(t, ok)
+	assert.Equal(t, -5, info.DebSize)
+	assert.Equal(t, -9, info.InstalledSize)
+}

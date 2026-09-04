@@ -262,3 +262,9 @@ func TestSetUsingRepoType_AllFalseExceptTarget(t *testing.T) {
 	assert.False(t, sc[config.OemDefaultRepo].IsUsing)
 	assert.True(t, sc[config.CustomRepo].IsUsing)
 }
+
+func TestCheckSupportDpkgScriptIgnore(t *testing.T) {
+	// Value depends on the host dpkg; only assert a bool is returned without panic.
+	result := checkSupportDpkgScriptIgnore()
+	assert.IsType(t, false, result)
+}

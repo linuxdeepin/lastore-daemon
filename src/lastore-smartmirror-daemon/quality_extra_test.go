@@ -135,3 +135,14 @@ func TestSortSelectMirror_SortedByQuality(t *testing.T) {
 	result := mq.sortSelectMirror([]string{"m1", "m2"})
 	assert.Equal(t, []string{"m2", "m1"}, result)
 }
+
+func TestReportString(t *testing.T) {
+	r := Report{
+		Mirror:     "m",
+		URL:        "http://m/dists/stable/Release",
+		Delay:      5 * time.Second,
+		Failed:     true,
+		StatusCode: 200,
+	}
+	assert.Equal(t, "m true 5s 200", r.String())
+}

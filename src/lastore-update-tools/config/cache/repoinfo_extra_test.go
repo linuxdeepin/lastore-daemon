@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -89,4 +90,22 @@ func TestRepoInfoLoaderPackageInfoNotExist(t *testing.T) {
 	ri := &RepoInfo{FilePath: "/nonexistent/path/test.repo"}
 	err := ri.LoaderPackageInfo(&CacheInfo{})
 	assert.Error(t, err)
+}
+
+func TestRepoInfoCheckRepoIndexSha256MissingFile(t *testing.T) {
+	ri := &RepoInfo{FilePath: "/nonexistent/path/test.repo", HashSha256: "abc"}
+	err := ri.CheckRepoIndexSha256()
+	assert.Error(t, err)
+}
+
+func TestRepoInfoCheckRepoIndexSha256Match(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "test.repo")
+	content := []byte("repo data")
+	require.NoError(t, os.WriteFile(filePath, content, 0644))
+	sum, err := fs.FileHashSha256(filePath)
+	require.NoError(t, err)
+
+	ri := &RepoInfo{FilePath: filePath, HashSha256: sum}
+	assert.NoError(t, ri.CheckRepoIndexSha256())
 }

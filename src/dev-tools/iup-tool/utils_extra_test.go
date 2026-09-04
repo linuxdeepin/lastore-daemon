@@ -235,3 +235,44 @@ func TestEncryptMsgEmpty(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, encrypted)
 }
+
+func TestGetTokenFromAptConfigBranches(t *testing.T) {
+	newFakeAptConfig := func(t *testing.T, scriptBody string) {
+		t.Helper()
+		dir := t.TempDir()
+		script := filepath.Join(dir, "apt-config")
+		require.NoError(t, os.WriteFile(script, []byte(scriptBody), 0o755))
+		t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	}
+
+	t.Run("valid token", func(t *testing.T) {
+		newFakeAptConfig(t, `#!/bin/sh
+printf '%s\n' 'Acquire::SmartMirrors::Token "my-token-123";'
+`)
+		assert.Equal(t, "my-token-123", getTokenFromAptConfig())
+	})
+
+	t.Run("empty output", func(t *testing.T) {
+		newFakeAptConfig(t, "#!/bin/sh\nexit 0\n")
+		assert.Equal(t, "", getTokenFromAptConfig())
+	})
+
+	t.Run("no opening quote", func(t *testing.T) {
+		newFakeAptConfig(t, `#!/bin/sh
+printf '%s\n' 'Acquire::SmartMirrors::Token my-token-123;'
+`)
+		assert.Equal(t, "", getTokenFromAptConfig())
+	})
+
+	t.Run("no closing quote", func(t *testing.T) {
+		newFakeAptConfig(t, `#!/bin/sh
+printf '%s\n' 'Acquire::SmartMirrors::Token "my-token-123'
+`)
+		assert.Equal(t, "", getTokenFromAptConfig())
+	})
+
+	t.Run("apt-config error", func(t *testing.T) {
+		newFakeAptConfig(t, "#!/bin/sh\nexit 1\n")
+		assert.Equal(t, "", getTokenFromAptConfig())
+	})
+}

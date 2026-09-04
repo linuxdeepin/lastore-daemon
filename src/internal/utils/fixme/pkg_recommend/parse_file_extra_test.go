@@ -78,3 +78,16 @@ func TestJsonDependentCategoriesGetAllDependentInfos(t *testing.T) {
 	// With no lang code match, the nil LangCode entries should be included
 	assert.NotEmpty(t, infos)
 }
+func TestJsonDependentCategoriesGetDependentInfosNil(t *testing.T) {
+	categories := jsonDependentCategories{
+		{Category: "tr", Infos: jsonDependentInfos{{Dependent: "pkg1", PkgPull: "pull1"}}},
+	}
+
+	// non-existent key returns nil
+	assert.Nil(t, categories.GetDependentInfos("nonexistent", "zh_CN"))
+
+	// existing key returns the dependent infos (empty LangCode hits direct append branch)
+	infos := categories.GetDependentInfos("tr", "zh_CN")
+	assert.NotNil(t, infos)
+	assert.Len(t, infos, 1)
+}

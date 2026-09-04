@@ -12,6 +12,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -213,4 +215,68 @@ func TestLoadMirrorSourcesInvalidJSON(t *testing.T) {
 func TestLoadMirrorSourcesConnectionError(t *testing.T) {
 	_, err := LoadMirrorSources("http://127.0.0.1:1")
 	assert.Error(t, err)
+}
+
+func TestGenerateUnpublishedMirrors(t *testing.T) {
+	mirrorData := unpublishedMirrors{
+		Error: "",
+		Mirrors: mirrors{
+			{Id: "m1", Name: "Mirror1", Weight: 100, UrlHttp: "mirror1.com", Country: "CN"},
+			{Id: "m2", Name: "Mirror2", Weight: 200, UrlHttps: "mirror2.com", Country: "US"},
+		},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		data, _ := json.Marshal(mirrorData)
+		_, _ = w.Write(data)
+	}))
+	defer srv.Close()
+
+	fpath := filepath.Join(t.TempDir(), "unpublished-mirrors.json")
+	err := GenerateUnpublishedMirrors(srv.URL, fpath)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(fpath)
+	require.NoError(t, err)
+	var result []system.MirrorSource
+	require.NoError(t, json.Unmarshal(data, &result))
+	assert.Len(t, result, 2)
+	assert.Equal(t, "m2", result[0].Id)
+	assert.Equal(t, "https://mirror2.com", result[0].Url)
+	assert.Equal(t, "m1", result[1].Id)
+	assert.Equal(t, "http://mirror1.com", result[1].Url)
+}
+
+func TestGenerateUnpublishedMirrorsError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	fpath := filepath.Join(t.TempDir(), "unpublished-mirrors.json")
+	err := GenerateUnpublishedMirrors(srv.URL, fpath)
+	assert.Error(t, err)
+	_, statErr := os.Stat(fpath)
+	assert.True(t, os.IsNotExist(statErr))
+}
+
+func TestGenerateMirrors(t *testing.T) {
+	// GenerateMirrors calls LoadMirrorSources(""), which reads
+	// /var/lib/lastore/config.json; in a test environment that file is
+	// absent so it falls back to the (empty) DSettings mirrors URL and
+	// the HTTP fetch fails before reaching WriteData.
+	fpath := filepath.Join(t.TempDir(), "mirrors.json")
+	err := GenerateMirrors("", fpath)
+	assert.Error(t, err)
+	_, statErr := os.Stat(fpath)
+	assert.True(t, os.IsNotExist(statErr))
+}
+
+func TestLoadMirrorSourcesEmptyURL(t *testing.T) {
+	// Exercises the url == "" branch: read config.json (absent -> IsNotExist
+	// -> fall back to empty DSettings URL) and then fail the HTTP fetch.
+	ms, err := LoadMirrorSources("")
+	assert.Error(t, err)
+	assert.Nil(t, ms)
 }
