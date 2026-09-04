@@ -579,15 +579,13 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 			}()
 			var allSourceFilePaths []string
 			for _, path := range sourcePathList {
-				var fileInfo os.FileInfo
-				fileInfo, beforeDoRealErr = os.Stat(path)
-				if beforeDoRealErr != nil {
+				fileInfo, err := os.Stat(path)
+				if err != nil {
 					continue
 				}
 				if fileInfo.IsDir() {
-					var allSourceDirFileInfos []os.DirEntry
-					allSourceDirFileInfos, beforeDoRealErr = os.ReadDir(path)
-					if beforeDoRealErr != nil {
+					allSourceDirFileInfos, err := os.ReadDir(path)
+					if err != nil {
 						continue
 					}
 					for _, fileInfo := range allSourceDirFileInfos {

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-ini/ini"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/dstore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +67,6 @@ func TestGenApplications(t *testing.T) {
 	assert.Contains(t, string(data), "测试应用")
 	assert.Contains(t, string(data), "simple")
 }
-
 func TestGenerateApplications(t *testing.T) {
 	dir := t.TempDir()
 	fpath := filepath.Join(dir, "apps.json")
@@ -75,7 +75,8 @@ func TestGenerateApplications(t *testing.T) {
 	cacheContent := `{"dpk://deb/testapp":{"name":"Test","category":"graphics","package_name":"testapp","locale":{"zh_CN":{"description":{"name":"测试应用"}}}}}`
 	require.NoError(t, os.WriteFile(fpath+".cache.json", []byte(cacheContent), 0644))
 
-	err := GenerateApplications("repo", fpath)
+	s := newTestStore(t)
+	err := generateApplications(s, fpath)
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(fpath)
@@ -95,6 +96,19 @@ func TestGenerateApplicationsWriteError(t *testing.T) {
 	cacheContent := `{"dpk://deb/testapp":{"name":"Test","category":"graphics","package_name":"testapp","locale":{}}}`
 	require.NoError(t, os.WriteFile(fpath+".cache.json", []byte(cacheContent), 0644))
 
-	err := GenerateApplications("repo", fpath)
+	s := newTestStore(t)
+	err := generateApplications(s, fpath)
 	assert.Error(t, err)
+}
+
+func newTestStore(t *testing.T) *dstore.Store {
+	t.Helper()
+
+	f := ini.Empty()
+	sec, err := f.NewSection("General")
+	require.NoError(t, err)
+	_, err = sec.NewKey("Server", "https://metadata.example.com")
+	require.NoError(t, err)
+
+	return dstore.NewStoreWithConfig(f)
 }

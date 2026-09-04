@@ -10,7 +10,7 @@ type DependentInfo struct {
 }
 type DependentInfos []DependentInfo
 
-const (
+var (
 	pkgDependsFile = "/usr/share/i18n/i18n_dependent.json"
 )
 

@@ -22,6 +22,7 @@ func TestGetEnhancedLocalePackagesInvalidLocale(t *testing.T) {
 }
 
 func TestGetByPackage(t *testing.T) {
+	useTestDataPaths(t)
 	pkgs, conflicts, err := GetByPackage("zh_CN.UTF-8", "gvfs")
 	assert.NoError(t, err)
 	_ = pkgs
@@ -29,11 +30,13 @@ func TestGetByPackage(t *testing.T) {
 }
 
 func TestGetByPackageInvalidLocale(t *testing.T) {
+	useTestDataPaths(t)
 	_, _, err := GetByPackage("xx_XX.INVALID", "gvfs")
 	assert.NoError(t, err)
 }
 
 func TestGetByLocale(t *testing.T) {
+	useTestDataPaths(t)
 	infos, conflicts, err := GetByLocale("zh_CN.UTF-8")
 	assert.NoError(t, err)
 	_ = infos
@@ -41,6 +44,7 @@ func TestGetByLocale(t *testing.T) {
 }
 
 func TestGetByLocaleInvalidLocale(t *testing.T) {
+	useTestDataPaths(t)
 	infos, conflicts, err := GetByLocale("xx_XX.INVALID")
 	assert.NoError(t, err)
 	// With invalid locale, infos should be empty (no matching lang code)
