@@ -302,8 +302,12 @@ func CheckLock(p string) (string, bool) {
 }
 
 func getEditionName() (string, error) {
+	return getEditionNameFromFile("/etc/os-version")
+}
+
+func getEditionNameFromFile(path string) (string, error) {
 	kf := keyfile.NewKeyFile()
-	err := kf.LoadFromFile("/etc/os-version")
+	err := kf.LoadFromFile(path)
 	if err != nil {
 		return "", err
 	}
