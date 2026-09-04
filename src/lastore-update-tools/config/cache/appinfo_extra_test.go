@@ -5,9 +5,13 @@
 package cache
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerify(t *testing.T) {
@@ -78,4 +82,34 @@ func TestMerge(t *testing.T) {
 	assert.Equal(t, "right.deb", left.Filename)
 	// Arch should be set
 	assert.Equal(t, "amd64", left.Arch)
+}
+
+func TestCheckFileExistTemp(t *testing.T) {
+	dir := t.TempDir()
+	fp := filepath.Join(dir, "test.deb")
+	require.NoError(t, os.WriteFile(fp, []byte("data"), 0644))
+
+	ai := &AppInfo{FilePath: dir, Filename: "test.deb"}
+	assert.NoError(t, ai.CheckFileExist())
+
+	aiMissing := &AppInfo{FilePath: dir, Filename: "missing.deb"}
+	assert.Error(t, aiMissing.CheckFileExist())
+}
+
+func TestCompareHashSha256Temp(t *testing.T) {
+	dir := t.TempDir()
+	fp := filepath.Join(dir, "test.deb")
+	content := []byte("hello world")
+	require.NoError(t, os.WriteFile(fp, content, 0644))
+	sum, err := fs.FileHashSha256(fp)
+	require.NoError(t, err)
+
+	ai := &AppInfo{FilePath: dir, Filename: "test.deb", HashSha256: sum}
+	assert.NoError(t, ai.CompareHashSha256())
+
+	aiBad := &AppInfo{FilePath: dir, Filename: "test.deb", HashSha256: "not-the-sum"}
+	assert.Error(t, aiBad.CompareHashSha256())
+
+	aiMissing := &AppInfo{FilePath: dir, Filename: "nope.deb", HashSha256: sum}
+	assert.Error(t, aiMissing.CompareHashSha256())
 }

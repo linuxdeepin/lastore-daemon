@@ -7,6 +7,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,4 +87,23 @@ func TestMaskLogfile(t *testing.T) {
 		assert.Equal(t, content, string(data))
 		_ = os.Remove(outPath)
 	})
+}
+
+func TestMaskLogfileAptHistoryLog(t *testing.T) {
+	// maskLogfile only takes the desensitize branch when the input path
+	// exactly equals aptHistoryLog ("/var/log/apt/history.log"), which is
+	// world-readable on the test host.
+	if _, err := os.Stat(aptHistoryLog); err != nil {
+		t.Skipf("apt history log not present: %v", err)
+	}
+	outPath, err := maskLogfile(aptHistoryLog)
+	require.NoError(t, err)
+	assert.Equal(t, "/tmp/history.log", outPath)
+
+	data, err := os.ReadFile(outPath)
+	require.NoError(t, err)
+	// Every "Requested-By: <user> (<uid>)" occurrence is desensitized to
+	// "Requested-By: *** (***)": the char right after "Requested-By: " must be '*'.
+	assert.False(t, regexp.MustCompile(`Requested-By: [^*]`).Match(data))
+	_ = os.Remove(outPath)
 }

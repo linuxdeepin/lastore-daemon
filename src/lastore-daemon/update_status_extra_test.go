@@ -616,3 +616,36 @@ func TestUpdateCheckCanUpgradeByEachStatusMissingKey(t *testing.T) {
 	assert.Equal(t, system.NotDownload, m.GetUpdateStatus(system.SystemUpdate))
 	assert.Equal(t, config.LastoreDaemonStatus(0), cfg.GetLastoreDaemonStatusByBit(config.CanUpgrade))
 }
+
+func TestUpdateCanUpgradeStatus_Set(t *testing.T) {
+	cfg := config.NewConfig("")
+	_ = cfg.SetLastoreDaemonStatus(0)
+	m := &UpdateModeStatusManager{lsConfig: cfg}
+
+	m.updateCanUpgradeStatus(true)
+	assert.Equal(t, config.CanUpgrade, cfg.GetLastoreDaemonStatusByBit(config.CanUpgrade))
+}
+
+func TestUpdateCanUpgradeStatus_Clear(t *testing.T) {
+	cfg := config.NewConfig("")
+	_ = cfg.SetLastoreDaemonStatus(config.CanUpgrade)
+	m := &UpdateModeStatusManager{lsConfig: cfg}
+
+	m.updateCanUpgradeStatus(false)
+	assert.Equal(t, config.LastoreDaemonStatus(0), cfg.GetLastoreDaemonStatusByBit(config.CanUpgrade))
+}
+
+func TestUpdateCanUpgradeStatus_Noop(t *testing.T) {
+	cfg := config.NewConfig("")
+	_ = cfg.SetLastoreDaemonStatus(0)
+	m := &UpdateModeStatusManager{lsConfig: cfg}
+
+	// already false -> no-op
+	m.updateCanUpgradeStatus(false)
+	assert.Equal(t, config.LastoreDaemonStatus(0), cfg.GetLastoreDaemonStatusByBit(config.CanUpgrade))
+
+	// set then already true -> no-op
+	m.updateCanUpgradeStatus(true)
+	m.updateCanUpgradeStatus(true)
+	assert.Equal(t, config.CanUpgrade, cfg.GetLastoreDaemonStatusByBit(config.CanUpgrade))
+}

@@ -182,3 +182,21 @@ func TestConfigResetDSettingsNoManager(t *testing.T) {
 	err := c.ResetDSettings("some-key")
 	assert.NoError(t, err)
 }
+
+func TestRecoveryAndApplyOemFlagInvalidType(t *testing.T) {
+	c := &Config{}
+	err := c.recoveryAndApplyOemFlag(system.UpdateType(1 << 10))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid oem update type")
+}
+
+func TestReloadOemRepoConfigNoDir(t *testing.T) {
+	c := &Config{}
+	// OemRepoDirPath is a const pointing at a root-owned path that does not
+	// exist in the test environment; GetOemRepoInfo therefore returns nil,nil.
+	require.NotPanics(t, func() {
+		c.reloadOemRepoConfig()
+	})
+	assert.Empty(t, c.SystemOemSourceConfig.RepoShowNameZh)
+	assert.Empty(t, c.SecurityOemSourceConfig.RepoShowNameZh)
+}

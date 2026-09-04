@@ -15,6 +15,7 @@ import (
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInitTrustedCallerUIDs(t *testing.T) {
@@ -194,4 +195,154 @@ func TestRemoveAllowCallerPersistsRuntimeState(t *testing.T) {
 	assert.Equal(t, []string{":1.13"}, callers)
 
 	sysBus.MockInterfaceDbusIfc.AssertExpectations(t)
+}
+
+func TestInitTrustedCallerUIDs_Error(t *testing.T) {
+	oldLookup := lookupUserByName
+	lookupUserByName = func(name string) (uint32, error) {
+		return 0, errors.New("no such user")
+	}
+	defer func() {
+		lookupUserByName = oldLookup
+	}()
+
+	uids := initTrustedCallerUIDs()
+	assert.Empty(t, uids)
+}
+
+func TestReadAllowCallerState_NotExist(t *testing.T) {
+	state, err := readAllowCallerState(filepath.Join(t.TempDir(), "no-such-file.ini"))
+	assert.NoError(t, err)
+	assert.Nil(t, state)
+}
+
+func TestReadAllowCallerState_Malformed(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "allow-callers.ini")
+	assert.NoError(t, os.WriteFile(path, []byte("this is not a keyfile"), 0644))
+	state, err := readAllowCallerState(path)
+	assert.Error(t, err)
+	assert.Nil(t, state)
+}
+
+func TestReadAllowCallerState_Valid(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "allow-callers.ini")
+	kf := keyfile.NewKeyFile()
+	kf.SetString(allowCallerStateSection, allowCallerBusIDKey, "bus-id-1")
+	kf.SetStringList(allowCallerStateSection, callerKey, []string{":1.1", "", ":1.1", ":1.2"})
+	assert.NoError(t, kf.SaveToFile(path))
+
+	state, err := readAllowCallerState(path)
+	assert.NoError(t, err)
+	require.NotNil(t, state)
+	assert.Equal(t, "bus-id-1", state.BusID)
+	assert.Equal(t, strv.Strv{":1.1", ":1.2"}, state.Callers)
+}
+
+func TestReadAllowCallerState_MissingCallerList(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "allow-callers.ini")
+	kf := keyfile.NewKeyFile()
+	kf.SetString(allowCallerStateSection, allowCallerBusIDKey, "bus-id-1")
+	assert.NoError(t, kf.SaveToFile(path))
+
+	state, err := readAllowCallerState(path)
+	assert.NoError(t, err)
+	require.NotNil(t, state)
+	assert.Equal(t, "bus-id-1", state.BusID)
+	assert.Empty(t, state.Callers)
+}
+
+func TestPersistAllowCallerState_EmptyRemovesFile(t *testing.T) {
+	oldPath := allowCallerStateFile
+	allowCallerStateFile = filepath.Join(t.TempDir(), "allow-callers.ini")
+	defer func() {
+		allowCallerStateFile = oldPath
+	}()
+
+	assert.NoError(t, os.WriteFile(allowCallerStateFile, []byte("x"), 0644))
+	m := &Manager{}
+	assert.NoError(t, m.persistAllowCallerState(strv.Strv{}))
+	_, err := os.Stat(allowCallerStateFile)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestPersistAllowCallerState_NilBusError(t *testing.T) {
+	oldPath := allowCallerStateFile
+	allowCallerStateFile = filepath.Join(t.TempDir(), "allow-callers.ini")
+	defer func() {
+		allowCallerStateFile = oldPath
+	}()
+
+	m := &Manager{}
+	err := m.persistAllowCallerState(strv.Strv{":1.1"})
+	assert.Error(t, err)
+}
+
+func TestAddAllowCaller_NotUniqueName(t *testing.T) {
+	m := &Manager{}
+	err := m.addAllowCaller("abc")
+	assert.Error(t, err)
+}
+
+func TestAddAllowCaller_NilBus(t *testing.T) {
+	m := &Manager{}
+	err := m.addAllowCaller(":1.1")
+	assert.Error(t, err)
+}
+
+func TestAddAllowCaller_GetNameOwnerError(t *testing.T) {
+	sysBus := &ofdbus.MockDBus{}
+	sysBus.MockInterfaceDbusIfc.On("GetNameOwner", dbus.Flags(0), ":1.1").Return("", errors.New("no such name"))
+	m := &Manager{sysDBusDaemon: sysBus}
+
+	err := m.addAllowCaller(":1.1")
+	assert.Error(t, err)
+	sysBus.MockInterfaceDbusIfc.AssertExpectations(t)
+}
+
+func TestAddAllowCaller_OwnerMismatch(t *testing.T) {
+	sysBus := &ofdbus.MockDBus{}
+	sysBus.MockInterfaceDbusIfc.On("GetNameOwner", dbus.Flags(0), ":1.1").Return(":1.2", nil)
+	m := &Manager{sysDBusDaemon: sysBus}
+
+	err := m.addAllowCaller(":1.1")
+	assert.Error(t, err)
+	sysBus.MockInterfaceDbusIfc.AssertExpectations(t)
+}
+
+func TestLoadAllowCaller_ReadError(t *testing.T) {
+	oldPath := allowCallerStateFile
+	allowCallerStateFile = filepath.Join(t.TempDir(), "allow-callers.ini")
+	defer func() {
+		allowCallerStateFile = oldPath
+	}()
+
+	assert.NoError(t, os.WriteFile(allowCallerStateFile, []byte("not a keyfile"), 0644))
+	m := &Manager{sysDBusDaemon: &ofdbus.MockDBus{}}
+	m.loadAllowCaller()
+	assert.Empty(t, m.allowCallServiceList)
+}
+
+func TestLoadAllowCaller_NilBusError(t *testing.T) {
+	oldPath := allowCallerStateFile
+	allowCallerStateFile = filepath.Join(t.TempDir(), "allow-callers.ini")
+	defer func() {
+		allowCallerStateFile = oldPath
+	}()
+
+	kf := keyfile.NewKeyFile()
+	kf.SetString(allowCallerStateSection, allowCallerBusIDKey, "bus-id-1")
+	kf.SetStringList(allowCallerStateSection, callerKey, []string{":1.1"})
+	assert.NoError(t, kf.SaveToFile(allowCallerStateFile))
+
+	m := &Manager{}
+	m.loadAllowCaller()
+	assert.Empty(t, m.allowCallServiceList)
+}
+
+func TestRemoveAllowCaller_NotPresent(t *testing.T) {
+	m := &Manager{
+		allowCallServiceList: strv.Strv{":1.1"},
+	}
+	m.removeAllowCaller(":1.99")
+	assert.Equal(t, strv.Strv{":1.1"}, m.allowCallServiceList)
 }

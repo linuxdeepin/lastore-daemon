@@ -101,6 +101,22 @@ func TestCheckVerifyCacheInfoEmptyUUID(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestCheckVerifyCacheInfoSuccess(t *testing.T) {
+	dir := t.TempDir()
+	repoFile := filepath.Join(dir, "Packages.test")
+	require.NoError(t, os.WriteFile(repoFile, []byte("repo data"), 0644))
+
+	cfg := &cache.CacheInfo{
+		UpdateMetaInfo: cache.UpdateInfo{
+			PkgDebPath:  "/tmp/debs",
+			UUID:        "test-uuid",
+			RepoBackend: []cache.RepoInfo{{Name: "test", FilePath: repoFile}},
+		},
+	}
+	err := CheckVerifyCacheInfo(cfg)
+	assert.NoError(t, err)
+}
+
 func TestCheckCoreFileExistValid(t *testing.T) {
 	tmpDir := t.TempDir()
 	coreFile := filepath.Join(tmpDir, "core.list")
@@ -162,6 +178,33 @@ func TestCheckDebListInstallStateExist(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+
+func TestCheckDebListInstallStateStateError(t *testing.T) {
+	midpkgs := map[string]*cache.AppTinyInfo{
+		"testpkg": {Name: "testpkg", State: cache.PkgState("broken")},
+	}
+	pkginfo := &cache.AppInfo{Name: "testpkg", Need: "strict"}
+	err := CheckDebListInstallState(midpkgs, pkginfo, "precheck", "test")
+	assert.Error(t, err)
+}
+
+func TestCheckDebListInstallStateVersionMismatch(t *testing.T) {
+	midpkgs := map[string]*cache.AppTinyInfo{
+		"testpkg": {Name: "testpkg", State: cache.InstalledOK, Version: "1.0"},
+	}
+	pkginfo := &cache.AppInfo{Name: "testpkg", Need: "strict", Version: "2.0"}
+	err := CheckDebListInstallState(midpkgs, pkginfo, "midcheck", "test")
+	assert.Error(t, err)
+}
+
+func TestCheckDebListInstallStateSuccess(t *testing.T) {
+	midpkgs := map[string]*cache.AppTinyInfo{
+		"testpkg": {Name: "testpkg", State: cache.InstalledOK, Version: "1.0"},
+	}
+	pkginfo := &cache.AppInfo{Name: "testpkg", Need: "strict", Version: "1.0"}
+	err := CheckDebListInstallState(midpkgs, pkginfo, "midcheck", "test")
+	assert.NoError(t, err)
+}
 func TestCheckImportantProcessInvalidStage(t *testing.T) {
 	err := CheckImportantProcess("invalid_stage")
 	assert.Error(t, err)

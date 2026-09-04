@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -157,6 +158,59 @@ func TestUnsetEnv(t *testing.T) {
 	err := UnsetEnv("TEST_UNSET_ENV_VAR")
 	require.NoError(t, err)
 	assert.Equal(t, "", os.Getenv("TEST_UNSET_ENV_VAR"))
+}
+
+func TestTeeToFileEnsureBaseDirError(t *testing.T) {
+	// parent path is an existing file, so EnsureBaseDir -> os.MkdirAll fails
+	dir := t.TempDir()
+	parentFile := filepath.Join(dir, "parent-is-file")
+	require.NoError(t, os.WriteFile(parentFile, []byte("x"), 0644))
+
+	err := TeeToFile(strings.NewReader("data"), filepath.Join(parentFile, "out.txt"), func(r io.Reader) error {
+		return nil
+	})
+	assert.Error(t, err)
+}
+
+func TestTeeToFileCreateError(t *testing.T) {
+	// fpath is an existing directory, so os.Create fails
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "outdir")
+	require.NoError(t, os.Mkdir(sub, 0755))
+
+	err := TeeToFile(strings.NewReader("data"), sub, func(r io.Reader) error {
+		return nil
+	})
+	assert.Error(t, err)
+}
+
+func TestWriteFileSecurelyMkdirAllError(t *testing.T) {
+	// parent path is an existing file, so os.MkdirAll fails
+	dir := t.TempDir()
+	parentFile := filepath.Join(dir, "parent-is-file")
+	require.NoError(t, os.WriteFile(parentFile, []byte("x"), 0644))
+
+	err := WriteFileSecurely(filepath.Join(parentFile, "child", "out.txt"), []byte("data"), 0644)
+	assert.Error(t, err)
+}
+
+func TestWriteFileSecurelyRenameError(t *testing.T) {
+	// Target path is an existing non-empty directory, so os.Rename fails.
+	dir := t.TempDir()
+	targetDir := filepath.Join(dir, "target")
+	require.NoError(t, os.MkdirAll(filepath.Join(targetDir, "child"), 0755))
+
+	err := WriteFileSecurely(targetDir, []byte("data"), 0644)
+	assert.Error(t, err)
+}
+
+func TestWriteFileSecurelyCreateTempError(t *testing.T) {
+	// A base name longer than NAME_MAX (255) makes os.CreateTemp fail.
+	dir := t.TempDir()
+	longName := strings.Repeat("a", 300)
+
+	err := WriteFileSecurely(filepath.Join(dir, longName), []byte("data"), 0644)
+	assert.Error(t, err)
 }
 
 func TestUnsetEnvNonExistent(t *testing.T) {

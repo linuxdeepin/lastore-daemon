@@ -177,3 +177,10 @@ func TestGetPackageName2(t *testing.T) {
 	assert.Equal(t, "ab", getPackageName("ab.list"))
 	assert.Equal(t, "pkg", getPackageName("pkg"))
 }
+
+func TestParsePackageInfos(t *testing.T) {
+	r, tmap := ParsePackageInfos()
+	// Both maps are non-nil even when /var/lib/dpkg/info is empty or unreadable.
+	assert.NotNil(t, r)
+	assert.NotNil(t, tmap)
+}

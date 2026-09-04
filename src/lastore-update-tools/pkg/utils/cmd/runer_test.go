@@ -198,6 +198,21 @@ func TestRunnerNotOutput(t *testing.T) {
 	assert.NoError(t, err, "RunnerNotOutput() should not return error")
 }
 
+func TestRunnerOutputError(t *testing.T) {
+	_, err := RunnerOutput(5, "sh", "-c", "exit 1")
+	assert.Error(t, err)
+}
+
+func TestRunnerOutputEnvError(t *testing.T) {
+	_, err := RunnerOutputEnv(5, "sh", nil, "-c", "exit 1")
+	assert.Error(t, err)
+}
+
+func TestRunnerNotOutputError(t *testing.T) {
+	err := RunnerNotOutput(5, "sh", "-c", "exit 1")
+	assert.Error(t, err)
+}
+
 // Benchmark tests
 func BenchmarkExecAndWait_SimpleCommand(b *testing.B) {
 	for i := 0; i < b.N; i++ {

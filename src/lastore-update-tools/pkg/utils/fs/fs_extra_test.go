@@ -62,3 +62,17 @@ func TestCreateDirMode(t *testing.T) {
 	err = CreateDirMode(newDir, 0755)
 	assert.NoError(t, err)
 }
+
+func TestCreateFileMkdirAllError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("requires non-root user to trigger permission error")
+	}
+	dir := t.TempDir()
+	ro := filepath.Join(dir, "ro")
+	require.NoError(t, os.Mkdir(ro, 0555))
+	defer os.Chmod(ro, 0755)
+
+	f, err := CreateFile(filepath.Join(ro, "sub", "x"))
+	assert.Nil(t, f)
+	assert.Error(t, err)
+}

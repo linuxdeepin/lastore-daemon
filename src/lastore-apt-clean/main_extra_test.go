@@ -528,3 +528,114 @@ func TestCompareVersionsGtFast_WithRevision(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, gt)
 }
+
+// writeFakeBin creates an executable shell script at a temp path and returns its path.
+func writeFakeBin(t *testing.T, script string) string {
+	t.Helper()
+	fpath := filepath.Join(t.TempDir(), "fake-bin")
+	if err := os.WriteFile(fpath, []byte("#!/bin/sh\n"+script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	return fpath
+}
+
+func TestGetDebInfo(t *testing.T) {
+	orig := binDpkgDeb
+	defer func() { binDpkgDeb = orig }()
+
+	t.Run("success", func(t *testing.T) {
+		binDpkgDeb = writeFakeBin(t, `printf 'Package: testpkg\nVersion: 1.0\nArchitecture: amd64\n'`)
+		info, err := getDebInfo("/nonexistent.deb")
+		require.NoError(t, err)
+		assert.Equal(t, "testpkg", info.pkg)
+		assert.Equal(t, "1.0", info.version)
+		assert.Equal(t, "amd64", info.arch)
+	})
+
+	t.Run("command error", func(t *testing.T) {
+		binDpkgDeb = writeFakeBin(t, "exit 1")
+		_, err := getDebInfo("/nonexistent.deb")
+		assert.Error(t, err)
+	})
+
+	t.Run("too few lines", func(t *testing.T) {
+		binDpkgDeb = writeFakeBin(t, `printf 'Package: testpkg\nVersion: 1.0'`)
+		_, err := getDebInfo("/nonexistent.deb")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "len(lines) < 3")
+	})
+
+	t.Run("missing Package prefix", func(t *testing.T) {
+		binDpkgDeb = writeFakeBin(t, `printf 'WrongPrefix: testpkg\nVersion: 1.0\nArchitecture: amd64\n'`)
+		_, err := getDebInfo("/nonexistent.deb")
+		assert.Error(t, err)
+	})
+}
+
+func TestLoadPkgStatusVersion(t *testing.T) {
+	orig := binDpkgQuery
+	defer func() { binDpkgQuery = orig }()
+
+	t.Run("success", func(t *testing.T) {
+		binDpkgQuery = writeFakeBin(t, `printf 'pkg:arch ii 1.0\nbadline\nfoo bar\n'`)
+		result, err := loadPkgStatusVersion()
+		require.NoError(t, err)
+		require.Len(t, result, 1)
+		assert.Equal(t, statusVersion{status: "ii", version: "1.0"}, result["pkg:arch"])
+	})
+
+	t.Run("command error", func(t *testing.T) {
+		binDpkgQuery = writeFakeBin(t, "exit 1")
+		_, err := loadPkgStatusVersion()
+		assert.Error(t, err)
+	})
+}
+
+func TestLoadCandidateVersions(t *testing.T) {
+	orig := binAptCache
+	defer func() { binAptCache = orig }()
+	origCache := _candidateCache
+	defer func() { _candidateCache = origCache }()
+
+	configPath := filepath.Join(t.TempDir(), "apt.conf")
+
+	t.Run("success", func(t *testing.T) {
+		binAptCache = writeFakeBin(t, `printf 'pkg1:amd64:\n  Candidate: 1.0\n'`)
+		err := loadCandidateVersions([]*debInfo{{pkg: "pkg1", arch: "amd64"}}, configPath)
+		require.NoError(t, err)
+		assert.Equal(t, "1.0", _candidateCache["pkg1:amd64"])
+	})
+
+	t.Run("command error", func(t *testing.T) {
+		binAptCache = writeFakeBin(t, "exit 1")
+		err := loadCandidateVersions([]*debInfo{{pkg: "pkg1", arch: "amd64"}}, configPath)
+		assert.Error(t, err)
+	})
+}
+
+func TestAppendArchivesDirInfos(t *testing.T) {
+	orig := _archivesDirInfos
+	defer func() { _archivesDirInfos = orig }()
+
+	t.Run("success", func(t *testing.T) {
+		_archivesDirInfos = nil
+		confPath := filepath.Join(t.TempDir(), "apt.conf")
+		content := "Dir \"/\";\nDir::Cache \"var/cache/apt/\";\nDir::Cache::archives \"archives/\";\n"
+		require.NoError(t, os.WriteFile(confPath, []byte(content), 0644))
+
+		appendArchivesDirInfos(confPath)
+		require.Len(t, _archivesDirInfos, 1)
+		assert.Equal(t, filepath.Join("/", "var/cache/apt/", "archives/"), _archivesDirInfos[0].archivesDir)
+		assert.Equal(t, confPath, _archivesDirInfos[0].configPath)
+	})
+
+	t.Run("empty Dir triggers error", func(t *testing.T) {
+		_archivesDirInfos = nil
+		confPath := filepath.Join(t.TempDir(), "apt.conf")
+		// Empty Dir value makes system.GetArchivesDir return an error.
+		require.NoError(t, os.WriteFile(confPath, []byte("Dir \"\";\n"), 0644))
+
+		appendArchivesDirInfos(confPath)
+		assert.Empty(t, _archivesDirInfos)
+	})
+}
