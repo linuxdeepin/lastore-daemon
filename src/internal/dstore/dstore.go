@@ -39,6 +39,11 @@ func NewStore() *Store {
 	return s
 }
 
+// NewStoreWithConfig 返回使用给定 ini 配置的 Store，主要用于测试以及已持有 *ini.File 的调用方。
+func NewStoreWithConfig(cfg *ini.File) *Store {
+	return &Store{sysCfg: cfg}
+}
+
 func (s *Store) GetMetadataServer() (string, error) {
 	var metadataServer string
 	if s.sysCfg != nil {

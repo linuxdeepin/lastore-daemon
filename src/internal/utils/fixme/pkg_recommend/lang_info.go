@@ -29,7 +29,7 @@ type LangCodeInfo struct {
 	Variant     string
 }
 
-const (
+var (
 	LangInfoFile = "/usr/share/i18n/language_info.json"
 
 	langSupportedFile = "/usr/share/i18n/SUPPORTED"

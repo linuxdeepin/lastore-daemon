@@ -47,17 +47,14 @@ func genApplications(v []*dstore.PackageInfo, fpath string) error {
 // GenerateApplications 在 fpath 路径生成 applications.json 文件，此文件内容为上架应用的信息。
 // fpath 一般为/var/lib/lastore/applications.json 。
 func GenerateApplications(repo, fpath string) error {
-	s := dstore.NewStore()
+	return generateApplications(dstore.NewStore(), fpath)
+}
 
+func generateApplications(s *dstore.Store, fpath string) error {
 	list, err := s.GetPackageApplication(fpath)
 	if err != nil {
 		return err
 	}
 
-	err = genApplications(list, fpath)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return genApplications(list, fpath)
 }

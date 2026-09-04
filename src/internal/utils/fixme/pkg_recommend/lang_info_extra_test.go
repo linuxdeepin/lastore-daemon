@@ -13,7 +13,8 @@ import (
 )
 
 func TestIsSupportedLocaleTrue(t *testing.T) {
-	// en_US.UTF-8 should be in /usr/share/i18n/SUPPORTED on most systems
+	useTestDataPaths(t)
+	// en_US.UTF-8 should be in the bundled SUPPORTED testdata
 	assert.True(t, IsSupportedLocale("en_US.UTF-8"))
 }
 
@@ -22,6 +23,7 @@ func TestIsSupportedLocaleFalse(t *testing.T) {
 }
 
 func TestGetSupportedLangInfos(t *testing.T) {
+	useTestDataPaths(t)
 	infos, err := GetSupportedLangInfos()
 	assert.NoError(t, err)
 	// Should return at least some entries on a system with i18n data
