@@ -268,12 +268,16 @@ func QueryPackageInstalled(pkgId string) bool {
 
 // QueryPackageInstallable query whether the pkgId can be installed
 func QueryPackageInstallable(pkgId string) bool {
-	err := exec.Command("/usr/bin/apt-cache", "-c", LastoreAptV2CommonConfPath, "show", "--", pkgId).Run() // #nosec G204
+	return queryPackageInstallable("/usr/bin/apt-cache", LastoreAptV2CommonConfPath, pkgId)
+}
+
+func queryPackageInstallable(bin, confPath, pkgId string) bool {
+	err := exec.Command(bin, "-c", confPath, "show", "--", pkgId).Run() // #nosec G204
 	if err != nil {
 		return false
 	}
 
-	out, err := exec.Command("/usr/bin/apt-cache", "-c", LastoreAptV2CommonConfPath, "policy", "--", pkgId).CombinedOutput() // #nosec G204
+	out, err := exec.Command(bin, "-c", confPath, "policy", "--", pkgId).CombinedOutput() // #nosec G204
 	if err != nil {
 		return false
 	}

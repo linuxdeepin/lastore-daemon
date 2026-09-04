@@ -5,12 +5,23 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
-	"github.com/stretchr/testify/assert"
+	"os"
 	"os/exec"
 	"strconv"
 	"testing"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func newTestConfig(t *testing.T) *config.Config {
+	t.Helper()
+	tmpfile, err := os.CreateTemp(t.TempDir(), "config-*.json")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+	return config.NewConfig(tmpfile.Name())
+}
 
 func TestCompareVersionsGeFast(t *testing.T) {
 	tests := []struct {
@@ -136,7 +147,7 @@ func TestCompareVersionLt(t *testing.T) {
 }
 
 func TestDisableOnlineSpeedLimitConfig_AlreadyDisabled(t *testing.T) {
-	m := &Manager{config: config.NewConfig("")}
+	m := &Manager{config: newTestConfig(t)}
 	cfg := downloadSpeedLimitConfig{
 		DownloadSpeedLimitEnabled: false,
 		LimitSpeed:                "1024",
@@ -153,7 +164,7 @@ func TestDisableOnlineSpeedLimitConfig_AlreadyDisabled(t *testing.T) {
 }
 
 func TestDisableOnlineSpeedLimitConfig_Enabled(t *testing.T) {
-	m := &Manager{config: config.NewConfig("")}
+	m := &Manager{config: newTestConfig(t)}
 	cfg := downloadSpeedLimitConfig{
 		DownloadSpeedLimitEnabled: true,
 		LimitSpeed:                "2048",
@@ -172,7 +183,7 @@ func TestDisableOnlineSpeedLimitConfig_Enabled(t *testing.T) {
 }
 
 func TestDisableOnlineSpeedLimitConfig_InvalidJSON(t *testing.T) {
-	m := &Manager{config: config.NewConfig("")}
+	m := &Manager{config: newTestConfig(t)}
 	m.config.SetDownloadSpeedLimitConfig("invalid-json")
 
 	err := m.disableOnlineSpeedLimitConfig()

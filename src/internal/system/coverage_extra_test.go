@@ -93,17 +93,42 @@ func TestQueryPackageInstalledExtra(t *testing.T) {
 	assert.False(t, QueryPackageInstalled("definitely-not-installed-pkg-xyz123"))
 }
 
+func newFakeAptCache(t *testing.T) string {
+	t.Helper()
+	script := `#!/bin/sh
+# argv: -c <conf> show|policy -- <pkgId>
+sub="$3"
+pkg="$5"
+case "$sub" in
+show)
+	case "$pkg" in
+	installable|none-candidate) exit 0 ;;
+	*) exit 1 ;;
+	esac
+	;;
+policy)
+	case "$pkg" in
+	installable) echo "Candidate: 1.0" ;;
+	none-candidate) echo "Candidate: (none)" ;;
+	*) exit 1 ;;
+	esac
+	;;
+esac
+`
+	path := filepath.Join(t.TempDir(), "apt-cache")
+	require.NoError(t, os.WriteFile(path, []byte(script), 0755))
+	return path
+}
+
 func TestQueryPackageInstallableExtra(t *testing.T) {
-	assert.True(t, QueryPackageInstallable("dpkg"))
-	assert.False(t, QueryPackageInstallable("definitely-not-installed-pkg-xyz123"))
+	bin := newFakeAptCache(t)
+	assert.True(t, queryPackageInstallable(bin, "/nonexistent.conf", "installable"))
+	assert.False(t, queryPackageInstallable(bin, "/nonexistent.conf", "missing"))
 }
 
 func TestQueryPackageInstallableNoCandidateExtra(t *testing.T) {
-	// "tigerbeetle" is left in config-files state on this system; apt-cache
-	// show succeeds but policy reports "Candidate: (none)" in C locale.
-	t.Setenv("LANG", "C.UTF-8")
-	t.Setenv("LC_ALL", "C.UTF-8")
-	assert.False(t, QueryPackageInstallable("tigerbeetle"))
+	bin := newFakeAptCache(t)
+	assert.False(t, queryPackageInstallable(bin, "/nonexistent.conf", "none-candidate"))
 }
 
 func TestQueryPackageDownloadSizeEmptyExtra(t *testing.T) {
