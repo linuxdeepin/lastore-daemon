@@ -121,3 +121,102 @@ func TestNeedMonitor_NoneEnabled(t *testing.T) {
 	mon := &PeakOffPeakMonitor{manager: mgr}
 	assert.False(t, mon.needMonitor())
 }
+
+func TestPeakOffPeakMonitorStartNeedMonitorFalse(t *testing.T) {
+	mgr := &Manager{updatePlatform: &updateplatform.UpdatePlatformManager{}}
+	m := &PeakOffPeakMonitor{manager: mgr, done: make(chan struct{})}
+
+	m.Start()
+	assert.True(t, m.stopped)
+}
+
+func TestPeakOffPeakMonitorStartAllDayRateLimit(t *testing.T) {
+	u := &Updater{service: newTestService(), config: newTestConfig(t)}
+	mgr := &Manager{
+		updatePlatform: &updateplatform.UpdatePlatformManager{},
+		updater:        u,
+		jobManager:     &JobManager{queues: map[string]*JobQueue{}},
+		config:         newTestConfig(t),
+	}
+	u.manager = mgr
+	mgr.updatePlatform.OnlineRateLimit.AllDayRateLimit.Enable = true
+
+	m := &PeakOffPeakMonitor{manager: mgr, done: make(chan struct{}), serverTime: "10:00:00"}
+	m.Start()
+	assert.True(t, m.stopped)
+	if u.setDownloadSpeedLimitTimer != nil {
+		u.setDownloadSpeedLimitTimer.Stop()
+	}
+}
+
+func TestPeakOffPeakMonitorStopAlreadyStopped(t *testing.T) {
+	m := &PeakOffPeakMonitor{stopped: true}
+	m.Stop()
+	assert.True(t, m.stopped)
+}
+
+func TestPeakOffPeakMonitorStop(t *testing.T) {
+	m := &PeakOffPeakMonitor{done: make(chan struct{})}
+	m.Stop()
+	assert.True(t, m.stopped)
+}
+
+func TestPeakOffPeakMonitorRun(t *testing.T) {
+	mgr := &Manager{updatePlatform: &updateplatform.UpdatePlatformManager{}}
+	m := &PeakOffPeakMonitor{
+		manager:       mgr,
+		done:          make(chan struct{}),
+		checkInterval: 5 * time.Millisecond,
+		serverTime:    "10:00:00",
+		startTime:     time.Now(),
+	}
+	m.wg.Add(1)
+	done := make(chan struct{})
+	go func() {
+		m.run()
+		close(done)
+	}()
+
+	time.Sleep(20 * time.Millisecond) // let the ticker fire and exercise refresh
+	close(m.done)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("run did not terminate after done was closed")
+	}
+}
+
+func TestPeakOffPeakMonitorRefreshNoChange(t *testing.T) {
+	mgr := &Manager{updatePlatform: &updateplatform.UpdatePlatformManager{}}
+	m := &PeakOffPeakMonitor{
+		manager:       mgr,
+		lastTimeState: 0,
+		startTime:     time.Now(),
+		serverTime:    "10:00:00",
+	}
+	m.refresh()
+	assert.Equal(t, 0, m.lastTimeState)
+}
+
+func TestPeakOffPeakMonitorRefreshStateChanged(t *testing.T) {
+	u := &Updater{service: newTestService(), config: newTestConfig(t)}
+	mgr := &Manager{
+		updatePlatform: &updateplatform.UpdatePlatformManager{},
+		updater:        u,
+		jobManager:     &JobManager{queues: map[string]*JobQueue{}},
+		config:         newTestConfig(t),
+	}
+	u.manager = mgr
+
+	m := &PeakOffPeakMonitor{
+		manager:       mgr,
+		lastTimeState: 1, // peak
+		startTime:     time.Now(),
+		serverTime:    "10:00:00",
+	}
+	m.refresh()
+	assert.Equal(t, 0, m.lastTimeState)
+	if u.setDownloadSpeedLimitTimer != nil {
+		u.setDownloadSpeedLimitTimer.Stop()
+	}
+}

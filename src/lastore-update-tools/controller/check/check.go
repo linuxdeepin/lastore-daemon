@@ -29,9 +29,17 @@ func SetDynHookTimeout(seconds int) {
 
 var logger = log.NewLogger("lastore/update-tools/check")
 
+// Injectable seams so tests can exercise error branches without touching the
+// real dpkg/apt tools. They default to the real implementations.
+var (
+	getCurrInstPkgStatFn       = sysinfo.GetCurrInstPkgStat
+	checkAppIsExistFn          = sysinfo.CheckAppIsExist
+	getSysPkgStateAndVersionFn = sysinfo.GetSysPkgStateAndVersion
+)
+
 // DONE(heysion): 修改错误返回
 func LoadSysPkgInfo(pkgs map[string]*cache.AppTinyInfo) error {
-	if err := sysinfo.GetCurrInstPkgStat(pkgs); err != nil {
+	if err := getCurrInstPkgStatFn(pkgs); err != nil {
 		return &system.JobError{
 			ErrType:      system.ErrorSysPkgInfoLoad,
 			ErrDetail:    fmt.Sprintf("load system package info error: %v", err),
@@ -45,21 +53,21 @@ func LoadSysPkgInfo(pkgs map[string]*cache.AppTinyInfo) error {
 func CheckAPTAndDPKGState() error {
 
 	// check dpkg and apt is
-	if flags, _ := sysinfo.CheckAppIsExist("/usr/bin/apt"); !flags {
+	if flags, _ := checkAppIsExistFn("/usr/bin/apt"); !flags {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckToolsDependFailed,
 			ErrDetail:    "/usr/bin/apt not found",
 			IsCheckError: true,
 		}
 	}
-	if flags, _ := sysinfo.CheckAppIsExist("/usr/bin/dpkg"); !flags {
+	if flags, _ := checkAppIsExistFn("/usr/bin/dpkg"); !flags {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckToolsDependFailed,
 			ErrDetail:    "/usr/bin/dpkg not found",
 			IsCheckError: true,
 		}
 	}
-	aptState, _, err := sysinfo.GetSysPkgStateAndVersion("apt")
+	aptState, _, err := getSysPkgStateAndVersionFn("apt")
 	if err != nil {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckToolsDependFailed,
@@ -75,7 +83,7 @@ func CheckAPTAndDPKGState() error {
 		}
 	}
 
-	dpkgState, _, err := sysinfo.GetSysPkgStateAndVersion("dpkg")
+	dpkgState, _, err := getSysPkgStateAndVersionFn("dpkg")
 	if err != nil {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckToolsDependFailed,

@@ -83,3 +83,70 @@ func TestSharedInhibitReleaseNoRef(t *testing.T) {
 	err := sharedInhibitRelease()
 	assert.NoError(t, err)
 }
+
+func TestUpdateSystemOnChanging(t *testing.T) {
+	originalFn := inhibitorFn
+	originalCloseFn := closeInhibitFd
+	defer func() {
+		inhibitorFn = originalFn
+		closeInhibitFd = originalCloseFn
+		sharedInhibitRef = 0
+		sharedInhibitFd = -1
+	}()
+
+	var capturedWhy string
+	var closedFd dbus.UnixFD
+	inhibitorFn = func(what, who, why string) (dbus.UnixFD, error) {
+		capturedWhy = why
+		return dbus.UnixFD(42), nil
+	}
+	closeInhibitFd = func(fd dbus.UnixFD) error {
+		closedFd = fd
+		return nil
+	}
+
+	m := &Manager{inhibitFd: -1}
+
+	// Acquire: install-like job selects the "Installing updates..." reason.
+	m.updateSystemOnChanging(true, true)
+	assert.Equal(t, dbus.UnixFD(42), m.inhibitFd)
+	assert.Contains(t, capturedWhy, "Installing updates")
+
+	// Repeat acquire while already inhibited is a no-op.
+	capturedWhy = ""
+	m.updateSystemOnChanging(true, false)
+	assert.Empty(t, capturedWhy)
+	assert.Equal(t, dbus.UnixFD(42), m.inhibitFd)
+
+	// Release closes the fd and resets to -1.
+	m.updateSystemOnChanging(false, false)
+	assert.Equal(t, dbus.UnixFD(-1), m.inhibitFd)
+	assert.Equal(t, dbus.UnixFD(42), closedFd)
+
+	// Repeat release is a no-op.
+	closedFd = -1
+	m.updateSystemOnChanging(false, false)
+	assert.Equal(t, dbus.UnixFD(-1), closedFd)
+}
+
+func TestUpdateSystemOnChangingTaskReason(t *testing.T) {
+	originalFn := inhibitorFn
+	originalCloseFn := closeInhibitFd
+	defer func() {
+		inhibitorFn = originalFn
+		closeInhibitFd = originalCloseFn
+		sharedInhibitRef = 0
+		sharedInhibitFd = -1
+	}()
+
+	var capturedWhy string
+	inhibitorFn = func(what, who, why string) (dbus.UnixFD, error) {
+		capturedWhy = why
+		return dbus.UnixFD(42), nil
+	}
+	closeInhibitFd = func(fd dbus.UnixFD) error { return nil }
+
+	m := &Manager{inhibitFd: -1}
+	m.updateSystemOnChanging(true, false)
+	assert.Contains(t, capturedWhy, "Tasks are running")
+}

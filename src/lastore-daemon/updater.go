@@ -427,6 +427,10 @@ func (u *Updater) initIdleDownloadConfig() error {
 	return nil
 }
 
+// systemdTimerDir is injectable so tests can redirect timer-file writes away
+// from the real /etc/systemd/system directory.
+var systemdTimerDir = "/etc/systemd/system"
+
 // writeTimerFile writes a systemd timer file to the specified path.
 // It returns true if the timer file is changed, false otherwise.
 func writeTimerFile(desc, hourMinute, unit string) (bool, error) {
@@ -442,7 +446,7 @@ func writeTimerFile(desc, hourMinute, unit string) (bool, error) {
 		return false, errors.New("unit is empty")
 	}
 
-	filePath := filepath.Join("/etc/systemd/system", unit)
+	filePath := filepath.Join(systemdTimerDir, unit)
 
 	// Get current file hash to check if content has changed
 	currentHash, err := getFileSha256(filePath)

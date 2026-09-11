@@ -58,3 +58,48 @@ func TestGenRepoInfo_WithFiles(t *testing.T) {
 	assert.NotEmpty(t, repoInfos[0].HashSha256)
 	assert.Equal(t, "test.example.com_debian_dists_stable_main_binary-amd64_Packages", repoInfos[0].Name)
 }
+
+func TestRetryDistUpgradeNilJob(t *testing.T) {
+	err := (&Manager{}).retryDistUpgrade(nil, false)
+	assert.Error(t, err)
+}
+
+func TestRetryDistUpgradeNoBackupJob(t *testing.T) {
+	jm := newTestJobManager()
+	up := NewJob(nil, "dist-1", "test", nil, system.DistUpgradeJobType, LockQueue, nil)
+	require.NoError(t, jm.addJob(up))
+	m := &Manager{jobManager: jm}
+	assert.NoError(t, m.retryDistUpgrade(up, false))
+}
+
+func TestRetryDistUpgradeBackupNotFailed(t *testing.T) {
+	jm := newTestJobManager()
+	backup := NewJob(nil, "backup-1", "backup", nil, system.BackupJobType, LockQueue, nil)
+	require.NoError(t, jm.addJob(backup))
+	up := NewJob(nil, "dist-1", "test", nil, system.DistUpgradeJobType, LockQueue, nil)
+	require.NoError(t, jm.addJob(up))
+	m := &Manager{jobManager: jm}
+	assert.Error(t, m.retryDistUpgrade(up, false))
+}
+
+func TestRetryDistUpgradeBackupFailedRetry(t *testing.T) {
+	jm := newTestJobManager()
+	backup := NewJob(nil, "backup-1", "backup", nil, system.BackupJobType, LockQueue, nil)
+	backup.Status = system.FailedStatus
+	require.NoError(t, jm.addJob(backup))
+	up := NewJob(nil, "dist-1", "test", nil, system.DistUpgradeJobType, LockQueue, nil)
+	require.NoError(t, jm.addJob(up))
+	m := &Manager{jobManager: jm}
+	assert.NoError(t, m.retryDistUpgrade(up, true))
+}
+
+func TestRetryDistUpgradeBackupFailedClean(t *testing.T) {
+	jm := newTestJobManager()
+	backup := NewJob(nil, "backup-1", "backup", nil, system.BackupJobType, LockQueue, nil)
+	backup.Status = system.FailedStatus
+	require.NoError(t, jm.addJob(backup))
+	up := NewJob(nil, "dist-1", "test", nil, system.DistUpgradeJobType, LockQueue, nil)
+	require.NoError(t, jm.addJob(up))
+	m := &Manager{jobManager: jm}
+	assert.NoError(t, m.retryDistUpgrade(up, false))
+}

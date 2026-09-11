@@ -33,21 +33,21 @@ func CheckSystem(typ CheckType, options map[string]string, indicator system.Indi
 	var checkError error
 	switch typ {
 	case PreUpdateCheck:
-		checkError = libCheck.PreUpdateCheck()
+		checkError = preUpdateCheckFn()
 	case PostUpdateCheck:
-		checkError = libCheck.PostUpdateCheck()
+		checkError = postUpdateCheckFn()
 	case PreDownloadCheck:
-		checkError = libCheck.PreDownloadCheck()
+		checkError = preDownloadCheckFn()
 	case PostDownloadCheck:
-		checkError = libCheck.PostDownloadCheck()
+		checkError = postDownloadCheckFn()
 	case PreBackupCheck:
-		checkError = libCheck.PreBackupCheck()
+		checkError = preBackupCheckFn()
 	case PostBackupCheck:
-		checkError = libCheck.PostBackupCheck()
+		checkError = postBackupCheckFn()
 	case PreUpgradeCheck:
-		checkError = libCheck.PreUpgradeCheck()
+		checkError = preUpgradeCheckFn()
 	case MidUpgradeCheck:
-		checkError = libCheck.MidUpgradeCheck()
+		checkError = midUpgradeCheckFn()
 	case PostUpgradeCheck:
 		if options[OptionFirstCheck] == "1" {
 			libCheck.PostCheckStage1 = true
@@ -55,7 +55,7 @@ func CheckSystem(typ CheckType, options map[string]string, indicator system.Indi
 			libCheck.PostCheckStage1 = false
 		}
 
-		checkError = libCheck.PostUpgradeCheck()
+		checkError = postUpgradeCheckFn()
 	default:
 		logger.Errorf("Unknown check type: %s", typ.String())
 		checkError = &system.JobError{

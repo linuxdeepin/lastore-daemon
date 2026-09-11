@@ -24,6 +24,38 @@ func TestNewStore(t *testing.T) {
 	require.NotNil(t, s)
 }
 
+func TestNewStoreFallbackToDefault(t *testing.T) {
+	origPath, origDefault := appstoreConfPath, appstoreConfPathDefault
+	defer func() { appstoreConfPath, appstoreConfPathDefault = origPath, origDefault }()
+
+	appstoreConfPath = filepath.Join(t.TempDir(), "missing.ini")
+	appstoreConfPathDefault = filepath.Join(t.TempDir(), "settings.ini.default")
+	require.NoError(t, os.WriteFile(appstoreConfPathDefault, []byte("[general]\nmetadata_server = http://example.invalid\n"), 0o644))
+
+	s := NewStore()
+	require.NotNil(t, s)
+	require.NotNil(t, s.sysCfg)
+}
+
+func TestNewStoreBothMissing(t *testing.T) {
+	origPath, origDefault := appstoreConfPath, appstoreConfPathDefault
+	defer func() { appstoreConfPath, appstoreConfPathDefault = origPath, origDefault }()
+
+	appstoreConfPath = filepath.Join(t.TempDir(), "missing.ini")
+	appstoreConfPathDefault = filepath.Join(t.TempDir(), "also-missing.ini")
+
+	s := NewStore()
+	require.NotNil(t, s)
+	assert.Nil(t, s.sysCfg)
+}
+
+func TestNewStoreWithConfig(t *testing.T) {
+	cfg := ini.Empty()
+	s := NewStoreWithConfig(cfg)
+	require.NotNil(t, s)
+	assert.Same(t, cfg, s.sysCfg)
+}
+
 func TestGetMetadataServerNilConfig(t *testing.T) {
 	s := &Store{sysCfg: nil}
 	server, err := s.GetMetadataServer()
@@ -228,4 +260,50 @@ func TestCacheFetchJSONHTTPError(t *testing.T) {
 	var v packageApps
 	err := cacheFetchJSON(&v, "http://127.0.0.1:1", cachePath, expireDelay)
 	assert.Error(t, err)
+}
+
+func TestCacheFetchJSONGzipError(t *testing.T) {
+	cachePath := filepath.Join(t.TempDir(), "packages.cache.json")
+
+	// Content-Encoding: gzip with a non-gzip body makes gzip.NewReader fail.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write([]byte("not gzip data"))
+	}))
+	defer srv.Close()
+
+	var v packageApps
+	err := cacheFetchJSON(&v, srv.URL, cachePath, expireDelay)
+	assert.Error(t, err)
+}
+
+func TestCacheFetchJSONOpenFileError(t *testing.T) {
+	// A cache path in a non-existent directory makes os.OpenFile fail after a
+	// successful fetch; the function logs and returns nil.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(packageApps{
+			"dpk://deb/com.example.fetched": {Name: "Fetched", Category: "utils"},
+		})
+	}))
+	defer srv.Close()
+
+	var v packageApps
+	err := cacheFetchJSON(&v, srv.URL, filepath.Join(t.TempDir(), "no-such-dir", "pkg.cache.json"), expireDelay)
+	assert.NoError(t, err)
+	assert.Contains(t, v, "dpk://deb/com.example.fetched")
+}
+
+func TestGetPackageApplicationFetchError(t *testing.T) {
+	// A metadata server pointing at an unreachable host makes cacheFetchJSON
+	// fail, exercising the GetPackageApplication error return.
+	f := ini.Empty()
+	sec, err := f.NewSection("General")
+	require.NoError(t, err)
+	_, err = sec.NewKey("Server", "http://127.0.0.1:1")
+	require.NoError(t, err)
+
+	s := &Store{sysCfg: f}
+	v, err := s.GetPackageApplication(filepath.Join(t.TempDir(), "packages"))
+	assert.Error(t, err)
+	assert.Nil(t, v)
 }

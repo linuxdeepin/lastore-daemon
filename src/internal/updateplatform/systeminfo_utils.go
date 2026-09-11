@@ -237,9 +237,12 @@ type DMI struct {
 	ProductVersion string `json:"product_version"`
 }
 
+// getSystemBusFn 提取为变量以便测试注入系统总线连接错误。
+var getSystemBusFn = dbus.SystemBus
+
 func getHardwareIdByHelper() string {
 	logger.Info("start get hardware id by helper")
-	systemBus, err := dbus.SystemBus()
+	systemBus, err := getSystemBusFn()
 	if err != nil {
 		logger.Warning("failed to get system bus:", err)
 		return ""
@@ -257,8 +260,14 @@ func getHardwareIdByHelper() string {
 	return hw.ID
 }
 
+// getProcessorInfoFn 与 runLsCpuFn 提取为变量以便测试注入。
+var (
+	getProcessorInfoFn = getProcessorInfo
+	runLsCpuFn         = runLsCpu
+)
+
 func getProcessorModelName() (string, error) {
-	processor, err := getProcessorInfo(cpuInfoFilePath)
+	processor, err := getProcessorInfoFn(cpuInfoFilePath)
 	if err != nil {
 		logger.Warning("Get cpu info failed:", err)
 		return "", err
@@ -266,7 +275,7 @@ func getProcessorModelName() (string, error) {
 	if processor != "" {
 		return processor, nil
 	}
-	res, err := runLsCpu() // 当 `/proc/cpuinfo` 中无法获取到处理器名称时，通过 `lscpu` 命令来获取
+	res, err := runLsCpuFn() // 当 `/proc/cpuinfo` 中无法获取到处理器名称时，通过 `lscpu` 命令来获取
 	if err != nil {
 		logger.Warning("run lscpu failed:", err)
 		return "", nil
@@ -368,8 +377,13 @@ func parseInfoFile(file, delim string) (map[string]string, error) {
 	return ret, nil
 }
 
+// getArchOutput 获取 dpkg 架构输出，提取为变量以便测试注入。
+var getArchOutput = func() ([]byte, error) {
+	return exec.Command("dpkg", "--print-architecture").Output()
+}
+
 func GetArchInfo() (string, error) {
-	arch, err := exec.Command("dpkg", "--print-architecture").Output()
+	arch, err := getArchOutput()
 	if err != nil {
 		logger.Warningf("GetSystemArchitecture failed:%v\n", arch)
 		return "", err
@@ -405,10 +419,14 @@ type oemInfo struct {
 	} `json:"custom_info"`
 }
 
-const (
+// oemInfoFile 与 oemSignFile 提取为变量以便测试注入临时目录。
+var (
 	oemInfoFile = "/etc/oem-info"
 	oemSignFile = "/var/uos/.oem-shadow"
-	oemPubKey   = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwzVS35kJl3mhSJssD3S5\nEzjJbFoAD+VsMSy2nS7WQA2XH0aPAWjgCeU+1ScYdBOWz+zWsnK77fGm96HueAuT\nhQEJ9J+ISJUuYBYCc6ovc35gxnhCmP2Qof+/vw98+uKnf1aTDI1imNCWOd/shSbL\nOBn5xFXPsQld1HJqahOuQZOguNIWvrvT7RtmQb77iu576gVLc948HreXKOPD57uK\nJoA2KcoUt95hd94wYyphCuE4onjPcIlpJQfda6PP+HO2Xwze3ltIG6hJSSAEK4R9\n8GnaOTqvslWVI9QFLCIyQ63dbbnASYFTWpDXTlPJsss64vfWOuEjwIyzzQDJNOzN\nFQIDAQAB\n-----END PUBLIC KEY-----"
+)
+
+const (
+	oemPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwzVS35kJl3mhSJssD3S5\nEzjJbFoAD+VsMSy2nS7WQA2XH0aPAWjgCeU+1ScYdBOWz+zWsnK77fGm96HueAuT\nhQEJ9J+ISJUuYBYCc6ovc35gxnhCmP2Qof+/vw98+uKnf1aTDI1imNCWOd/shSbL\nOBn5xFXPsQld1HJqahOuQZOguNIWvrvT7RtmQb77iu576gVLc948HreXKOPD57uK\nJoA2KcoUt95hd94wYyphCuE4onjPcIlpJQfda6PP+HO2Xwze3ltIG6hJSSAEK4R9\n8GnaOTqvslWVI9QFLCIyQ63dbbnASYFTWpDXTlPJsss64vfWOuEjwIyzzQDJNOzN\nFQIDAQAB\n-----END PUBLIC KEY-----"
 )
 
 func getCustomInfoAndOemId() (bool, string, error) {
@@ -475,7 +493,8 @@ func getHardwareVersion() (string, error) {
 	return string(res), nil
 }
 
-const oemFilePath = "/etc/.oemid"
+// oemFilePath 提取为变量以便测试注入临时目录。
+var oemFilePath = "/etc/.oemid"
 
 func getOEMID() (string, error) {
 	content, err := os.ReadFile(oemFilePath)
@@ -523,6 +542,9 @@ func getMachineType() string {
 
 var _tokenUpdateMu sync.Mutex
 
+// tokenConfigFile 为 token 配置文件路径，提取为变量以便测试注入临时目录。
+var tokenConfigFile = "/etc/apt/apt.conf.d/99lastore-token.conf"
+
 // UpdateTokenConfigFile 更新 99lastore-token.conf 文件的内容
 func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) string {
 	logger.Infof("UpdateTokenConfigFile includeDiskInfo: %v, getHardwareIdByHelper: %v", includeDiskInfo, getHardwareIdByHelper)
@@ -532,7 +554,6 @@ func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) str
 	logger.Debug("start getSystemInfo")
 	systemInfo := getSystemInfo(includeDiskInfo, getHardwareIdByHelper)
 	logger.Debug("end getSystemInfo")
-	tokenPath := "/etc/apt/apt.conf.d/99lastore-token.conf"
 	var tokenSlice []string
 	tokenSlice = append(tokenSlice, "a="+systemInfo.SystemName)
 	tokenSlice = append(tokenSlice, "b="+systemInfo.ProductType)
@@ -553,12 +574,12 @@ func UpdateTokenConfigFile(includeDiskInfo bool, getHardwareIdByHelper bool) str
 	token := strings.Join(tokenSlice, ";")
 	token = strings.Replace(token, "\n", "", -1)
 	tokenContent := []byte("Acquire::SmartMirrors::Token \"" + token + "\";\n")
-	existingContent, err := os.ReadFile(tokenPath)
+	existingContent, err := os.ReadFile(tokenConfigFile)
 	if err == nil && bytes.Equal(existingContent, tokenContent) {
 		logger.Debug("token content unchanged, skip writing")
 		return token
 	}
-	err = os.WriteFile(tokenPath, tokenContent, 0644)
+	err = os.WriteFile(tokenConfigFile, tokenContent, 0644)
 	if err != nil {
 		logger.Warning(err)
 	}

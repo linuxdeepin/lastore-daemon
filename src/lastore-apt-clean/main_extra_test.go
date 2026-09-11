@@ -570,6 +570,18 @@ func TestGetDebInfo(t *testing.T) {
 		_, err := getDebInfo("/nonexistent.deb")
 		assert.Error(t, err)
 	})
+
+	t.Run("missing Version prefix", func(t *testing.T) {
+		binDpkgDeb = writeFakeBin(t, `printf 'Package: testpkg\nWrong: 1.0\nArchitecture: amd64\n'`)
+		_, err := getDebInfo("/nonexistent.deb")
+		assert.Error(t, err)
+	})
+
+	t.Run("missing Architecture prefix", func(t *testing.T) {
+		binDpkgDeb = writeFakeBin(t, `printf 'Package: testpkg\nVersion: 1.0\nWrong: amd64\n'`)
+		_, err := getDebInfo("/nonexistent.deb")
+		assert.Error(t, err)
+	})
 }
 
 func TestLoadPkgStatusVersion(t *testing.T) {
@@ -638,4 +650,21 @@ func TestAppendArchivesDirInfos(t *testing.T) {
 		appendArchivesDirInfos(confPath)
 		assert.Empty(t, _archivesDirInfos)
 	})
+}
+
+func TestMainFunction(t *testing.T) {
+	// printJSON makes actWithPolicy record stats instead of deleting real
+	// cached .deb files under /var/cache/apt/archives.
+	origPrintJSON := options.printJSON
+	options.printJSON = true
+	defer func() { options.printJSON = origPrintJSON }()
+
+	// On hosts with incremental update enabled, main() runs the real
+	// deepin-immutable-ctl, which triggers a polkit auth prompt. Swap in a
+	// no-op fake so the test is hermetic and never requests elevation.
+	origImmutableCtl := binImmutableCtl
+	binImmutableCtl = writeFakeBin(t, "exit 0")
+	defer func() { binImmutableCtl = origImmutableCtl }()
+
+	main()
 }

@@ -192,7 +192,7 @@ func listPackageDesktopFiles(pkg string) []string {
 }
 
 func getArchiveInfo() (string, error) {
-	out, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
+	out, err := exec.Command(apt.LastoreAptCleanBinPath, "-print-json").Output()
 	if err != nil {
 		return "", err
 	}
@@ -200,7 +200,7 @@ func getArchiveInfo() (string, error) {
 }
 
 func getNeedCleanCacheSize() (float64, error) {
-	output, err := exec.Command("/usr/bin/lastore-apt-clean", "-print-json").Output()
+	output, err := exec.Command(apt.LastoreAptCleanBinPath, "-print-json").Output()
 	if err != nil {
 		return 0, err
 	}
@@ -300,8 +300,12 @@ func getFilterPackages(infosMap map[string][]string, updateType system.UpdateTyp
 	return r
 }
 
+// aptGetBin is injectable so tests can redirect apt-get invocations without
+// touching the real apt cache or triggering a password prompt.
+var aptGetBin = "apt-get"
+
 func cleanAllCache() {
-	err := exec.Command("apt-get", "clean", "-c", system.LastoreAptV2CommonConfPath).Run()
+	err := exec.Command(aptGetBin, "clean", "-c", system.LastoreAptV2CommonConfPath).Run()
 	if err != nil {
 		logger.Warning(err)
 	}
@@ -375,9 +379,12 @@ func checkSupportDpkgScriptIgnore() bool {
 
 const (
 	coreListPath    = "/usr/share/core-list/corelist"
-	coreListVarPath = "/var/lib/lastore/corelist"
 	coreListPkgName = "deepin-package-list"
 )
+
+// coreListVarPath is injectable so tests can redirect the core-list cache read
+// without touching the real /var/lib/lastore state.
+var coreListVarPath = "/var/lib/lastore/corelist"
 
 // containsPathTraversal 检查 dpkg-deb -c 输出中是否存在路径穿越
 // dpkg-deb -c 输出格式: perms owner/group size date time path

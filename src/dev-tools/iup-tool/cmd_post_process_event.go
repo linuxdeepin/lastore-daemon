@@ -48,13 +48,13 @@ func runPostProcessEvent(cmd *cobra.Command, args []string) {
 		data, err := os.ReadFile(eventDataFile)
 		if err != nil {
 			logger.Warningf("failed to read data file: %v", err)
-			os.Exit(1)
+			osExit(1)
 		}
 		event = &ProcessEvent{}
 		err = json.Unmarshal(data, event)
 		if err != nil {
 			logger.Warningf("failed to parse JSON data: %v", err)
-			os.Exit(1)
+			osExit(1)
 		}
 	} else {
 		event = &ProcessEvent{
@@ -79,7 +79,7 @@ func runPostProcessEvent(cmd *cobra.Command, args []string) {
 			validTypes = append(validTypes, fmt.Sprintf("%d=%s", i, i.String()))
 		}
 		logger.Warningf("valid event types: %s", strings.Join(validTypes, ", "))
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Debugf("Process Event: %s", spew.Sdump(event))
@@ -91,13 +91,13 @@ func runPostProcessEvent(cmd *cobra.Command, args []string) {
 	response, err := genPostProcessEventResponse(updatePlatform.requestURL, updatePlatform.Token, event)
 	if err != nil {
 		logger.Warningf("genPostProcessEventResponse failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, PostProcessEvent)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Infof("Process event posted successfully")

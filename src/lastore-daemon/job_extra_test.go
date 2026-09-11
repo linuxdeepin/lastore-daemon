@@ -404,3 +404,9 @@ func TestJobSetErrorRoundTrip(t *testing.T) {
 	assert.True(t, got.IsCheckError)
 	assert.Equal(t, []string{"a", "b"}, got.ErrorLog)
 }
+
+func TestJobSetErrorNil(t *testing.T) {
+	j := &Job{service: newTestService(), Description: "old"}
+	j.setError(nil)
+	assert.Equal(t, "null", j.Description)
+}

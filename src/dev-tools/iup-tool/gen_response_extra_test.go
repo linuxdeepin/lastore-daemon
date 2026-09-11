@@ -108,6 +108,17 @@ func TestGenVersionResponseBadURL(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestGenVersionResponseNewRequestError(t *testing.T) {
+	// A control character in the URL makes http.NewRequest fail before any
+	// network I/O, exercising the request-construction error branch.
+	m := &UpdatePlatformManager{
+		requestURL: "http://\n",
+		Token:      "tok",
+	}
+	_, err := m.genVersionResponse()
+	assert.Error(t, err)
+}
+
 func TestGenUpdatePolicyByToken(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

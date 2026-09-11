@@ -69,7 +69,7 @@ func runPostProcess(cmd *cobra.Command, args []string) {
 		data, err := os.ReadFile(processDataFile)
 		if err != nil {
 			logger.Warningf("failed to read data file: %v", err)
-			os.Exit(1)
+			osExit(1)
 		}
 		buf = bytes.NewBuffer(data)
 	} else {
@@ -86,7 +86,7 @@ func runPostProcess(cmd *cobra.Command, args []string) {
 		data, err := json.Marshal(message)
 		if err != nil {
 			logger.Warningf("failed to marshal status message: %v", err)
-			os.Exit(1)
+			osExit(1)
 		}
 		logger.Debugf("Status Message JSON (buf): %s", data)
 		buf = bytes.NewBuffer(data)
@@ -102,13 +102,13 @@ func runPostProcess(cmd *cobra.Command, args []string) {
 	response, err := genPostProcessResponse(updatePlatform.requestURL, updatePlatform.Token, buf, filePath)
 	if err != nil {
 		logger.Warningf("genPostProcessResponse failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, PostProcess)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Infof("Process status message posted successfully")
@@ -122,7 +122,7 @@ func uploadLogFiles(files []string) {
 	for _, file := range files {
 		if _, err := os.Stat(file); err != nil {
 			logger.Warningf("file does not exist: %s", file)
-			os.Exit(1)
+			osExit(1)
 		}
 	}
 
@@ -131,14 +131,14 @@ func uploadLogFiles(files []string) {
 	err := tarFiles(files, outFilename)
 	if err != nil {
 		logger.Warningf("failed to tar log files: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	// Open tar file
 	tarFile, err := os.Open(outFilename)
 	if err != nil {
 		logger.Warningf("failed to open tar file: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 	defer tarFile.Close()
 
@@ -147,13 +147,13 @@ func uploadLogFiles(files []string) {
 	response, err := genPostProcessResponse(updatePlatform.requestURL, updatePlatform.Token, tarFile, xzFilePath)
 	if err != nil {
 		logger.Warningf("failed to upload log files: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, PostProcess)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Infof("Log files uploaded successfully")

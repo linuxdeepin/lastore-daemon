@@ -178,3 +178,23 @@ func TestParseInstallAddSizeInvalid(t *testing.T) {
 	_, err := parseInstallAddSize("invalid line")
 	assert.Error(t, err)
 }
+
+func TestParsePackageSizeInvalidNeedNumber(t *testing.T) {
+	need, all, err := parsePackageSize("Need to get 1.2.3 MB of archives")
+	assert.Error(t, err)
+	assert.Equal(t, float64(SizeUnknown), need)
+	assert.Equal(t, float64(SizeUnknown), all)
+}
+
+func TestParsePackageSizeInvalidAllNumber(t *testing.T) {
+	need, all, err := parsePackageSize("Need to get 10 MB/1.2.3 MB of archives")
+	assert.Error(t, err)
+	assert.Equal(t, float64(SizeUnknown), need)
+	assert.Equal(t, float64(SizeUnknown), all)
+}
+
+func TestParseInstallAddSizeInvalidNumber(t *testing.T) {
+	size, err := parseInstallAddSize("After this operation, 1.2.3 MB of disk space will be used")
+	assert.Error(t, err)
+	assert.Equal(t, float64(SizeUnknown), size)
+}

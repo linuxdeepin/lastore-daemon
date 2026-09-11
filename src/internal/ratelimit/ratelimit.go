@@ -19,6 +19,17 @@ const DefaultRateLimit = 10240 * 1024 // 10240KB/s unit: bytes per second
 const MinRateLimit = 10 * 1024        // 10KB/s unit: bytes per second
 const MaxRateLimit = 999999 * 1024    // 999999KB/s unit: bytes per second
 
+// getUpgradeDeliveryBusObject returns the D-Bus object of the upgradedelivery
+// service. Extracted as a package-level var so tests can inject a fake object
+// without connecting to the real system bus.
+var getUpgradeDeliveryBusObject = func() (dbus.BusObject, error) {
+	sysBus, err := dbus.SystemBus()
+	if err != nil {
+		return nil, err
+	}
+	return sysBus.Object(UPGRADE_DELIVERY_SERVICE, UPGRADE_DELIVERY_OBJECT_PATH), nil
+}
+
 // SyncLimit 服务器端限速配置信息
 type SyncLimit struct {
 	AllDayRateLimit   *RateLimitWithTime `json:"a,omitempty"` // 全天限制
@@ -152,11 +163,10 @@ func SetIPFSRateLimit(uploadLimitRate, downloadLimitRate IPFSLimitRate) error {
 // SetIPFSDownloadRateLimit sets the download rate limit for IPFS.
 // rate is in kilobytes per second (KB/s). If rate is -1, it means no rate limit.
 func SetIPFSDownloadRateLimit(rate int) error {
-	sysBus, err := dbus.SystemBus()
+	object, err := getUpgradeDeliveryBusObject()
 	if err != nil {
 		return fmt.Errorf("failed to connect to system bus: %w", err)
 	}
-	object := sysBus.Object(UPGRADE_DELIVERY_SERVICE, UPGRADE_DELIVERY_OBJECT_PATH)
 	if err := object.Call(UPGRADE_DELIVERY_INTERFACE+".SetDownloadRateLimit", 0, rate).Store(); err != nil {
 		return fmt.Errorf("failed to set download rate limit: %w", err)
 	}
@@ -166,11 +176,10 @@ func SetIPFSDownloadRateLimit(rate int) error {
 // SetIPFSUploadRateLimit sets the upload rate limit for IPFS.
 // rate is in kilobytes per second (KB/s). If rate is -1, it means no rate limit.
 func SetIPFSUploadRateLimit(rate int) error {
-	sysBus, err := dbus.SystemBus()
+	object, err := getUpgradeDeliveryBusObject()
 	if err != nil {
 		return fmt.Errorf("failed to connect to system bus: %w", err)
 	}
-	object := sysBus.Object(UPGRADE_DELIVERY_SERVICE, UPGRADE_DELIVERY_OBJECT_PATH)
 	if err := object.Call(UPGRADE_DELIVERY_INTERFACE+".SetUploadRateLimit", 0, rate).Store(); err != nil {
 		return fmt.Errorf("failed to set upload rate limit: %w", err)
 	}
@@ -186,11 +195,10 @@ func GetDeliveryDownloadRateLimit() (RateInfoEvent, error) {
 }
 
 func getDeliveryRateLimit(method string) (RateInfoEvent, error) {
-	sysBus, err := dbus.SystemBus()
+	object, err := getUpgradeDeliveryBusObject()
 	if err != nil {
 		return RateInfoEvent{}, fmt.Errorf("failed to get delivery rate limit: %w", err)
 	}
-	object := sysBus.Object(UPGRADE_DELIVERY_SERVICE, UPGRADE_DELIVERY_OBJECT_PATH)
 	limitSpeedData, err := object.GetProperty(UPGRADE_DELIVERY_INTERFACE + "." + method)
 	if err != nil {
 		return RateInfoEvent{}, fmt.Errorf("failed to get limit speed: %w", err)

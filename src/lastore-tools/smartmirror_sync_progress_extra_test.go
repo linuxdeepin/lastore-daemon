@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestSaveMirrorInfos(t *testing.T) {
@@ -177,4 +178,50 @@ func TestParseIndexBadStatus(t *testing.T) {
 
 	_, err := ParseIndex(srv.URL)
 	assert.Error(t, err)
+}
+
+func TestFetchLastSyncValidHeader(t *testing.T) {
+	want := time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Last-Modified", want.Format(time.RFC1123))
+	}))
+	defer srv.Close()
+
+	got := fetchLastSync(srv.URL)
+	assert.True(t, got.Equal(want), "got %v, want %v", got, want)
+}
+
+func TestFetchLastSyncMissingHeader(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer srv.Close()
+
+	got := fetchLastSync(srv.URL)
+	assert.Equal(t, time.Time{}, got)
+}
+
+func TestFetchLastSyncConnectionError(t *testing.T) {
+	got := fetchLastSync("http://127.0.0.1:1")
+	assert.Equal(t, time.Time{}, got)
+}
+
+func TestDetectServer(t *testing.T) {
+	lastMod := time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/index.json" {
+			w.Header().Set("Last-Modified", lastMod.Format(time.RFC1123))
+			_, _ = w.Write([]byte(`["__GUARD__1700000000"]`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	infos := DetectServer(2, "index.json", srv.URL, nil)
+
+	require.Len(t, infos, 1)
+	assert.Equal(t, srv.URL, infos[0].Name)
+	assert.True(t, infos[0].Support2014)
+	assert.True(t, infos[0].Support2015)
+	assert.Equal(t, 1.0, infos[0].Progress)
+	assert.True(t, infos[0].LastSync.Equal(lastMod))
 }

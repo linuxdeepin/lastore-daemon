@@ -19,7 +19,7 @@ func TestCheckKey(t *testing.T) {
 	assert.True(t, checkKey("Package-Name"))
 	assert.True(t, checkKey("123"))
 	assert.True(t, checkKey(""))
-	assert.True(t, checkKey("Package Name"))  // space is in valid range
+	assert.True(t, checkKey("Package Name")) // space is in valid range
 	assert.False(t, checkKey("Package@Name"))
 	assert.False(t, checkKey("测试"))
 }
@@ -124,8 +124,8 @@ func TestDecodeMalformed(t *testing.T) {
 
 func TestSoftwareString(t *testing.T) {
 	sw := Software{
-		Package: "vim",
-		Version: "1.0",
+		Package:      "vim",
+		Version:      "1.0",
 		Architecture: "amd64",
 	}
 	s := sw.String()
@@ -136,8 +136,8 @@ func TestSoftwareString(t *testing.T) {
 
 func TestSoftwareEncode(t *testing.T) {
 	sw := Software{
-		Package: "vim",
-		Version: "1.0",
+		Package:      "vim",
+		Version:      "1.0",
 		Architecture: "amd64",
 	}
 	bts, err := sw.Encode()
@@ -158,8 +158,8 @@ func TestSoftwareEncodeEmpty(t *testing.T) {
 func TestSoftwareStanza(t *testing.T) {
 	sw := &Software{}
 	sw.Stanza(map[string]string{
-		"Package": "vim",
-		"Version": "1.0",
+		"Package":      "vim",
+		"Version":      "1.0",
 		"Architecture": "amd64",
 	})
 	assert.Equal(t, "vim", sw.Package)
@@ -244,12 +244,12 @@ func TestMergePackagesSoftwareEmpty(t *testing.T) {
 
 func TestMakeStanzaAppInfo(t *testing.T) {
 	stanza := Stanza{
-		"Package":       "vim",
-		"Version":       "1.0",
-		"Architecture":  "amd64",
-		"Filename":      "pool/main/v/vim/vim.deb",
-		"SHA256":        "abc123",
-		"Size":          "1024",
+		"Package":        "vim",
+		"Version":        "1.0",
+		"Architecture":   "amd64",
+		"Filename":       "pool/main/v/vim/vim.deb",
+		"SHA256":         "abc123",
+		"Size":           "1024",
 		"Installed-Size": "2048",
 	}
 	ok, info := makeStanzaAppInfo(stanza)
@@ -271,17 +271,17 @@ func TestMakeStanzaAppInfoMissingFields(t *testing.T) {
 
 func TestMakeStanzaAppInfoInvalidSize(t *testing.T) {
 	stanza := Stanza{
-		"Package":       "vim",
-		"Version":       "1.0",
-		"Architecture":  "amd64",
-		"Filename":      "vim.deb",
-		"SHA256":        "abc",
-		"Size":          "not-a-number",
+		"Package":        "vim",
+		"Version":        "1.0",
+		"Architecture":   "amd64",
+		"Filename":       "vim.deb",
+		"SHA256":         "abc",
+		"Size":           "not-a-number",
 		"Installed-Size": "also-not",
 	}
 	ok, info := makeStanzaAppInfo(stanza)
 	assert.True(t, ok)
-	assert.Equal(t, 0, info.DebSize)     // invalid size stays at zero value
+	assert.Equal(t, 0, info.DebSize)       // invalid size stays at zero value
 	assert.Equal(t, 0, info.InstalledSize) // invalid installed-size stays at zero value
 }
 
@@ -449,12 +449,12 @@ func TestSoftwareStringError(t *testing.T) {
 
 func TestMakeStanzaAppInfoMissingEachField(t *testing.T) {
 	base := Stanza{
-		"Package":       "vim",
-		"Version":       "1.0",
-		"Architecture":  "amd64",
-		"Filename":      "pool/main/v/vim/vim.deb",
-		"SHA256":        "abc123",
-		"Size":          "1024",
+		"Package":        "vim",
+		"Version":        "1.0",
+		"Architecture":   "amd64",
+		"Filename":       "pool/main/v/vim/vim.deb",
+		"SHA256":         "abc123",
+		"Size":           "1024",
 		"Installed-Size": "2048",
 	}
 	for _, field := range []string{"Package", "Version", "Architecture", "Filename", "SHA256"} {
@@ -486,12 +486,12 @@ func TestMakeStanzaAppInfoNoSizeFields(t *testing.T) {
 
 func TestMakeStanzaAppInfoInvalidSizeNegative(t *testing.T) {
 	s := Stanza{
-		"Package":       "vim",
-		"Version":       "1.0",
-		"Architecture":  "amd64",
-		"Filename":      "vim.deb",
-		"SHA256":        "abc",
-		"Size":          "-5",
+		"Package":        "vim",
+		"Version":        "1.0",
+		"Architecture":   "amd64",
+		"Filename":       "vim.deb",
+		"SHA256":         "abc",
+		"Size":           "-5",
 		"Installed-Size": "-9",
 	}
 	ok, info := makeStanzaAppInfo(s)

@@ -15,7 +15,9 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-const lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
+// lastoreJobCacheJson is injectable so tests can redirect the job-cache
+// read/write without touching the real /tmp state.
+var lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
 
 func (m *Manager) canAutoQuit() bool {
 	m.PropsMu.RLock()

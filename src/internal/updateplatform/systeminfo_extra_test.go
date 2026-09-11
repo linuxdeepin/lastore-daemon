@@ -4,10 +4,12 @@
 package updateplatform
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -200,4 +202,119 @@ func TestGetClientPackageInfoUpdatePlatform(t *testing.T) {
 	result := getClientPackageInfo("lastore-daemon")
 	// dpkg-query may fail; just verify it doesn't panic
 	_ = result
+}
+
+func TestGetHardwareIdByHelperBusError(t *testing.T) {
+	orig := getSystemBusFn
+	getSystemBusFn = func() (*dbus.Conn, error) { return nil, errors.New("no system bus") }
+	t.Cleanup(func() { getSystemBusFn = orig })
+
+	assert.Empty(t, getHardwareIdByHelper())
+}
+
+func TestGetProcessorModelName(t *testing.T) {
+	origProc := getProcessorInfoFn
+	origLsCpu := runLsCpuFn
+	t.Cleanup(func() {
+		getProcessorInfoFn = origProc
+		runLsCpuFn = origLsCpu
+	})
+
+	t.Run("processor info error", func(t *testing.T) {
+		getProcessorInfoFn = func(string) (string, error) { return "", errors.New("cpuinfo error") }
+		name, err := getProcessorModelName()
+		assert.Error(t, err)
+		assert.Empty(t, name)
+	})
+
+	t.Run("processor found", func(t *testing.T) {
+		getProcessorInfoFn = func(string) (string, error) { return "Intel i7", nil }
+		name, err := getProcessorModelName()
+		require.NoError(t, err)
+		assert.Equal(t, "Intel i7", name)
+	})
+
+	t.Run("lscpu error fallback", func(t *testing.T) {
+		getProcessorInfoFn = func(string) (string, error) { return "", nil }
+		runLsCpuFn = func() (map[string]string, error) { return nil, errors.New("lscpu error") }
+		name, err := getProcessorModelName()
+		require.NoError(t, err)
+		assert.Empty(t, name)
+	})
+
+	t.Run("lscpu model name", func(t *testing.T) {
+		getProcessorInfoFn = func(string) (string, error) { return "", nil }
+		runLsCpuFn = func() (map[string]string, error) { return map[string]string{"Model name": "AMD Ryzen"}, nil }
+		name, err := getProcessorModelName()
+		require.NoError(t, err)
+		assert.Equal(t, "AMD Ryzen", name)
+	})
+}
+
+func TestGetArchInfoError(t *testing.T) {
+	orig := getArchOutput
+	getArchOutput = func() ([]byte, error) { return nil, errors.New("dpkg failed") }
+	t.Cleanup(func() { getArchOutput = orig })
+
+	arch, err := GetArchInfo()
+	assert.Error(t, err)
+	assert.Empty(t, arch)
+}
+
+func TestGetOEMIDValid(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "oemid")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("OEM-12345"), 0644))
+
+	orig := oemFilePath
+	oemFilePath = tmpFile
+	t.Cleanup(func() { oemFilePath = orig })
+
+	id, err := getOEMID()
+	require.NoError(t, err)
+	assert.Equal(t, "OEM-12345", id)
+}
+
+func TestGetCustomInfoAndOemId(t *testing.T) {
+	origInfo := oemInfoFile
+	origSign := oemSignFile
+	t.Cleanup(func() {
+		oemInfoFile = origInfo
+		oemSignFile = origSign
+	})
+
+	t.Run("files missing", func(t *testing.T) {
+		oemInfoFile = filepath.Join(t.TempDir(), "nope-info")
+		oemSignFile = filepath.Join(t.TempDir(), "nope-sign")
+		isCustom, oemID, err := getCustomInfoAndOemId()
+		assert.Error(t, err)
+		assert.False(t, isCustom)
+		assert.Empty(t, oemID)
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		dir := t.TempDir()
+		oemInfoFile = filepath.Join(dir, "oem-info")
+		oemSignFile = filepath.Join(dir, "oem-shadow")
+		require.NoError(t, os.WriteFile(oemInfoFile, []byte("not json"), 0644))
+		require.NoError(t, os.WriteFile(oemSignFile, []byte("sig"), 0644))
+
+		isCustom, oemID, err := getCustomInfoAndOemId()
+		assert.Error(t, err)
+		assert.False(t, isCustom)
+		assert.Empty(t, oemID)
+	})
+
+	t.Run("verify failure", func(t *testing.T) {
+		dir := t.TempDir()
+		oemInfoFile = filepath.Join(dir, "oem-info")
+		oemSignFile = filepath.Join(dir, "oem-shadow")
+		content := `{"basic":{"iso_id":"abc","timestamp":1},"custom_info":{"customized_kernel":true}}`
+		require.NoError(t, os.WriteFile(oemInfoFile, []byte(content), 0644))
+		require.NoError(t, os.WriteFile(oemSignFile, []byte("invalid sig"), 0644))
+
+		isCustom, oemID, err := getCustomInfoAndOemId()
+		assert.Error(t, err)
+		assert.False(t, isCustom)
+		assert.Empty(t, oemID)
+	})
 }

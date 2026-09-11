@@ -48,13 +48,13 @@ func runPostResult(cmd *cobra.Command, args []string) {
 		data, err := os.ReadFile(resultDataFile)
 		if err != nil {
 			logger.Warningf("failed to read data file: %v", err)
-			os.Exit(1)
+			osExit(1)
 		}
 		result = &UpgradePostMsg{}
 		err = json.Unmarshal(data, result)
 		if err != nil {
 			logger.Warningf("failed to parse JSON data: %v", err)
-			os.Exit(1)
+			osExit(1)
 		}
 	} else {
 		result = &UpgradePostMsg{
@@ -81,13 +81,13 @@ func runPostResult(cmd *cobra.Command, args []string) {
 	response, err := genPostResultResponse(updatePlatform.requestURL, updatePlatform.Token, result)
 	if err != nil {
 		logger.Warningf("genPostResultResponse failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, PostResult)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Infof("Upgrade result posted successfully")

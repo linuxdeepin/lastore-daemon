@@ -229,6 +229,26 @@ const (
 	TrialExpired    UiActiveState = 4  // 试用期已过期
 )
 
+// licenseAuthorizationStateFn 查询系统授权状态,提取为变量以便测试注入。
+var licenseAuthorizationStateFn = func() (int32, error) {
+	sysBus, err := dbusutil.NewSystemService()
+	if err != nil {
+		return 0, err
+	}
+	licenseObj := license.NewLicense(sysBus.Conn())
+	return licenseObj.AuthorizationState().Get(0)
+}
+
+// licenseActiveCodeFn 查询系统激活码,提取为变量以便测试注入。
+var licenseActiveCodeFn = func() (string, error) {
+	sysBus, err := dbusutil.NewSystemService()
+	if err != nil {
+		return "", err
+	}
+	licenseObj := license.NewLicense(sysBus.Conn())
+	return licenseObj.ActiveCode().Get(0)
+}
+
 func IsAuthorized() bool {
 	edition, err := getEditionName()
 	if err != nil {
@@ -238,13 +258,7 @@ func IsAuthorized() bool {
 	if edition == "Community" {
 		return true
 	}
-	sysBus, err := dbusutil.NewSystemService()
-	if err != nil {
-		logger.Warning(err)
-		return false
-	}
-	licenseObj := license.NewLicense(sysBus.Conn())
-	state, err := licenseObj.AuthorizationState().Get(0)
+	state, err := licenseAuthorizationStateFn()
 	if err != nil {
 		logger.Warning(err)
 		return false
@@ -256,13 +270,7 @@ func IsAuthorized() bool {
 }
 
 func IsActiveCodeExist() bool {
-	sysBus, err := dbusutil.NewSystemService()
-	if err != nil {
-		logger.Warning(err)
-		return false
-	}
-	licenseObj := license.NewLicense(sysBus.Conn())
-	code, err := licenseObj.ActiveCode().Get(0)
+	code, err := licenseActiveCodeFn()
 	if err != nil {
 		logger.Warning(err)
 		return false
@@ -301,8 +309,11 @@ func CheckLock(p string) (string, bool) {
 	return "", false
 }
 
+// osVersionFile 为系统版本信息文件路径,提取为变量以便测试注入临时目录。
+var osVersionFile = "/etc/os-version"
+
 func getEditionName() (string, error) {
-	return getEditionNameFromFile("/etc/os-version")
+	return getEditionNameFromFile(osVersionFile)
 }
 
 func getEditionNameFromFile(path string) (string, error) {

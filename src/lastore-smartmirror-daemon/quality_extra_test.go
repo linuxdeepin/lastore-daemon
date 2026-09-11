@@ -106,8 +106,8 @@ func TestUpdateQuality_Multiple(t *testing.T) {
 
 func TestSortSelectMirror_Empty(t *testing.T) {
 	mq := &MirrorQuality{
-		QualityMap:    QualityMap{},
-		adjustDelays:  map[string]int{},
+		QualityMap:   QualityMap{},
+		adjustDelays: map[string]int{},
 	}
 	result := mq.sortSelectMirror([]string{})
 	assert.Empty(t, result)

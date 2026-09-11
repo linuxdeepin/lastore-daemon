@@ -187,7 +187,10 @@ type fullUpgradeOption struct {
 	MajorUpgrade      bool // 是否为大版本升级
 }
 
-const (
+// optionFilePath and optionFilePathTemp are variables so tests can redirect
+// the reboot-check option file to a temporary directory instead of touching
+// the real /etc and /tmp paths.
+var (
 	optionFilePath     = "/etc/deepin/deepin_update_option.json" // 和gen_upgrade_check_config.sh脚本中对应
 	optionFilePathTemp = "/tmp/deepin_update_option.json"
 )

@@ -4,14 +4,16 @@
 package main
 
 import (
-	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
-	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestApplicationInfosExtra(t *testing.T) {
@@ -267,4 +269,76 @@ func TestCheckSupportDpkgScriptIgnore(t *testing.T) {
 	// Value depends on the host dpkg; only assert a bool is returned without panic.
 	result := checkSupportDpkgScriptIgnore()
 	assert.IsType(t, false, result)
+}
+
+func TestRecordUpgradeLogPrepends(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "upgrade_record.json")
+
+	// First record writes a one-element array.
+	recordUpgradeLog("uuid-1", system.SystemUpdate, map[string]string{"a": "b"}, path)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var records []recordInfo
+	require.NoError(t, json.Unmarshal(data, &records))
+	require.Len(t, records, 1)
+	assert.Equal(t, "uuid-1", records[0].UUID)
+	assert.Equal(t, system.SystemUpdate, records[0].UpgradeMode)
+
+	// Second record is PREPENDED to the existing array.
+	recordUpgradeLog("uuid-2", system.SecurityUpdate, nil, path)
+	data, err = os.ReadFile(path)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, &records))
+	require.Len(t, records, 2)
+	assert.Equal(t, "uuid-2", records[0].UUID)
+	assert.Equal(t, "uuid-1", records[1].UUID)
+}
+
+func TestRecordUpgradeLogInvalidJSON(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "upgrade_record.json")
+	require.NoError(t, os.WriteFile(path, []byte("{not-json"), 0644))
+
+	// Malformed existing content must not be overwritten.
+	recordUpgradeLog("uuid-1", system.SystemUpdate, nil, path)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "{not-json", string(data))
+}
+
+func TestGetHistoryChangelog(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "changelog.txt")
+	require.NoError(t, os.WriteFile(path, []byte("changelog content"), 0644))
+	assert.Equal(t, "changelog content", getHistoryChangelog(path))
+
+	assert.Equal(t, "", getHistoryChangelog(filepath.Join(t.TempDir(), "nope.txt")))
+}
+
+func TestGetCoreListFromCacheValid(t *testing.T) {
+	orig := coreListVarPath
+	coreListVarPath = filepath.Join(t.TempDir(), "corelist")
+	t.Cleanup(func() { coreListVarPath = orig })
+
+	data, err := json.Marshal(PackageList{PkgList: []Package{{PkgName: "pkg-a"}, {PkgName: "pkg-b"}}})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(coreListVarPath, data, 0644))
+
+	assert.Equal(t, []string{"pkg-a", "pkg-b"}, getCoreListFromCache())
+}
+
+func TestGetCoreListFromCacheMalformed(t *testing.T) {
+	orig := coreListVarPath
+	coreListVarPath = filepath.Join(t.TempDir(), "corelist")
+	t.Cleanup(func() { coreListVarPath = orig })
+	require.NoError(t, os.WriteFile(coreListVarPath, []byte("{bad"), 0644))
+
+	assert.Nil(t, getCoreListFromCache())
+}
+
+func TestCleanAllCacheWarning(t *testing.T) {
+	orig := aptGetBin
+	aptGetBin = filepath.Join(t.TempDir(), "no-such-apt-get")
+	t.Cleanup(func() { aptGetBin = orig })
+
+	// apt-get missing -> logs a warning; must not panic or touch the real cache.
+	cleanAllCache()
 }

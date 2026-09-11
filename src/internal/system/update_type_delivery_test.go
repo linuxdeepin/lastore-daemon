@@ -112,3 +112,10 @@ func TestExtractURLPath(t *testing.T) {
 		})
 	}
 }
+
+func TestReplaceRepoSchemeWithDeliveryNoScheme(t *testing.T) {
+	// A "deb" line whose fields carry no http/https/delivery scheme falls
+	// through the loop and is returned unchanged.
+	line := "deb cdrom:[Ubuntu 20.04] stable main"
+	assert.Equal(t, line, replaceRepoSchemeWithDelivery(line))
+}

@@ -10,6 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
+	"math"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +31,12 @@ func TestWriteData(t *testing.T) {
 	content, err := os.ReadFile(fp)
 	require.NoError(t, err)
 	assert.Contains(t, string(content), `"key":"value"`)
+}
+
+func TestWriteDataMarshalError(t *testing.T) {
+	// math.NaN() cannot be JSON-encoded, exercising the json.Marshal error branch.
+	err := WriteData(filepath.Join(t.TempDir(), "data.json"), math.NaN())
+	require.Error(t, err)
 }
 
 func TestValidURL(t *testing.T) {
@@ -217,4 +226,66 @@ func TestUnsetEnvNonExistent(t *testing.T) {
 	err := UnsetEnv("DEFINITELY_NOT_SET_VAR_XYZ123")
 	require.NoError(t, err)
 	assert.Equal(t, "", os.Getenv("DEFINITELY_NOT_SET_VAR_XYZ123"))
+}
+
+func TestOpenURLSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("hello"))
+	}))
+	defer srv.Close()
+
+	rc, err := OpenURL(srv.URL)
+	require.NoError(t, err)
+	defer rc.Close()
+
+	body, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(body))
+}
+
+func TestOpenURLStatusError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	rc, err := OpenURL(srv.URL)
+	assert.Error(t, err)
+	assert.Nil(t, rc)
+}
+
+func TestOpenURLConnectError(t *testing.T) {
+	rc, err := OpenURL("http://127.0.0.1:1")
+	assert.Error(t, err)
+	assert.Nil(t, rc)
+}
+
+func TestRemoteCatLineSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("first line\nsecond line"))
+	}))
+	defer srv.Close()
+
+	line, err := RemoteCatLine(srv.URL)
+	require.NoError(t, err)
+	assert.Equal(t, "first line", line)
+}
+
+func TestRemoteCatLineTooLong(t *testing.T) {
+	long := strings.Repeat("x", 8192)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(long))
+	}))
+	defer srv.Close()
+
+	line, err := RemoteCatLine(srv.URL)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "too long")
+	assert.True(t, strings.HasPrefix(long, line), "returned line should be a prefix of the oversized input")
+}
+
+func TestRemoteCatLineConnectError(t *testing.T) {
+	line, err := RemoteCatLine("http://127.0.0.1:1")
+	assert.Error(t, err)
+	assert.Empty(t, line)
 }

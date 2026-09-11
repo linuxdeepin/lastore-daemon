@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -219,6 +220,16 @@ func TestGetRandomBytesZero(t *testing.T) {
 	result, err := GetRandomBytes(0)
 	require.NoError(t, err)
 	assert.Len(t, result, 0)
+}
+
+func TestGetRandomBytesReadError(t *testing.T) {
+	old := randRead
+	randRead = func([]byte) (int, error) { return 0, errors.New("entropy exhausted") }
+	defer func() { randRead = old }()
+
+	result, err := GetRandomBytes(8)
+	assert.Error(t, err)
+	assert.Nil(t, result)
 }
 
 func TestEncryptMsg(t *testing.T) {

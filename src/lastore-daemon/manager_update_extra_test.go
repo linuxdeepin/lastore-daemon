@@ -23,6 +23,20 @@ func newTestConfig(t *testing.T) *config.Config {
 	return config.NewConfig(tmpfile.Name())
 }
 
+func TestGetSystemUpgradablePackagesMapEmptyCoreList(t *testing.T) {
+	installList, removeList, err := getSystemUpgradablePackagesMap(nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "coreList is nil")
+	assert.Nil(t, installList)
+	assert.Nil(t, removeList)
+
+	installList, removeList, err = getSystemUpgradablePackagesMap([]string{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "coreList is nil")
+	assert.Nil(t, installList)
+	assert.Nil(t, removeList)
+}
+
 func TestCompareVersionsGeFast(t *testing.T) {
 	tests := []struct {
 		name    string

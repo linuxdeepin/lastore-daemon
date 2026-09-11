@@ -30,10 +30,12 @@ const (
 )
 
 const (
-	aptConfDir           = "/etc/apt/apt.conf.d"
 	tokenConfFileName    = "99lastore-token.conf" // #nosec G101
 	securityConfFileName = "99security.conf"
 )
+
+// aptConfDir 提取为变量以便测试注入临时目录,避免写入真实 /etc/apt/apt.conf.d。
+var aptConfDir = "/etc/apt/apt.conf.d"
 
 func Tr(text string) string {
 	return gettext.Tr(text)

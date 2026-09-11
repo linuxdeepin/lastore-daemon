@@ -33,6 +33,10 @@ var (
 	binDpkgQuery string
 	binDpkgDeb   string
 	binAptCache  string
+	// binImmutableCtl defaults to PATH lookup; only invoked when incremental
+	// update is enabled, so it is not resolved in findBins (avoids Fatal on
+	// hosts without deepin-immutable-ctl).
+	binImmutableCtl = "deepin-immutable-ctl"
 
 	logger = log.NewLogger("cmd/lastore-apt-clean")
 )
@@ -82,7 +86,7 @@ func main() {
 	// 如果是增量更新，则调用deepin-immutable-ctl upgrade cleanup命令清理immutable系统的缓存deb包和ostree包分支
 	cfg := config.NewConfig(path.Join("/var/lib/lastore", "config.json"))
 	if cfg.UseIncrementalUpdate() {
-		err := exec.Command("deepin-immutable-ctl", "upgrade", "clean").Run()
+		err := exec.Command(binImmutableCtl, "upgrade", "clean").Run()
 		if err != nil {
 			logger.Debugf("failed to clean upgrade cache: %v", err)
 		}

@@ -46,9 +46,17 @@ func parseDfAvailOuput(output string) (uint64, error) {
 	return strconv.ParseUint(fields[len(fields)-1], 10, 64)
 }
 
+// dfRunner and dataDirExists are package-level seams so tests can exercise the
+// branch logic of GetRootDiskFreeSpace/GetDataDiskFreeSpace without touching the
+// real filesystem. They default to the real implementations.
+var (
+	dfRunner      = runcmd.RunnerOutput
+	dataDirExists = fs.CheckFileExistState
+)
+
 // TODO:(DingHao) fix to udisksctl
 func GetRootDiskFreeSpace() (uint64, error) {
-	freeSpace, err := runcmd.RunnerOutput(10, "df", "-l", "--output=avail", "/")
+	freeSpace, err := dfRunner(10, "df", "-l", "--output=avail", "/")
 	if err != nil {
 		return 0, err
 	}
@@ -58,7 +66,7 @@ func GetRootDiskFreeSpace() (uint64, error) {
 
 // TODO:(DingHao) fix to udisksctl
 func GetDataDiskFreeSpace() (uint64, error) {
-	if err := fs.CheckFileExistState("/data"); err != nil {
+	if err := dataDirExists("/data"); err != nil {
 		sysSpace, err := GetRootDiskFreeSpace()
 		if err != nil {
 			return 0, err
@@ -66,7 +74,7 @@ func GetDataDiskFreeSpace() (uint64, error) {
 		return sysSpace, nil
 	}
 
-	freeSpace, err := runcmd.RunnerOutput(10, "df", "-l", "--output=avail", "/data")
+	freeSpace, err := dfRunner(10, "df", "-l", "--output=avail", "/data")
 	if err != nil {
 		return 0, err
 	}

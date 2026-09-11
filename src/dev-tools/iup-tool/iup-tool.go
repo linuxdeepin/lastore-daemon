@@ -12,6 +12,9 @@ var logger = log.NewLogger("lastore/iup-tool")
 
 var updatePlatform UpdatePlatformManager
 
+// osExit wraps os.Exit so tests can intercept process termination.
+var osExit = os.Exit
+
 // initUpdatePlatform initialize update platform manager
 func initUpdatePlatform() {
 	updatePlatform = UpdatePlatformManager{

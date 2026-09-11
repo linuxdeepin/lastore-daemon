@@ -276,10 +276,14 @@ func PKCS7Encode(text []byte, blockSize int) []byte {
 	return append(text, paddingByte...)
 }
 
+// randRead wraps math/rand.Read so tests can inject a failing source to
+// exercise the error branch of GetRandomBytes.
+var randRead = rand.Read
+
 // GetRandomBytes generates random bytes of specified length
 func GetRandomBytes(length uint32) ([]byte, error) {
 	res := make([]byte, length)
-	_, err := rand.Read(res)
+	_, err := randRead(res)
 	if err != nil {
 		logger.Warning(err)
 		return nil, err

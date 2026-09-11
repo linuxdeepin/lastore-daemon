@@ -11,6 +11,16 @@ import (
 	"strings"
 )
 
+// Package-level seams so tests can inject in-memory fakes without shelling out
+// to dpkg/dpkg-query or touching the live system. Defaults are the real
+// implementations, so production behaviour is unchanged.
+var (
+	listPackageFileFn       = system.ListPackageFile
+	queryPackageDepsFn      = system.QueryPackageDependencies
+	queryPackageInstalledFn = system.QueryPackageInstalled
+	listPkgsFilesFn         = ListPkgsFiles
+)
+
 // QueryDesktopFilePath return the most possible right
 // desktop file in the pkgId.
 // It will parsing pkgId plus all dependencies of it.
@@ -19,7 +29,7 @@ func QueryDesktopFilePathByDependencies(pkgId string) string {
 	found := make(chan bool, 1)
 	ch := queryRelateDependencies(found, pkgId, nil)
 	for pkgname := range ch {
-		for _, f := range system.ListPackageFile(pkgname) {
+		for _, f := range listPackageFileFn(pkgname) {
 			if path.Base(f) == pkgId+".desktop" {
 				found <- true
 				return f
@@ -35,10 +45,11 @@ func QueryDesktopFilePathByDependencies(pkgId string) string {
 // QueryPackageSameNameDepends try find the packages which possible
 // contain the right desktop file.
 // e.g.
-//    stardict-gtk --> stardict-common
-//    stardict-gnome --> stardict-common
-//    evince --> evince-common
-//    evince-gtk --> evince, evince-common  Note: (recursion guest)
+//
+//	stardict-gtk --> stardict-common
+//	stardict-gnome --> stardict-common
+//	evince --> evince-common
+//	evince-gtk --> evince, evince-common  Note: (recursion guest)
 func queryRelateDependencies(stopCh chan bool, pkgId string, set map[string]struct{}) chan string {
 	ch := make(chan string, 1)
 	if set == nil {
@@ -48,12 +59,12 @@ func queryRelateDependencies(stopCh chan bool, pkgId string, set map[string]stru
 
 	go func() {
 		defer close(ch)
-		for _, p := range system.QueryPackageDependencies(pkgId) {
+		for _, p := range queryPackageDepsFn(pkgId) {
 			if _, ok := set[p]; ok {
 				continue
 			}
 
-			if !system.QueryPackageInstalled(p) {
+			if !queryPackageInstalledFn(p) {
 				continue
 			}
 
@@ -80,7 +91,7 @@ func queryRelateDependencies(stopCh chan bool, pkgId string, set map[string]stru
 
 func ListDesktopFiles(pkg string) []string {
 	var ret []string
-	for _, p := range ListPkgsFiles(QuerySameSourcePkgs(pkg)) {
+	for _, p := range listPkgsFilesFn(QuerySameSourcePkgs(pkg)) {
 		if strings.HasSuffix(p, ".desktop") {
 			ret = append(ret, p)
 		}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -29,25 +28,25 @@ func init() {
 func runGetCurrentPackages(cmd *cobra.Command, args []string) {
 	if currentPkgBaseline == "" {
 		logger.Warning("baseline is required")
-		os.Exit(1)
+		osExit(1)
 	}
 
 	response, err := genCurrentPkgListsResponse(updatePlatform.requestURL, updatePlatform.Token, currentPkgBaseline)
 	if err != nil {
 		logger.Warningf("genCurrentPkgListsResponse failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, GetCurrentPkgLists)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	pkgs := getCurrentPkgListsData(data)
 	if pkgs == nil {
 		logger.Warning("failed to parse current package list data")
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Infof("Current Package Lists for baseline: %s", currentPkgBaseline)

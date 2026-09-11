@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
@@ -34,25 +33,25 @@ func init() {
 func runGetUpdateLog(cmd *cobra.Command, args []string) {
 	if updateLogBaseline == "" {
 		logger.Warning("baseline is required")
-		os.Exit(1)
+		osExit(1)
 	}
 
 	response, err := genUpdateLogResponse(updatePlatform.requestURL, updatePlatform.Token, updateLogBaseline, updateLogIsUnstable)
 	if err != nil {
 		logger.Warningf("genUpdateLogResponse failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, GetUpdateLog)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logs := getUpdateLogData(data)
 	if logs == nil {
 		logger.Warning("failed to parse update log data")
-		os.Exit(1)
+		osExit(1)
 	}
 	logger.Debugf("Update Log Data: %v", spew.Sdump(logs))
 }

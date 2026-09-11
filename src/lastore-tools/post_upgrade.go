@@ -44,10 +44,17 @@ type upgradePostContent struct {
 	NextBaseline    string `json:"nextBaseline"`
 }
 
+// postUpgradeNewConfig and postUpgradeCacheFile are injectable seams so tests
+// can control the platform URL and cache location inside postUpgrade.
+var (
+	postUpgradeNewConfig = NewConfig
+	postUpgradeCacheFile = "/var/cache/lastore/postupgrade.cache"
+)
+
 func postUpgrade(data string) error {
-	config := NewConfig(path.Join(system.VarLibDir, "config.json"))
+	config := postUpgradeNewConfig(path.Join(system.VarLibDir, "config.json"))
 	url := config.PlatformUrl + "/api/v1/update/status"
-	postCacheFile := "/var/cache/lastore/postupgrade.cache"
+	postCacheFile := postUpgradeCacheFile
 	dataVer := "upmsg v1.0"
 	var datas []string
 	if len(data) != 0 {

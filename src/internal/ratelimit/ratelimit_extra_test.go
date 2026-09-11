@@ -5,10 +5,14 @@
 package ratelimit
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/godbus/dbus/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConvertRateLimitWithTimeToRateInfo(t *testing.T) {
@@ -338,4 +342,191 @@ func TestSetIPFSRateLimitSystemBusError(t *testing.T) {
 
 	err := SetIPFSRateLimit(upload, download)
 	assert.Error(t, err)
+}
+
+func TestSetIPFSDownloadRateLimitSystemBusError(t *testing.T) {
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
+	assert.Error(t, SetIPFSDownloadRateLimit(1024))
+}
+
+func TestSetIPFSUploadRateLimitSystemBusError(t *testing.T) {
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
+	assert.Error(t, SetIPFSUploadRateLimit(1024))
+}
+
+func TestGetDeliveryUploadRateLimitSystemBusError(t *testing.T) {
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
+	_, err := GetDeliveryUploadRateLimit()
+	assert.Error(t, err)
+}
+
+func TestGetDeliveryDownloadRateLimitSystemBusError(t *testing.T) {
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
+	_, err := GetDeliveryDownloadRateLimit()
+	assert.Error(t, err)
+}
+
+func TestGetDeliveryRateLimitSystemBusError(t *testing.T) {
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
+	ev, err := getDeliveryRateLimit("DownloadLimitSpeed")
+	assert.Error(t, err)
+	assert.Equal(t, RateInfoEvent{}, ev)
+}
+
+// fakeBusObject is a minimal dbus.BusObject double used to exercise the D-Bus
+// call/get-property branches without connecting to the real system bus.
+type fakeBusObject struct {
+	callErr     error
+	callMethod  string
+	callFlags   dbus.Flags
+	callArgs    []interface{}
+	property    dbus.Variant
+	propertyErr error
+	gotProperty string
+}
+
+func (f *fakeBusObject) Call(method string, flags dbus.Flags, args ...interface{}) *dbus.Call {
+	f.callMethod = method
+	f.callFlags = flags
+	f.callArgs = args
+	return &dbus.Call{Err: f.callErr}
+}
+
+func (f *fakeBusObject) CallWithContext(ctx context.Context, method string, flags dbus.Flags, args ...interface{}) *dbus.Call {
+	return f.Call(method, flags, args...)
+}
+
+func (f *fakeBusObject) Go(method string, flags dbus.Flags, ch chan *dbus.Call, args ...interface{}) *dbus.Call {
+	return f.Call(method, flags, args...)
+}
+
+func (f *fakeBusObject) GoWithContext(ctx context.Context, method string, flags dbus.Flags, ch chan *dbus.Call, args ...interface{}) *dbus.Call {
+	return f.Call(method, flags, args...)
+}
+
+func (f *fakeBusObject) AddMatchSignal(iface, member string, options ...dbus.MatchOption) *dbus.Call {
+	return &dbus.Call{}
+}
+
+func (f *fakeBusObject) RemoveMatchSignal(iface, member string, options ...dbus.MatchOption) *dbus.Call {
+	return &dbus.Call{}
+}
+
+func (f *fakeBusObject) GetProperty(p string) (dbus.Variant, error) {
+	f.gotProperty = p
+	return f.property, f.propertyErr
+}
+
+func (f *fakeBusObject) StoreProperty(p string, value interface{}) error {
+	return nil
+}
+
+func (f *fakeBusObject) SetProperty(p string, v interface{}) error {
+	return nil
+}
+
+func (f *fakeBusObject) Destination() string {
+	return UPGRADE_DELIVERY_SERVICE
+}
+
+func (f *fakeBusObject) Path() dbus.ObjectPath {
+	return dbus.ObjectPath(UPGRADE_DELIVERY_OBJECT_PATH)
+}
+
+// stubUpgradeDeliveryBusObject replaces getUpgradeDeliveryBusObject with a fake
+// that always returns the supplied object, restoring the original on cleanup.
+func stubUpgradeDeliveryBusObject(t *testing.T, fake *fakeBusObject) {
+	t.Helper()
+	old := getUpgradeDeliveryBusObject
+	getUpgradeDeliveryBusObject = func() (dbus.BusObject, error) {
+		return fake, nil
+	}
+	t.Cleanup(func() { getUpgradeDeliveryBusObject = old })
+}
+
+func TestSetIPFSDownloadRateLimitCall(t *testing.T) {
+	t.Run("no limit -1 passes through to dbus", func(t *testing.T) {
+		fake := &fakeBusObject{}
+		stubUpgradeDeliveryBusObject(t, fake)
+		assert.NoError(t, SetIPFSDownloadRateLimit(-1))
+		assert.Equal(t, UPGRADE_DELIVERY_INTERFACE+".SetDownloadRateLimit", fake.callMethod)
+		assert.Equal(t, []interface{}{-1}, fake.callArgs)
+	})
+
+	t.Run("call error propagated", func(t *testing.T) {
+		fake := &fakeBusObject{callErr: errors.New("dbus call failed")}
+		stubUpgradeDeliveryBusObject(t, fake)
+		err := SetIPFSDownloadRateLimit(1024)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to set download rate limit")
+	})
+}
+
+func TestSetIPFSUploadRateLimitCall(t *testing.T) {
+	t.Run("no limit -1 passes through to dbus", func(t *testing.T) {
+		fake := &fakeBusObject{}
+		stubUpgradeDeliveryBusObject(t, fake)
+		assert.NoError(t, SetIPFSUploadRateLimit(-1))
+		assert.Equal(t, UPGRADE_DELIVERY_INTERFACE+".SetUploadRateLimit", fake.callMethod)
+		assert.Equal(t, []interface{}{-1}, fake.callArgs)
+	})
+
+	t.Run("call error propagated", func(t *testing.T) {
+		fake := &fakeBusObject{callErr: errors.New("dbus call failed")}
+		stubUpgradeDeliveryBusObject(t, fake)
+		err := SetIPFSUploadRateLimit(2048)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to set upload rate limit")
+	})
+}
+
+func TestGetDeliveryRateLimitParsing(t *testing.T) {
+	t.Run("valid rate info event decode", func(t *testing.T) {
+		fake := &fakeBusObject{property: dbus.MakeVariant(`{"LimitType":1,"LimitRate":102400,"CurrentRate":102400,"RateType":2,"Speed":102400}`)}
+		stubUpgradeDeliveryBusObject(t, fake)
+		ev, err := getDeliveryRateLimit("DownloadLimitSpeed")
+		assert.NoError(t, err)
+		assert.Equal(t, UPGRADE_DELIVERY_INTERFACE+".DownloadLimitSpeed", fake.gotProperty)
+		assert.Equal(t, 1, ev.LimitType)
+		assert.Equal(t, int64(102400), ev.LimitRate)
+		assert.Equal(t, int64(102400), ev.CurrentRate)
+		assert.Equal(t, 2, ev.RateType)
+		assert.Equal(t, int64(102400), ev.Speed)
+	})
+
+	t.Run("missing fields decode to zero values", func(t *testing.T) {
+		fake := &fakeBusObject{property: dbus.MakeVariant(`{"LimitType":2}`)}
+		stubUpgradeDeliveryBusObject(t, fake)
+		ev, err := getDeliveryRateLimit("UploadLimitSpeed")
+		assert.NoError(t, err)
+		assert.Equal(t, 2, ev.LimitType)
+		assert.Equal(t, int64(0), ev.LimitRate)
+		assert.Equal(t, int64(0), ev.CurrentRate)
+		assert.Equal(t, 0, ev.RateType)
+		assert.Equal(t, int64(0), ev.Speed)
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		fake := &fakeBusObject{property: dbus.MakeVariant(`{not-json`)}
+		stubUpgradeDeliveryBusObject(t, fake)
+		_, err := getDeliveryRateLimit("DownloadLimitSpeed")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to unmarshal limit speed")
+	})
+
+	t.Run("empty speed", func(t *testing.T) {
+		fake := &fakeBusObject{property: dbus.MakeVariant("")}
+		stubUpgradeDeliveryBusObject(t, fake)
+		_, err := getDeliveryRateLimit("DownloadLimitSpeed")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "limit speed is empty")
+	})
+
+	t.Run("get property error", func(t *testing.T) {
+		fake := &fakeBusObject{propertyErr: errors.New("no such property")}
+		stubUpgradeDeliveryBusObject(t, fake)
+		_, err := getDeliveryRateLimit("DownloadLimitSpeed")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to get limit speed")
+	})
 }

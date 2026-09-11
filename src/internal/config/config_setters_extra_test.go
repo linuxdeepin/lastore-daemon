@@ -349,15 +349,15 @@ func TestDisableConsoleLogging(t *testing.T) {
 func TestJson2DSettings(t *testing.T) {
 	cfg := newTestConfig(t)
 	old := &Config{
-		Version:           "1.0",
-		AutoCheckUpdates:  true,
-		MirrorSource:      "test",
-		AppstoreRegion:    "CN",
-		Repository:        "desktop",
-		MirrorsUrl:        "https://mirrors.test.com",
-		UpdateMode:        system.SystemUpdate,
-		CheckInterval:     time.Hour,
-		CleanInterval:     time.Hour * 2,
+		Version:            "1.0",
+		AutoCheckUpdates:   true,
+		MirrorSource:       "test",
+		AppstoreRegion:     "CN",
+		Repository:         "desktop",
+		MirrorsUrl:         "https://mirrors.test.com",
+		UpdateMode:         system.SystemUpdate,
+		CheckInterval:      time.Hour,
+		CleanInterval:      time.Hour * 2,
 		AutoInstallUpdates: true,
 	}
 	cfg.json2DSettings(old)

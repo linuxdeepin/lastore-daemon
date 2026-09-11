@@ -3,8 +3,8 @@ package meta
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"io"
+	"os"
 
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 )

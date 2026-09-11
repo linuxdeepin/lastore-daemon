@@ -130,3 +130,66 @@ Icon=x
 	fs := DesktopFiles{PkgName: "nomatchpkg", Files: []string{low, high}}
 	assert.Equal(t, high, fs.BestOne(), "highest-scoring file should win")
 }
+
+func TestQueryDesktopFileNonExistent(t *testing.T) {
+	assert.Empty(t, QueryDesktopFile("nonexistent-pkg-xyz123"), "no desktop file should be found for a non-existent package")
+}
+
+// The flatpak branch of QueryDesktopFile reads a fixed directory. flatpakAppsDir
+// is a package var seam so these tests point it at a temp dir instead of
+// /var/lib/flatpak/exports/share/applications.
+func TestQueryDesktopFileFlatpakNameMatch(t *testing.T) {
+	dir := t.TempDir()
+	writeDesktopFile(t, dir, "com.example.app.desktop", "[Desktop Entry]\nExec=/usr/bin/app\n")
+
+	origDir := flatpakAppsDir
+	flatpakAppsDir = dir
+	t.Cleanup(func() { flatpakAppsDir = origDir })
+
+	got := QueryDesktopFile("deepin-fpapp-com.example.app")
+	assert.Equal(t, filepath.Join(dir, "com.example.app.desktop"), got)
+}
+
+func TestQueryDesktopFileFlatpakExecMatch(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "somedir"), 0o755); err != nil {
+		t.Fatalf("mkdirall: %v", err)
+	}
+	// An unreadable .desktop entry exercises the LoadFromFile error/continue
+	// branch; it must be skipped without aborting the search.
+	broken := writeDesktopFile(t, dir, "broken.desktop", "[Desktop Entry]\n")
+	if err := os.Chmod(broken, 0o000); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	// The file name does not match appId, so the first loop falls through and
+	// the second loop matches on the Exec field instead. The directory entry
+	// exercises the IsDir() skip branch.
+	writeDesktopFile(t, dir, "other.desktop", "[Desktop Entry]\nExec=com.example.app --foo\n")
+
+	origDir := flatpakAppsDir
+	flatpakAppsDir = dir
+	t.Cleanup(func() { flatpakAppsDir = origDir })
+
+	got := QueryDesktopFile("deepin-fpapp-com.example.app")
+	assert.Equal(t, filepath.Join(dir, "other.desktop"), got)
+}
+
+func TestQueryDesktopFileNonFlatpakFound(t *testing.T) {
+	dir := t.TempDir()
+	high := writeDesktopFile(t, dir, "high.desktop", "[Desktop Entry]\nExec=/usr/bin/x\nIcon=x\n")
+
+	origS2B := __S2B__
+	origB2S := __B2S__
+	__B2S__ = map[string]string{"somepkg": "somesrc"}
+	__S2B__ = map[string][]string{"somesrc": {"somepkg"}}
+
+	origList := listPkgsFilesFn
+	listPkgsFilesFn = func(pkgs []string) []string { return []string{high} }
+	t.Cleanup(func() {
+		__S2B__ = origS2B
+		__B2S__ = origB2S
+		listPkgsFilesFn = origList
+	})
+
+	assert.Equal(t, high, QueryDesktopFile("somepkg"))
+}

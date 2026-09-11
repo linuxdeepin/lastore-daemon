@@ -15,15 +15,15 @@ func useTestDataPaths(t *testing.T) {
 
 	origLangInfo := LangInfoFile
 	origSupported := langSupportedFile
-	origDepends := pkgDependsFile
+	origDepends := PkgDependsFile
 
 	LangInfoFile = filepath.Join("testdata", "support_languages.json")
 	langSupportedFile = filepath.Join("testdata", "SUPPORTED")
-	pkgDependsFile = filepath.Join("pkg_depends.json")
+	PkgDependsFile = filepath.Join("pkg_depends.json")
 
 	t.Cleanup(func() {
 		LangInfoFile = origLangInfo
 		langSupportedFile = origSupported
-		pkgDependsFile = origDepends
+		PkgDependsFile = origDepends
 	})
 }

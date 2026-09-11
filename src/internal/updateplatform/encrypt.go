@@ -28,6 +28,9 @@ const (
  */
 var encodingAesKey = "DflXyFwTmaoGmbDkVj8uD62XGb01pkJn"
 
+// randRead 提取为变量以便测试注入随机数读取错误。
+var randRead = rand.Read
+
 func EncryptMsg(data []byte) ([]byte, error) {
 	// 获得16位随机字符串，填充到明文之前
 	replyMsgBytes, err := GetRandomBytes(randomLen)
@@ -71,7 +74,7 @@ func PKCS7Encode(text []byte, blockSize int) []byte {
 // GetRandomBytes 根据需要长度,生成随机字符
 func GetRandomBytes(length uint32) ([]byte, error) {
 	res := make([]byte, length)
-	_, err := rand.Read(res)
+	_, err := randRead(res)
 	if err != nil {
 		logger.Warning(err)
 		return nil, err

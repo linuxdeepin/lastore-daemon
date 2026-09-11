@@ -15,7 +15,9 @@ import (
 
 var logger = log.NewLogger("lastore/dstore")
 
-const (
+// appstoreConfPath / appstoreConfPathDefault are vars so tests can redirect
+// them to temporary files; the defaults are unchanged.
+var (
 	appstoreConfPath        = "/usr/share/deepin-app-store/settings.ini"
 	appstoreConfPathDefault = "/usr/share/deepin-app-store/settings.ini.default"
 )

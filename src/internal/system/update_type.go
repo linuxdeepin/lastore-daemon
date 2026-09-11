@@ -191,7 +191,6 @@ func AllInstallUpdateType() []UpdateType {
 
 const (
 	OriginSourceFile = "/etc/apt/sources.list"
-	OriginSourceDir  = "/etc/apt/sources.list.d"
 
 	AppStoreList       = "appstore.list"
 	UnstableSourceList = "deepin-unstable-source.list"
@@ -203,6 +202,11 @@ const (
 	UnstableSourceFile = "/etc/apt/sources.list.d/" + UnstableSourceList
 	HweSourceFile      = "/etc/apt/sources.list.d/" + HweSourceList
 	SecuritySourceFile = "/etc/apt/sources.list.d/" + SecurityList
+)
+
+// 仓库目录路径提取为变量以便测试注入临时目录。
+var (
+	OriginSourceDir = "/etc/apt/sources.list.d"
 
 	SoftLinkSystemSourceDir = "/var/lib/lastore/SystemSource.d" // 系统更新仓库
 	SecuritySourceDir       = "/var/lib/lastore/SecuritySource.d"
@@ -210,6 +214,9 @@ const (
 	UnknownSourceDir        = "/var/lib/lastore/unknownSource.d"          // 未知来源更新的源个数不定,需要创建软链接放在同一目录内
 	OtherSystemSourceDir    = "/var/lib/lastore/otherSystemSource.d"      // 其他需要检查的系统仓库
 	AppendSourceDir         = "/etc/deepin/lastore-daemon/sources.list.d" // 追加仓库的路径
+
+	LastoreSourcesPath = "/var/lib/lastore/sources.list"   // 历史版本遗留,已废弃
+	CustomSourceDir    = "/var/lib/lastore/sources.list.d" // 历史版本遗留,已废弃
 )
 
 var SystemUpdateSource = SoftLinkSystemSourceDir
@@ -233,11 +240,6 @@ func GetCategorySourceMap() map[UpdateType]string {
 		AppendUpdate:      AppendSourceDir,
 	}
 }
-
-const (
-	LastoreSourcesPath = "/var/lib/lastore/sources.list"   // 历史版本遗留,已废弃
-	CustomSourceDir    = "/var/lib/lastore/sources.list.d" // 历史版本遗留,已废弃
-)
 
 // UpdateSystemDefaultSourceDir systemSourceList需要list文件的绝对路径；更新系统仓库文件夹,如果从更新平台获取系统仓库,那么不需要调用这里
 func UpdateSystemDefaultSourceDir(sourceList []string) error {

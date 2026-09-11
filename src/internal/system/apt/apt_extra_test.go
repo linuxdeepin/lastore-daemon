@@ -51,6 +51,13 @@ func TestParseJobErrorUnmetDependencies(t *testing.T) {
 	assert.Equal(t, system.ErrorUnmetDependencies, err.ErrType)
 }
 
+func TestParseJobErrorUnmetDependenciesWithDetail(t *testing.T) {
+	stdout := "The following packages have unmet dependencies:\n foo : Depends: bar"
+	err := parseJobError("E: Unable to correct problems, you have held broken packages", stdout)
+	assert.Equal(t, system.ErrorUnmetDependencies, err.ErrType)
+	assert.Contains(t, err.ErrDetail, "The following packages have unmet dependencies:")
+}
+
 func TestParseJobErrorNoInstallationCandidate(t *testing.T) {
 	err := parseJobError("E: Package foo has no installation candidate", "")
 	assert.Equal(t, system.ErrorNoInstallationCandidate, err.ErrType)
@@ -89,6 +96,31 @@ func TestParseJobErrorInvalidSourcesList(t *testing.T) {
 func TestParseJobErrorUnknown(t *testing.T) {
 	err := parseJobError("some random error", "")
 	assert.Equal(t, system.ErrorUnknown, err.ErrType)
+}
+
+func TestParseJobErrorDpkgSegfault(t *testing.T) {
+	err := parseJobError("E: Sub-process /usr/bin/dpkg received a segmentation fault.", "")
+	assert.Equal(t, system.ErrorDpkgError, err.ErrType)
+}
+
+func TestParseJobErrorDpkgExitedUnexpectedly(t *testing.T) {
+	err := parseJobError("E: Sub-process /usr/bin/dpkg exited unexpectedly", "")
+	assert.Equal(t, system.ErrorDpkgError, err.ErrType)
+}
+
+func TestParseJobErrorPermissionDenied(t *testing.T) {
+	err := parseJobError("E: Could not open lock file - don't have permission to access", "")
+	assert.Equal(t, system.ErrorOperationNotPermitted, err.ErrType)
+}
+
+func TestParseJobErrorDpkgUnpack(t *testing.T) {
+	err := parseJobError("E: dpkg: error processing archive (--unpack): corrupted filesystem", "")
+	assert.Equal(t, system.ErrorDamagePackage, err.ErrType)
+}
+
+func TestParseJobErrorNoSpaceGeneric(t *testing.T) {
+	err := parseJobError("E: No space left on device", "")
+	assert.Equal(t, system.ErrorInsufficientSpace, err.ErrType)
 }
 
 func TestParseAptShowListBasic(t *testing.T) {

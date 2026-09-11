@@ -37,10 +37,14 @@ var serviceCheckMap = map[string][]string{
 	},
 }
 
+// pidofRunner is a package-level seam so tests can exercise the classification
+// branches of CheckImportantProcess without spawning the real pidof tool.
+var pidofRunner = runcmd.RunnerOutput
+
 func CheckImportantProcess(stage string) error {
 	if programCheckList, ok := programCheckMap[stage]; ok {
 		for _, program := range programCheckList {
-			programPid, err := runcmd.RunnerOutput(10, "pidof", program)
+			programPid, err := pidofRunner(10, "pidof", program)
 			if err != nil {
 				return &system.JobError{
 					ErrType:      system.ErrorCheckProgramFailed,
@@ -104,8 +108,12 @@ func (c *SystemdChecker) IsUnitActive(serviceName string) (bool, error) {
 	return activeState == "active", nil
 }
 
+// newSystemdCheckerFn is a package-level seam so tests can exercise the
+// service-check branches of CheckImportantService without a real system bus.
+var newSystemdCheckerFn = NewSystemdChecker
+
 func CheckImportantService(stage string) error {
-	SystemdChecker, err := NewSystemdChecker()
+	SystemdChecker, err := newSystemdCheckerFn()
 	if err != nil {
 		return &system.JobError{
 			ErrType:      system.ErrorCheckServiceFailed,

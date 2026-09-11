@@ -65,10 +65,10 @@ func TestMerge(t *testing.T) {
 	}
 
 	right := AppInfo{
-		Name:     "", // empty, should not overwrite
-		Version:  "2.0.0", // non-empty, should overwrite
+		Name:     "",          // empty, should not overwrite
+		Version:  "2.0.0",     // non-empty, should overwrite
 		Filename: "right.deb", // non-empty, should overwrite
-		Arch:     "amd64", // non-empty, should be set
+		Arch:     "amd64",     // non-empty, should be set
 	}
 
 	err := left.Merge(right)

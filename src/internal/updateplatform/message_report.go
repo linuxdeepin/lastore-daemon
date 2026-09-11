@@ -157,13 +157,16 @@ type platformCacheContent struct {
 }
 
 // 需要注意cache文件的同步时机，所有数据应该不会从os-version和os-baseline获取
-const (
+// 路径提取为变量以便测试注入临时目录。
+var (
 	CacheVersion  = "/var/lib/lastore/os-version.b"
 	cacheBaseline = "/var/lib/lastore/os-baseline.b"
 	realBaseline  = "/etc/os-baseline"
 	realVersion   = "/etc/os-version"
 	cacheTaskInfo = "/var/lib/lastore/os-task-info"
+)
 
+const (
 	KeyNow      string = "now"      // 立即更新
 	KeyShutdown string = "shutdown" // 关机更新
 	KeyLayout   string = "15:04"
@@ -493,8 +496,11 @@ const (
 	UnstableVersion = 2
 )
 
+// dbusSystemBus 提取为变量以便测试注入失败路径。
+var dbusSystemBus = dbus.SystemBus
+
 func isUnstable() int {
-	sysBus, err := dbus.SystemBus()
+	sysBus, err := dbusSystemBus()
 	if err != nil {
 		return ReleaseVersion
 	}
@@ -1352,7 +1358,7 @@ type CVEMeta struct {
 
 var CVEs map[string]CEVInfo // 保存全局cves信息，方便查询
 
-const cveLocalInfo = "/var/lib/lastore/cve_local_info.json"
+var cveLocalInfo = "/var/lib/lastore/cve_local_info.json"
 
 func loadLocalCVEData() []byte {
 	data, err := os.ReadFile(cveLocalInfo)
@@ -1577,9 +1583,11 @@ func genPlatformReposFromRepoInfos(repoInfos []repoInfo, platformRepoComponents 
 	return repos
 }
 
+// aptAuthConfFile 为 uos.conf 认证文件路径，提取为变量以便测试注入临时目录。
+var aptAuthConfFile = "/etc/apt/auth.conf.d/uos.conf"
+
 func getAptAuthConf(domain string) (user, password string) {
-	AuthFile := "/etc/apt/auth.conf.d/uos.conf"
-	file, err := os.Open(AuthFile)
+	file, err := os.Open(aptAuthConfFile)
 	if err != nil {
 		logger.Warning("failed open uos.conf:", err)
 		return "", ""
@@ -2148,7 +2156,7 @@ func (m *UpdatePlatformManager) PostUpgradeStatus(uuid string, upgradeStatus Upg
 }
 
 func (m *UpdatePlatformManager) SetInhibitAutoQuit() {
-
+	logger.Debug("UpdatePlatformManager.SetInhibitAutoQuit called")
 }
 
 func (m *UpdatePlatformManager) saveTaskId() {
@@ -2476,11 +2484,14 @@ func resetSpeedLimitConfigToDefaults(c *Cfg.Config) {
 	c.DeliveryLocalUploadOffPeakLimit = defaultDeliveryRateLimitConfig
 }
 
+// iupUninstallScript 提取为变量以便测试注入临时脚本,避免执行真实的卸载脚本。
+var iupUninstallScript = "/usr/lib/iup-daemon/uninstall"
+
 // 416 indicates uninstallation is required
 func (m *UpdatePlatformManager) tryToUnRegisterConsole() (bool, error) {
-	if utils.IsFileExist("/usr/lib/iup-daemon/uninstall") {
+	if utils.IsFileExist(iupUninstallScript) {
 		logger.Infof("executing uninstall script")
-		cmd := exec.Command("/usr/lib/iup-daemon/uninstall")
+		cmd := exec.Command(iupUninstallScript)
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
 		output, err := cmd.CombinedOutput()
 		if err != nil {

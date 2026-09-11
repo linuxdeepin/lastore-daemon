@@ -169,6 +169,48 @@ func newTestManagerWithUpdatePlatform() *Manager {
 	}
 }
 
+func TestApplyOnlineRateLimitAllDay(t *testing.T) {
+	m := newTestManagerWithUpdatePlatform()
+	m.updatePlatform.OnlineRateLimit.AllDayRateLimit = updateplatform.AllDayRateLimit{
+		Enable: true,
+		Bps:    2048,
+	}
+	var dl downloadSpeedLimitConfig
+	m.applyOnlineRateLimit(&dl, "10:00")
+	assert.Equal(t, "2048", dl.LimitSpeed)
+	assert.True(t, dl.IsOnlineSpeedLimit)
+	assert.True(t, dl.DownloadSpeedLimitEnabled)
+}
+
+func TestApplyOnlineRateLimitTimeState(t *testing.T) {
+	// 全天限速关闭时,按时间区间路由到忙时/闲时配置。
+	m := newTestManagerWithUpdatePlatform()
+	m.updatePlatform.OnlineRateLimit.PeakTimeRateLimit = updateplatform.PeakOrNotTimeRateLimit{
+		Enable:    true,
+		StartTime: "07:00",
+		EndTime:   "22:00",
+		Bps:       512,
+	}
+	m.updatePlatform.OnlineRateLimit.OffPeakTimeRateLimit = updateplatform.PeakOrNotTimeRateLimit{
+		Enable:    true,
+		StartTime: "22:00",
+		EndTime:   "07:00",
+		Bps:       1024,
+	}
+
+	var peak downloadSpeedLimitConfig
+	m.applyOnlineRateLimit(&peak, "10:00")
+	assert.Equal(t, "512", peak.LimitSpeed)
+	assert.True(t, peak.IsOnlineSpeedLimit)
+	assert.True(t, peak.DownloadSpeedLimitEnabled)
+
+	var offPeak downloadSpeedLimitConfig
+	m.applyOnlineRateLimit(&offPeak, "01:00")
+	assert.Equal(t, "1024", offPeak.LimitSpeed)
+	assert.True(t, offPeak.IsOnlineSpeedLimit)
+	assert.True(t, offPeak.DownloadSpeedLimitEnabled)
+}
+
 func TestGetCurrentTimeStatePeak(t *testing.T) {
 	m := newTestManagerWithUpdatePlatform()
 	m.updatePlatform.OnlineRateLimit.PeakTimeRateLimit = updateplatform.PeakOrNotTimeRateLimit{

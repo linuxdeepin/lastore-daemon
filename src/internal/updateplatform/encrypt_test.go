@@ -5,6 +5,7 @@
 package updateplatform
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -81,6 +82,16 @@ func TestGetRandomBytes(t *testing.T) {
 		r1, _ := GetRandomBytes(32)
 		r2, _ := GetRandomBytes(32)
 		assert.NotEqual(t, r1, r2)
+	})
+
+	t.Run("read error", func(t *testing.T) {
+		orig := randRead
+		randRead = func([]byte) (int, error) { return 0, errors.New("rand read failed") }
+		t.Cleanup(func() { randRead = orig })
+
+		result, err := GetRandomBytes(16)
+		assert.Error(t, err)
+		assert.Nil(t, result)
 	})
 }
 

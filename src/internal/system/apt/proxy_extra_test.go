@@ -4,9 +4,11 @@
 package apt
 
 import (
+	"testing"
+
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckPkgSystemErrorNoLock(t *testing.T) {
@@ -145,4 +147,23 @@ func TestParseProgressField_Invalid(t *testing.T) {
 	v, err := parseProgressField("abc")
 	assert.Error(t, err)
 	assert.Equal(t, -1.0, v)
+}
+
+func TestParseBackupProgressInfoValidJSON(t *testing.T) {
+	info, err := parseBackupProgressInfo("job1", `{"progress":50,"description":"backing up"}`)
+	require.NoError(t, err)
+	assert.Equal(t, "job1", info.JobId)
+	assert.InDelta(t, 0.5, info.Progress, 0.0001)
+	assert.Equal(t, "backing up", info.Description)
+	assert.Equal(t, system.RunningStatus, info.Status)
+	assert.False(t, info.Cancelable)
+}
+
+func TestParseBackupProgressInfoInvalidJSON(t *testing.T) {
+	info, err := parseBackupProgressInfo("job1", "not json")
+	require.NoError(t, err)
+	assert.Equal(t, "job1", info.JobId)
+	assert.Equal(t, 0.0, info.Progress)
+	assert.Equal(t, "", info.Description)
+	assert.Equal(t, system.RunningStatus, info.Status)
 }

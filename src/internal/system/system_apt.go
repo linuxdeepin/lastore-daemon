@@ -159,14 +159,14 @@ func QueryPackageDownloadSize(updateType UpdateType, packages ...string) (float6
 		var cmd *exec.Cmd
 		if utils2.IsDir(path) {
 			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
+			cmd = exec.Command(aptGetBinPath,
 				append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath,
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path),
 					"--print-uris", "--assume-no", "install", "--"}, packages...)...)
 		} else {
 			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
+			cmd = exec.Command(aptGetBinPath,
 				append([]string{"-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath,
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null"),
@@ -214,13 +214,13 @@ func QuerySourceDownloadSize(updateType UpdateType, pkgList []string) (float64, 
 		var cmd *exec.Cmd
 		if utils2.IsDir(path) {
 			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
+			cmd = exec.Command(aptGetBinPath,
 				append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}, pkgList...)...)
 		} else {
 			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
+			cmd = exec.Command(aptGetBinPath,
 				append([]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}, pkgList...)...)
@@ -266,9 +266,15 @@ func QueryPackageInstalled(pkgId string) bool {
 	return status == "installed"
 }
 
+// aptCacheBinPath 为 apt-cache 二进制路径,提取为变量以便测试注入假 bin。
+var aptCacheBinPath = "/usr/bin/apt-cache"
+
+// aptGetBinPath 为 apt-get 二进制路径,提取为变量以便测试注入假 bin。
+var aptGetBinPath = "/usr/bin/apt-get"
+
 // QueryPackageInstallable query whether the pkgId can be installed
 func QueryPackageInstallable(pkgId string) bool {
-	return queryPackageInstallable("/usr/bin/apt-cache", LastoreAptV2CommonConfPath, pkgId)
+	return queryPackageInstallable(aptCacheBinPath, LastoreAptV2CommonConfPath, pkgId)
 }
 
 func queryPackageInstallable(bin, confPath, pkgId string) bool {
@@ -299,13 +305,13 @@ func QuerySourceAddSize(updateType UpdateType) (float64, error) {
 		var cmd *exec.Cmd
 		if utils2.IsDir(path) {
 			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
+			cmd = exec.Command(aptGetBinPath,
 				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", "/dev/null"),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", path)}...)
 		} else {
 			// #nosec G204
-			cmd = exec.Command("/usr/bin/apt-get",
+			cmd = exec.Command(aptGetBinPath,
 				[]string{"dist-upgrade", "-d", "-o", "Debug::NoLocking=1", "-c", LastoreAptV2CommonConfPath, "--assume-no",
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::sourcelist", path),
 					"-o", fmt.Sprintf("%v=%v", "Dir::Etc::SourceParts", "/dev/null")}...)

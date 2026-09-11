@@ -1278,9 +1278,11 @@ func (m *Manager) reportLog(category reportCategory, status bool, description st
 }
 
 // 检查无忧还原状态，只需要启动时检查一次
+// deepinImmutableBootedFile 提取为变量以便测试注入临时文件。
+var deepinImmutableBootedFile = "/run/deepin-immutable-writable/booted"
+
 func (m *Manager) updateAutoRecoveryStatus() {
-	bootedFile := "/run/deepin-immutable-writable/booted"
-	bootedContent, err := os.ReadFile(bootedFile)
+	bootedContent, err := os.ReadFile(deepinImmutableBootedFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			logger.Debug(err)

@@ -42,7 +42,7 @@ var CMDTester = cli.Command{
 
 // MainTester 处理 test 子命令。
 // 其中 install 和 remove 命令不能直接执行，需要把本程序的路径（一般是 /usr/bin/lastore-tools）加入配置文件
-//（一般是/var/lib/lastore/config.json）中的 AllowInstallRemovePkgExecPaths 列表中。
+// （一般是/var/lib/lastore/config.json）中的 AllowInstallRemovePkgExecPaths 列表中。
 func MainTester(c *cli.Context) error {
 	var err error
 	switch c.String("job") {
@@ -131,9 +131,15 @@ func LastorePrepareUpgrade() error {
 	return waitJob(j)
 }
 
+// lastoreNewStore and lastoreAppsPath are injectable seams for LastoreSearch.
+var (
+	lastoreNewStore = dstore.NewStore
+	lastoreAppsPath = "/var/lib/lastore/applications.json"
+)
+
 func LastoreSearch(server string, p string, debug bool) error {
-	store := dstore.NewStore()
-	pkgInfos, err := store.GetPackageApplication("/var/lib/lastore/applications.json")
+	store := lastoreNewStore()
+	pkgInfos, err := store.GetPackageApplication(lastoreAppsPath)
 	if err != nil {
 		return err
 	}
@@ -188,8 +194,16 @@ func LastoreUpgrade() error {
 	return waitJob(j)
 }
 
+// systemBusFn and newJobFn are injectable seams so tests can exercise the
+// non-D-Bus branches of getLastore and waitJob without touching the real
+// system bus. They default to the real implementations.
+var (
+	systemBusFn = dbus.SystemBus
+	newJobFn    = lastore.NewJob
+)
+
 func getLastore() lastore.Lastore {
-	sysBus, err := dbus.SystemBus()
+	sysBus, err := systemBusFn()
 	if err != nil {
 		panic(err)
 	}
@@ -204,17 +218,21 @@ func showLine(j lastore.Job) string {
 	progress, _ := j.Progress().Get(0)
 	description, _ := j.Description().Get(0)
 
+	return formatJobLine(id, type0, status, progress, description)
+}
+
+func formatJobLine(id, typ, status string, progress float64, description string) string {
 	return fmt.Sprintf("id:%v(%v)\tProgress:%v:%v%%\tDesc:%q",
-		id, type0, status, progress*100, description)
+		id, typ, status, progress*100, description)
 }
 
 func waitJob(p dbus.ObjectPath) error {
-	sysBus, err := dbus.SystemBus()
+	sysBus, err := systemBusFn()
 	if err != nil {
 		return err
 	}
 
-	j, err := lastore.NewJob(sysBus, p)
+	j, err := newJobFn(sysBus, p)
 	if err != nil {
 		return err
 	}

@@ -11,10 +11,15 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 )
 
+// deepinImmutableCtlPath is injectable so tests can substitute a fake binary
+// instead of executing the real deepin-immutable-ctl (which triggers polkit
+// authorization prompts for the user).
+var deepinImmutableCtlPath = system.DeepinImmutableCtlPath
+
 // 格式化输出需要添加-j 参数
 func (i *immutableManager) osTreeCmd(args []string) (out string, err error) {
-	if system.NormalFileExists(system.DeepinImmutableCtlPath) {
-		cmd := exec.Command(system.DeepinImmutableCtlPath, args...) // #nosec G204
+	if system.NormalFileExists(deepinImmutableCtlPath) {
+		cmd := exec.Command(deepinImmutableCtlPath, args...) // #nosec G204
 		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
 		cmd.Env = append(cmd.Env, system.OriginalLocaleEnvs...)
 		logger.Info("run command:", cmd.Args)
@@ -39,7 +44,7 @@ func (i *immutableManager) osTreeCmd(args []string) (out string, err error) {
 			return stdout.String(), nil
 		}
 	} else {
-		return "", fmt.Errorf("%v not found", system.DeepinImmutableCtlPath)
+		return "", fmt.Errorf("%v not found", deepinImmutableCtlPath)
 	}
 }
 
@@ -74,7 +79,7 @@ func newImmutableManager(indicator system.Indicator) *immutableManager {
 
 // checkFullMergeSupport checks if deepin-immutable-ctl supports the --full-merge option
 func (i *immutableManager) checkFullMergeSupport() bool {
-	cmd := exec.Command(system.DeepinImmutableCtlPath, "admin", "deploy", "-h")
+	cmd := exec.Command(deepinImmutableCtlPath, "admin", "deploy", "-h")
 	output, _ := cmd.CombinedOutput()
 	return strings.Contains(string(output), "--full-merge")
 }

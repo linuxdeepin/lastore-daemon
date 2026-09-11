@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -29,19 +28,19 @@ func runGetCVEInfo(cmd *cobra.Command, args []string) {
 	response, err := genCVEInfoResponse(updatePlatform.requestURL, updatePlatform.Token, cveSyncTime)
 	if err != nil {
 		logger.Warningf("genCVEInfoResponse failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	data, err := getResponseData(response, GetPkgCVEs)
 	if err != nil {
 		logger.Warningf("getResponseData failed: %v", err)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	cveMeta := getCVEData(data)
 	if cveMeta == nil {
 		logger.Warning("failed to parse CVE data")
-		os.Exit(1)
+		osExit(1)
 	}
 
 	logger.Infof("CVE Data Time: %s", cveMeta.DataTime)

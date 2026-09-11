@@ -27,9 +27,13 @@ import (
 )
 
 const (
-	run              = "systemd-run"
 	deepinDaemonUser = "deepin-daemon"
 )
+
+// systemdRunBin is the path to the systemd-run binary used to create transient
+// timer units. It is a variable so tests can substitute a no-op binary and
+// avoid triggering polkit authentication for managing system services.
+var systemdRunBin = "systemd-run"
 
 var lastoreUnitCache = "/run/lastore/lastoreUnitCache"
 
@@ -164,7 +168,7 @@ func (m *Manager) startOfflineTask() {
 		var args []string
 		args = append(args, fmt.Sprintf("--unit=%s", name))
 		args = append(args, cmdArgs...)
-		cmd := exec.Command(run, args...)
+		cmd := exec.Command(systemdRunBin, args...)
 		logger.Info(cmd.String())
 		var errBuffer bytes.Buffer
 		cmd.Stderr = &errBuffer
@@ -266,7 +270,7 @@ func (m *Manager) updateTimerUnit(unitName UnitName) error {
 	autoCheckArgs, ok := m.getLastoreSystemUnitMap()[unitName]
 	if ok {
 		args = append(args, autoCheckArgs...)
-		cmd := exec.Command(run, args...)
+		cmd := exec.Command(systemdRunBin, args...)
 		var errBuffer bytes.Buffer
 		cmd.Stderr = &errBuffer
 		err = cmd.Run()
@@ -329,21 +333,27 @@ func (m *Manager) getNextUpdateDelay() time.Duration {
 }
 
 func (m *Manager) getNextAutoCheckDelay() int {
+	startCheckRange := m.config.StartCheckRange
+	if len(startCheckRange) != 2 || startCheckRange[1] <= startCheckRange[0] {
+		// Config.StartCheckRange is populated from dsettings; when dsettings is
+		// unavailable the slice is empty. Fall back to the same default the
+		// dsettings load path uses rather than indexing into an empty slice.
+		startCheckRange = []int{1800, 21600}
+	}
+
 	if m.config.IntranetUpdate {
 		if m.isAutoCheckTimerFirstRun {
-			randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0]) + m.config.StartCheckRange[0]
-			return randomDelay
-		} else {
-			checkInterval := m.config.CheckInterval
-			if checkInterval < 0 {
-				checkInterval = 0
-			}
-			return int((checkInterval) / time.Second)
+			return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(startCheckRange[1]-startCheckRange[0]) + startCheckRange[0]
 		}
-	} else {
-		randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m.config.StartCheckRange[1]-m.config.StartCheckRange[0]) + m.config.StartCheckRange[0]
-		return int(m.getNextUpdateDelay()/time.Second) + randomDelay
+		checkInterval := m.config.CheckInterval
+		if checkInterval < 0 {
+			checkInterval = 0
+		}
+		return int(checkInterval / time.Second)
 	}
+
+	randomDelay := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(startCheckRange[1]-startCheckRange[0]) + startCheckRange[0]
+	return int(m.getNextUpdateDelay()/time.Second) + randomDelay
 }
 
 // isAllowedToTriggerSystemEvent checks if the uid is allowed to trigger system events

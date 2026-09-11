@@ -20,7 +20,6 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
 
 	"github.com/codegangsta/cli"
-	"github.com/godbus/dbus/v5"
 )
 
 var CMDCheckPolicy = cli.Command{
@@ -43,10 +42,17 @@ func genVersionResponse(c *Config) (*http.Response, error) {
 	return client.Do(request)
 }
 
+// genVersionResponseFn and checkPolicyCacheFile are injectable seams so tests
+// can exercise MainCheckPolicy without real network or shared /tmp state.
+var (
+	genVersionResponseFn = genVersionResponse
+	checkPolicyCacheFile = "/tmp/checkpolicy.cache"
+)
+
 // MainCheckPolicy 检查更新策略，策略变化拉起lastore-daemon处理
 func MainCheckPolicy(c *cli.Context) error {
 	config := NewConfig(path.Join("/var/lib/lastore", "config.json"))
-	cacheFile := "/tmp/checkpolicy.cache"
+	cacheFile := checkPolicyCacheFile
 	var oldSum string
 	oldTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local)
 	nowTime := time.Now()
@@ -75,7 +81,7 @@ func MainCheckPolicy(c *cli.Context) error {
 		}
 	}
 	logger.Debug("Check old time:", oldTime)
-	response, err := genVersionResponse(config)
+	response, err := genVersionResponseFn(config)
 	if err != nil {
 		logger.Warning(err)
 		return err
@@ -102,7 +108,7 @@ func MainCheckPolicy(c *cli.Context) error {
 				_, _ = writeFile.WriteString(nowTime.Format(time.RFC3339))
 				_, _ = writeFile.WriteString("\n")
 			}
-			sysBus, err := dbus.SystemBus()
+			sysBus, err := systemBusFn()
 			if err == nil {
 				err = sysBus.Object("org.deepin.dde.Lastore1", "/org/deepin/dde/Lastore1").Call(
 					"org.deepin.dde.Lastore1.Manager.UpdateSource", 0).Err

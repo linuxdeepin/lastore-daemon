@@ -163,21 +163,25 @@ func (p *APTSystem) AttachDeliveryIndicator(f system.DeliveryIndicator) {
 	p.DeliveryIndicator = f
 }
 
+// checkLockFn 与 dpkgLockWaitInterval 是 WaitDpkgLockRelease 的注入点,便于测试。
+var checkLockFn = system.CheckLock
+var dpkgLockWaitInterval = 5 * time.Second
+
 func WaitDpkgLockRelease() {
 	for {
-		msg, wait := system.CheckLock("/var/lib/dpkg/lock")
+		msg, wait := checkLockFn("/var/lib/dpkg/lock")
 		if wait {
 			logger.Warningf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 				msg, time.Now())
-			time.Sleep(time.Second * 5)
+			time.Sleep(dpkgLockWaitInterval)
 			continue
 		}
 
-		msg, wait = system.CheckLock("/var/lib/dpkg/lock-frontend")
+		msg, wait = checkLockFn("/var/lib/dpkg/lock-frontend")
 		if wait {
 			logger.Warningf("Wait 5s for unlock\n\"%s\" \n at %v\n",
 				msg, time.Now())
-			time.Sleep(time.Second * 5)
+			time.Sleep(dpkgLockWaitInterval)
 			continue
 		}
 
@@ -498,7 +502,7 @@ func (p *APTSystem) DistUpgrade(jobId string, packages []string, environ map[str
 
 func (p *APTSystem) UpdateSource(jobId string, environ map[string]string, args map[string]string) error {
 	if p.IncrementalUpdate {
-		cmd := exec.Command(system.DeepinImmutableCtlPath, "upgrade", "update-remote")
+		cmd := exec.Command(DeepinImmutableCtlPath, "upgrade", "update-remote")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			logger.Warningf("Failed to update remotes: %v, %s", err, string(output))
@@ -550,7 +554,7 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 	}
 
 	if system.ErrorDpkgInterrupted == system.JobErrorType(errType) {
-		cmd := exec.Command("/usr/bin/dpkg", "--force-confold", "--configure", "-a")
+		cmd := exec.Command(DpkgBinPath, "--force-confold", "--configure", "-a")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("run dpkg --configure -a err: %v", string(out))
@@ -782,28 +786,30 @@ func parseBackupJobError(stdErrStr string, stdOutStr string) *system.JobError {
 	}
 }
 
+func parseBackupProgressInfo(id, line string) (system.JobProgressInfo, error) {
+	type info struct {
+		Progress    float64 `json:"progress"`
+		Description string  `json:"description"`
+	}
+
+	var progress float64
+	var p info
+	if err := json.Unmarshal([]byte(line), &p); err == nil {
+		progress = p.Progress / 100.0
+	}
+	return system.JobProgressInfo{
+		JobId:       id,
+		Progress:    progress,
+		Description: p.Description,
+		Status:      system.RunningStatus,
+		Cancelable:  false,
+	}, nil
+}
+
 func (p *APTSystem) OsBackup(jobId string) error {
 	c := newAPTCommand(p, jobId, system.BackupJobType, p.Indicator, p.DeliveryIndicator, nil)
 	c.ParseJobError = parseBackupJobError
-	c.ParseProgressInfo = func(id, line string) (system.JobProgressInfo, error) {
-		type info struct {
-			Progress    float64 `json:"progress"`
-			Description string  `json:"description"`
-		}
-
-		var progress float64
-		var p info
-		if err := json.Unmarshal([]byte(line), &p); err == nil {
-			progress = p.Progress / 100.0
-		}
-		return system.JobProgressInfo{
-			JobId:       jobId,
-			Progress:    progress,
-			Description: p.Description,
-			Status:      system.RunningStatus,
-			Cancelable:  false,
-		}, nil
-	}
+	c.ParseProgressInfo = parseBackupProgressInfo
 	environ := map[string]string{
 		"IMMUTABLE_DISABLE_REMOUNT": "false",
 	}

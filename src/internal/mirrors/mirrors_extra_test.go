@@ -144,6 +144,20 @@ func TestGetUnpublishedMirrorSourcesBadStatus(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestGetUnpublishedMirrorSourcesBadStatusWithValidJSON(t *testing.T) {
+	// A valid JSON body decodes successfully, so the non-200 status branch
+	// (rather than the decode-error branch) is reached.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = io.WriteString(w, `{"error":"","mirrors":[]}`)
+	}))
+	defer srv.Close()
+
+	_, err := getUnpublishedMirrorSources(srv.URL)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not ok")
+}
+
 func TestGetUnpublishedMirrorSourcesInvalidJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -187,6 +201,20 @@ func TestLoadMirrorSourcesBadStatus(t *testing.T) {
 
 	_, err := LoadMirrorSources(srv.URL)
 	assert.Error(t, err)
+}
+
+func TestLoadMirrorSourcesBadStatusWithValidJSON(t *testing.T) {
+	// A valid JSON array decodes successfully, reaching the non-200 status
+	// branch rather than the decode-error branch.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(w, `[{"id":"m1","name":"Mirror1","weight":1}]`)
+	}))
+	defer srv.Close()
+
+	_, err := LoadMirrorSources(srv.URL)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not ok")
 }
 
 func TestLoadMirrorSourcesEmptyResult(t *testing.T) {

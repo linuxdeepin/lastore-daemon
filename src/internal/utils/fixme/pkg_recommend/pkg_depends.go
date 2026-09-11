@@ -11,11 +11,11 @@ type DependentInfo struct {
 type DependentInfos []DependentInfo
 
 var (
-	pkgDependsFile = "/usr/share/i18n/i18n_dependent.json"
+	PkgDependsFile = "/usr/share/i18n/i18n_dependent.json"
 )
 
 func GetEnhancedLocalePackages(lang string, pkg string) []string {
-	categories, err := getDependentCategories(pkgDependsFile)
+	categories, err := getDependentCategories(PkgDependsFile)
 	if err != nil {
 		return nil
 	}
@@ -25,7 +25,7 @@ func GetEnhancedLocalePackages(lang string, pkg string) []string {
 }
 
 func GetByPackage(locale, pkg string) ([]string, []string, error) {
-	categories, err := getDependentCategories(pkgDependsFile)
+	categories, err := getDependentCategories(PkgDependsFile)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -36,7 +36,7 @@ func GetByPackage(locale, pkg string) ([]string, []string, error) {
 }
 
 func GetByLocale(locale string) (DependentInfos, DependentInfos, error) {
-	categories, err := getDependentCategories(pkgDependsFile)
+	categories, err := getDependentCategories(PkgDependsFile)
 	if err != nil {
 		return nil, nil, err
 	}

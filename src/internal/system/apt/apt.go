@@ -80,19 +80,19 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	case system.UpdateSourceJobType:
 		args = append(args, cmdArgs...)
 		args = append(args, "-o", "APT::Status-Fd=3", "update", "--fix-missing")
-		return exec.Command("/usr/bin/apt-get", args...)
+		return exec.Command(AptGetBinPath, args...)
 	case system.CleanJobType:
-		return exec.Command("/usr/bin/lastore-apt-clean")
+		return exec.Command(LastoreAptCleanBinPath)
 	case system.BackupJobType:
-		return exec.Command(system.DeepinImmutableCtlPath, "admin", "deploy", "--backup", "-j", "-w")
+		return exec.Command(DeepinImmutableCtlPath, "admin", "deploy", "--backup", "-j", "-w")
 	case system.IncrementalDownloadJobType:
 		args := []string{"upgrade", "--download-only", "--status-fd", "3"}
 		args = append(args, cmdArgs...)
-		return exec.Command(system.DeepinImmutableCtlPath, args...)
+		return exec.Command(DeepinImmutableCtlPath, args...)
 	case system.IncrementalUpdateJobType:
 		args := []string{"upgrade", "--status-fd", "3"}
 		args = append(args, cmdArgs...)
-		return exec.Command(system.DeepinImmutableCtlPath, args...)
+		return exec.Command(DeepinImmutableCtlPath, args...)
 	case system.FixErrorJobType:
 		var errType system.JobErrorType
 		if len(cmdArgs) >= 1 {
@@ -107,7 +107,7 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 		}
 		switch errType {
 		case system.ErrorDpkgInterrupted:
-			return exec.Command("/usr/bin/apt-get", "-y", "-c", system.LastoreAptV2CommonConfPath, "-f", "install", aptOptionString) // #nosec G204
+			return exec.Command(AptGetBinPath, "-y", "-c", system.LastoreAptV2CommonConfPath, "-f", "install", aptOptionString) // #nosec G204
 		case system.ErrorDependenciesBroken:
 			args = append(args, "-c", system.LastoreAptV2CommonConfPath)
 			args = append(args, "-f", "install")
@@ -290,9 +290,19 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 	return tmpPath, nil
 }
 
+// DeepinImmutableCtlPath 为 deepin-immutable-ctl 二进制路径,提取为变量以便测试注入假 bin。
+var DeepinImmutableCtlPath = system.DeepinImmutableCtlPath
+
+// 以下二进制路径提取为变量以便测试注入假 bin。
+var (
+	AptGetBinPath          = "/usr/bin/apt-get"
+	LastoreAptCleanBinPath = "/usr/bin/lastore-apt-clean"
+	DpkgBinPath            = "/usr/bin/dpkg"
+)
+
 // In incremental update mode, returns true if all packages are cached, otherwise returns false.
 func IsIncrementalUpdateCached(sourceArgs string) bool {
-	cmd := exec.Command("/usr/sbin/deepin-immutable-ctl", "upgrade", "check")
+	cmd := exec.Command(DeepinImmutableCtlPath, "upgrade", "check")
 	if sourceArgs != "" {
 		cmd.Env = append(os.Environ(), "DEEPIN_IMMUTABLE_UPGRADE_APT_OPTION="+sourceArgs)
 	}

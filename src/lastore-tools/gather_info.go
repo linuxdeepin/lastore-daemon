@@ -112,13 +112,19 @@ func convertToHardwareBytes(totalCapacity int64) int64 {
 }
 
 func getDiskSize() ([]DiskInfo, error) {
-	var diskInfos []DiskInfo
 	out, err := exec.Command("lsblk", "-J", "-bno", "NAME,RM,TYPE,SIZE,FSUSE%").Output()
 	if err != nil {
-		return diskInfos, err
+		return nil, err
 	}
+	return parseLsblkOutput(out)
+}
+
+// parseLsblkOutput parses the JSON emitted by `lsblk -J -bno NAME,RM,TYPE,SIZE,FSUSE%`.
+// It is split from getDiskSize so its branch logic can be exercised without a real lsblk.
+func parseLsblkOutput(out []byte) ([]DiskInfo, error) {
+	var diskInfos []DiskInfo
 	var blockDevices BlockDevices
-	err = json.Unmarshal(out, &blockDevices)
+	err := json.Unmarshal(out, &blockDevices)
 	if err != nil {
 		return diskInfos, err
 	}
@@ -268,6 +274,13 @@ func getWhetherGatherInfo(c *config.Config) (*http.Response, error) {
 	return client.Do(request)
 }
 
+// getDiskSizeFn and getMemorySizeByDmiFn are injectable seams so tests can
+// exercise postHardwareInfo without real lsblk/dmidecode hardware probing.
+var (
+	getDiskSizeFn        = getDiskSize
+	getMemorySizeByDmiFn = getMemorySizeByDmi
+)
+
 func postHardwareInfo(c *config.Config) error {
 	// get S/N
 	var sn string
@@ -279,12 +292,12 @@ func postHardwareInfo(c *config.Config) error {
 	}
 
 	// get disk info
-	diskInfos, err := getDiskSize()
+	diskInfos, err := getDiskSizeFn()
 	if err != nil {
 		return fmt.Errorf("cannot get disk infos: %w", err)
 	}
 	logger.Infof("disk info :%+v", diskInfos)
-	memoryInfos, err := getMemorySizeByDmi()
+	memoryInfos, err := getMemorySizeByDmiFn()
 	if err != nil {
 		return fmt.Errorf("cannot get memory infos: %w", err)
 	}
@@ -338,9 +351,13 @@ func MainPostHardwareInfo(c *cli.Context) error {
 	return postHardwareInfo(config)
 }
 
+// getWhetherGatherInfoFn is an injectable seam so tests can exercise
+// MainGatherInfo without real network access.
+var getWhetherGatherInfoFn = getWhetherGatherInfo
+
 func MainGatherInfo(c *cli.Context) error {
 	config := config.NewConfig(path.Join("/var/lib/lastore", "config.json"))
-	response, err := getWhetherGatherInfo(config)
+	response, err := getWhetherGatherInfoFn(config)
 	if err != nil {
 		return fmt.Errorf("get whether gather info failed: %w", err)
 	}

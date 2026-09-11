@@ -649,3 +649,10 @@ func TestUpdateCanUpgradeStatus_Noop(t *testing.T) {
 	m.updateCanUpgradeStatus(true)
 	assert.Equal(t, config.CanUpgrade, cfg.GetLastoreDaemonStatusByBit(config.CanUpgrade))
 }
+
+func TestUpdateModeStatusBySizeNoMatchingMode(t *testing.T) {
+	// mode 0 matches no install type, so every loop iteration takes the
+	// "mode&typ == 0" continue branch and no goroutine is spawned.
+	m := &UpdateModeStatusManager{updateModeStatusObj: map[string]system.UpdateModeStatus{}}
+	m.updateModeStatusBySize(0, nil)
+}

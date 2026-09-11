@@ -166,11 +166,15 @@ func getSystemArchitectures() []system.Architecture {
 	return r
 }
 
+// queryDpkgUpgradeInfoByAptListFn is an injectable seam so tests can exercise
+// GenerateUpdateInfos without running apt.
+var queryDpkgUpgradeInfoByAptListFn = queryDpkgUpgradeInfoByAptList
+
 func GenerateUpdateInfos(outputPath string) error {
 	var upgradeInfo []system.UpgradeInfo
 	for _, category := range system.AllInstallUpdateType() {
 		sourcePath := system.GetCategorySourceMap()[category]
-		lines, err := queryDpkgUpgradeInfoByAptList(sourcePath)
+		lines, err := queryDpkgUpgradeInfoByAptListFn(sourcePath)
 		if err != nil {
 			if os.IsNotExist(err) { // 该类型源文件不存在时,无需将错误写入到文件中
 				logger.Info(err)

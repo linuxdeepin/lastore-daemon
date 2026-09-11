@@ -31,14 +31,18 @@ import (
 	debVersion "pault.ag/go/debian/version"
 )
 
+// prepareUpdateSourcePartialPaths lists the APT partial directories cleaned
+// before an update-source run. It is a variable so tests can redirect the
+// cleanup to a temporary directory.
+var prepareUpdateSourcePartialPaths = []string{
+	"/var/lib/apt/lists/partial",
+	"/var/lib/lastore/lists/partial",
+	"/var/cache/apt/archives/partial",
+	"/var/cache/lastore/archives/partial",
+}
+
 func prepareUpdateSource() {
-	partialFilePaths := []string{
-		"/var/lib/apt/lists/partial",
-		"/var/lib/lastore/lists/partial",
-		"/var/cache/apt/archives/partial",
-		"/var/cache/lastore/archives/partial",
-	}
-	for _, partialFilePath := range partialFilePaths {
+	for _, partialFilePath := range prepareUpdateSourcePartialPaths {
 		infos, err := os.ReadDir(partialFilePath)
 		if err != nil {
 			continue

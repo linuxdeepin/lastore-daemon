@@ -312,3 +312,104 @@ func TestCustomSourceWrapperMultiExtra(t *testing.T) {
 	_, err = os.Stat(gotPath)
 	assert.True(t, os.IsNotExist(err))
 }
+
+func TestQueryPackageInstallableWrapper(t *testing.T) {
+	old := aptCacheBinPath
+	aptCacheBinPath = newFakeAptCache(t)
+	t.Cleanup(func() { aptCacheBinPath = old })
+
+	assert.True(t, QueryPackageInstallable("installable"))
+	assert.False(t, QueryPackageInstallable("none-candidate"))
+	assert.False(t, QueryPackageInstallable("missing"))
+}
+
+func TestQueryPackageInstallablePolicyError(t *testing.T) {
+	// "show" succeeds (exit 0) but "policy" fails (exit 1), so the
+	// policy-error branch returns false.
+	script := `#!/bin/sh
+sub="$3"
+case "$sub" in
+show) exit 0 ;;
+policy) exit 1 ;;
+esac
+`
+	bin := newFakeAptGet(t, script)
+	assert.False(t, queryPackageInstallable(bin, "/nonexistent.conf", "somepkg"))
+}
+
+// newFakeAptGet writes an executable shell script and returns its path, to be
+// injected into aptGetBinPath so size queries don't touch the real apt-get.
+func newFakeAptGet(t *testing.T, script string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "apt-get")
+	require.NoError(t, os.WriteFile(path, []byte(script), 0755))
+	return path
+}
+
+func overrideAptGetBin(t *testing.T, script string) {
+	t.Helper()
+	old := aptGetBinPath
+	aptGetBinPath = newFakeAptGet(t, script)
+	t.Cleanup(func() { aptGetBinPath = old })
+}
+
+func TestQueryPackageDownloadSizeHappyExtra(t *testing.T) {
+	overrideDirVars(t)
+	require.NoError(t, os.MkdirAll(SystemUpdateSource, 0755))
+	overrideAptGetBin(t, "#!/bin/sh\necho \"Need to get 100 MB of archives\"\n")
+
+	need, all, err := QueryPackageDownloadSize(SystemUpdate, "fake-pkg")
+	require.NoError(t, err)
+	assert.InDelta(t, 100*1000*1000, need, 1)
+	assert.InDelta(t, 100*1000*1000, all, 1)
+}
+
+func TestQueryPackageDownloadSizeRunErrorExtra(t *testing.T) {
+	overrideDirVars(t)
+	overrideAptGetBin(t, "#!/bin/sh\necho \"no size here\"\nexit 1\n")
+
+	need, all, err := QueryPackageDownloadSize(SystemUpdate, "fake-pkg")
+	assert.Error(t, err)
+	assert.Equal(t, float64(SizeDownloaded), need)
+	assert.Equal(t, float64(SizeDownloaded), all)
+}
+
+func TestQuerySourceDownloadSizeHappyExtra(t *testing.T) {
+	overrideDirVars(t)
+	require.NoError(t, os.MkdirAll(SystemUpdateSource, 0755))
+	overrideAptGetBin(t, "#!/bin/sh\necho \"Need to get 50 MB/100 MB of archives\"\n")
+
+	need, all, err := QuerySourceDownloadSize(SystemUpdate, nil)
+	require.NoError(t, err)
+	assert.InDelta(t, 50*1000*1000, need, 1)
+	assert.InDelta(t, 100*1000*1000, all, 1)
+}
+
+func TestQuerySourceDownloadSizeRunErrorExtra(t *testing.T) {
+	overrideDirVars(t)
+	overrideAptGetBin(t, "#!/bin/sh\necho \"no size here\"\nexit 1\n")
+
+	need, all, err := QuerySourceDownloadSize(SystemUpdate, nil)
+	assert.Error(t, err)
+	assert.Equal(t, float64(SizeDownloaded), need)
+	assert.Equal(t, float64(SizeDownloaded), all)
+}
+
+func TestQuerySourceAddSizeHappyExtra(t *testing.T) {
+	overrideDirVars(t)
+	require.NoError(t, os.MkdirAll(SystemUpdateSource, 0755))
+	overrideAptGetBin(t, "#!/bin/sh\necho \"After this operation, 200 MB of disk space will be used\"\n")
+
+	size, err := QuerySourceAddSize(SystemUpdate)
+	require.NoError(t, err)
+	assert.InDelta(t, 200*1000*1000, size, 1)
+}
+
+func TestQuerySourceAddSizeRunErrorExtra(t *testing.T) {
+	overrideDirVars(t)
+	overrideAptGetBin(t, "#!/bin/sh\necho \"no size here\"\nexit 1\n")
+
+	size, err := QuerySourceAddSize(SystemUpdate)
+	assert.Error(t, err)
+	assert.Equal(t, float64(SizeUnknown), size)
+}

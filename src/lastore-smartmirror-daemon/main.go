@@ -19,11 +19,19 @@ import (
 //go:generate dbusutil-gen em -type SmartMirror
 var logger = log.NewLogger("lastore/smartmirror")
 
+// newSystemServiceFn is an injectable seam so tests can exercise the early-exit
+// branches of run without connecting to the real system bus.
+var newSystemServiceFn = dbusutil.NewSystemService
+
 func main() {
 	runDaemon := flag.Bool("daemon", false, "run as daemon and not exit")
 	flag.Parse()
 
-	service, err := dbusutil.NewSystemService()
+	run(*runDaemon)
+}
+
+func run(runDaemon bool) {
+	service, err := newSystemServiceFn()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -66,7 +74,7 @@ func main() {
 
 	logger.Debug("Started service at system bus")
 
-	if *runDaemon {
+	if runDaemon {
 		logger.Debug("Run as daemon and not auto exit")
 		service.SetAutoQuitHandler(time.Second*5, func() bool {
 			return false

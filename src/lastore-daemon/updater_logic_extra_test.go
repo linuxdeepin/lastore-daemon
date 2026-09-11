@@ -117,6 +117,21 @@ func TestWriteTimerFile_EmptyUnit(t *testing.T) {
 	assert.Contains(t, err.Error(), "unit is empty")
 }
 
+func TestWriteTimerFile_Success(t *testing.T) {
+	orig := systemdTimerDir
+	systemdTimerDir = t.TempDir()
+	t.Cleanup(func() { systemdTimerDir = orig })
+
+	changed, err := writeTimerFile("Auto download", "10:30", "auto.timer")
+	assert.NoError(t, err)
+	assert.True(t, changed)
+
+	// Writing identical content again reports no change.
+	changed, err = writeTimerFile("Auto download", "10:30", "auto.timer")
+	assert.NoError(t, err)
+	assert.False(t, changed)
+}
+
 func TestNeedRefreshFullMerge_InvalidUid(t *testing.T) {
 	result := needRefreshFullMerge(999999)
 	assert.False(t, result)

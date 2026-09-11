@@ -132,9 +132,12 @@ func (fs DesktopFiles) score(i int) int {
 
 const (
 	flatpakAppPkgPrefix = "deepin-fpapp-"
-	flatpakAppsDir      = "/var/lib/flatpak/exports/share/applications"
 	desktopExt          = ".desktop"
 )
+
+// flatpakAppsDir is a package var (rather than a const) so tests can point it
+// at a temporary directory without touching the real flatpak export dir.
+var flatpakAppsDir = "/var/lib/flatpak/exports/share/applications"
 
 // QueryDesktopFile 根据软件包名 pkg 返回包内最好的一个 desktop 文件。
 // 此功能可能随着 deepin-app-store 的升级而被废弃。

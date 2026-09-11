@@ -580,15 +580,7 @@ func getConfigFromDSettings() *Config {
 		c.DeliveryLocalUploadOffPeakLimit = v.Value().(string)
 	}
 
-	updateLastoreDaemonStatus := func() {
-		v, err = c.dsLastoreManager.Value(0, DSettingsKeyLastoreDaemonStatus)
-		if err != nil {
-			logger.Warning(err)
-		} else {
-			c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(int64))
-		}
-	}
-	updateLastoreDaemonStatus()
+	c.updateLastoreDaemonStatus()
 
 	v, err = c.dsLastoreManager.Value(0, dSettingsKeyCheckUpdateMode)
 	if err != nil {
@@ -788,147 +780,158 @@ func getConfigFromDSettings() *Config {
 	c.OtherSourceList = append(c.OtherSourceList, "/etc/apt/sources.list.d/driver.list")
 	c.SecuritySourceList = append(c.SecuritySourceList, system.SecuritySourceFile)
 
-	_, err = c.dsLastoreManager.ConnectValueChanged(func(key string) {
-		logger.Infof("config update: key=%s", key)
-		switch key {
-		case DSettingsKeyIntranetUpdate:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIntranetUpdate)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.PlatformUpdate
-				newValue := v.Value().(bool)
-				c.IntranetUpdate = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyPlatformUpdate:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUpdate)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.PlatformUpdate
-				newValue := v.Value().(bool)
-				c.PlatformUpdate = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyPlatformUrl:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyPlatformUrl)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.PlatformUrl
-				newValue := v.Value().(string)
-				c.PlatformUrl = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyGetHardwareIdByHelper:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyGetHardwareIdByHelper)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.GetHardwareIdByHelper
-				newValue := v.Value().(bool)
-				c.GetHardwareIdByHelper = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyIncludeDiskInfo:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncludeDiskInfo)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.IncludeDiskInfo
-				newValue := v.Value().(bool)
-				c.IncludeDiskInfo = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyIncrementalUpdate:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyIncrementalUpdate)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.IncrementalUpdate
-				newValue := v.Value().(bool)
-				c.IncrementalUpdate = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyAutoDownloadUpdates:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyAutoDownloadUpdates)
-			if err != nil {
-				logger.Warning(err)
-			} else {
-				oldValue := c.AutoDownloadUpdates
-				newValue := v.Value().(bool)
-				c.AutoDownloadUpdates = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyUpgradeDeliveryEnabled:
-			v, err = c.dsLastoreManager.Value(0, DSettingsKeyUpgradeDeliveryEnabled)
-			if err != nil {
-				logger.Warningf("failed to get value for %s: %v", DSettingsKeyUpgradeDeliveryEnabled, err)
-			} else {
-				oldValue := c.UpgradeDeliveryEnabled
-				newValue := v.Value().(bool)
-				c.UpgradeDeliveryEnabled = newValue
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldValue, newValue)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		case DSettingsKeyLastoreDaemonStatus:
-			oldStatus := c.lastoreDaemonStatus
-			updateLastoreDaemonStatus()
-			newStatus := c.lastoreDaemonStatus
-			if (oldStatus & DisableUpdate) != (newStatus & DisableUpdate) {
-				c.dsettingsChangedCbMapMu.Lock()
-				cb := c.dsettingsChangedCbMap[key]
-				if cb != nil {
-					go cb(oldStatus, newStatus)
-				}
-				c.dsettingsChangedCbMapMu.Unlock()
-			}
-		}
-	})
+	_, err = c.dsLastoreManager.ConnectValueChanged(c.handleValueChanged)
 	if err != nil {
 		logger.Warning(err)
 	}
 	return c
+}
+
+func (c *Config) updateLastoreDaemonStatus() {
+	v, err := c.dsLastoreManager.Value(0, DSettingsKeyLastoreDaemonStatus)
+	if err != nil {
+		logger.Warning(err)
+	} else {
+		c.lastoreDaemonStatus = LastoreDaemonStatus(v.Value().(int64))
+	}
+}
+
+func (c *Config) handleValueChanged(key string) {
+	logger.Infof("config update: key=%s", key)
+	switch key {
+	case DSettingsKeyIntranetUpdate:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyIntranetUpdate)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.PlatformUpdate
+			newValue := v.Value().(bool)
+			c.IntranetUpdate = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyPlatformUpdate:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyPlatformUpdate)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.PlatformUpdate
+			newValue := v.Value().(bool)
+			c.PlatformUpdate = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyPlatformUrl:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyPlatformUrl)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.PlatformUrl
+			newValue := v.Value().(string)
+			c.PlatformUrl = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyGetHardwareIdByHelper:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyGetHardwareIdByHelper)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.GetHardwareIdByHelper
+			newValue := v.Value().(bool)
+			c.GetHardwareIdByHelper = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyIncludeDiskInfo:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyIncludeDiskInfo)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.IncludeDiskInfo
+			newValue := v.Value().(bool)
+			c.IncludeDiskInfo = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyIncrementalUpdate:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyIncrementalUpdate)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.IncrementalUpdate
+			newValue := v.Value().(bool)
+			c.IncrementalUpdate = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyAutoDownloadUpdates:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyAutoDownloadUpdates)
+		if err != nil {
+			logger.Warning(err)
+		} else {
+			oldValue := c.AutoDownloadUpdates
+			newValue := v.Value().(bool)
+			c.AutoDownloadUpdates = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyUpgradeDeliveryEnabled:
+		v, err := c.dsLastoreManager.Value(0, DSettingsKeyUpgradeDeliveryEnabled)
+		if err != nil {
+			logger.Warningf("failed to get value for %s: %v", DSettingsKeyUpgradeDeliveryEnabled, err)
+		} else {
+			oldValue := c.UpgradeDeliveryEnabled
+			newValue := v.Value().(bool)
+			c.UpgradeDeliveryEnabled = newValue
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldValue, newValue)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	case DSettingsKeyLastoreDaemonStatus:
+		oldStatus := c.lastoreDaemonStatus
+		c.updateLastoreDaemonStatus()
+		newStatus := c.lastoreDaemonStatus
+		if (oldStatus & DisableUpdate) != (newStatus & DisableUpdate) {
+			c.dsettingsChangedCbMapMu.Lock()
+			cb := c.dsettingsChangedCbMap[key]
+			if cb != nil {
+				go cb(oldStatus, newStatus)
+			}
+			c.dsettingsChangedCbMapMu.Unlock()
+		}
+	}
 }
 
 func (c *Config) json2DSettings(oldConfig *Config) {

@@ -5,12 +5,15 @@
 package check
 
 import (
-	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetDynHookTimeoutPositive(t *testing.T) {
@@ -178,7 +181,6 @@ func TestCheckDebListInstallStateExist(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-
 func TestCheckDebListInstallStateStateError(t *testing.T) {
 	midpkgs := map[string]*cache.AppTinyInfo{
 		"testpkg": {Name: "testpkg", State: cache.PkgState("broken")},
@@ -255,4 +257,113 @@ func TestCheckDataDiskFreeSpaceHuge(t *testing.T) {
 	// requesting an impossibly large amount should fail
 	err := CheckDataDiskFreeSpace(999999999999999)
 	assert.Error(t, err)
+}
+
+func TestLoadSysPkgInfoError(t *testing.T) {
+	old := getCurrInstPkgStatFn
+	getCurrInstPkgStatFn = func(map[string]*cache.AppTinyInfo) error {
+		return errors.New("dpkg-query failed")
+	}
+	t.Cleanup(func() { getCurrInstPkgStatFn = old })
+
+	err := LoadSysPkgInfo(map[string]*cache.AppTinyInfo{})
+	var jobErr *system.JobError
+	require.ErrorAs(t, err, &jobErr)
+	assert.Equal(t, system.ErrorSysPkgInfoLoad, jobErr.ErrType)
+}
+
+func TestCheckAPTAndDPKGStateBranches(t *testing.T) {
+	oldExist, oldState := checkAppIsExistFn, getSysPkgStateAndVersionFn
+	t.Cleanup(func() { checkAppIsExistFn, getSysPkgStateAndVersionFn = oldExist, oldState })
+
+	cases := []struct {
+		name     string
+		exist    func(string) (bool, error)
+		state    func(string) (string, string, error)
+		wantType system.JobErrorType
+	}{
+		{
+			name: "apt not found",
+			exist: func(app string) (bool, error) {
+				if app == "/usr/bin/apt" {
+					return false, nil
+				}
+				return true, nil
+			},
+			state:    func(string) (string, string, error) { return "ii", "1.0", nil },
+			wantType: system.ErrorCheckToolsDependFailed,
+		},
+		{
+			name: "dpkg not found",
+			exist: func(app string) (bool, error) {
+				if app == "/usr/bin/dpkg" {
+					return false, nil
+				}
+				return true, nil
+			},
+			state:    func(string) (string, string, error) { return "ii", "1.0", nil },
+			wantType: system.ErrorCheckToolsDependFailed,
+		},
+		{
+			name:  "apt state error",
+			exist: func(string) (bool, error) { return true, nil },
+			state: func(pkg string) (string, string, error) {
+				if pkg == "apt" {
+					return "", "", errors.New("query failed")
+				}
+				return "ii", "1.0", nil
+			},
+			wantType: system.ErrorCheckToolsDependFailed,
+		},
+		{
+			name:  "apt state not installed",
+			exist: func(string) (bool, error) { return true, nil },
+			state: func(pkg string) (string, string, error) {
+				if pkg == "apt" {
+					return "rc", "1.0", nil
+				}
+				return "ii", "1.0", nil
+			},
+			wantType: system.ErrorCheckToolsDependFailed,
+		},
+		{
+			name:  "dpkg state error",
+			exist: func(string) (bool, error) { return true, nil },
+			state: func(pkg string) (string, string, error) {
+				if pkg == "dpkg" {
+					return "", "", errors.New("query failed")
+				}
+				return "ii", "1.0", nil
+			},
+			wantType: system.ErrorCheckToolsDependFailed,
+		},
+		{
+			name:  "dpkg state not installed",
+			exist: func(string) (bool, error) { return true, nil },
+			state: func(pkg string) (string, string, error) {
+				if pkg == "dpkg" {
+					return "rc", "1.0", nil
+				}
+				return "ii", "1.0", nil
+			},
+			wantType: system.ErrorCheckToolsDependFailed,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			checkAppIsExistFn = tc.exist
+			getSysPkgStateAndVersionFn = tc.state
+
+			err := CheckAPTAndDPKGState()
+			var jobErr *system.JobError
+			require.ErrorAs(t, err, &jobErr)
+			assert.Equal(t, tc.wantType, jobErr.ErrType)
+		})
+	}
+
+	// success path
+	checkAppIsExistFn = func(string) (bool, error) { return true, nil }
+	getSysPkgStateAndVersionFn = func(string) (string, string, error) { return "ii", "1.0", nil }
+	assert.NoError(t, CheckAPTAndDPKGState())
 }

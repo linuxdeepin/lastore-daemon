@@ -9,6 +9,7 @@ import (
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddCMD(t *testing.T) {
@@ -153,4 +154,32 @@ func TestCreateCommandLineFixErrorPanic(t *testing.T) {
 	assert.Panics(t, func() {
 		createCommandLine(system.FixErrorJobType, []string{"invalid_error_type"})
 	})
+}
+
+func TestNewAPTCommand(t *testing.T) {
+	p := &APTSystem{CmdSet: make(map[string]*system.Command)}
+	cmd := newAPTCommand(p, "job-1", system.InstallJobType, nil, nil, []string{"vim"})
+
+	require.NotNil(t, cmd)
+	assert.Equal(t, "job-1", cmd.JobId)
+	assert.True(t, cmd.Cancelable)
+	assert.Len(t, p.CmdSet, 1)
+	assert.Same(t, cmd, p.CmdSet["job-1"])
+
+	// command line is an install of vim via apt-get
+	assert.Contains(t, cmd.Cmd.Path, "apt-get")
+	assert.Contains(t, cmd.Cmd.Args, "install")
+	assert.Contains(t, cmd.Cmd.Args, "vim")
+
+	// process group is set so Abort can kill the whole tree
+	require.NotNil(t, cmd.Cmd.SysProcAttr)
+	assert.True(t, cmd.Cmd.SysProcAttr.Setpgid)
+
+	// parse callbacks are wired to the apt-specific parsers
+	assert.NotNil(t, cmd.ParseJobError)
+	assert.NotNil(t, cmd.ParseProgressInfo)
+	assert.NotNil(t, cmd.ParseDeliveryDownloadInfo)
+
+	// stdout is captured into the command's own buffer
+	assert.NotNil(t, cmd.Cmd.Stdout)
 }
