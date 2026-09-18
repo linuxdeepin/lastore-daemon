@@ -1,3 +1,9 @@
+lastore-daemon (6.2.70) unstable; urgency=medium
+
+  * test: improve unit test coverage (#490)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 18 Sep 2026 13:28:07 +0800
+
 lastore-daemon (6.2.69) unstable; urgency=medium
 
   * fix: comment out TestGetDiskSize_ReturnsResult (#489)
