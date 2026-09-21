@@ -66,27 +66,6 @@ func TestSmartMirror_makeChoice(t *testing.T) {
 		t.Fatalf("Failed to create test config: %v", err)
 	}
 
-	// Write quality data file
-	qualityData := map[string]interface{}{
-		"https://x-cdn-community-packages.deepin.com/": map[string]int{
-			"detect_count":  50,
-			"access_count":  50,
-			"failed_count":  5,
-			"average_delay": 150,
-		},
-		"http://mirrors.tuna.tsinghua.edu.cn/deepin/": map[string]int{
-			"detect_count":  80,
-			"access_count":  80,
-			"failed_count":  2,
-			"average_delay": 110,
-		},
-	}
-	qualityJSON, _ := json.MarshalIndent(qualityData, "", "  ")
-	err = os.WriteFile(filepath.Join(tempDir, "smartmirror_quality.json"), qualityJSON, 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test quality.json: %v", err)
-	}
-
 	// Create SmartMirror instance
 	s := newSmartMirror(nil)
 	originalURL := "https://community-packages.deepin.com/beige/pool/main/f/fish/fish_3.7.1-1deepin1_amd64.deb"

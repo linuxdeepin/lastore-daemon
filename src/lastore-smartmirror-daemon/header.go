@@ -5,10 +5,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -38,51 +36,11 @@ func machineID() string {
 	return strings.TrimSpace(string(bs))
 }
 
-func stripURLPath(u string) string {
-	v, err := url.Parse(u)
-	if err != nil {
-		return u
-	}
-	return getUrlHostname(v)
-}
-
-func getUrlHostname(u *url.URL) string {
-	return stripPort(u.Host)
-}
-
-// copy from go source net/url/url.go
-func stripPort(hostport string) string {
-	colon := strings.IndexByte(hostport, ':')
-	if colon == -1 {
-		return hostport
-	}
-	if i := strings.IndexByte(hostport, ']'); i != -1 {
-		return strings.TrimPrefix(hostport[:i], "[")
-	}
-	return hostport[:colon]
-}
-
 func makeHeader() map[string]string {
 	return map[string]string{
 		"User-Agent": userAgent(),
 		"MID":        machineID(),
 		"Range":      "bytes=0-1023",
-	}
-}
-
-func makeReportHeader(reports []Report) map[string]string {
-	m1 := []string{}
-	for _, r := range reports {
-		status := fmt.Sprintf("T%v", r.Delay)
-		if r.Failed {
-			status = fmt.Sprintf("E%v", r.StatusCode)
-		}
-		m1 = append(m1, stripURLPath(r.Mirror)+":"+status)
-	}
-	return map[string]string{
-		"User-Agent": userAgent(),
-		"MID":        machineID(),
-		"M1":         strings.Join(m1, ";"),
 	}
 }
 

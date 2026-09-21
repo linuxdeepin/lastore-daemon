@@ -166,13 +166,19 @@ func TestValidatePackageNamesEmpty(t *testing.T) {
 }
 
 func TestParseDeliveryDownloadInfoStatus(t *testing.T) {
-	line := "102 Status[{IsFinish false} {Speed 10240} {Proto https}]"
+	line := "102 Status[{URI https://mirror.example/pool/a.deb} {UsedMirror https://mirror.example/} {Filename /var/cache/apt/archives/a.deb} {Size 2048} {DownloadedSize 1024} {Progress 50} {IsFinish false} {Speed 10240} {Proto https}]"
 	info, err := parseDeliveryDownloadInfo("job1", line)
 	assert.NoError(t, err)
 	assert.Equal(t, "job1", info.JobId)
 	assert.False(t, info.IsFinished)
 	assert.Equal(t, int64(10240), info.Speed)
 	assert.Equal(t, "https", info.Proto)
+	assert.Equal(t, "https://mirror.example/pool/a.deb", info.URI)
+	assert.Equal(t, "https://mirror.example/", info.UsedMirror)
+	assert.Equal(t, "/var/cache/apt/archives/a.deb", info.FileName)
+	assert.Equal(t, int64(2048), info.DownloadSize)
+	assert.Equal(t, int64(1024), info.DownloadedSize)
+	assert.Equal(t, 50.0, info.Progress)
 }
 
 func TestParseDeliveryDownloadInfoFinished(t *testing.T) {
@@ -181,6 +187,46 @@ func TestParseDeliveryDownloadInfoFinished(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, info.IsFinished)
 	assert.Equal(t, int64(-1), info.Speed)
+}
+
+func TestParseAPTWorkerDoneWithoutDownloadedSize(t *testing.T) {
+	line := "' <- http:201%20URI%20Done%0aSize:%20262144%0aFilename:%20/var/cache/apt/archives/a.deb%0aURI:%20https://mirror.example/deepin/pool/a.deb%0a%0a'"
+	info, err := parseDeliveryDownloadInfo("job1", line)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, info.MethodEvent)
+	assert.True(t, info.IsFinished)
+	assert.False(t, info.Failed)
+	assert.Equal(t, "https://mirror.example/deepin/pool/a.deb", info.URI)
+	assert.Equal(t, "/var/cache/apt/archives/a.deb", info.FileName)
+	assert.Equal(t, int64(262144), info.DownloadSize)
+	assert.Equal(t, int64(0), info.DownloadedSize)
+}
+
+func TestParseAPTWorkerTransferTimestamps(t *testing.T) {
+	line := "' <- https:201%20URI%20Done%0aX-Deepin-Transfer-Start-USec:%201000%0aX-Deepin-Transfer-End-USec:%202000%0aSize:%20100%0aURI:%20https://mirror.example/deepin/pool/a.deb%0a%0a'"
+	info, err := parseDeliveryDownloadInfo("job1", line)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, info.MethodEvent)
+	assert.Equal(t, int64(1000), info.TransferStartUs)
+	assert.Equal(t, int64(2000), info.TransferEndUs)
+}
+
+func TestParseAPTWorkerTransferStartTimestamp(t *testing.T) {
+	line := "' <- https:200%20URI%20Start%0aX-Deepin-Transfer-Start-USec:%2042%0aSize:%20100%0aURI:%20https://mirror.example/deepin/pool/a.deb%0a%0a'"
+	info, err := parseDeliveryDownloadInfo("job1", line)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, info.MethodEvent)
+	assert.Equal(t, int64(42), info.TransferStartUs)
+}
+
+func TestParseAPTWorkerFailure(t *testing.T) {
+	line := "' <- http:400%20URI%20Failure%0aFailReason:%20Connection%20failed%0aURI:%20https://mirror.example/deepin/pool/a.deb%0a%0a'"
+	info, err := parseDeliveryDownloadInfo("job1", line)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, info.MethodEvent)
+	assert.True(t, info.IsFinished)
+	assert.True(t, info.Failed)
+	assert.Contains(t, info.FailReason, "Connection failed")
 }
 
 func TestParseDeliveryDownloadInfoNoStatus(t *testing.T) {

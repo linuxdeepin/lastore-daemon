@@ -203,3 +203,19 @@ func TestNewAPTCommand(t *testing.T) {
 	// stdout is captured into the command's own buffer
 	assert.NotNil(t, cmd.Cmd.Stdout)
 }
+
+func TestNewAPTCommandEnablesWorkerLifecycleTrace(t *testing.T) {
+	p := &APTSystem{CmdSet: make(map[string]*system.Command)}
+	cmd := newAPTCommand(p, "job-worker-trace", system.DownloadJobType, nil,
+		func(system.JobDeliveryDownloadInfo) {}, nil)
+	assert.Contains(t, cmd.Cmd.Args, "Debug::pkgAcquire::Worker=1")
+}
+
+func TestNewAPTCommandSkipsWorkerTraceWithoutPackageTransfer(t *testing.T) {
+	p := &APTSystem{CmdSet: make(map[string]*system.Command)}
+	for _, cmdType := range []string{system.UpdateSourceJobType, system.RemoveJobType} {
+		cmd := newAPTCommand(p, "job-"+cmdType, cmdType, nil,
+			func(system.JobDeliveryDownloadInfo) {}, nil)
+		assert.NotContains(t, cmd.Cmd.Args, "Debug::pkgAcquire::Worker=1")
+	}
+}

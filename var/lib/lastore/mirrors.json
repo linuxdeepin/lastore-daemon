@@ -12,6 +12,18 @@
     "adjust_delay": 0
   },
   {
+    "id": "MirrorZ",
+    "name": "CERNET MirrorZ",
+    "url": "https://mirrors.cernet.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "教育网联合镜像站（MirrorZ）",
+      "zh_TW": "教育網聯合鏡像站（MirrorZ）"
+    },
+    "weight": 95000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
     "id": "Kernel",
     "name": "[US] Linux Kernel Archives",
     "url": "https://mirrors.kernel.org/deepin/",
