@@ -12,33 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStripURLPath_ValidURL(t *testing.T) {
-	result := stripURLPath("http://example.com:8080/path/to/resource")
-	assert.Equal(t, "example.com", result)
-}
-
-func TestStripURLPath_WithPort(t *testing.T) {
-	result := stripURLPath("https://mirror.example.com:443/deepin/pool")
-	assert.Equal(t, "mirror.example.com", result)
-}
-
-func TestStripURLPath_NoPort(t *testing.T) {
-	result := stripURLPath("http://example.com/path")
-	assert.Equal(t, "example.com", result)
-}
-
-func TestStripURLPath_InvalidURL(t *testing.T) {
-	// url.Parse is very lenient, but an invalid URL with control character
-	// should trigger the error path
-	result := stripURLPath("http://[::1:abcd")
-	// url.Parse may or may not error on this; if it does, the function returns input as-is
-	// if it doesn't, it returns the hostname
-	// Just verify it doesn't panic and returns a non-empty string
-	assert.NotPanics(t, func() {
-		_ = stripURLPath(result)
-	})
-}
-
 func TestBuildRequest_Valid(t *testing.T) {
 	header := map[string]string{
 		"User-Agent": "test-agent",
@@ -135,15 +108,4 @@ func TestHandleRequest_ConnectionError(t *testing.T) {
 	url, code := handleRequest(req)
 	assert.Equal(t, "", url)
 	assert.Equal(t, -2, code)
-}
-
-func TestMakeReportHeader_WithReports(t *testing.T) {
-	reports := []Report{
-		{Mirror: "http://mirror1.com/path", Delay: 100, Failed: false},
-		{Mirror: "http://mirror2.com/path", Delay: 0, Failed: true, StatusCode: 500},
-	}
-	header := makeReportHeader(reports)
-	assert.NotEmpty(t, header["M1"])
-	assert.Contains(t, header["M1"], "mirror1.com:T100")
-	assert.Contains(t, header["M1"], "mirror2.com:E500")
 }

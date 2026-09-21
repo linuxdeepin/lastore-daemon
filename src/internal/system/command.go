@@ -9,12 +9,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // allowedChildEnvKeys 允许传递给子进程的环境变量白名单
@@ -59,9 +59,10 @@ type Command struct {
 	cmdMu    sync.Mutex
 	ExitCode int
 
-	pipe    *os.File
-	stderrR *os.File
-	stderrW *os.File
+	pipe       *os.File
+	stderrR    *os.File
+	stderrW    *os.File
+	stderrDone chan struct{}
 
 	Indicator                 Indicator
 	DeliveryIndicator         DeliveryIndicator
@@ -134,7 +135,8 @@ func (c *Command) Start() error {
 
 	c.stderrR = stderrR
 	c.stderrW = stderrW
-	c.Cmd.Stderr = io.MultiWriter(&c.Stderr, stderrW)
+	c.Cmd.Stderr = stderrW
+	c.stderrDone = make(chan struct{})
 
 	c.cmdMu.Lock()
 	err = c.Cmd.Start()
@@ -149,7 +151,10 @@ func (c *Command) Start() error {
 	c.pipe = rr
 
 	go c.updateProgress()
-	go c.updateStderr()
+	go func() {
+		defer close(c.stderrDone)
+		c.updateStderr()
+	}()
 
 	go func() {
 		_ = c.Wait()
@@ -160,6 +165,11 @@ func (c *Command) Start() error {
 
 func (c *Command) Wait() (err error) {
 	err = c.Cmd.Wait()
+	// Drain final 201/400 events before publishing job completion.
+	if c.stderrDone != nil {
+		_ = c.stderrW.Close()
+		<-c.stderrDone
+	}
 	if c.ExitCode != ExitPause {
 		if err != nil {
 			c.ExitCode = ExitFailure
@@ -346,15 +356,31 @@ func (c *Command) updateStderr() {
 	b := bufio.NewReader(c.stderrR)
 	for {
 		line, err := b.ReadString('\n')
-		if err != nil {
+		if line == "" && err != nil {
 			return
 		}
+		worker := strings.Contains(line, " -> ") || strings.Contains(line, " <- ")
+		if !worker {
+			c.Stderr.WriteString(line)
+		}
 
-		if strings.Contains(line, "102 Status") {
+		// Delivery methods expose legacy 102 Status lines. Standard apt methods
+		// expose the same lifecycle through Debug::pkgAcquire::Worker (600
+		// Acquire, 200 Start, 201 Done and 400 Failure); both are parsed by the
+		// configured delivery parser.
+		if c.ParseDeliveryDownloadInfo != nil && c.DeliveryIndicator != nil && (strings.Contains(line, "102 Status") || strings.Contains(line, "102%20Status") || strings.Contains(line, "%20URI%20")) {
 			deliveryInfo, err := c.ParseDeliveryDownloadInfo(c.JobId, line)
 			if err != nil {
 				logger.Errorf("aptCommand.updateStderr %v -> %v\n", deliveryInfo, err)
 				continue
+			}
+			if deliveryInfo.EventAt.IsZero() {
+				deliveryInfo.EventAt = time.Now()
+			}
+			if deliveryInfo.Failed {
+				// Worker debug lines are kept out of the job log, so log the
+				// failure reason here to keep download failures diagnosable.
+				logger.Warningf("apt download failed: uri=%q used_mirror=%q fail_reason=%q", deliveryInfo.URI, deliveryInfo.UsedMirror, deliveryInfo.FailReason)
 			}
 			c.DeliveryIndicator(deliveryInfo)
 		}

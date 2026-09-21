@@ -19,5 +19,10 @@ func (v *SmartMirror) GetExportedMethods() dbusutil.ExportedMethods {
 			Fn:     v.SetEnable,
 			InArgs: []string{"enable"},
 		},
+		{
+			Name:   "RecordActualDownload",
+			Fn:     v.RecordActualDownload,
+			InArgs: []string{"uri", "usedMirror", "bytes", "elapsedMs", "waitMs", "failed", "bytesKnown"},
+		},
 	}
 }

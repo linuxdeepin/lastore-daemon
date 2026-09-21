@@ -287,6 +287,43 @@ func TestCommandUpdateStderrExtra(t *testing.T) {
 	assert.Equal(t, "a.deb", infos[0].FileName)
 }
 
+func TestCommandUpdateStderrWorkerLifecycle(t *testing.T) {
+	pr, pw, err := os.Pipe()
+	require.NoError(t, err)
+	defer pr.Close()
+
+	var infos []JobDeliveryDownloadInfo
+	var mu sync.Mutex
+	c := &Command{
+		JobId:   "job-1",
+		stderrR: pr,
+		ParseDeliveryDownloadInfo: func(id, line string) (JobDeliveryDownloadInfo, error) {
+			return JobDeliveryDownloadInfo{JobId: id, IsFinished: true}, nil
+		},
+		DeliveryIndicator: func(info JobDeliveryDownloadInfo) {
+			mu.Lock()
+			infos = append(infos, info)
+			mu.Unlock()
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		c.updateStderr()
+		close(done)
+	}()
+	_, err = pw.Write([]byte("' <- http:201%20URI%20Done%0aURI:%20https://mirror.example/a.deb%0a%0a'\n"))
+	require.NoError(t, err)
+	require.NoError(t, pw.Close())
+	<-done
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Len(t, infos, 1)
+	assert.True(t, infos[0].IsFinished)
+	assert.False(t, infos[0].EventAt.IsZero())
+}
+
 // newAtExitCommand builds a Command whose pipes and Cmd are already started so
 // that atExit can be exercised directly for a given exit code.
 func newAtExitCommand(t *testing.T, exitCode int, atExitFn func() bool, ind Indicator) *Command {

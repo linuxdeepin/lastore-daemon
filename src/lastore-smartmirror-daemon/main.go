@@ -84,4 +84,6 @@ func run(runDaemon bool) {
 	}
 	service.DelayAutoQuit()
 	service.Wait()
+	// Flush the samples that arrived within the debounce window.
+	smartmirror.flushQuality()
 }

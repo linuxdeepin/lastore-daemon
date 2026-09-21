@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +47,7 @@ type Job struct {
 	Proto                   string
 	hasDeliveryDownloadInfo bool
 	speedMeter              SpeedMeter
+	deliveryDownloads       map[string]*downloadSession
 
 	Cancelable bool
 
@@ -72,6 +75,35 @@ type Job struct {
 	initiator Initiator // source of trigger
 }
 
+type downloadSession struct {
+	URI             string
+	UsedMirror      string
+	FileName        string
+	StartedAt       time.Time
+	HeaderAt        time.Time
+	FirstByteAt     time.Time
+	Bytes           int64
+	Size            int64
+	ResumePoint     int64
+	TransferStartUs int64
+	TransferEndUs   int64
+}
+
+type completedDownload struct {
+	URI             string
+	UsedMirror      string
+	FileName        string
+	StartedAt       time.Time
+	FirstByteAt     time.Time
+	Bytes           int64
+	Size            int64
+	ResumePoint     int64
+	TransferStartUs int64
+	TransferEndUs   int64
+	BytesKnown      bool
+	Failed          bool
+}
+
 // Initiator is the source of trigger
 type Initiator uint
 
@@ -94,10 +126,11 @@ func NewJob(service *dbusutil.Service, id, jobName string, packages []string, jo
 		Progress:   .0,
 		Cancelable: true,
 
-		option:        make(map[string]string),
-		queueName:     queueName,
-		retry:         1,
-		DeliverySpeed: -1,
+		option:            make(map[string]string),
+		queueName:         queueName,
+		retry:             1,
+		DeliverySpeed:     -1,
+		deliveryDownloads: make(map[string]*downloadSession),
 
 		progressRangeBegin: 0,
 		progressRangeEnd:   1,
@@ -135,12 +168,12 @@ func (j *Job) String() string {
 	)
 }
 
-func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
+func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) *completedDownload {
 	j.PropsMu.Lock()
 	defer j.PropsMu.Unlock()
 
-	if info.Speed == 0 && info.Proto == "" {
-		return
+	if info.Speed == 0 && info.Proto == "" && info.URI == "" && !info.IsFinished {
+		return nil
 	}
 
 	j.DeliverySpeed = info.Speed
@@ -165,6 +198,169 @@ func (j *Job) updateDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
 			_ = j.emitPropChangedProto(proto)
 		}
 	}
+
+	if j.deliveryDownloads == nil {
+		j.deliveryDownloads = make(map[string]*downloadSession)
+	}
+	eventAt := info.EventAt
+	if eventAt.IsZero() {
+		eventAt = time.Now()
+	}
+	uri := info.URI
+	if uri == "" && info.FileName != "" {
+		for candidateURI, candidate := range j.deliveryDownloads {
+			if candidate.FileName == info.FileName {
+				uri = candidateURI
+				break
+			}
+		}
+	}
+	// Some apt method versions emit a compact finish status containing only
+	// IsFinish/Speed/Proto. When exactly one download is active, it is safe to
+	// associate that status with the sole session; with multiple sessions we
+	// must avoid attributing the result to the wrong mirror.
+	if uri == "" && info.IsFinished && len(j.deliveryDownloads) == 1 {
+		for candidateURI := range j.deliveryDownloads {
+			uri = candidateURI
+		}
+	}
+	if uri == "" {
+		if info.IsFinished {
+			logger.Warningf("cannot match finished download status for job %q: uri=%q filename=%q", j.Id, info.URI, info.FileName)
+		}
+		return nil
+	}
+	if info.MethodEvent == 103 {
+		// Transfer the same acquisition to its redirect URI, without leaving
+		// a duplicate session to be counted again when the job finishes.
+		if session := j.deliveryDownloads[uri]; session != nil && info.NewURI != "" {
+			delete(j.deliveryDownloads, uri)
+			session.URI = info.NewURI
+			j.deliveryDownloads[info.NewURI] = session
+		}
+		return nil
+	}
+	if info.IMS {
+		delete(j.deliveryDownloads, uri)
+		return nil
+	}
+	session := j.deliveryDownloads[uri]
+	if session == nil {
+		session = &downloadSession{URI: uri, StartedAt: eventAt}
+		j.deliveryDownloads[uri] = session
+	}
+	if info.UsedMirror != "" {
+		session.UsedMirror = info.UsedMirror
+	}
+	if info.FileName != "" {
+		session.FileName = info.FileName
+	}
+	if info.DownloadSize > session.Size {
+		session.Size = info.DownloadSize
+	}
+	if info.ResumePoint > session.ResumePoint {
+		session.ResumePoint = info.ResumePoint
+	}
+	if info.DownloadedSize > session.Bytes {
+		session.Bytes = info.DownloadedSize
+	}
+	// HTTP methods emit 200 after accepting response headers, immediately
+	// before the body. Never start the clock at 201: small files may have no
+	// intermediate progress events at all.
+	if info.MethodEvent == 200 && session.HeaderAt.IsZero() {
+		session.HeaderAt = eventAt
+	}
+	if info.MethodEvent == 200 && info.TransferStartUs > 0 {
+		session.TransferStartUs = info.TransferStartUs
+	}
+	if info.TransferEndUs > 0 {
+		session.TransferEndUs = info.TransferEndUs
+	}
+	if session.FirstByteAt.IsZero() && (!info.IsFinished &&
+		(info.DownloadedSize > 0 || info.Speed > 0)) {
+		session.FirstByteAt = eventAt
+	}
+	if !info.IsFinished {
+		return nil
+	}
+	finished := &completedDownload{
+		URI:             session.URI,
+		UsedMirror:      session.UsedMirror,
+		FileName:        session.FileName,
+		StartedAt:       session.StartedAt,
+		FirstByteAt:     session.FirstByteAt,
+		Bytes:           session.Bytes,
+		Size:            session.Size,
+		ResumePoint:     session.ResumePoint,
+		TransferStartUs: session.TransferStartUs,
+		TransferEndUs:   session.TransferEndUs,
+		BytesKnown:      session.Bytes > 0,
+		Failed:          info.Failed,
+	}
+	if finished.FirstByteAt.IsZero() {
+		finished.FirstByteAt = session.HeaderAt
+	}
+	delete(j.deliveryDownloads, uri)
+	return finished
+}
+
+// finishActiveDownloads reports the sessions that never received a 201/400
+// event, so a job that ends early still contributes its observed samples.
+func (j *Job) finishActiveDownloads(failed bool) []*completedDownload {
+	j.PropsMu.Lock()
+	defer j.PropsMu.Unlock()
+	finished := make([]*completedDownload, 0, len(j.deliveryDownloads))
+	for uri, session := range j.deliveryDownloads {
+		firstByte := session.FirstByteAt
+		if firstByte.IsZero() {
+			firstByte = session.HeaderAt
+		}
+		finished = append(finished, &completedDownload{
+			URI: session.URI, UsedMirror: session.UsedMirror, FileName: session.FileName,
+			StartedAt: session.StartedAt, FirstByteAt: firstByte,
+			Bytes: session.Bytes, Size: session.Size,
+			ResumePoint: session.ResumePoint, TransferStartUs: session.TransferStartUs,
+			BytesKnown: session.Bytes > 0, Failed: failed,
+		})
+		delete(j.deliveryDownloads, uri)
+	}
+	return finished
+}
+
+func fallbackDownloadSize(filename string, expected int64) (int64, bool, string) {
+	if filename == "" || !filepath.IsAbs(filename) {
+		return 0, false, "filename is missing or not absolute"
+	}
+	filenames := []string{filename}
+	// APT emits the URI Acquire Filename before it moves the completed file
+	// from archives/partial/ into archives/. Try that final location when the
+	// original path has disappeared by the time the Done event is handled.
+	partial := string(filepath.Separator) + "partial" + string(filepath.Separator)
+	if index := strings.LastIndex(filename, partial); index >= 0 {
+		final := filename[:index] + string(filepath.Separator) + filename[index+len(partial):]
+		if final != filename {
+			filenames = append(filenames, final)
+		}
+	}
+	var lastErr error
+	for _, candidate := range filenames {
+		info, err := os.Lstat(candidate)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+			return 0, false, fmt.Sprintf("%q is not a regular file", candidate)
+		}
+		if info.Size() <= 0 {
+			return 0, false, fmt.Sprintf("%q has zero size", candidate)
+		}
+		if expected > 0 && info.Size() != expected {
+			return 0, false, fmt.Sprintf("%q size %d does not match expected %d", candidate, info.Size(), expected)
+		}
+		return info.Size(), true, ""
+	}
+	return 0, false, fmt.Sprintf("stat %q: %v", filename, lastErr)
 }
 
 // updateInfo update Job information from info and return

@@ -126,8 +126,28 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 	return exec.Command("apt-get", args...)
 }
 
+// workerDebugJobType reports whether an apt-get run transfers packages and
+// therefore needs the worker protocol events. Other runs (update, autoremove,
+// fix-error) keep their normal verbosity.
+func workerDebugJobType(cmdType string) bool {
+	switch cmdType {
+	case system.InstallJobType, system.DownloadJobType,
+		system.PrepareDistUpgradeJobType, system.DistUpgradeJobType:
+		return true
+	default:
+		return false
+	}
+}
+
 func newAPTCommand(cmdSet system.CommandSet, jobId string, cmdType string, fn system.Indicator, deliveryFn system.DeliveryIndicator, cmdArgs []string) *system.Command {
 	cmd := createCommandLine(cmdType, cmdArgs)
+	// Debug::pkgAcquire::Worker exposes the standard method protocol
+	// (600/200/201/400 with URI, Size and X-Deepin-Transfer-*-USec fields) that
+	// parseDeliveryDownloadInfo consumes; command.updateStderr keeps those
+	// debug lines out of the job log.
+	if deliveryFn != nil && workerDebugJobType(cmdType) {
+		cmd.Args = append(cmd.Args, "-o", "Debug::pkgAcquire::Worker=1")
+	}
 
 	// See aptCommand.Abort
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
