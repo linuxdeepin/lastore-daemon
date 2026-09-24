@@ -250,6 +250,10 @@ func (m *Manager) PauseJob(sender dbus.Sender, jobId string) *dbus.Error {
 
 func (m *Manager) RegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.Error {
 	logger.Infof("Register lastore agent form %v, sender:%v.", path, sender)
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil {
 		logger.Warning(err)
@@ -362,6 +366,10 @@ func (m *Manager) StartJob(sender dbus.Sender, jobId string) *dbus.Error {
 }
 
 func (m *Manager) UnRegisterAgent(sender dbus.Sender, path dbus.ObjectPath) *dbus.Error {
+	// root、特殊 uid 和 allow-caller 白名单直通，其余调用方走 polkit。
+	if err := m.checkInvokePermission(sender); err != nil {
+		return dbusutil.ToError(err)
+	}
 	uid, err := m.service.GetConnUID(string(sender))
 	if err != nil {
 		logger.Warning(err)
