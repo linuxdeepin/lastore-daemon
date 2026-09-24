@@ -1,3 +1,10 @@
+lastore-daemon (6.2.71) unstable; urgency=medium
+
+  * fix(security): add caller verification for agent register methods
+    (#492)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Thu, 24 Sep 2026 14:46:50 +0800
+
 lastore-daemon (6.2.70) unstable; urgency=medium
 
   * test: improve unit test coverage (#490)
