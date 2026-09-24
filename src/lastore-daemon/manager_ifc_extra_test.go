@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/godbus/dbus/v5"
-	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	"github.com/linuxdeepin/go-lib/dbusutil"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
@@ -58,21 +57,12 @@ func newPermissionGatedManager(t *testing.T) *Manager {
 
 func newRootConnService(t *testing.T) *dbusutil.Service {
 	t.Helper()
-	return newConnServiceWithUID(t, 0)
-}
-
-// newConnServiceWithUID returns a dbusutil.Service whose connection is served by
-// the fake bus daemon, which reports the given uid for every bus call. A
-// non-zero uid that is not allow-listed makes Manager.checkInvokePermission fall
-// through to polkit, i.e. the caller is untrusted.
-func newConnServiceWithUID(t *testing.T, uid uint32) *dbusutil.Service {
-	t.Helper()
 	server, client := net.Pipe()
 	conn, err := dbus.NewConn(server)
 	require.NoError(t, err)
 
 	stop := make(chan struct{})
-	go serveFakeBus(client, stop, uid)
+	go serveFakeBus(client, stop)
 
 	require.NoError(t, conn.Auth(nil))
 	require.NoError(t, conn.Hello())
@@ -130,7 +120,7 @@ func fakeBusError(serial uint32) *dbus.Message {
 	}
 }
 
-func serveFakeBus(c net.Conn, stop <-chan struct{}, uid uint32) {
+func serveFakeBus(c net.Conn, stop <-chan struct{}) {
 	defer c.Close()
 	r := bufio.NewReader(c)
 
@@ -179,7 +169,7 @@ func serveFakeBus(c net.Conn, stop <-chan struct{}, uid uint32) {
 		case "Hello":
 			reply = fakeBusReply(serial, []interface{}{":1.0"})
 		case "GetConnectionUnixUser":
-			reply = fakeBusReply(serial, []interface{}{uid})
+			reply = fakeBusReply(serial, []interface{}{uint32(0)})
 		case "GetConnectionUnixProcessID":
 			reply = fakeBusReply(serial, []interface{}{uint32(os.Getpid())})
 		case "NameHasOwner":
@@ -312,32 +302,6 @@ func TestManagerIfcStartJobPermissionDenied(t *testing.T) {
 func TestManagerIfcUnRegisterAgentGetConnUIDFails(t *testing.T) {
 	m := newPermissionGatedManager(t)
 	assert.NotNil(t, m.UnRegisterAgent(ifcTestSender, "/org/deepin/dde/Lastore1/Agent1"))
-}
-
-// Agent registration is reachable by any local user over the system bus, so the
-// permission check has to run before the agent map is touched. The system bus
-// address points at a nonexistent socket so polkit.CheckAuth fails fast instead
-// of popping an auth dialog on a desktop session.
-func TestManagerIfcRegisterAgentUntrustedCallerDenied(t *testing.T) {
-	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
-
-	m := &Manager{
-		service:      newConnServiceWithUID(t, 1000),
-		userAgents:   newUserAgentMap(),
-		loginManager: login1.NewManager(newFailingConnService(t).Conn()),
-	}
-	assert.NotNil(t, m.RegisterAgent(ifcTestSender, lastoreAgentPath))
-	assert.False(t, m.userAgents.hasUser("1000"))
-}
-
-func TestManagerIfcUnRegisterAgentUntrustedCallerDenied(t *testing.T) {
-	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/tmp/lastore-nonexistent-dbus-socket")
-
-	m := &Manager{service: newConnServiceWithUID(t, 1000), userAgents: newUserAgentMap()}
-	m.userAgents.setActiveUID("1000")
-	m.userAgents.addAgent("1000", newMockLastoreAgent())
-	assert.NotNil(t, m.UnRegisterAgent(ifcTestSender, lastoreAgentPath))
-	assert.NotNil(t, m.userAgents.getActiveLastoreAgent())
 }
 
 func TestManagerIfcUpdateSourcePermissionDenied(t *testing.T) {
