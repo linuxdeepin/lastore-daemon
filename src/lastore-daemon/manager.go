@@ -906,6 +906,17 @@ func (m *Manager) watchSession(uid string, session login1.Session) {
 	}
 }
 
+func (m *Manager) getRebootActionHint() string {
+	if m.userAgents == nil {
+		logger.Warning("userAgents not initialized, using default reboot action hint")
+		return actionRebootShutdownFront
+	}
+	if m.userAgents.getActiveSessionType() == "wayland" {
+		return actionRebootSessionManager
+	}
+	return actionRebootShutdownFront
+}
+
 func (m *Manager) handleSessionNew(sessionId string, sessionPath dbus.ObjectPath) {
 	logger.Debugf("session added %v %v", sessionId, sessionPath)
 	sysBus := m.service.Conn()
@@ -988,6 +999,14 @@ const (
 	// 通知中"查看/重试/立即更新"按钮的动作: 通过 DBus 调用控制中心打开更新页面
 	// Notification action for View/Retry/UpdateNow: open the update page via DBus
 	actionShowUpdateModule = "dbus-send,--session,--print-reply,--dest=org.deepin.dde.ControlCenter1,/org/deepin/dde/ControlCenter1,org.deepin.dde.ControlCenter1.ShowModule,string:update"
+
+	// 通知中"重启"按钮的动作(Wayland会话): treeland下无ShutdownFront1,通过SessionManager1重启
+	// Notification action for Reboot in Wayland sessions: SessionManager1.RequestReboot
+	actionRebootSessionManager = "dbus-send,--session,--print-reply,--dest=org.deepin.dde.SessionManager1,/org/deepin/dde/SessionManager1,org.deepin.dde.SessionManager1.RequestReboot"
+
+	// 通知中"重启"按钮的默认动作(X11会话)
+	// Default notification action for Reboot (X11 sessions)
+	actionRebootShutdownFront = "dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"
 )
 
 func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {

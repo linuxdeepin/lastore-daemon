@@ -717,7 +717,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			msg := gettext.Tr("Updates failed: insufficient disk space. Please reboot to avoid the effect on your system.")
 			action := []string{"reboot", gettext.Tr("Reboot")}
 			hints := map[string]dbus.Variant{
-				"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"),
+				"x-deepin-action-reboot":      dbus.MakeVariant(m.getRebootActionHint()),
 				"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
 			// 未备份
 			if m.statusManager.abStatus != system.HasBackedUp {
@@ -736,7 +736,7 @@ func (m *Manager) preFailedHook(job *Job, mode system.UpdateType, uuid string) e
 			msg := gettext.Tr("Updates failed. Please reboot to avoid the effect on your system.")
 			action := []string{"reboot", gettext.Tr("Reboot")}
 			hints := map[string]dbus.Variant{
-				"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"),
+				"x-deepin-action-reboot":      dbus.MakeVariant(m.getRebootActionHint()),
 				"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
 			// 未备份
 			if m.statusManager.abStatus != system.HasBackedUp {
@@ -844,7 +844,7 @@ func (m *Manager) afterUpgradeCmdSuccessHook() error {
 	msg := gettext.Tr("Restart the computer to use the system and applications properly.")
 	action := []string{"reboot", gettext.Tr("Reboot Now"), "cancel", gettext.Tr("Reboot Later")}
 	hints := map[string]dbus.Variant{
-		"x-deepin-action-reboot":      dbus.MakeVariant("dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"),
+		"x-deepin-action-reboot":      dbus.MakeVariant(m.getRebootActionHint()),
 		"x-deepin-NoAnimationActions": dbus.MakeVariant("reboot")}
 	go m.sendNotify(updateNotifyShow, 0, "system-updated", summary, msg, action, hints, system.NotifyExpireTimeoutNoHide)
 	return nil

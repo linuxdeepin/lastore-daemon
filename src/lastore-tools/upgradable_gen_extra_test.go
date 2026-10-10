@@ -47,6 +47,14 @@ func TestGenerateUpdateInfosWithSeam(t *testing.T) {
 		}
 	}
 
+	// GenerateUpdateInfos writes the failure report next to outputPath by
+	// prefixing it with "error_"; keep that relative write inside a temporary
+	// directory instead of the package directory.
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(t.TempDir()))
+	t.Cleanup(func() { _ = os.Chdir(oldWd) })
+
 	outputPath := filepath.Join(t.TempDir(), "update_infos.json")
 	require.NoError(t, GenerateUpdateInfos(outputPath))
 
