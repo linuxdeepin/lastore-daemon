@@ -176,10 +176,57 @@ func TestGetPlatformStatusDisable(t *testing.T) {
 }
 
 func TestConfigUseIncrementalUpdate(t *testing.T) {
-	c := &Config{IncrementalUpdate: true}
-	assert.True(t, c.UseIncrementalUpdate())
-	c2 := &Config{IncrementalUpdate: false}
-	assert.False(t, c2.UseIncrementalUpdate())
+	// Save and restore injectable functions
+	oldEditionFn := getEditionNameFn
+	oldSmartMirrorFn := isSmartMirrorEnabledFn
+	t.Cleanup(func() {
+		getEditionNameFn = oldEditionFn
+		isSmartMirrorEnabledFn = oldSmartMirrorFn
+	})
+
+	// Professional edition: behavior unchanged, only IncrementalUpdate flag matters
+	t.Run("Professional", func(t *testing.T) {
+		getEditionNameFn = func() (string, error) { return "Professional", nil }
+
+		c := &Config{IncrementalUpdate: true}
+		assert.True(t, c.UseIncrementalUpdate())
+
+		c2 := &Config{IncrementalUpdate: false}
+		assert.False(t, c2.UseIncrementalUpdate())
+	})
+
+	// Community edition: requires smart mirror disabled + CDN source
+	t.Run("Community_SmartMirrorDisabled_CDN", func(t *testing.T) {
+		getEditionNameFn = func() (string, error) { return "Community", nil }
+		isSmartMirrorEnabledFn = func() bool { return false }
+
+		c := &Config{IncrementalUpdate: true, MirrorSource: officialCDNMirrorSourceID}
+		assert.True(t, c.UseIncrementalUpdate())
+	})
+
+	t.Run("Community_SmartMirrorEnabled", func(t *testing.T) {
+		getEditionNameFn = func() (string, error) { return "Community", nil }
+		isSmartMirrorEnabledFn = func() bool { return true }
+
+		c := &Config{IncrementalUpdate: true, MirrorSource: officialCDNMirrorSourceID}
+		assert.False(t, c.UseIncrementalUpdate())
+	})
+
+	t.Run("Community_SmartMirrorDisabled_NonCDN", func(t *testing.T) {
+		getEditionNameFn = func() (string, error) { return "Community", nil }
+		isSmartMirrorEnabledFn = func() bool { return false }
+
+		c := &Config{IncrementalUpdate: true, MirrorSource: "custom"}
+		assert.False(t, c.UseIncrementalUpdate())
+	})
+
+	t.Run("Community_IncrementalDisabled", func(t *testing.T) {
+		getEditionNameFn = func() (string, error) { return "Community", nil }
+		isSmartMirrorEnabledFn = func() bool { return false }
+
+		c := &Config{IncrementalUpdate: false, MirrorSource: officialCDNMirrorSourceID}
+		assert.False(t, c.UseIncrementalUpdate())
+	})
 }
 
 func TestConfigResetDSettingsNoManager(t *testing.T) {

@@ -35,7 +35,7 @@ func TestGetEditionNameFromVar(t *testing.T) {
 	osVersionFile = path
 	t.Cleanup(func() { osVersionFile = old })
 
-	edition, err := getEditionName()
+	edition, err := GetEditionName()
 	assert.NoError(t, err)
 	assert.Equal(t, "Community", edition)
 }
