@@ -250,7 +250,7 @@ var licenseActiveCodeFn = func() (string, error) {
 }
 
 func IsAuthorized() bool {
-	edition, err := getEditionName()
+	edition, err := GetEditionName()
 	if err != nil {
 		return false
 	}
@@ -312,7 +312,7 @@ func CheckLock(p string) (string, bool) {
 // osVersionFile 为系统版本信息文件路径,提取为变量以便测试注入临时目录。
 var osVersionFile = "/etc/os-version"
 
-func getEditionName() (string, error) {
+func GetEditionName() (string, error) {
 	return getEditionNameFromFile(osVersionFile)
 }
 

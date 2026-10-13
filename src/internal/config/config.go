@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -1016,8 +1017,41 @@ func (c *Config) SetIncrementalUpdate(enable bool) error {
 	return c.save(DSettingsKeyIncrementalUpdate, enable)
 }
 
+const officialCDNMirrorSourceID = "default"
+
+type smartMirrorConfig struct {
+	Enable bool
+}
+
+func isSmartMirrorEnabled() bool {
+	var cfg smartMirrorConfig
+	err := system.DecodeJson(filepath.Join(system.VarLibDir, "smartmirror_config.json"), &cfg)
+	if err != nil {
+		// 文件不存在或读取失败时，智能镜像源默认为开启状态
+		return true
+	}
+	return cfg.Enable
+}
+
+var getEditionNameFn = system.GetEditionName
+var isSmartMirrorEnabledFn = isSmartMirrorEnabled
+
 func (c *Config) UseIncrementalUpdate() bool {
-	return !c.IntranetUpdate && !c.UpgradeDeliveryEnabled && c.IncrementalUpdate
+	if c.IntranetUpdate || c.UpgradeDeliveryEnabled || !c.IncrementalUpdate {
+		return false
+	}
+
+	edition, err := getEditionNameFn()
+	if err != nil {
+		logger.Warning("failed to get edition name:", err)
+		return true
+	}
+
+	if edition == "Community" {
+		return !isSmartMirrorEnabledFn() && c.MirrorSource == officialCDNMirrorSourceID
+	}
+
+	return true
 }
 
 func (c *Config) SetMirrorSource(id string) error {
