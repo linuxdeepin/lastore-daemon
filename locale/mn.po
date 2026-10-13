@@ -88,7 +88,7 @@ msgstr ""
 #: ../src/lastore-daemon/manager_update.go:238
 #: ../src/lastore-daemon/manager_update.go:294
 msgid "View"
-msgstr ""
+msgstr "Харах"
 
 #: ../src/lastore-daemon/manager_download.go:212
 #: ../src/lastore-daemon/manager_upgrade.go:672
