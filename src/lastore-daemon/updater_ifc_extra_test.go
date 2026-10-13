@@ -268,12 +268,19 @@ func TestUpdaterSetIdleDownloadConfigTimer(t *testing.T) {
 func TestUpdaterSetAutoDownloadUpdatesDisableWithIdle(t *testing.T) {
 	u := &Updater{
 		service:               newTestService(),
+		manager:               &Manager{jobManager: newTestJobManager()},
 		config:                newTestConfig(t),
 		AutoDownloadUpdates:   true,
 		idleDownloadConfigObj: idleDownloadConfig{IdleDownloadEnabled: true},
 	}
 	assert.NoError(t, u.setAutoDownloadUpdates(false))
 	assert.False(t, u.AutoDownloadUpdates)
+	// setIdleDownloadConfig debounces through a 1s AfterFunc timer; stop it so the
+	// callback cannot run after the test (it would abort the idle download against
+	// this test's fixtures).
+	if u.setIdleDownloadConfigTimer != nil {
+		u.setIdleDownloadConfigTimer.Stop()
+	}
 }
 
 func TestUpdaterSetDeliveryDownloadSpeedLimitLocalSame(t *testing.T) {
