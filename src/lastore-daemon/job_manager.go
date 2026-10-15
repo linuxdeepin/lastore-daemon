@@ -50,14 +50,7 @@ type JobManager struct {
 	dispatchMux sync.Mutex
 	notify      func()
 
-	jobDetailFn            func(msg string)
-	actualDownloadReporter func(actualDownloadReport)
-}
-
-type actualDownloadReport struct {
-	URI, UsedMirror          string
-	Bytes, ElapsedMs, WaitMs int64
-	Failed, BytesKnown       bool
+	jobDetailFn func(msg string)
 }
 
 func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func(), jobDetailFn func(msg string)) *JobManager {
@@ -79,10 +72,6 @@ func NewJobManager(service *dbusutil.Service, api system.System, notifyFn func()
 	api.AttachIndicator(m.handleJobProgressInfo)
 	api.AttachDeliveryIndicator(m.handleDeliveryDownloadInfo)
 	return m
-}
-
-func (jm *JobManager) SetActualDownloadReporter(fn func(actualDownloadReport)) {
-	jm.actualDownloadReporter = fn
 }
 
 func (jm *JobManager) List() JobList {
@@ -601,12 +590,6 @@ func (jm *JobManager) handleJobProgressInfo(info system.JobProgressInfo) {
 	if j.updateInfo(info) {
 		jm.markDirty()
 	}
-	if info.Status == system.FailedStatus || info.Status == system.SucceedStatus {
-		failed := info.Status == system.FailedStatus
-		for _, report := range j.finishActiveDownloads(failed) {
-			jm.reportActualDownload(jm.completeDownloadReport(report))
-		}
-	}
 }
 
 func (jm *JobManager) handleDeliveryDownloadInfo(info system.JobDeliveryDownloadInfo) {
@@ -615,75 +598,10 @@ func (jm *JobManager) handleDeliveryDownloadInfo(info system.JobDeliveryDownload
 		logger.Warningf("Can't find Job %q when update info %v\n", info.JobId, info)
 		return
 	}
-	if report := j.updateDeliveryDownloadInfo(info); report != nil {
-		jm.reportActualDownload(jm.completeDownloadReport(report))
-	}
+	j.updateDeliveryDownloadInfo(info)
 	if info.Speed > 0 && jm.DownloadLimitOnChanging {
 		jm.DownloadLimitOnChanging = false
 	}
-}
-
-func (jm *JobManager) completeDownloadReport(download *completedDownload) actualDownloadReport {
-	bytes, known, errText := download.Bytes, download.BytesKnown, ""
-	if !download.Failed && known && download.Size > 0 && bytes != download.Size {
-		known = false
-		errText = fmt.Sprintf("reported bytes %d do not match expected %d", bytes, download.Size)
-		logger.Warningf("smartmirror actual download size mismatch for %q: %s", download.URI, errText)
-	}
-	if !download.Failed && !known {
-		logger.Infof("smartmirror DownloadedSize unavailable; using Filename fallback: uri=%q filename=%q", download.URI, download.FileName)
-		bytes, known, errText = fallbackDownloadSize(download.FileName, download.Size)
-		if !known {
-			logger.Warningf("smartmirror actual download size unavailable for %q: %s", download.URI, errText)
-		}
-	}
-	if known && download.ResumePoint > 0 {
-		if bytes < download.ResumePoint {
-			logger.Warningf("smartmirror actual download resume point exceeds file size for %q: resume=%d size=%d", download.URI, download.ResumePoint, bytes)
-			bytes, known = 0, false
-		} else {
-			bytes -= download.ResumePoint
-			if bytes == 0 {
-				known = false
-			}
-		}
-	}
-	firstByte := download.FirstByteAt
-	if firstByte.IsZero() {
-		firstByte = download.StartedAt
-	}
-	// Only method-side monotonic timestamps are authoritative for transfer
-	// duration. The APT worker debug log arrival time is distorted while apt
-	// waits on SmartMirror Query, so it must never be used as the speed
-	// denominator. Without the method-side X-Deepin-Transfer-Start-USec and
-	// X-Deepin-Transfer-End-USec fields the sample has no valid duration and
-	// the speed is not recorded.
-	var elapsed time.Duration
-	if download.TransferStartUs > 0 && download.TransferEndUs > download.TransferStartUs {
-		elapsed = time.Duration(download.TransferEndUs-download.TransferStartUs) * time.Microsecond
-	} else {
-		elapsed = 0
-	}
-	wait := firstByte.Sub(download.StartedAt)
-	if wait < 0 {
-		wait = 0
-	}
-	return actualDownloadReport{
-		URI: download.URI, UsedMirror: download.UsedMirror, Bytes: bytes,
-		ElapsedMs: int64((elapsed + time.Millisecond - 1) / time.Millisecond), WaitMs: wait.Milliseconds(),
-		Failed: download.Failed, BytesKnown: known,
-	}
-}
-
-func (jm *JobManager) reportActualDownload(report actualDownloadReport) {
-	if jm.actualDownloadReporter == nil {
-		return
-	}
-	// The report is delivered synchronously so a finished download is stored
-	// before the job can be removed. It is cheap: the Smartmirror daemon only
-	// updates its in-memory state here and writes the quality file later, in a
-	// single debounced pass for the whole burst.
-	jm.actualDownloadReporter(report)
 }
 
 func (jm *JobManager) findJobById(jobId string) *Job {

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 )
 
 const VarLibDir = "/var/lib/lastore"
@@ -62,28 +61,14 @@ const (
 )
 
 type JobDeliveryDownloadInfo struct {
-	// MethodEvent is zero for legacy delivery UI status, otherwise an APT
-	// worker protocol event (102, 200, 201, 400 or 103). TransferStartUs and
-	// TransferEndUs are the method-side monotonic transfer timestamps.
-	MethodEvent     int
-	EventAt         time.Time
-	NewURI          string
-	URI             string
-	UsedMirror      string
-	FileName        string
-	FailReason      string
-	Proto           string
-	DownloadSize    int64
-	DownloadedSize  int64
-	ResumePoint     int64
-	Speed           int64
-	TransferStartUs int64
-	TransferEndUs   int64
-	Progress        float64
-	JobId           string
-	IMS             bool
-	Failed          bool
-	IsFinished      bool
+	JobId          string
+	FileName       string
+	Proto          string
+	DownloadSize   int64
+	DownloadedSize int64
+	Speed          int64
+	Progress       float64
+	IsFinished     bool
 }
 
 type JobProgressInfo struct {

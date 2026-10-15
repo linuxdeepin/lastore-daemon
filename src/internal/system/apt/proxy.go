@@ -58,20 +58,16 @@ func parseProgressField(v string) (float64, error) {
 }
 
 func parseDeliveryDownloadInfo(id, line string) (system.JobDeliveryDownloadInfo, error) {
-	if info, ok := parseAPTWorkerInfo(id, line); ok {
-		return info, nil
-	}
-	line = strings.TrimSpace(line)
-	// command.updateStderr forwards every line containing the legacy status
-	// marker, so start parsing at the marker instead of requiring it first.
-	const statusMarker = "102 Status["
-	if marker := strings.Index(line, statusMarker); marker >= 0 {
+	if strings.Contains(line, "102 Status") {
 		var jobDeliveryDownloadInfo system.JobDeliveryDownloadInfo
 		jobDeliveryDownloadInfo.JobId = id
-		line = strings.TrimSuffix(line[marker+len(statusMarker):], "]")
+		line = strings.TrimPrefix(line, "102 Status[")
+		line = strings.TrimSuffix(line, "]")
 		parts := strings.Split(line, "} {")
 		var isFinish bool
 		var err error
+		var speed int64
+		var proto string
 		for i := range parts {
 			parts[i] = strings.Trim(parts[i], "{} ")
 		}
@@ -83,34 +79,26 @@ func parseDeliveryDownloadInfo(id, line string) (system.JobDeliveryDownloadInfo,
 			key := strings.TrimSpace(kv[0])
 			value := strings.TrimSpace(kv[1])
 
-			switch key {
-			case "URI":
-				jobDeliveryDownloadInfo.URI = value
-			case "UsedMirror":
-				jobDeliveryDownloadInfo.UsedMirror = value
-			case "Filename":
-				jobDeliveryDownloadInfo.FileName = value
-			case "Size", "DownloadSize":
-				jobDeliveryDownloadInfo.DownloadSize, _ = strconv.ParseInt(value, 10, 64)
-			case "DownloadedSize", "Downloaded":
-				jobDeliveryDownloadInfo.DownloadedSize, _ = strconv.ParseInt(value, 10, 64)
-			case "Progress":
-				jobDeliveryDownloadInfo.Progress, _ = strconv.ParseFloat(value, 64)
-			case "IsFinish":
+			if key != "IsFinish" && key != "Speed" && key != "Proto" {
+				continue
+			} else if key == "IsFinish" {
 				isFinish, err = strconv.ParseBool(value)
 				if err != nil {
 					logger.Warningf("failed to parse isFinish %v", err)
 					isFinish = true
 				}
-			case "Speed":
-				jobDeliveryDownloadInfo.Speed, _ = strconv.ParseInt(value, 10, 64)
-			case "Proto":
-				jobDeliveryDownloadInfo.Proto = value
+			} else if key == "Speed" {
+				speed, _ = strconv.ParseInt(value, 10, 64)
+			} else if key == "Proto" {
+				proto = value
 			}
 		}
 
+		jobDeliveryDownloadInfo.Proto = proto
 		jobDeliveryDownloadInfo.IsFinished = isFinish
-		if isFinish {
+		if !isFinish {
+			jobDeliveryDownloadInfo.Speed = speed
+		} else {
 			jobDeliveryDownloadInfo.Speed = -1
 		}
 		return jobDeliveryDownloadInfo, nil
