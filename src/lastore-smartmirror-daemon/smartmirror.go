@@ -59,8 +59,9 @@ type SmartMirror struct {
 	taskCount      int
 	queryID        atomic.Uint64
 
-	probeStableMu  sync.Mutex
-	probeStableURI string
+	probeStableMu       sync.Mutex
+	probeStableURI      string
+	probeStableOfficial string
 }
 
 type probeRequest struct {
@@ -308,8 +309,9 @@ func (s *SmartMirror) runProbes(original, officialMirror string, candidates, sta
 		go func() {
 			target, ok := probeURI(original, officialMirror, mirror)
 			if !ok {
+				logger.Warningf("smartmirror 4k probe skipped: mirror base %q cannot be rewritten for %q (official %q)", mirror, original, officialMirror)
 				s.mirrorQuality.recordProbe4K(mirror, "", nativesmartmirror.Sample{At: time.Now()},
-					fmt.Errorf("mirror URI does not match official prefix"))
+					fmt.Errorf("mirror base %q is not a usable http(s) URL", mirror))
 				done <- struct{}{}
 				return
 			}
@@ -327,12 +329,11 @@ func (s *SmartMirror) runProbes(original, officialMirror string, candidates, sta
 		stage2Candidates = s.mirrorQuality.probe2MCandidates(s.sourcesURL, time.Now(), probeSpeedBatch)
 	}
 
-	// Use a stable, package-independent index file for speed probes so a small
-	// package cannot finish early and produce an unrealistically high speed.
-	probeBase := original
-	if stable := s.stableProbeOriginal(officialMirror); stable != "" {
-		probeBase = stable
-	}
+	// Speed probes use a stable, package-independent index file when one that
+	// belongs to the official archive is available, so a small package cannot
+	// finish early and produce an unrealistically high speed. Without such an
+	// index the package URI itself is measured.
+	base := s.probeBase(original, officialMirror)
 
 	var wg sync.WaitGroup
 	for _, mirror := range stage2Candidates {
@@ -340,10 +341,11 @@ func (s *SmartMirror) runProbes(original, officialMirror string, candidates, sta
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			target, ok := probeURI(probeBase, officialMirror, mirror)
+			target, ok := probeURI(base, officialMirror, mirror)
 			if !ok {
+				logger.Warningf("smartmirror 2m probe skipped: mirror base %q cannot be rewritten for %q (official %q)", mirror, base, officialMirror)
 				s.mirrorQuality.recordProbe2M(mirror, "", nativesmartmirror.Sample{At: time.Now()},
-					fmt.Errorf("mirror URI does not match official prefix"))
+					fmt.Errorf("mirror base %q is not a usable http(s) URL", mirror))
 				return
 			}
 			sample, err := s.prober.run(target, probe2MBytes)
@@ -409,9 +411,12 @@ func lessStableProbe(a, b stableProbeCandidate) bool {
 	return a.uri < b.uri
 }
 
-// pickStableProbeURI selects a stable Packages index URI. It prefers the
-// official base, the native architecture, a Packages target and the main
-// component, then falls back to the best remaining apt index target.
+// pickStableProbeURI selects a stable Packages index URI for speed probes. It
+// only returns index targets that belong to officialMirror, preferring the
+// native architecture, a Packages target and the main component. A target from
+// another archive is useless here: Rewrite rejects it, so every mirror would be
+// recorded as a failed probe. Returning "" makes the caller fall back to the
+// package URI it was given.
 func pickStableProbeURI(output, officialMirror, arch string) string {
 	var candidates []stableProbeCandidate
 	for _, line := range strings.Split(output, "\n") {
@@ -437,7 +442,7 @@ func pickStableProbeURI(output, officialMirror, arch string) string {
 			return c.uri
 		}
 	}
-	return candidates[0].uri
+	return ""
 }
 
 func nativeArchitecture() (string, error) {
@@ -451,6 +456,10 @@ func nativeArchitecture() (string, error) {
 	}
 	return arch, nil
 }
+
+// discoverStableProbeURIFn is an injectable seam so tests can exercise the
+// probe base validation without apt installed.
+var discoverStableProbeURIFn = discoverStableProbeURI
 
 // discoverStableProbeURI asks apt for the index targets of the configured
 // sources and picks a Packages index for the native architecture. This keeps
@@ -474,21 +483,44 @@ func discoverStableProbeURI(officialMirror string) (string, error) {
 	return uri, nil
 }
 
-// stableProbeOriginal returns the cached stable probe target, discovering it
-// on first use. A failure falls back to the caller's package URI.
+// stableProbeOriginal returns the stable probe target for officialMirror,
+// discovering it on first use. Only bases that belong to officialMirror are
+// adopted: a base on another host or path cannot be rewritten onto the mirrors
+// (Rewrite requires the same scheme, host and path prefix), so every 2 MiB probe
+// would fail and be recorded against the mirrors instead of being measured.
+// An undiscoverable or unusable base returns "", and the caller keeps using the
+// package URI it was given. The result - including "" - is remembered per
+// officialMirror so a broken environment does not re-run apt for every batch.
 func (s *SmartMirror) stableProbeOriginal(officialMirror string) string {
 	s.probeStableMu.Lock()
 	defer s.probeStableMu.Unlock()
-	if s.probeStableURI != "" {
+	if s.probeStableOfficial == officialMirror {
 		return s.probeStableURI
 	}
-	uri, err := discoverStableProbeURI(officialMirror)
+	s.probeStableOfficial = officialMirror
+	s.probeStableURI = ""
+	uri, err := discoverStableProbeURIFn(officialMirror)
 	if err != nil {
 		logger.Warningf("discover stable probe URI failed: %v", err)
 		return ""
 	}
+	if !nativesmartmirror.SameBase(uri, officialMirror) {
+		logger.Warningf("ignore stable probe URI %q: outside official prefix %q, using the package URI", uri, officialMirror)
+		return ""
+	}
+	logger.Infof("smartmirror stable probe base=%q official=%q", uri, officialMirror)
 	s.probeStableURI = uri
 	return uri
+}
+
+// probeBase returns the source URI used for 2 MiB speed probes: the stable
+// package-independent index when it belongs to officialMirror, otherwise the
+// caller's package URI.
+func (s *SmartMirror) probeBase(original, officialMirror string) string {
+	if stable := s.stableProbeOriginal(officialMirror); stable != "" {
+		return stable
+	}
+	return original
 }
 
 // RecordActualDownload receives one completed apt download. The lastore daemon
