@@ -102,7 +102,10 @@ func TestPreUpgradeCmdSuccessHook(t *testing.T) {
 }
 
 func TestAfterUpgradeCmdSuccessHook(t *testing.T) {
-	m := &Manager{config: newTestConfig(t), updater: &Updater{}}
+	// NewManager calls initAgent() before any hook can run; the hook still
+	// needs userAgents because the spawned sendNotify resolves the active
+	// lastore agent through it.
+	m := &Manager{config: newTestConfig(t), updater: &Updater{}, userAgents: newUserAgentMap()}
 	assert.NoError(t, m.afterUpgradeCmdSuccessHook())
 }
 

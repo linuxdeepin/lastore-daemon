@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+	login1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.login1"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/stretchr/testify/assert"
@@ -148,9 +149,12 @@ func TestGetNextAutoCheckDelay(t *testing.T) {
 		m.config.LastCheckTime = time.Now()
 		m.config.CheckInterval = time.Minute
 		d := m.getNextAutoCheckDelay()
-		// 60s check interval + random within [1800, 21600)
-		assert.GreaterOrEqual(t, d, 1860)
-		assert.Less(t, d, 21660)
+		// getNextUpdateDelay() truncates the remaining check interval to whole
+		// seconds, so a check that just ran contributes 59..60s; the jitter is
+		// random within [1800, 21600).
+		interval := int(m.config.CheckInterval / time.Second)
+		assert.GreaterOrEqual(t, d, interval-1+1800)
+		assert.Less(t, d, interval+21600)
 	})
 
 	t.Run("valid range non intranet", func(t *testing.T) {
@@ -159,9 +163,34 @@ func TestGetNextAutoCheckDelay(t *testing.T) {
 		m.config.LastCheckTime = time.Now()
 		m.config.CheckInterval = time.Minute
 		d := m.getNextAutoCheckDelay()
-		// 60s check interval + random within [100, 200)
-		assert.GreaterOrEqual(t, d, 160)
-		assert.Less(t, d, 260)
+		// Same whole-second truncation as above; the jitter is random within
+		// [100, 200).
+		interval := int(m.config.CheckInterval / time.Second)
+		assert.GreaterOrEqual(t, d, interval-1+m.config.StartCheckRange[0])
+		assert.Less(t, d, interval+m.config.StartCheckRange[1])
+	})
+}
+
+func TestGetRebootActionHint(t *testing.T) {
+	t.Run("userAgents not initialized", func(t *testing.T) {
+		// NewManager only assigns userAgents in initAgent(); hooks that build the
+		// reboot notification must not dereference it while it is still nil.
+		m := &Manager{}
+		assert.Equal(t, actionRebootShutdownFront, m.getRebootActionHint())
+	})
+
+	t.Run("no active session", func(t *testing.T) {
+		m := &Manager{userAgents: newUserAgentMap()}
+		assert.Equal(t, actionRebootShutdownFront, m.getRebootActionHint())
+	})
+
+	t.Run("active session type unavailable", func(t *testing.T) {
+		session, err := login1.NewSession(newFailingConnService(t).Conn(), "/org/freedesktop/login1/session/_31")
+		require.NoError(t, err)
+		m := &Manager{userAgents: newUserAgentMap()}
+		m.userAgents.setActiveUID("1000")
+		m.userAgents.addSession("1000", session)
+		assert.Equal(t, actionRebootShutdownFront, m.getRebootActionHint())
 	})
 }
 

@@ -264,6 +264,29 @@ func (m *userAgentMap) getActiveLastoreAgentLang() string {
 	return item.lang
 }
 
+func (m *userAgentMap) getActiveSessionType() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.activeUid == "" {
+		return ""
+	}
+
+	item := m.uidItemMap[m.activeUid]
+	if item == nil {
+		return ""
+	}
+	for _, session := range item.sessions {
+		sessionType, err := session.Type().Get(0)
+		if err != nil {
+			logger.Warning(err)
+			continue
+		}
+		return sessionType
+	}
+	return ""
+}
+
 const lastoreAgentPath = "/org/deepin/dde/Lastore1/Agent"
 
 func (m *userAgentMap) getActiveLastoreAgent() lastoreAgent.Agent {
