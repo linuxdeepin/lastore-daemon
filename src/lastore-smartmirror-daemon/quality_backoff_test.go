@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -71,9 +72,12 @@ func TestProbe4KMetadata(t *testing.T) {
 func TestProbe2MBackoff(t *testing.T) {
 	mq := newTestQuality(nil)
 	mirror := "m"
-	incomplete := nativesmartmirror.Sample{Bytes: probe2MBytes / 2, Body: time.Second, At: time.Now()}
+	// Only a probe that really failed escalates the backoff; a probe whose
+	// target was smaller than the window is covered by
+	// TestProbe2MShortTargetIsNotAFailure.
+	failed := nativesmartmirror.Sample{Bytes: probe2MBytes / 2, Body: time.Second, At: time.Now()}
 
-	mq.recordProbe2M(mirror, "u", incomplete, nil)
+	mq.recordProbe2M(mirror, "u", failed, errors.New("500 Connection failed"))
 	q := mq.QualityMap[mirror]
 	if q.Probe2MFailures != 1 {
 		t.Fatalf("failures = %d, want 1", q.Probe2MFailures)
@@ -82,12 +86,22 @@ func TestProbe2MBackoff(t *testing.T) {
 		t.Fatalf("first retry = %v, want ~24h", d)
 	}
 
-	mq.recordProbe2M(mirror, "u", incomplete, nil)
+	mq.recordProbe2M(mirror, "u", failed, errors.New("500 Connection failed"))
 	if q.Probe2MFailures != 2 {
 		t.Fatalf("failures = %d, want 2", q.Probe2MFailures)
 	}
 	if d := time.Until(q.Probe2MNextAt); d < 3*24*time.Hour || d > 5*24*time.Hour {
 		t.Fatalf("second retry = %v, want ~4d", d)
+	}
+
+	mq.recordProbe2M(mirror, "u", failed, errors.New("500 Connection failed"))
+	if d := time.Until(q.Probe2MNextAt); d < 15*24*time.Hour || d > 17*24*time.Hour {
+		t.Fatalf("third retry = %v, want ~16d", d)
+	}
+
+	mq.recordProbe2M(mirror, "u", failed, errors.New("500 Connection failed"))
+	if d := time.Until(q.Probe2MNextAt); d < 29*24*time.Hour || d > 31*24*time.Hour {
+		t.Fatalf("fourth retry = %v, want ~30d", d)
 	}
 
 	complete := nativesmartmirror.Sample{Bytes: probe2MBytes, Body: time.Second, At: time.Now()}
@@ -104,6 +118,51 @@ func TestProbe2MBackoff(t *testing.T) {
 	mq.recordProbe2M(mirror, "u", complete, nil)
 	if d := time.Until(q.Probe2MNextAt); d < 29*24*time.Hour || d > 31*24*time.Hour {
 		t.Fatalf("success retry with actual = %v, want ~30d", d)
+	}
+}
+
+// A probe whose target ended before the 2 MiB window was served completely, so
+// it is inconclusive rather than a mirror failure. This is the normal case when
+// no stable index is available and apt fetches a package smaller than the
+// window: 128061 of 146246 packages in a deepin index are below 2 MiB.
+func TestProbe2MShortTargetIsNotAFailure(t *testing.T) {
+	mq := newTestQuality(nil)
+	mirror := "m"
+	now := time.Now()
+	mq.recordProbe4K(mirror, "https://mirror.example/Packages", nativesmartmirror.Sample{Bytes: probe4KBytes, At: now}, nil)
+
+	short := nativesmartmirror.Sample{Bytes: 64 << 10, Body: time.Second, At: now}
+	for i := 0; i < 5; i++ {
+		mq.recordProbe2M(mirror, "https://mirror.example/pkg.deb", short, nil)
+	}
+
+	q := mq.QualityMap[mirror]
+	if q.Probe2MComplete {
+		t.Fatal("64 KiB transfer must not be marked complete")
+	}
+	if q.Probe2MFailures != 0 {
+		t.Fatalf("failures = %d, want 0 for a served short target", q.Probe2MFailures)
+	}
+	if q.Probe2MSpeed != 64<<10 {
+		t.Fatalf("speed = %v, want %d", q.Probe2MSpeed, 64<<10)
+	}
+	if d := time.Until(q.Probe2MNextAt); d < probe2MShortRetry-time.Hour || d > probe2MShortRetry+time.Hour {
+		t.Fatalf("short target retry = %v, want ~%v", d, probe2MShortRetry)
+	}
+	if got := mq.probe2MCandidates([]string{mirror}, now, 5); len(got) != 0 {
+		t.Fatalf("mirror probed again before the retry: %v", got)
+	}
+	if got := mq.probe2MCandidates([]string{mirror}, now.Add(probe2MShortRetry+time.Minute), 5); len(got) != 1 {
+		t.Fatalf("mirror not probed again after the retry: %v", got)
+	}
+
+	// The escalation ladder must still start from zero for a real failure.
+	mq.recordProbe2M(mirror, "u", nativesmartmirror.Sample{At: time.Now()}, errors.New("404 Not Found"))
+	if q.Probe2MFailures != 1 {
+		t.Fatalf("failures after a real failure = %d, want 1", q.Probe2MFailures)
+	}
+	if d := time.Until(q.Probe2MNextAt); d < 23*time.Hour || d > 25*time.Hour {
+		t.Fatalf("retry after a real failure = %v, want ~24h", d)
 	}
 }
 

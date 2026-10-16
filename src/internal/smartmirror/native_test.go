@@ -186,3 +186,58 @@ func TestNativeHTTPSUsesAPTTrustConfiguration(t *testing.T) {
 		t.Fatalf("APT TLS configuration not applied: %+v", res)
 	}
 }
+
+// The gate needs the object size the method learned from the server, so a
+// transfer that stops at the byte budget can be told apart from a complete small
+// object. The size is announced in 200 URI Start when the server sends a
+// Content-Length, and only in 201 URI Done when it does not.
+func TestNativeProbeReportsObjectSize(t *testing.T) {
+	data := []byte(strings.Repeat("z", 2972))
+	large := make([]byte, 64<<10)
+
+	contentLength := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body := data
+		if r.URL.Path == "/large.deb" {
+			body = large
+		}
+		w.Header().Set("Content-Length", fmt.Sprint(len(body)))
+		_, _ = w.Write(body)
+	}))
+	defer contentLength.Close()
+
+	chunked := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// No Content-Length: http.Server switches to chunked encoding.
+		_, _ = w.Write(data)
+	}))
+	defer chunked.Close()
+
+	cases := []struct {
+		name     string
+		uri      string
+		budget   Budget
+		wantSize int64
+		capped   bool
+	}{
+		{"size announced before the body", contentLength.URL + "/large.deb",
+			Budget{Total: 3 * time.Second, Idle: 5 * time.Second, Bytes: 4 << 10}, int64(len(large)), true},
+		{"small object with content length", contentLength.URL + "/tiny.deb",
+			Budget{Total: 3 * time.Second, Idle: 5 * time.Second, Bytes: 4 << 10}, int64(len(data)), false},
+		{"small object without content length", chunked.URL + "/tiny.deb",
+			Budget{Total: 3 * time.Second, Idle: 5 * time.Second, Bytes: 4 << 10}, int64(len(data)), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := (Native{Config: nativeConfig(), Stderr: io.Discard}).
+				Fetch(context.Background(), request(t, tc.uri, nil), tc.budget, nil, nil)
+			if res.Err != nil {
+				t.Fatalf("probe: %v", res.Err)
+			}
+			if res.Sample.ExpectedBytes != tc.wantSize {
+				t.Fatalf("expected size = %d, want %d", res.Sample.ExpectedBytes, tc.wantSize)
+			}
+			if res.Sample.Capped != tc.capped {
+				t.Fatalf("capped = %v, want %v", res.Sample.Capped, tc.capped)
+			}
+		})
+	}
+}

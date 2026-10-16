@@ -19,6 +19,11 @@ const (
 	minSpeedBytesPerSecond = 1 << 10
 	maxSpeedBytesPerSecond = 500 << 20
 
+	// probe2MShortRetry is when a probe whose target ended before the 2 MiB
+	// window is repeated. Such a probe is inconclusive, not a mirror failure, so
+	// it must not feed the failure backoff.
+	probe2MShortRetry = 24 * time.Hour
+
 	// Actual download samples are kept in a bounded recent window. Old samples
 	// are only dropped when both the sample count and the byte volume exceed
 	// their thresholds; the hard maximum protects against pathological runs
@@ -305,22 +310,50 @@ func (mq *MirrorQuality) probe2MCandidates(mirrors []string, now time.Time, limi
 	return out
 }
 
+// probe4KPassed reports whether a gate probe proves that the mirror served the
+// object apt asked for. Filling the byte budget proves it for an object larger
+// than the budget; an object smaller than the budget proves it only when the
+// whole object arrived. When the method reported no size, a transfer that
+// completed without filling the budget delivered the whole object.
+func probe4KPassed(sample nativesmartmirror.Sample, err error) bool {
+	if err != nil {
+		return false
+	}
+	switch {
+	case sample.Bytes >= probe4KBytes:
+		return true
+	case sample.ExpectedBytes > 0:
+		return sample.Bytes == sample.ExpectedBytes
+	default:
+		return sample.Bytes > 0
+	}
+}
+
+// recordProbe4K stores one 4 KiB gate probe. The gate answers "can this mirror
+// serve the object apt is fetching", so the object size decides the criterion:
+// requiring probe4KBytes from every transfer would mark every mirror as failing
+// whenever the object itself is smaller than the probe budget, and rank() would
+// drop them all until the gate is refreshed.
 func (mq *MirrorQuality) recordProbe4K(mirror, uri string, sample nativesmartmirror.Sample, err error) {
 	mq.mux.Lock()
 	defer mq.mux.Unlock()
 	q := mq.getQuality(mirror)
 	q.Probe4KAt = sampleTime(sample)
-	q.Probe4KPassed = err == nil && sample.Bytes >= probe4KBytes
+	q.Probe4KPassed = probe4KPassed(sample, err)
 	q.Probe4KURI = uri
 	q.Probe4KBytes = sample.Bytes
 	q.Probe4KBodyUs = sample.Body.Microseconds()
 }
 
-// recordProbe2M stores the probe speed even when the probe failed after some
-// body was transferred: the bytes and time already observed are still a valid
-// measurement, they only do not open the 4 KiB gate. The probed URI, byte
-// count and body time are persisted, and probe_2m_next_at implements the
-// 1/4/16/30 day refresh backoff.
+// recordProbe2M stores one 2 MiB speed probe. The probe speed is kept even when
+// the probe stopped before the byte cap: the bytes and time already observed are
+// still a measurement, they only do not open the 4 KiB gate. A probe whose
+// target ended before the window - a Packages index smaller than 2 MiB, or a
+// package URI used when no stable index is available - was served completely, so
+// it is inconclusive rather than a mirror failure: probe_2m_failures stays and
+// the probe is retried after probe2MShortRetry. Only a probe that really failed
+// escalates the 1/4/16/30 day backoff. The probed URI, byte count and body time
+// are persisted.
 func (mq *MirrorQuality) recordProbe2M(mirror, uri string, sample nativesmartmirror.Sample, err error) {
 	mq.mux.Lock()
 	defer mq.mux.Unlock()
@@ -333,25 +366,28 @@ func (mq *MirrorQuality) recordProbe2M(mirror, uri string, sample nativesmartmir
 	q.Probe2MSpeed = clampSpeed(sample.Bytes, sample.Body)
 	complete := err == nil && sample.Bytes >= probe2MBytes
 	q.Probe2MComplete = complete
-	if complete {
+	switch {
+	case complete:
 		q.Probe2MFailures = 0
 		if q.hasFreshActual(now) {
 			q.Probe2MNextAt = now.Add(30 * 24 * time.Hour)
 		} else {
 			q.Probe2MNextAt = now.Add(16 * 24 * time.Hour)
 		}
-		return
-	}
-	q.Probe2MFailures++
-	switch {
-	case q.Probe2MFailures <= 1:
-		q.Probe2MNextAt = now.Add(24 * time.Hour)
-	case q.Probe2MFailures == 2:
-		q.Probe2MNextAt = now.Add(4 * 24 * time.Hour)
-	case q.Probe2MFailures == 3:
-		q.Probe2MNextAt = now.Add(16 * 24 * time.Hour)
+	case err == nil:
+		q.Probe2MNextAt = now.Add(probe2MShortRetry)
 	default:
-		q.Probe2MNextAt = now.Add(30 * 24 * time.Hour)
+		q.Probe2MFailures++
+		switch {
+		case q.Probe2MFailures <= 1:
+			q.Probe2MNextAt = now.Add(24 * time.Hour)
+		case q.Probe2MFailures == 2:
+			q.Probe2MNextAt = now.Add(4 * 24 * time.Hour)
+		case q.Probe2MFailures == 3:
+			q.Probe2MNextAt = now.Add(16 * 24 * time.Hour)
+		default:
+			q.Probe2MNextAt = now.Add(30 * 24 * time.Hour)
+		}
 	}
 }
 
