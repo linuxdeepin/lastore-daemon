@@ -555,6 +555,7 @@ func (p *APTSystem) FixError(jobId string, errType string, environ map[string]st
 
 	if system.ErrorDpkgInterrupted == system.JobErrorType(errType) {
 		cmd := exec.Command(DpkgBinPath, "--force-confold", "--configure", "-a")
+		cmd.Env = append(os.Environ(), "IMMUTABLE_DISABLE_REMOUNT=false")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("run dpkg --configure -a err: %v", string(out))
