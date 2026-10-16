@@ -1,3 +1,23 @@
+lastore-daemon (6.2.72) unstable; urgency=medium
+
+  * fix(apt): re-enable immutable remount for dpkg --configure -a
+  * fix(smartmirror): stop exporting RecordActualDownload over D-Bus
+  * fix(smartmirror): judge probe results by the object the apt method
+    served
+  * fix(smartmirror): reject probe bases outside the official mirror
+  * fix(smartmirror): decouple actual download speed from delivery
+    download info
+  * feat(smartmirror): stable index probes and actual-speed ranking
+  * fix(apt): retry failed downloads 5 times with apt Acquire::Retries
+    (#498)
+  * fix(upgrade): use SessionManager1.RequestReboot in Wayland sessions
+    (#497)
+  * fix: restrict incremental update for Community edition
+  * i18n: Updates for project Deepin Desktop Environment (#494)
+  * test: fix leaked idle-download timer panic in daemon tests
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 16 Oct 2026 15:24:16 +0800
+
 lastore-daemon (6.2.71) unstable; urgency=medium
 
   * fix(security): add caller verification for agent register methods
