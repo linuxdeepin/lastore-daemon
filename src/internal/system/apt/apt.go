@@ -19,6 +19,9 @@ import (
 
 var logger = log.NewLogger("lastore/apt")
 
+// downloadRetries 下载任务失败时由apt内部自动重试的次数(仅纯下载命令,即不会执行dpkg的install -d/dist-upgrade -d)
+const downloadRetries = 5
+
 func (p *APTSystem) AddCMD(cmd *system.Command) {
 	if _, ok := p.CmdSet[cmd.JobId]; ok {
 		logger.Warningf("APTSystem AddCMD: exist cmd %q\n", cmd.JobId)
@@ -49,6 +52,9 @@ func createCommandLine(cmdType string, cmdArgs []string) *exec.Cmd {
 
 	if cmdType == system.DownloadJobType || cmdType == system.PrepareDistUpgradeJobType {
 		options["Debug::NoLocking"] = "1"
+		// 下载失败多为网络抖动等瞬态问题,交给apt内部重试(重试期间job状态不变,不会频繁跳变);
+		// 安装/升级等会执行dpkg的命令不加该参数
+		options["Acquire::Retries"] = strconv.Itoa(downloadRetries)
 		args = append(args, "-m")
 	}
 
