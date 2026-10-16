@@ -5,6 +5,7 @@
 package apt
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
@@ -137,6 +138,25 @@ func TestCreateCommandLine(t *testing.T) {
 				assert.Contains(t, cmd.Args, s)
 			}
 		})
+	}
+}
+
+func TestCreateCommandLineDownloadRetries(t *testing.T) {
+	// 只有纯下载命令(不执行dpkg)带apt内部重试,重试5次
+	for _, cmdType := range []string{system.DownloadJobType, system.PrepareDistUpgradeJobType} {
+		cmd := createCommandLine(cmdType, []string{"vim"})
+		assert.Contains(t, strings.Join(cmd.Args, " "), "-o Acquire::Retries=5", cmdType)
+	}
+
+	// 安装/升级/卸载/检查更新等命令不加该参数
+	for _, cmdType := range []string{
+		system.InstallJobType,
+		system.DistUpgradeJobType,
+		system.RemoveJobType,
+		system.UpdateSourceJobType,
+	} {
+		cmd := createCommandLine(cmdType, []string{"vim"})
+		assert.NotContains(t, strings.Join(cmd.Args, " "), "Acquire::Retries", cmdType)
 	}
 }
 
