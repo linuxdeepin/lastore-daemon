@@ -26,14 +26,14 @@ func TestRecordActualDownloadNeedsMethodTimeAndPersists(t *testing.T) {
 	uri := "https://fast.example/deepin/beige/pool/pkg.deb"
 
 	// Without a method-side duration the sample must not produce a speed.
-	if err := s.RecordActualDownload(uri, mirror, 1<<20, 0, 0, false, true); err != nil {
+	if err := s.recordActualDownload(uri, mirror, 1<<20, 0, 0, false, true); err != nil {
 		t.Fatalf("record actual download: %v", err)
 	}
 	if speed := s.mirrorQuality.QualityMap[mirror].ActualSpeed; speed != 0 {
 		t.Fatalf("speed recorded without method time: %v", speed)
 	}
 
-	if err := s.RecordActualDownload(uri, mirror, 1<<20, 1000, 0, false, true); err != nil {
+	if err := s.recordActualDownload(uri, mirror, 1<<20, 1000, 0, false, true); err != nil {
 		t.Fatalf("record actual download: %v", err)
 	}
 	s.flushQuality()
@@ -64,7 +64,7 @@ func TestRecordActualDownloadFeedsRanking(t *testing.T) {
 	s.mirrorQuality.recordProbe2M("https://fast.example/deepin/", "https://fast.example/deepin/pkg.deb", nativesmartmirror.Sample{
 		Bytes: probe2MBytes, Body: time.Second / 5, At: now,
 	}, nil)
-	if err := s.RecordActualDownload(
+	if err := s.recordActualDownload(
 		"https://slow.example/deepin/beige/pool/pkg.deb",
 		"https://slow.example/deepin/", 1<<20, 1000, 0, false, true,
 	); err != nil {
@@ -99,10 +99,10 @@ func TestSmartMirrorQueryDisabled(t *testing.T) {
 func TestSmartMirrorGetExportedMethods(t *testing.T) {
 	s := &SmartMirror{}
 	methods := s.GetExportedMethods()
-	assert.Len(t, methods, 3)
+	assert.Len(t, methods, 2)
 
-	names := []string{methods[0].Name, methods[1].Name, methods[2].Name}
-	assert.ElementsMatch(t, []string{"Query", "SetEnable", "RecordActualDownload"}, names)
+	names := []string{methods[0].Name, methods[1].Name}
+	assert.ElementsMatch(t, []string{"Query", "SetEnable"}, names)
 }
 
 func TestActualMirrorMatchesURIAndBase(t *testing.T) {
