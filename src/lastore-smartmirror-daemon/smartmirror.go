@@ -523,9 +523,13 @@ func (s *SmartMirror) probeBase(original, officialMirror string) string {
 	return original
 }
 
-// RecordActualDownload receives one completed apt download. The lastore daemon
-// reports asynchronously, so this method only updates local state.
-func (s *SmartMirror) RecordActualDownload(uri, usedMirror string, bytes, elapsedMs, waitMs int64, failed, bytesKnown bool) *dbus.Error {
+// recordActualDownload receives one completed apt download and updates local
+// state only. It is deliberately unexported: no component reports downloads
+// since 58b2bda removed the lastore daemon reporter, so the actual-speed fields
+// stay at their defaults and ranking uses the probe speed and the mirror weight.
+// The signature keeps the reporter's fields so the sample path can be re-wired
+// when a producer is available again.
+func (s *SmartMirror) recordActualDownload(uri, usedMirror string, bytes, elapsedMs, waitMs int64, failed, bytesKnown bool) *dbus.Error {
 	if s.service != nil {
 		s.service.DelayAutoQuit()
 	}
