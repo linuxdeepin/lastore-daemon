@@ -57,6 +57,77 @@ func TestSmallCompletedProbeKeepsItsSpeed(t *testing.T) {
 	}
 }
 
+// The gate probes the object apt is currently fetching, so a completed transfer
+// of an object smaller than the 4 KiB budget proves the mirror serves it: it must
+// not be recorded as a failing gate, otherwise rank() drops every probed mirror
+// for probe4KRefresh and the 2 MiB stage never runs.
+func TestProbe4KGateAcceptsSmallCompletedObject(t *testing.T) {
+	mq := newTestQuality(map[string]int{"small": 1})
+	now := time.Now()
+	mq.recordProbe4K("small", "https://mirror.example/tiny.deb",
+		nativesmartmirror.Sample{Bytes: 2048, ExpectedBytes: 2048, Body: 20 * time.Millisecond, At: now}, nil)
+
+	if q := mq.QualityMap["small"]; !q.Probe4KPassed {
+		t.Fatalf("small completed probe marked failed: %+v", q)
+	}
+	if ranked := mq.rank([]string{"small"}, now); len(ranked) != 1 {
+		t.Fatalf("rank dropped the mirror: %v", ranked)
+	}
+	if due := mq.probe2MCandidates([]string{"small"}, now, 5); len(due) != 1 || due[0] != "small" {
+		t.Fatalf("2 MiB stage not reached: %v", due)
+	}
+}
+
+// The gate must prove that the object apt asked for was served: an object
+// smaller than the byte budget only passes when the whole object arrived, an
+// object larger than the budget passes when it filled the budget.
+func TestProbe4KGateCriteria(t *testing.T) {
+	cases := []struct {
+		name          string
+		bytes         int64
+		expectedBytes int64
+		err           error
+		want          bool
+	}{
+		{"small object delivered whole", 2048, 2048, nil, true},
+		{"small object truncated", 1024, 2048, nil, false},
+		{"object larger than the budget fills it", probe4KBytes, 1 << 20, nil, true},
+		{"object larger than the budget stops short", 1024, 1 << 20, nil, false},
+		{"object exactly the budget", probe4KBytes, probe4KBytes, nil, true},
+		{"unknown size completed", 2048, 0, nil, true},
+		{"unknown size without a body", 0, 0, nil, false},
+		{"failed probe", 2048, 2048, errors.New("404 Not Found"), false},
+		{"failed probe after the budget", probe4KBytes, 1 << 20, errors.New("500 Connection failed"), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mq := newTestQuality(nil)
+			mq.recordProbe4K("m", "https://mirror.example/a.deb",
+				nativesmartmirror.Sample{Bytes: tc.bytes, ExpectedBytes: tc.expectedBytes, At: time.Now()}, tc.err)
+
+			if got := mq.QualityMap["m"].Probe4KPassed; got != tc.want {
+				t.Fatalf("Probe4KPassed = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// A mirror that did not deliver the object stays out of the ranking until the
+// gate is refreshed.
+func TestProbe4KGateRejectionExcludesTheMirror(t *testing.T) {
+	mq := newTestQuality(nil)
+	now := time.Now()
+	mq.recordProbe4K("truncated", "https://mirror.example/a.deb",
+		nativesmartmirror.Sample{Bytes: 1024, ExpectedBytes: 3072, At: now}, nil)
+	mq.recordProbe4K("missing", "https://mirror.example/b.deb",
+		nativesmartmirror.Sample{At: now}, errors.New("404 Not Found"))
+
+	ranked := mq.rank([]string{"truncated", "missing", "untested"}, now)
+	if len(ranked) != 1 || ranked[0] != "untested" {
+		t.Fatalf("rank = %v, want [untested]", ranked)
+	}
+}
+
 func TestProbe2MRecordsExactTarget(t *testing.T) {
 	mq := newTestQuality(nil)
 	now := time.Now()

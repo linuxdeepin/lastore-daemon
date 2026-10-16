@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -239,10 +240,19 @@ func (n Native) once(ctx context.Context, req Message, budget Budget, emit func(
 				if bodyStart.IsZero() {
 					bodyStart = time.Now()
 				}
+				// The size the method learned from the server arrives before any body
+				// byte. A probe that stops at the byte budget never reaches 201, so this
+				// is the only chance to record the size of the object.
+				if out.Sample.ExpectedBytes == 0 {
+					out.Sample.ExpectedBytes = parseSize(m.Get("Size"))
+				}
 				if emit != nil {
 					emit(m)
 				}
 			case 201:
+				if out.Sample.ExpectedBytes == 0 {
+					out.Sample.ExpectedBytes = parseSize(m.Get("Size"))
+				}
 				out.Done = m
 				return
 			case 103:
@@ -263,6 +273,16 @@ func (n Native) once(ctx context.Context, req Message, budget Budget, emit func(
 			}
 		}
 	}
+}
+
+// parseSize reads the byte count the APT method reports for the object, and
+// returns 0 when the field is absent or unusable.
+func parseSize(raw string) int64 {
+	size, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil || size < 0 {
+		return 0
+	}
+	return size
 }
 
 func fileSize(path string) int64 {
