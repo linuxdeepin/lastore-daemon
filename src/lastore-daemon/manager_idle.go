@@ -8,16 +8,20 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 )
 
-// lastoreJobCacheJson is injectable so tests can redirect the job-cache
-// read/write without touching the real /tmp state.
-var lastoreJobCacheJson = "/tmp/lastoreJobCache.json"
+// lastoreJobCacheJson 保存上一次退出时失败/暂停的 job。
+// 原路径为 /tmp/lastoreJobCache.json：/tmp 全局可写且文件名固定，本地用户可抢先
+// 创建同名符号链接/文件，诱导 root 守护进程读写其指定对象；/run/lastore 为 root 独占目录。
+// 保留为变量以便测试重定向。
+var lastoreJobCacheJson = filepath.Join(utils.RuntimeDirPath, "lastoreJobCache.json")
 
 func (m *Manager) canAutoQuit() bool {
 	m.PropsMu.RLock()
@@ -144,7 +148,11 @@ func (m *Manager) saveCacheJob() {
 		logger.Warning(err)
 		return
 	}
-	err = os.WriteFile(lastoreJobCacheJson, b, 0600)
+	if err := utils.EnsureSecureDir(filepath.Dir(lastoreJobCacheJson)); err != nil {
+		logger.Warning(err)
+		return
+	}
+	err = utils.WriteFileSecurely(lastoreJobCacheJson, b, 0600)
 	if err != nil {
 		logger.Warning(err)
 	}

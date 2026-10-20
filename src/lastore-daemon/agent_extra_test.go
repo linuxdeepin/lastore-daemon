@@ -19,7 +19,7 @@ import (
 )
 
 func TestDecodeJsonExtra(t *testing.T) {
-	dir := t.TempDir()
+	dir := secureTempDir(t)
 	fpath := filepath.Join(dir, "data.json")
 	data := map[string]string{"key": "value"}
 	content, err := json.Marshal(data)
@@ -39,7 +39,7 @@ func TestDecodeJsonNonexistent(t *testing.T) {
 }
 
 func TestDecodeJsonInvalid(t *testing.T) {
-	dir := t.TempDir()
+	dir := secureTempDir(t)
 	fpath := filepath.Join(dir, "bad.json")
 	require.NoError(t, os.WriteFile(fpath, []byte("not json"), 0644))
 
@@ -125,7 +125,7 @@ func TestUserAgentMapSaveRecordContent(t *testing.T) {
 	m.addLang("1000", "zh_CN.UTF-8")
 	m.setActiveUID("1000")
 
-	dir := t.TempDir()
+	dir := secureTempDir(t)
 	fpath := filepath.Join(dir, "record.json")
 	m.saveRecordContent(fpath)
 

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/dut"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
@@ -317,8 +318,7 @@ func (m *Manager) prepareDistUpgrade(sender dbus.Sender, origin system.UpdateTyp
 			string(system.FailedStatus): func() error {
 				if m.config.IntranetUpdate {
 					stopPeakOffPeakMonitor()
-					cacheFile := "/tmp/checkpolicy.cache"
-					_ = os.RemoveAll(cacheFile)
+					_ = os.RemoveAll(config.CheckPolicyCacheFile)
 				}
 				// 失败的单独设置失败类型的状态,其他的还原成未下载(其中下载完成的由于限制不会被修改)
 				m.statusManager.SetUpdateStatus(j.updateTyp, system.DownloadErr)

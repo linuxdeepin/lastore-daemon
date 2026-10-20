@@ -292,6 +292,7 @@ func TestCustomSourceWrapperNilActionMultiExtra(t *testing.T) {
 }
 
 func TestCustomSourceWrapperMultiExtra(t *testing.T) {
+	redirectRuntimeDir(t)
 	var gotPath string
 	var gotUnref func()
 	err := CustomSourceWrapper(SystemUpdate|SecurityUpdate, func(path string, unref func()) error {

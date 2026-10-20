@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
@@ -349,6 +350,12 @@ func (m *userAgentMap) getAgentsInfo() *userAgentInfoMap {
 func (m *userAgentMap) saveRecordContent(recordFilePath string) {
 	content, err := json.Marshal(m.getAgentsInfo())
 	if err != nil {
+		logger.Warning(err)
+		return
+	}
+	// recordFilePath 位于 /run/lastore：先确保目录存在且为 root 独占
+	// （WriteFileSecurely 的兜底 MkdirAll 是 0755，不能作为 0700 的保证）
+	if err := utils.EnsureSecureDir(filepath.Dir(recordFilePath)); err != nil {
 		logger.Warning(err)
 		return
 	}

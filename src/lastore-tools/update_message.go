@@ -12,10 +12,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"syscall"
 
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/dbusutil"
@@ -62,9 +64,13 @@ func maskLogfile(file string) (string, error) {
 		_ = inputFile.Close()
 	}()
 
-	outputFilePath := "/tmp/" + filepath.Base(file)
-	// 创建新文件
-	outputFile, err := os.Create(outputFilePath)
+	// 输出目录必须是 root 独占的运行时目录：/tmp 全局可写，固定文件名会被预置
+	if err := utils.EnsureSecureDir(utils.RuntimeDirPath); err != nil {
+		return "", err
+	}
+	outputFilePath := filepath.Join(utils.RuntimeDirPath, filepath.Base(file))
+	// 创建新文件，使用 O_NOFOLLOW 防止符号链接跟随，权限收紧为 0600
+	outputFile, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|syscall.O_NOFOLLOW, 0600)
 	if err != nil {
 		return "", err
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	Cfg "github.com/linuxdeepin/lastore-daemon/src/internal/config"
+	internalutils "github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 func newOKServer(t *testing.T) *httptest.Server {
@@ -40,8 +41,10 @@ func TestGenPostProcessResponse(t *testing.T) {
 		Token:          "tok",
 		config:         &Cfg.Config{},
 	}
-	filePath := filepath.Join(t.TempDir(), "proc.xz")
-	resp, err := m.genPostProcessResponse(strings.NewReader("hello platform"), filePath)
+	oldRuntimeDir := internalutils.RuntimeDirPath
+	internalutils.RuntimeDirPath = filepath.Join(t.TempDir(), "lastore")
+	t.Cleanup(func() { internalutils.RuntimeDirPath = oldRuntimeDir })
+	resp, err := m.genPostProcessResponse(strings.NewReader("hello platform"))
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)

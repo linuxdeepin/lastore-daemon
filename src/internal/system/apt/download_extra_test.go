@@ -12,7 +12,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
+
+// redirectRuntimeDir 把 root 独占的 /run/lastore 指向测试临时目录，
+// 使 DownloadPackages 可在无 root 环境下执行。
+func redirectRuntimeDir(t *testing.T) {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "lastore")
+	require.NoError(t, os.Mkdir(dir, 0700))
+	old := utils.RuntimeDirPath
+	utils.RuntimeDirPath = dir
+	t.Cleanup(func() { utils.RuntimeDirPath = old })
+}
 
 // prependFakeAptGet 在 PATH 前插入一个假 apt-get,使 DownloadPackages/safeStart
 // 等依赖 apt-get 的路径可在无 root 环境下执行。
@@ -27,6 +40,7 @@ func prependFakeAptGet(t *testing.T, exitCode int, output string) string {
 }
 
 func TestDownloadPackagesSuccess(t *testing.T) {
+	redirectRuntimeDir(t)
 	prependFakeAptGet(t, 0, "")
 
 	tmpPath, err := DownloadPackages([]string{"pkg1", "pkg2"}, nil, map[string]string{"APT::foo": "bar"})
@@ -37,6 +51,7 @@ func TestDownloadPackagesSuccess(t *testing.T) {
 }
 
 func TestDownloadPackagesFailure(t *testing.T) {
+	redirectRuntimeDir(t)
 	prependFakeAptGet(t, 100, "E: Failed to fetch http://example.com/pkg.deb\n")
 
 	_, err := DownloadPackages([]string{"pkg1"}, nil, nil)

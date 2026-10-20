@@ -24,6 +24,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 /*
@@ -627,8 +628,13 @@ func (m *Manager) SetUpdateSources(sender dbus.Sender, updateType system.UpdateT
 			logger.Warning("custom repo config is invalid")
 			return dbusutil.ToError(errors.New("custom repo config is invalid"))
 		}
-		// 使用apt-get check 检查仓库时候合规
-		tmpFile, err := os.CreateTemp("/tmp", "custom_repo_*")
+		// 使用apt-get check 检查仓库是否合规。
+		// 临时 sources.list 放在 root 独占目录：/tmp 全局可写，固定/可预测路径可被本地用户预置。
+		if err := utils.EnsureRuntimeDir(); err != nil {
+			logger.Warning(err)
+			return dbusutil.ToError(err)
+		}
+		tmpFile, err := os.CreateTemp(utils.RuntimeDirPath, "custom_repo_*.list")
 		if err != nil {
 			logger.Warning(err)
 		} else {

@@ -181,6 +181,12 @@ func (m *Manager) startOfflineTask() {
 		kf.SetString("UnitName", string(name), fmt.Sprintf("%s.unit", name))
 	}
 
+	// lastoreUnitCache 位于 /run/lastore：先确保目录存在且为 root 独占
+	// （SaveKeyFileSecurely 的兜底 MkdirAll 是 0755，不能作为 0700 的保证）
+	if err := utils.EnsureSecureDir(filepath.Dir(lastoreUnitCache)); err != nil {
+		logger.Warning(err)
+		return
+	}
 	err := utils.SaveKeyFileSecurely(lastoreUnitCache, kf, 0644)
 	if err != nil {
 		logger.Warning(err)
@@ -199,6 +205,10 @@ func (m *Manager) saveUpdateSourceOnce() {
 		return
 	}
 	kf.SetBool("RecordData", "UpdateSourceOnce", true)
+	if err := utils.EnsureSecureDir(filepath.Dir(lastoreUnitCache)); err != nil {
+		logger.Warning(err)
+		return
+	}
 	err = utils.SaveKeyFileSecurely(lastoreUnitCache, kf, 0644)
 	if err != nil {
 		logger.Warning(err)

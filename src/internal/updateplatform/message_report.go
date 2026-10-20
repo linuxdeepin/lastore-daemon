@@ -37,6 +37,7 @@ import (
 	Cfg "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/ratelimit"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	internalutils "github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 var logger = log.NewLogger("lastore/messageReport")
@@ -766,19 +767,24 @@ func (m *UpdatePlatformManager) genUpdateLogResponse() (*http.Response, error) {
 
 // genPostProcessResponse 生成数据，发送请求，并返回response.
 // buf: 数据输入,io.Reader.
-// filePath: 生成的xz压缩的中间文件.
-func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader, filePath string) (*http.Response, error) {
+// 中间文件在 root 独占的运行时目录中随机命名，避免 /tmp 可预测路径被抢占。
+func (m *UpdatePlatformManager) genPostProcessResponse(buf io.Reader) (*http.Response, error) {
 	policyUrl := m.requestUrl + Urls[PostProcess].path
 	client := &http.Client{
 		Timeout: 40 * time.Second,
 	}
+	if err := internalutils.EnsureRuntimeDir(); err != nil {
+		logger.Warning("ensure runtime dir failed:", err)
+		return nil, err
+	}
+	xzFile, err := ioutil.TempFile(internalutils.RuntimeDirPath, "update_*.xz")
+	if err != nil {
+		logger.Warning("create temp file failed:", err)
+		return nil, err
+	}
+	filePath := xzFile.Name()
 	if log.LevelDebug != logger.GetLogLevel() {
 		defer os.RemoveAll(filePath)
-	}
-	xzFile, err := os.Create(filePath)
-	if err != nil {
-		logger.Warning("create file failed:", err)
-		return nil, err
 	}
 	xzCmd := exec.Command("xz", "-z", "-c")
 	xzCmd.Stdin = buf
@@ -1688,10 +1694,17 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 			}
 
 			file = strings.ReplaceAll(file, "/", "_")
-			lastoreFile := "/tmp/" + file
+			// InRelease 暂存文件必须放在 root 独占目录：原实现为 /tmp/<file>，可预测路径
+			// 会被本地用户预置；该文件仅用于本次 md5 比对，用完即删
+			if err := internalutils.EnsureRuntimeDir(); err != nil {
+				logger.Warning("ensure runtime dir failed:", err)
+				return
+			}
+			lastoreFile := filepath.Join(internalutils.RuntimeDirPath, file)
 			aptFile := filepath.Join(system.OnlineListPath, file)
+			defer os.Remove(lastoreFile)
 
-			err = os.WriteFile(lastoreFile, data, 0644)
+			err = internalutils.WriteFileSecurely(lastoreFile, data, 0644)
 			if err != nil {
 				logger.Warning(err)
 				return
@@ -1841,8 +1854,7 @@ func (m *UpdatePlatformManager) PostStatusMessage(message StatusMessage, forceUp
 	logger.Debugf("post status msg:%s", msg)
 
 	buf := bytes.NewBufferString(string(msg))
-	filePath := fmt.Sprintf("/tmp/%s_%s.xz", "update", time.Now().Format("20231019102233444"))
-	response, err := m.genPostProcessResponse(buf, filePath)
+	response, err := m.genPostProcessResponse(buf)
 	if err != nil {
 		logger.Warningf("post status message failed:%v", err)
 		return
@@ -1912,7 +1924,14 @@ func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
 	}
 	hardwareId := GetHardwareId(m.config.IncludeDiskInfo, m.config.GetHardwareIdByHelper)
 
-	outFilename := fmt.Sprintf("/tmp/%s_%s_%s_%s.tar", "update", hardwareId, utils.GenUuid(), time.Now().Format("20231019102233444"))
+	if err := internalutils.EnsureRuntimeDir(); err != nil {
+		logger.Warning("ensure runtime dir failed:", err)
+		return
+	}
+	outFilename := filepath.Join(internalutils.RuntimeDirPath,
+		fmt.Sprintf("%s_%s_%s_%s.tar", "update", hardwareId, utils.GenUuid(), time.Now().Format("20231019102233444")))
+	// 日志包仅在本函数内上传使用，用完即删，避免在 /run/lastore 中累积
+	defer os.Remove(outFilename)
 	err := tarFiles(files, outFilename)
 	if err != nil {
 		logger.Warningf("tar log files failed:%v", err)
@@ -1924,7 +1943,7 @@ func (m *UpdatePlatformManager) PostUpdateLogFiles(files []string) {
 		return
 	}
 	defer tarFile.Close()
-	response, err := m.genPostProcessResponse(tarFile, outFilename+".xz")
+	response, err := m.genPostProcessResponse(tarFile)
 	if err != nil {
 		logger.Warningf("post status message failed:%v", err)
 		return

@@ -12,7 +12,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
+
+// redirectRuntimeDir 把 root 独占的 /run/lastore 指向测试临时目录（0700），
+// 使脱敏日志可在无 root 环境下写出。
+func redirectRuntimeDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "lastore")
+	require.NoError(t, os.Mkdir(dir, 0700))
+	old := utils.RuntimeDirPath
+	utils.RuntimeDirPath = dir
+	t.Cleanup(func() { utils.RuntimeDirPath = old })
+	return dir
+}
 
 func TestDesensitize(t *testing.T) {
 	tests := []struct {
@@ -55,6 +69,7 @@ func TestMaskLogfile(t *testing.T) {
 	})
 
 	t.Run("normal file copy", func(t *testing.T) {
+		runtimeDir := redirectRuntimeDir(t)
 		dir := t.TempDir()
 		srcFile := filepath.Join(dir, "test.log")
 		content := "line1\nline2\nline3\n"
@@ -62,7 +77,7 @@ func TestMaskLogfile(t *testing.T) {
 
 		outPath, err := maskLogfile(srcFile)
 		require.NoError(t, err)
-		assert.Equal(t, "/tmp/"+filepath.Base(srcFile), outPath)
+		assert.Equal(t, filepath.Join(runtimeDir, filepath.Base(srcFile)), outPath)
 
 		data, err := os.ReadFile(outPath)
 		require.NoError(t, err)
@@ -71,6 +86,7 @@ func TestMaskLogfile(t *testing.T) {
 	})
 
 	t.Run("apt history log with desensitize", func(t *testing.T) {
+		redirectRuntimeDir(t)
 		dir := t.TempDir()
 		srcFile := filepath.Join(dir, "history.log")
 		content := "Start-Date: 2024-01-01\nRequested-By: alice (1000)\nCommand: apt upgrade\n"
@@ -90,6 +106,7 @@ func TestMaskLogfile(t *testing.T) {
 }
 
 func TestMaskLogfileAptHistoryLog(t *testing.T) {
+	runtimeDir := redirectRuntimeDir(t)
 	// maskLogfile only takes the desensitize branch when the input path
 	// exactly equals aptHistoryLog ("/var/log/apt/history.log"), which is
 	// world-readable on the test host.
@@ -98,7 +115,7 @@ func TestMaskLogfileAptHistoryLog(t *testing.T) {
 	}
 	outPath, err := maskLogfile(aptHistoryLog)
 	require.NoError(t, err)
-	assert.Equal(t, "/tmp/history.log", outPath)
+	assert.Equal(t, filepath.Join(runtimeDir, "history.log"), outPath)
 
 	data, err := os.ReadFile(outPath)
 	require.NoError(t, err)

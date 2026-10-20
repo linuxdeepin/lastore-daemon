@@ -6,7 +6,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -241,10 +240,12 @@ const (
 const configTimeLayout = "2006-01-02T15:04:05.999999999-07:00"
 
 var (
-	legacyOnlineCachePath     = "/tmp/platform_cache.json"
-	legacyClassifiedCachePath = "/tmp/classified_cache.json"
-	onlineCachePath           = "/var/lib/lastore/platform_cache.json"
-	classifiedCachePath       = "/var/lib/lastore/classified_cache.json"
+	onlineCachePath     = "/var/lib/lastore/platform_cache.json"
+	classifiedCachePath = "/var/lib/lastore/classified_cache.json"
+
+	// CheckPolicyCacheFile 由 lastore-tools checkpolicy 写入，daemon 在内网下载失败时清理。
+	// 与其它 root 临时文件一致放在 root 独占的运行时目录，避免 /tmp 固定路径被抢占。
+	CheckPolicyCacheFile = filepath.Join(utils.RuntimeDirPath, "checkpolicy.cache")
 )
 
 func getConfigFromDSettings() *Config {
@@ -757,7 +758,8 @@ func getConfigFromDSettings() *Config {
 	}
 
 	// classifiedCachePath和onlineCachePath两项数据没有存储在dconfig中，是因为数据量太大，dconfig不支持存储这么长的数据
-	content, err := readCacheWithLegacyFallback(classifiedCachePath, legacyClassifiedCachePath)
+	// 不再回退读取 /tmp 中的旧缓存：/tmp 全局可写，缓存内容可被本地用户伪造。
+	content, err := os.ReadFile(classifiedCachePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logger.Warning(err)
@@ -770,7 +772,7 @@ func getConfigFromDSettings() *Config {
 		}
 	}
 
-	content, err = readCacheWithLegacyFallback(onlineCachePath, legacyOnlineCachePath)
+	content, err = os.ReadFile(onlineCachePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logger.Warning(err)
@@ -1305,17 +1307,6 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 func (c *Config) SetOnlineCache(cache string) error {
 	c.OnlineCache = cache
 	return utils.WriteFileSecurely(onlineCachePath, []byte(cache), 0644)
-}
-
-func readCacheWithLegacyFallback(path, legacyPath string) ([]byte, error) {
-	content, err := os.ReadFile(path)
-	if err == nil || !errors.Is(err, os.ErrNotExist) {
-		return content, err
-	}
-	if legacyPath == "" {
-		return nil, err
-	}
-	return os.ReadFile(legacyPath)
 }
 
 func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {
