@@ -10,7 +10,7 @@ import (
 	"crypto/cipher"
 	"errors"
 
-	"math/rand"
+	"crypto/rand"
 	"strings"
 )
 
@@ -28,7 +28,7 @@ const (
  */
 var encodingAesKey = "DflXyFwTmaoGmbDkVj8uD62XGb01pkJn"
 
-// randRead 提取为变量以便测试注入随机数读取错误。
+// randRead 提取为变量以便测试注入随机数读取错误。生产路径使用 crypto/rand(CSPRNG)。
 var randRead = rand.Read
 
 func EncryptMsg(data []byte) ([]byte, error) {
