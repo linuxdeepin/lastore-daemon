@@ -366,6 +366,24 @@ func TestSendNotifyAgentError(t *testing.T) {
 	assert.Equal(t, uint32(0), m.sendNotify("app", 0, "icon", "summary", "body", nil, nil, -1))
 }
 
+func TestFormatNotificationActions(t *testing.T) {
+	// A nil slice used to be json.Marshal'd into "null", which gdbus rejects
+	// as an invalid "as" value and aborts the notification call.
+	assert.Equal(t, "@as []", formatNotificationActions(nil))
+	assert.Equal(t, "@as []", formatNotificationActions([]string{}))
+	assert.Equal(t, `@as ["retry","Retry"]`, formatNotificationActions([]string{"retry", "Retry"}))
+}
+
+func TestFormatNotificationHints(t *testing.T) {
+	assert.Equal(t, "@a{sv} {}", formatNotificationHints(nil))
+	assert.Equal(t, "@a{sv} {}", formatNotificationHints(map[string]dbus.Variant{
+		"non-string": dbus.MakeVariant(42),
+	}))
+	assert.Equal(t, `@a{sv} {"x-deepin-action-retry":<"foo">}`, formatNotificationHints(map[string]dbus.Variant{
+		"x-deepin-action-retry": dbus.MakeVariant("foo"),
+	}))
+}
+
 func TestChangePrepareDistUpgradeJobOption(t *testing.T) {
 	m := &Manager{jobManager: newTestJobManager()}
 	m.ChangePrepareDistUpgradeJobOption()
