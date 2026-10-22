@@ -17,7 +17,7 @@ import (
 )
 
 func TestLoadCacheJobNoFile(t *testing.T) {
-	// /tmp/lastoreJobCache.json is absent in a fresh test env; hits the
+	// /run/lastore/lastoreJobCache.json is absent in a fresh test env; hits the
 	// os.ReadFile error early-return.
 	(&Manager{}).loadCacheJob()
 }

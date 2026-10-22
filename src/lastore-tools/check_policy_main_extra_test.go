@@ -23,7 +23,21 @@ import (
 )
 
 func TestMainCheckPolicy(t *testing.T) {
+	// 走真实的 NewConfig，但必须切断裂点：否则平台地址可用且缓存不一致时，
+	// MainCheckPolicy 会经 system D-Bus 调 daemon 的 UpdateSource，弹出 polkit 鉴权框。
+	oldGen := genVersionResponseFn
+	oldBus := systemBusFn
+	t.Cleanup(func() {
+		genVersionResponseFn = oldGen
+		systemBusFn = oldBus
+	})
+	genVersionResponseFn = func(*config.Config) (*http.Response, error) {
+		return nil, errors.New("network disabled in test")
+	}
+	systemBusFn = func() (*dbus.Conn, error) { return nil, errors.New("no bus") }
+
 	err := MainCheckPolicy(nil)
+	assert.Error(t, err)
 	t.Logf("MainCheckPolicy returned: %v", err)
 }
 
@@ -51,7 +65,9 @@ func setupCheckPolicySeams(t *testing.T, body string, status int) {
 			Body:       io.NopCloser(strings.NewReader(body)),
 		}, nil
 	}
-	checkPolicyCacheFile = filepath.Join(t.TempDir(), "checkpolicy.cache")
+	cacheDir := filepath.Join(t.TempDir(), "lastore")
+	require.NoError(t, os.Mkdir(cacheDir, 0700))
+	checkPolicyCacheFile = filepath.Join(cacheDir, "checkpolicy.cache")
 	systemBusFn = func() (*dbus.Conn, error) { return nil, errors.New("no bus") }
 }
 
@@ -95,7 +111,9 @@ func TestMainCheckPolicyResponseError(t *testing.T) {
 	genVersionResponseFn = func(c *config.Config) (*http.Response, error) {
 		return nil, errors.New("network down")
 	}
-	checkPolicyCacheFile = filepath.Join(t.TempDir(), "checkpolicy.cache")
+	cacheDir := filepath.Join(t.TempDir(), "lastore")
+	require.NoError(t, os.Mkdir(cacheDir, 0700))
+	checkPolicyCacheFile = filepath.Join(cacheDir, "checkpolicy.cache")
 
 	assert.Error(t, MainCheckPolicy(nil))
 }

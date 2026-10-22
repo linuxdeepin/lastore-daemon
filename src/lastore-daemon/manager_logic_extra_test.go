@@ -5,6 +5,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -140,15 +141,22 @@ func TestInhibitAutoQuitCountSub(t *testing.T) {
 }
 
 func TestSaveCacheJob_EmptyJobList(t *testing.T) {
+	oldCache := lastoreJobCacheJson
+	lastoreJobCacheJson = filepath.Join(secureTempDir(t), "lastoreJobCache.json")
+	t.Cleanup(func() { lastoreJobCacheJson = oldCache })
+
 	m := &Manager{}
 	m.saveCacheJob()
 
 	_, err := os.Stat(lastoreJobCacheJson)
 	assert.NoError(t, err, "cache file should be written even with empty job list")
-	_ = os.Remove(lastoreJobCacheJson)
 }
 
 func TestSaveCacheJob_WithFailedJob(t *testing.T) {
+	oldCache := lastoreJobCacheJson
+	lastoreJobCacheJson = filepath.Join(secureTempDir(t), "lastoreJobCache.json")
+	t.Cleanup(func() { lastoreJobCacheJson = oldCache })
+
 	job := &Job{
 		Id:       "test-job-1",
 		Name:     "test",
@@ -159,7 +167,6 @@ func TestSaveCacheJob_WithFailedJob(t *testing.T) {
 		jobList: []*Job{job},
 	}
 	m.saveCacheJob()
-	defer os.Remove(lastoreJobCacheJson)
 
 	assert.FileExists(t, lastoreJobCacheJson)
 }

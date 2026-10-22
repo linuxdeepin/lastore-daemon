@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 
+	internalutils "github.com/linuxdeepin/lastore-daemon/src/internal/utils"
+
 	"github.com/linuxdeepin/go-lib/strv"
 	"github.com/linuxdeepin/go-lib/utils"
 )
@@ -556,12 +558,17 @@ func CustomSourceWrapper(updateType UpdateType, doRealAction func(path string, u
 		return errors.New("doRealAction is nil")
 	default:
 		if doRealAction != nil {
-			// 仓库组合的情况，需要重新组合文件
+			// 仓库组合的情况，需要重新组合文件；临时源目录放在 root 独占目录，
+			// 避免本地用户在 /tmp 预置同名条目诱导 root 把他人的仓库文件当作 apt 源
 			var beforeDoRealErr error
 			var sourceDir string
+			if err := internalutils.EnsureRuntimeDir(); err != nil {
+				logger.Warning(err)
+				return err
+			}
 			// #nosec G301
 			logger.Infof("sourcePathList: %v", sourcePathList)
-			sourceDir, beforeDoRealErr = os.MkdirTemp("/tmp", "*Source.d")
+			sourceDir, beforeDoRealErr = os.MkdirTemp(internalutils.RuntimeDirPath, "*Source.d")
 			if beforeDoRealErr != nil {
 				logger.Warning(beforeDoRealErr)
 				return beforeDoRealErr

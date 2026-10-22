@@ -64,7 +64,7 @@ func Test_canAutoQuit(t *testing.T) {
 }
 
 func Test_saveUpdateSourceOnce(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := secureTempDir(t)
 	prevUnitCache := lastoreUnitCache
 	lastoreUnitCache = filepath.Join(tempDir, "lastoreUnitCache")
 	t.Cleanup(func() {
@@ -89,7 +89,7 @@ func Test_saveUpdateSourceOnce(t *testing.T) {
 }
 
 func Test_saveUserAgentRecordContent(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := secureTempDir(t)
 	prevRecordPath := userAgentRecordPath
 	userAgentRecordPath = filepath.Join(tempDir, "lastoreAgentCache")
 	t.Cleanup(func() {

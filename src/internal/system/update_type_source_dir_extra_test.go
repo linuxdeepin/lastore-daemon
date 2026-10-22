@@ -407,6 +407,7 @@ func TestRefreshSymlinksForSourceDirRelinkSymlinkError(t *testing.T) {
 
 func TestCustomSourceWrapperMultiMissingSource(t *testing.T) {
 	overrideDirVars(t)
+	redirectRuntimeDir(t)
 
 	// Neither SystemUpdateSource nor SecuritySourceDir exists -> os.Stat fails,
 	// so the combined dir ends up empty.
@@ -427,6 +428,7 @@ func TestCustomSourceWrapperMultiMissingSource(t *testing.T) {
 
 func TestCustomSourceWrapperMultiFileSource(t *testing.T) {
 	overrideDirVars(t)
+	redirectRuntimeDir(t)
 
 	// SystemUpdateSource is a regular file (not a dir) -> appended directly.
 	require.NoError(t, os.WriteFile(SystemUpdateSource, []byte("deb http://x beige main\n"), 0644))

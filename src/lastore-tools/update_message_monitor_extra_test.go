@@ -42,6 +42,7 @@ func TestCollectLogsWithFile(t *testing.T) {
 	updatePlatform = updateplatform.NewUpdatePlatformManager(&config.Config{
 		PlatformDisabled: config.DisabledProcess,
 	}, false)
+	runtimeDir := redirectRuntimeDir(t)
 
 	const base = "lastore_tools_collect.log"
 	src := filepath.Join(t.TempDir(), base)
@@ -49,7 +50,7 @@ func TestCollectLogsWithFile(t *testing.T) {
 	logFiles = []string{src}
 	collectLogs()
 
-	out := "/tmp/" + base
+	out := filepath.Join(runtimeDir, base)
 	data, err := os.ReadFile(out)
 	require.NoError(t, err)
 	assert.Equal(t, "line1\n", string(data))

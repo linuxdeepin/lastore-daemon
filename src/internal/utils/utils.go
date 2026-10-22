@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -181,6 +182,42 @@ func doUnsetEnvC(envName string) {
 	cname := C.CString(envName)
 	defer C.free(unsafe.Pointer(cname))
 	C.unsetenv(cname)
+}
+
+// RuntimeDirPath 是 lastore 的 root 独占运行时目录：lastore-daemon.service 声明了
+// RuntimeDirectory=lastore、RuntimeDirectoryMode=0700，普通用户无法在其中创建条目，
+// 守护进程生成的临时文件/目录都应放在这里。
+// 禁止使用 /tmp（1777 全局可写）：文件名一旦固定或可预测，本地用户即可抢先创建
+// 同名符号链接/命名管道/普通文件，诱导 root 读写其指定对象（任意文件覆写、阻塞）。
+var RuntimeDirPath = "/run/lastore"
+
+// EnsureSecureDir 确保 dir 存在、是目录、不可被其它用户写入且属主为当前用户，
+// 避免 root 把文件写进他人可预置条目的目录。
+// 未由 systemd 创建 RuntimeDirectory 的一次性进程（如 lastore-tools）也依赖它建目录。
+func EnsureSecureDir(dir string) error {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	fi, err := os.Lstat(dir)
+	if err != nil {
+		return err
+	}
+	if !fi.IsDir() {
+		return fmt.Errorf("%s is not a directory", dir)
+	}
+	if fi.Mode().Perm()&0022 != 0 {
+		return fmt.Errorf("%s mode %#o is writable by other users", dir, fi.Mode().Perm())
+	}
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != uint32(os.Geteuid()) {
+		return fmt.Errorf("%s is not owned by current user", dir)
+	}
+	return nil
+}
+
+// EnsureRuntimeDir 确保 RuntimeDirPath 可用
+func EnsureRuntimeDir() error {
+	return EnsureSecureDir(RuntimeDirPath)
 }
 
 func WriteFileSecurely(path string, content []byte, perm os.FileMode) error {

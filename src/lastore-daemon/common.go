@@ -26,6 +26,7 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system/apt"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/linuxdeepin/go-lib/procfs"
@@ -442,6 +443,8 @@ func downloadAndDecompressCoreList() (string, error) {
 		logger.Warningf("download %v failed:%v", downloadPackages, err)
 		return coreListPath, nil
 	}
+	// apt 下载的 deb 只用于取出 coreList 文件，解压后即可清理
+	defer os.RemoveAll(downloadPkg)
 	// 去下载路径查找
 	files, err := os.ReadDir(downloadPkg)
 	if err != nil {
@@ -467,7 +470,10 @@ func downloadAndDecompressCoreList() (string, error) {
 			return "", fmt.Errorf("deb package %s contains path traversal entries", debFile)
 		}
 
-		tmpDir, err := os.MkdirTemp("/tmp", coreListPkgName+".XXXXXX")
+		if err := utils.EnsureRuntimeDir(); err != nil {
+			return "", err
+		}
+		tmpDir, err := os.MkdirTemp(utils.RuntimeDirPath, coreListPkgName+".XXXXXX")
 		if err != nil {
 			return "", err
 		}

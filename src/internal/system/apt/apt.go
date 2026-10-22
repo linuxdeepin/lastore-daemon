@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/linuxdeepin/go-lib/log"
 )
@@ -280,7 +281,11 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 	args = append(args, packages...)
 	logger.Debug("download package with args:", args)
 	cmd := exec.Command("apt-get", args...)
-	tmpPath, err := os.MkdirTemp("/tmp", "apt-download-")
+	// 下载目录放在 root 独占目录：/tmp 全局可写，可预测路径会被本地用户预置
+	if err := utils.EnsureRuntimeDir(); err != nil {
+		return "", err
+	}
+	tmpPath, err := os.MkdirTemp(utils.RuntimeDirPath, "apt-download-")
 	if err != nil {
 		return "", err
 	}
@@ -291,6 +296,7 @@ func DownloadPackages(packages []string, environ map[string]string, options map[
 	cmd.Stderr = &errBuf
 	err = cmd.Run()
 	if err != nil {
+		_ = os.RemoveAll(tmpPath)
 		return "", parseJobError(errBuf.String(), "")
 	}
 	return tmpPath, nil

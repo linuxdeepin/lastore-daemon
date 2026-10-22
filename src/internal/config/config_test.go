@@ -85,18 +85,12 @@ func withTestCachePaths(t *testing.T) {
 	tempDir := t.TempDir()
 	prevOnline := onlineCachePath
 	prevClassified := classifiedCachePath
-	prevLegacyOnline := legacyOnlineCachePath
-	prevLegacyClassified := legacyClassifiedCachePath
 	onlineCachePath = tempDir + "/platform_cache.json"
 	classifiedCachePath = tempDir + "/classified_cache.json"
-	legacyOnlineCachePath = tempDir + "/legacy_platform_cache.json"
-	legacyClassifiedCachePath = tempDir + "/legacy_classified_cache.json"
 
 	t.Cleanup(func() {
 		onlineCachePath = prevOnline
 		classifiedCachePath = prevClassified
-		legacyOnlineCachePath = prevLegacyOnline
-		legacyClassifiedCachePath = prevLegacyClassified
 	})
 }
 
@@ -157,15 +151,4 @@ func TestSetClassifiedUpdatablePackagesRejectsSymlinkTarget(t *testing.T) {
 	content, readErr = os.ReadFile(targetPath)
 	require.NoError(t, readErr)
 	assert.Equal(t, originalContent, content)
-}
-
-func TestReadCacheWithLegacyFallback(t *testing.T) {
-	withTestCachePaths(t)
-
-	legacyContent := []byte(`{"cached":true}`)
-	require.NoError(t, os.WriteFile(legacyOnlineCachePath, legacyContent, 0600))
-
-	content, err := readCacheWithLegacyFallback(onlineCachePath, legacyOnlineCachePath)
-	require.NoError(t, err)
-	assert.Equal(t, legacyContent, content)
 }
