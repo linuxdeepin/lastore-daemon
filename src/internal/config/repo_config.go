@@ -186,14 +186,21 @@ func (c *Config) reloadOemRepoConfig() {
 // ReloadSourcesDir 更新系统、安全仓库list文件，/var/lib/lastore/SystemSource.d和/var/lib/lastore/SecuritySource.d
 func (c *Config) ReloadSourcesDir() {
 	c.reloadOemRepoConfig()
-	v, err := c.dsLastoreManager.Value(0, dSettingsKeySystemRepoType)
+	c.dsettingsMu.RLock()
+	ds := c.dsLastoreManager
+	c.dsettingsMu.RUnlock()
+	if ds == nil {
+		logger.Warning("dsLastoreManager is nil, skip ReloadSourcesDir")
+		return
+	}
+	v, err := ds.Value(0, dSettingsKeySystemRepoType)
 	if err != nil {
 		logger.Warning(err)
 	} else {
 		c.SystemRepoType = RepoType(v.Value().(string))
 	}
 	logger.Debug("reload sources using config:", c.SystemRepoType)
-	v, err = c.dsLastoreManager.Value(0, dSettingsKeySecurityRepoType)
+	v, err = ds.Value(0, dSettingsKeySecurityRepoType)
 	if err != nil {
 		logger.Warning(err)
 	} else {

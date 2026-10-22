@@ -73,6 +73,8 @@ type Manager struct {
 
 	sysPower   power.Power
 	signalLoop *dbusutil.SignalLoop
+	dccSigLoop *dbusutil.SignalLoop
+	dccMu      sync.Mutex
 
 	UpdateMode      system.UpdateType `prop:"access:rw"` // 更新设置的内容
 	CheckUpdateMode system.UpdateType `prop:"access:rw"` // 检查更新选中的内容
@@ -211,6 +213,24 @@ func (m *Manager) initDbusSignalListen() {
 				m.userAgents.handleNameLost(name)
 			}
 			m.removeAllowCaller(name)
+		}
+		if name == "org.desktopspec.ConfigManager" {
+			if newOwner != "" {
+				logger.Info("dconfig service started/restarted, reconnecting dconfig connections")
+				go func() {
+					m.config.ReconnectDSettings()
+					m.syncThirdPartyDconfig()
+				}()
+			} else if oldOwner != "" {
+				// dconfig 服务停止（非重启）：旧 proxy 已失效，清理后等待服务恢复时重连
+				logger.Info("dconfig service stopped, invalidating stale dconfig connections")
+				// 同步执行：InvalidateDSettings 与 invalidateThirdPartyDconfig
+				// 仅做 mutex + SignalLoop.Stop + 置空，无 DBus 调用，耗时在微秒级，
+				// 不会阻塞信号循环；同步执行可保证 stop 在后续 restart 信号处理
+				// 之前完成，避免 stop/restart 两个 goroutine 竞态将重建的有效代理置空
+				m.config.InvalidateDSettings()
+				m.invalidateThirdPartyDconfig()
+			}
 		}
 	})
 	if err != nil {
@@ -706,12 +726,33 @@ func (m *Manager) updateModeWriteCallback(pw *dbusutil.PropertyWrite) *dbus.Erro
 	return nil
 }
 
+// invalidateThirdPartyDconfig stops the third-party dconfig signal loop so
+// that no signals are processed on the stale connection while the dconfig
+// service is down. The loop is recreated on the next syncThirdPartyDconfig.
+func (m *Manager) invalidateThirdPartyDconfig() {
+	m.dccMu.Lock()
+	defer m.dccMu.Unlock()
+	if m.dccSigLoop != nil {
+		m.dccSigLoop.Stop()
+		m.dccSigLoop = nil
+	}
+}
+
 func (m *Manager) syncThirdPartyDconfig() {
 	const (
 		dccDsettingsId         = "org.deepin.dde.control-center"
 		dccUpdateDsettingsName = "org.deepin.dde.control-center.update"
 		dccKeyThirdPartySource = "updateThirdPartySource"
 	)
+	m.dccMu.Lock()
+	defer m.dccMu.Unlock()
+
+	// 释放旧的信号循环资源，避免每次重连累积 goroutine 与 DBus 订阅
+	if m.dccSigLoop != nil {
+		m.dccSigLoop.Stop()
+		m.dccSigLoop = nil
+	}
+
 	ds := ConfigManager.NewConfigManager(m.service.Conn())
 	dsPath, err := ds.AcquireManager(0, dccDsettingsId, dccUpdateDsettingsName, "")
 	if err != nil {
@@ -723,9 +764,9 @@ func (m *Manager) syncThirdPartyDconfig() {
 		logger.Warning(err)
 		return
 	}
-	systemSigLoop := dbusutil.NewSignalLoop(m.service.Conn(), 10)
-	systemSigLoop.Start()
-	dsDCCManager.InitSignalExt(systemSigLoop, true)
+	m.dccSigLoop = dbusutil.NewSignalLoop(m.service.Conn(), 10)
+	m.dccSigLoop.Start()
+	dsDCCManager.InitSignalExt(m.dccSigLoop, true)
 	v, err := dsDCCManager.Value(0, dccKeyThirdPartySource)
 	if err != nil {
 		logger.Warning(err)

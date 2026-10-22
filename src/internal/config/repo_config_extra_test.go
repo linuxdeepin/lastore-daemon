@@ -232,7 +232,32 @@ func TestConfigUseIncrementalUpdate(t *testing.T) {
 func TestConfigResetDSettingsNoManager(t *testing.T) {
 	c := &Config{}
 	err := c.ResetDSettings("some-key")
-	assert.NoError(t, err)
+	assert.Error(t, err)
+}
+
+// ReconnectDSettings reloads config while holding dsettingsReloadMu, and the
+// reload path re-enters save() (recoveryAndApplyOemFlag -> SetSystemRepoType),
+// which calls ensureDSettingsConnected when the proxy is nil. If that path
+// blocked on dsettingsReloadMu the reconnect goroutine would deadlock and
+// permanently block every later config write. Reentrancy safety must therefore
+// not depend on whether dconfig happens to be reachable.
+func TestEnsureReconnectDoesNotBlockOnReloadLock(t *testing.T) {
+	c := &Config{}
+
+	c.dsettingsReloadMu.Lock()
+	defer c.dsettingsReloadMu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		c.ensureDSettingsConnected()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("ensureDSettingsConnected blocked on dsettingsReloadMu: reconnect path is not reentrant-safe")
+	}
 }
 
 func TestRecoveryAndApplyOemFlagInvalidType(t *testing.T) {
@@ -658,7 +683,7 @@ func TestUpdateLastoreDaemonStatusFromDSettings(t *testing.T) {
 			Return(dbus.MakeVariant(int64(DisableUpdate|CanUpgrade)), nil)
 
 		c := &Config{dsLastoreManager: mgr}
-		c.updateLastoreDaemonStatus()
+		c.updateLastoreDaemonStatus(c.dsLastoreManager)
 		assert.Equal(t, LastoreDaemonStatus(DisableUpdate|CanUpgrade), c.lastoreDaemonStatus)
 	})
 	t.Run("error", func(t *testing.T) {
@@ -667,7 +692,7 @@ func TestUpdateLastoreDaemonStatusFromDSettings(t *testing.T) {
 			Return(dbus.Variant{}, errors.New("not available"))
 
 		c := &Config{dsLastoreManager: mgr, lastoreDaemonStatus: CanUpgrade}
-		c.updateLastoreDaemonStatus()
+		c.updateLastoreDaemonStatus(c.dsLastoreManager)
 		assert.Equal(t, LastoreDaemonStatus(CanUpgrade), c.lastoreDaemonStatus)
 	})
 }

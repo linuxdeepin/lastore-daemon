@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	ConfigManager "github.com/linuxdeepin/go-dbus-factory/org.desktopspec.ConfigManager"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +21,9 @@ func newTestConfig(t *testing.T) *Config {
 	tmpfile, err := os.CreateTemp(t.TempDir(), "config-*.json")
 	require.NoError(t, err)
 	tmpfile.Close()
-	cfg := &Config{filePath: tmpfile.Name()}
+	mgr := &ConfigManager.MockManager{}
+	mgr.MockInterfaceManager.On("SetValue", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	cfg := &Config{filePath: tmpfile.Name(), dsLastoreManager: mgr}
 	return cfg
 }
 
