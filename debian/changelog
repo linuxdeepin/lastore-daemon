@@ -1,3 +1,10 @@
+lastore-daemon (6.2.73) unstable; urgency=medium
+
+  * fix(security): move root temp files from /tmp to /run/lastore (#503)
+  * fix(encrypt): use crypto/rand (CSPRNG) instead of math/rand (#502)
+
+ -- wangzhaohui <wangzhaohui@uniontech.com>  Fri, 23 Oct 2026 12:39:48 +0800
+
 lastore-daemon (6.2.72) unstable; urgency=medium
 
   * fix(apt): re-enable immutable remount for dpkg --configure -a
