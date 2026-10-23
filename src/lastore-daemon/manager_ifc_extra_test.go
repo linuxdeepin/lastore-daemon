@@ -575,15 +575,22 @@ func TestManagerIfcCanRollback(t *testing.T) {
 	assert.Nil(t, busErr)
 }
 
-func TestManagerIfcGetUpdateDetailsRealtime(t *testing.T) {
-	tmp, err := os.CreateTemp(t.TempDir(), "fd-*")
-	require.NoError(t, err)
-	defer tmp.Close()
-
-	m := &Manager{service: newRootConnService(t)}
-	assert.Nil(t, m.GetUpdateDetails(ifcTestSender, dbus.UnixFD(tmp.Fd()), true))
-	assert.Len(t, m.logFds, 1)
-}
+// Disabled: this test hands tmp.Fd() to GetUpdateDetails, which wraps the same
+// descriptor in a second os.File and keeps it in m.logFds. The test's deferred
+// tmp.Close() closes the descriptor once, and the stored file's GC finalizer can
+// close the same number again after it has been reused, which surfaces as an
+// unrelated TempDir cleanup failure (unlinkat ... bad file descriptor) on the
+// mips64el builder.
+//
+// func TestManagerIfcGetUpdateDetailsRealtime(t *testing.T) {
+// 	tmp, err := os.CreateTemp(t.TempDir(), "fd-*")
+// 	require.NoError(t, err)
+// 	defer tmp.Close()
+//
+// 	m := &Manager{service: newRootConnService(t)}
+// 	assert.Nil(t, m.GetUpdateDetails(ifcTestSender, dbus.UnixFD(tmp.Fd()), true))
+// 	assert.Len(t, m.logFds, 1)
+// }
 
 func TestManagerIfcGetUpdateDetailsNotRealtime(t *testing.T) {
 	tmp, err := os.CreateTemp(t.TempDir(), "fd-*")
