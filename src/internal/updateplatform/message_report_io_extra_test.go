@@ -120,10 +120,15 @@ func TestGetUpdateTargetEmpty(t *testing.T) {
 	assert.Contains(t, result, "TargetVersion")
 }
 
-func TestIsUnstable(t *testing.T) {
-	// No DBus in test env, should return ReleaseVersion (1)
-	result := isUnstable()
-	assert.Equal(t, ReleaseVersion, result)
+func TestToIsUnstable(t *testing.T) {
+	assert.Equal(t, UnstableVersion, toIsUnstable("Enabled"))
+	for _, value := range []string{"Disabled", "", "unknown", "enabled", "ENABLED", " Enabled", "Enabled "} {
+		assert.Equal(t, ReleaseVersion, toIsUnstable(value), "value: %q", value)
+	}
+}
+
+func TestReadUpdateUnstable(t *testing.T) {
+	assert.NotPanics(t, func() { readUpdateUnstable() })
 }
 
 func TestGetPlatformRepoSources(t *testing.T) {
