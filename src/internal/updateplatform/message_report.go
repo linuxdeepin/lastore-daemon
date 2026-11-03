@@ -500,33 +500,35 @@ const (
 // dbusSystemBus 提取为变量以便测试注入失败路径。
 var dbusSystemBus = dbus.SystemBus
 
-func isUnstable() int {
+func readUpdateUnstable() string {
 	sysBus, err := dbusSystemBus()
 	if err != nil {
-		return ReleaseVersion
+		return ""
 	}
 	ds := ConfigManager.NewConfigManager(sysBus)
 	dsPath, err := ds.AcquireManager(0, "org.deepin.unstable", "org.deepin.unstable", "")
 	if err != nil {
 		logger.Warning(err)
-		return ReleaseVersion
+		return ""
 	}
 	unstableManager, err := ConfigManager.NewManager(sysBus, dsPath)
 	if err != nil {
 		logger.Warning(err)
-		return ReleaseVersion
+		return ""
 	}
 	v, err := unstableManager.Value(0, "updateUnstable")
 	if err != nil {
-		return ReleaseVersion
-	} else {
-		value := v.Value().(string)
-		if value == "Enabled" {
-			return UnstableVersion
-		} else {
-			return ReleaseVersion
-		}
+		return ""
 	}
+	value, _ := v.Value().(string)
+	return value
+}
+
+func toIsUnstable(updateUnstable string) int {
+	if updateUnstable == "Enabled" {
+		return UnstableVersion
+	}
+	return ReleaseVersion
 }
 
 type Version struct {
@@ -755,7 +757,7 @@ func (m *UpdatePlatformManager) genUpdateLogResponse() (*http.Response, error) {
 	}
 	values := url.Values{}
 	values.Add("baseline", m.targetBaseline)
-	values.Add("isUnstable", fmt.Sprintf("%d", isUnstable()))
+	values.Add("isUnstable", strconv.Itoa(toIsUnstable(readUpdateUnstable())))
 	policyUrl = policyUrl + "?" + values.Encode()
 	request, err := http.NewRequest(Urls[GetUpdateLog].method, policyUrl, nil)
 	if err != nil {

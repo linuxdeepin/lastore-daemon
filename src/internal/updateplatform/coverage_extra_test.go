@@ -328,12 +328,14 @@ func TestRecoverVersionLinkErrors(t *testing.T) {
 	assert.NotPanics(t, func() { m.RecoverVersionLink() })
 }
 
-func TestIsUnstableSystemBusError(t *testing.T) {
+func TestReadUpdateUnstableSystemBusError(t *testing.T) {
 	old := dbusSystemBus
 	dbusSystemBus = func() (*dbus.Conn, error) { return nil, errors.New("no system bus") }
 	t.Cleanup(func() { dbusSystemBus = old })
 
-	assert.Equal(t, ReleaseVersion, isUnstable())
+	value := readUpdateUnstable()
+	assert.Empty(t, value)
+	assert.Equal(t, ReleaseVersion, toIsUnstable(value))
 }
 
 func TestGenUpdatePolicyByTokenSuccess(t *testing.T) {

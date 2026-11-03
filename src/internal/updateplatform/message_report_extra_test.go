@@ -7,6 +7,8 @@ package updateplatform
 import (
 	"archive/tar"
 	"encoding/json"
+	"errors"
+	"github.com/godbus/dbus/v5"
 	Cfg "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/ratelimit"
 	"github.com/stretchr/testify/assert"
@@ -670,10 +672,14 @@ func TestGenCVEInfoResponseUpdatePlatform(t *testing.T) {
 }
 
 func TestGenUpdateLogResponseUpdatePlatform(t *testing.T) {
+	old := dbusSystemBus
+	dbusSystemBus = func() (*dbus.Conn, error) { return nil, errors.New("no system bus") }
+	t.Cleanup(func() { dbusSystemBus = old })
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/systemupdatelogs", r.URL.Path)
 		assert.NotEmpty(t, r.URL.Query().Get("baseline"))
-		assert.NotEmpty(t, r.URL.Query().Get("isUnstable"))
+		assert.Equal(t, "1", r.URL.Query().Get("isUnstable"))
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, `{"result":true,"code":0,"data":[]}`)
 	}))
