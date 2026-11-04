@@ -198,10 +198,16 @@ type packageLists struct {
 
 // PreInstalledPkgMeta 预装软件包元数据
 type PreInstalledPkgMeta struct {
-	PreCheck  []ShellCheck `json:"preCheck"`  // 更新前检查脚本
-	MidCheck  []ShellCheck `json:"midCheck"`  // 更新后检查脚本
-	PostCheck []ShellCheck `json:"postCheck"` // 更新完成重启后检查脚本
-	Packages  packageLists `json:"packages"`  // 基线软件包清单
+	PreCheck          []ShellCheck `json:"preCheck"`          // 更新前检查脚本
+	MidCheck          []ShellCheck `json:"midCheck"`          // 更新后检查脚本
+	PostCheck         []ShellCheck `json:"postCheck"`         // 更新完成重启后检查脚本
+	PreUpdateCheck    []ShellCheck `json:"preUpdateCheck"`    // 检查更新前检查脚本
+	PostUpdateCheck   []ShellCheck `json:"postUpdateCheck"`   // 检查更新后检查脚本
+	PreDownloadCheck  []ShellCheck `json:"preDownloadCheck"`  // 下载更新前检查脚本
+	PostDownloadCheck []ShellCheck `json:"postDownloadCheck"` // 下载更新后检查脚本
+	PreBackupCheck    []ShellCheck `json:"preBackupCheck"`    // 备份前检查脚本
+	PostBackupCheck   []ShellCheck `json:"postBackupCheck"`   // 备份后检查脚本
+	Packages          packageLists `json:"packages"`          // 基线软件包清单
 }
 
 // CVEInfo CVE 信息
