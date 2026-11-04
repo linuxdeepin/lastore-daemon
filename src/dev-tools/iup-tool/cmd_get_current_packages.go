@@ -4,8 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -18,10 +21,12 @@ var getCurrentPackagesCmd = &cobra.Command{
 }
 
 var currentPkgBaseline string
+var currentPkgShowScripts bool
 
 func init() {
 	getCurrentPackagesCmd.Flags().StringVarP(&currentPkgBaseline, "baseline", "b", "", "Current baseline number (required)")
 	_ = getCurrentPackagesCmd.MarkFlagRequired("baseline")
+	getCurrentPackagesCmd.Flags().BoolVar(&currentPkgShowScripts, "show-scripts", false, "Print decoded check scripts without executing them")
 	rootCmd.AddCommand(getCurrentPackagesCmd)
 }
 
@@ -36,6 +41,7 @@ func runGetCurrentPackages(cmd *cobra.Command, args []string) {
 		logger.Warningf("genCurrentPkgListsResponse failed: %v", err)
 		osExit(1)
 	}
+	defer response.Body.Close()
 
 	data, err := getResponseData(response, GetCurrentPkgLists)
 	if err != nil {
@@ -50,13 +56,59 @@ func runGetCurrentPackages(cmd *cobra.Command, args []string) {
 	}
 
 	logger.Infof("Current Package Lists for baseline: %s", currentPkgBaseline)
-	logger.Infof("PreCheck scripts: %d", len(pkgs.PreCheck))
-	logger.Infof("MidCheck scripts: %d", len(pkgs.MidCheck))
-	logger.Infof("PostCheck scripts: %d", len(pkgs.PostCheck))
+	for _, group := range currentPackageScriptGroups(pkgs) {
+		logger.Infof("%s scripts: %d", group.name, len(group.scripts))
+	}
+	if currentPkgShowScripts {
+		if err := printCurrentPackageScripts(cmd.OutOrStdout(), pkgs); err != nil {
+			logger.Warningf("show check scripts failed: %v", err)
+			osExit(1)
+		}
+	}
 	logger.Infof("Core packages: %d", len(pkgs.Packages.Core))
 	logger.Infof("Select packages: %d", len(pkgs.Packages.Select))
 	logger.Infof("Freeze packages: %d", len(pkgs.Packages.Freeze))
 	logger.Infof("Purge packages: %d", len(pkgs.Packages.Purge))
+}
+
+// packageScriptGroup 关联平台字段名、daemon 部署子目录及该阶段的脚本。
+type packageScriptGroup struct {
+	name    string
+	dir     string
+	scripts []ShellCheck
+}
+
+func currentPackageScriptGroups(pkgs *PreInstalledPkgMeta) []packageScriptGroup {
+	return []packageScriptGroup{
+		// 平台保留历史字段 preCheck/midCheck/postCheck，daemon 则使用 *_upgrade_check
+		// 目录；这里需与 PrepareCheckScripts 的映射一致，而非旧的 pre_check/mid_check/post_check。
+		{"preCheck", "pre_upgrade_check", pkgs.PreCheck},
+		{"midCheck", "mid_upgrade_check", pkgs.MidCheck},
+		{"postCheck", "post_upgrade_check", pkgs.PostCheck},
+		{"preUpdateCheck", "pre_update_check", pkgs.PreUpdateCheck},
+		{"postUpdateCheck", "post_update_check", pkgs.PostUpdateCheck},
+		{"preDownloadCheck", "pre_download_check", pkgs.PreDownloadCheck},
+		{"postDownloadCheck", "post_download_check", pkgs.PostDownloadCheck},
+		{"preBackupCheck", "pre_backup_check", pkgs.PreBackupCheck},
+		{"postBackupCheck", "post_backup_check", pkgs.PostBackupCheck},
+	}
+}
+
+func printCurrentPackageScripts(w io.Writer, pkgs *PreInstalledPkgMeta) error {
+	for _, group := range currentPackageScriptGroups(pkgs) {
+		for _, script := range group.scripts {
+			// Match the daemon's handling of padded and unpadded Base64.
+			content, err := base64.RawStdEncoding.DecodeString(strings.TrimRight(script.Shell, "="))
+			if err != nil {
+				return fmt.Errorf("decode %s/%s: %w", group.name, script.Name, err)
+			}
+			destination := filepath.Join("/var/lib/lastore/check", group.dir, script.Name)
+			if _, err := fmt.Fprintf(w, "===== %s / %s =====\nLastore-daemon destination: %s\n\n%s\n", group.name, script.Name, destination, content); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func genCurrentPkgListsResponse(requestUrl, token, baseline string) (*http.Response, error) {

@@ -126,12 +126,35 @@ make bin/iup-tool
 ### 参数
 
 - `-b, --baseline <baseline>`：**必选**，当前基线号。
+- `--show-scripts`：打印九组检查脚本的预期部署路径和解码后的明文，不执行脚本；无效 Base64 会报错并以非零状态退出。
 
 ### 使用示例
 
 ```bash
 ./iup-tool --debug get_current_packages --baseline pro-20-std-4-s-260105143125
 ```
+
+直接查看 shell 内容无需开启 debug（避免打印认证请求头）：
+
+```bash
+./iup-tool get_current_packages --baseline comm-25-std-0017 --show-scripts
+```
+
+默认输出九组脚本的数量：`preCheck`、`midCheck`、`postCheck`、
+`preUpdateCheck`、`postUpdateCheck`、`preDownloadCheck`、`postDownloadCheck`、
+`preBackupCheck`、`postBackupCheck`。未下发的字段按空列表处理。
+
+`--show-scripts` 在每个脚本标题后展示 daemon 的预期部署位置，再输出脚本内容，例如：
+
+```text
+===== preBackupCheck / 0_update_immutable_ctl.sh =====
+Lastore-daemon destination: /var/lib/lastore/check/pre_backup_check/0_update_immutable_ctl.sh
+
+#!/bin/bash
+...
+```
+
+该路径仅用于说明，不表示文件已存在；工具不会创建或执行脚本。
 
 ---
 

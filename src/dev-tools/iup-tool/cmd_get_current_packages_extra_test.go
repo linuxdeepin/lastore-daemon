@@ -5,13 +5,53 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestCurrentPackageScriptsAllStages(t *testing.T) {
+	fields := map[string]string{
+		"preCheck": "pre_upgrade_check", "midCheck": "mid_upgrade_check", "postCheck": "post_upgrade_check",
+		"preUpdateCheck": "pre_update_check", "postUpdateCheck": "post_update_check",
+		"preDownloadCheck": "pre_download_check", "postDownloadCheck": "post_download_check",
+		"preBackupCheck": "pre_backup_check", "postBackupCheck": "post_backup_check",
+	}
+	for field, dir := range fields {
+		for name, encoding := range map[string]*base64.Encoding{"padded": base64.StdEncoding, "raw": base64.RawStdEncoding} {
+			t.Run(field+"/"+name, func(t *testing.T) {
+				content := "#!/bin/sh\necho inspect-only\n"
+				data := fmt.Sprintf(`{%q:[{"name":"test.sh","shell":%q}]}`, field, encoding.EncodeToString([]byte(content)))
+				pkgs := getCurrentPkgListsData([]byte(data))
+				require.NotNil(t, pkgs)
+				var out bytes.Buffer
+				require.NoError(t, printCurrentPackageScripts(&out, pkgs))
+				assert.Equal(t, "===== "+field+" / test.sh =====\nLastore-daemon destination: /var/lib/lastore/check/"+dir+"/test.sh\n\n"+content+"\n", out.String())
+			})
+		}
+	}
+}
+
+func TestCurrentPackageScriptsInvalidBase64(t *testing.T) {
+	pkgs := &PreInstalledPkgMeta{PreCheck: []ShellCheck{{Name: "bad.sh", Shell: "!invalid!"}}}
+	var out bytes.Buffer
+	err := printCurrentPackageScripts(&out, pkgs)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "preCheck/bad.sh")
+}
+
+func TestCurrentPackageScriptsEmpty(t *testing.T) {
+	var out bytes.Buffer
+	require.NoError(t, printCurrentPackageScripts(&out, &PreInstalledPkgMeta{}))
+	assert.Empty(t, out.String())
+}
 
 func TestRunGetCurrentPackagesBaselineRequired(t *testing.T) {
 	restore, code := stubExit()
