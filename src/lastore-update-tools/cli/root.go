@@ -35,13 +35,17 @@ func (e *Error) Error() string {
 func initCheckEnv() error {
 	logger.Debugf("initialize check environment")
 	logger.Debugf("load config")
-	if err := RootCoreConfig.LoaderCfg(ConfigCfg); err != nil {
+	created, err := RootCoreConfig.LoadOrCreateCfg(ConfigCfg)
+	if err != nil {
 		logger.Errorf("load config failed:%v", err)
 		return &system.JobError{
 			ErrType:      system.ErrorCheckMetaInfoFile,
 			ErrDetail:    fmt.Sprintf("load config failed:%v", err),
 			IsCheckError: true,
 		}
+	}
+	if created {
+		logger.Infof("restored missing check config: %s", ConfigCfg)
 	}
 
 	check.SetDynHookTimeout(RootCoreConfig.DynHookTimeout)

@@ -9,6 +9,7 @@ import (
 	"github.com/linuxdeepin/go-lib/log"
 	utils2 "github.com/linuxdeepin/go-lib/utils"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
+	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/config/cache"
 	runcmd "github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/pkg/utils/cmd"
 	"github.com/linuxdeepin/lastore-daemon/src/lastore-update-tools/sysinfo"
@@ -18,7 +19,7 @@ var CheckBaseDir = "/var/lib/lastore/check/"
 
 // DynHookTimeout is the timeout in seconds for executing dynamic hook scripts.
 // Default is 1800 seconds (30 minutes). Can be overridden via configuration.
-var DynHookTimeout int = 1800
+var DynHookTimeout int = config.DefaultDynHookTimeout
 
 // SetDynHookTimeout sets the timeout for dynamic hook execution.
 func SetDynHookTimeout(seconds int) {
