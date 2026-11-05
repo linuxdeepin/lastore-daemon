@@ -8,10 +8,15 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/spf13/cobra"
 )
+
+// CheckBaseDir is the daemon's deployment directory for platform check scripts.
+const CheckBaseDir = "/var/lib/lastore/check"
 
 var getCurrentPackagesCmd = &cobra.Command{
 	Use:   "get_current_packages",
@@ -100,15 +105,30 @@ func printCurrentPackageScripts(w io.Writer, pkgs *PreInstalledPkgMeta) error {
 			// Match the daemon's handling of padded and unpadded Base64.
 			content, err := base64.RawStdEncoding.DecodeString(strings.TrimRight(script.Shell, "="))
 			if err != nil {
-				return fmt.Errorf("decode %s/%s: %w", group.name, script.Name, err)
+				return fmt.Errorf("decode %s/%s: %w", group.name, terminalSafeText(script.Name, false), err)
 			}
-			destination := filepath.Join("/var/lib/lastore/check", group.dir, script.Name)
-			if _, err := fmt.Fprintf(w, "===== %s / %s =====\nLastore-daemon destination: %s\n\n%s\n", group.name, script.Name, destination, content); err != nil {
+			destination := filepath.Join(CheckBaseDir, group.dir, script.Name)
+			if _, err := fmt.Fprintf(w, "===== %s / %s =====\nLastore-daemon destination: %s\n\n%s\n", group.name, terminalSafeText(script.Name, false), terminalSafeText(destination, false), terminalSafeText(string(content), true)); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// Render untrusted control and formatting characters visibly, not as terminal commands.
+// Only script bodies retain line feeds and tabs; metadata must stay on one line.
+func terminalSafeText(text string, multiline bool) string {
+	var out strings.Builder
+	for _, r := range text {
+		if unicode.IsPrint(r) || (multiline && (r == '\n' || r == '\t')) {
+			out.WriteRune(r)
+		} else {
+			quoted := strconv.QuoteRune(r)
+			out.WriteString(quoted[1 : len(quoted)-1])
+		}
+	}
+	return out.String()
 }
 
 func genCurrentPkgListsResponse(requestUrl, token, baseline string) (*http.Response, error) {

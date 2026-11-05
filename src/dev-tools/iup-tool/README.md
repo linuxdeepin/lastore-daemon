@@ -155,6 +155,8 @@ Lastore-daemon destination: /var/lib/lastore/check/pre_backup_check/0_update_imm
 ```
 
 该路径仅用于说明，不表示文件已存在；工具不会创建或执行脚本。
+脚本名、路径和正文中的终端控制字符会以可见转义显示（如 `\x1b`），
+正文保留换行和制表符；重定向输出同样使用该安全展示格式，并非原始脚本导出。
 
 ---
 

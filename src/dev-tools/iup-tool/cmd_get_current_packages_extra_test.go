@@ -33,7 +33,7 @@ func TestCurrentPackageScriptsAllStages(t *testing.T) {
 				require.NotNil(t, pkgs)
 				var out bytes.Buffer
 				require.NoError(t, printCurrentPackageScripts(&out, pkgs))
-				assert.Equal(t, "===== "+field+" / test.sh =====\nLastore-daemon destination: /var/lib/lastore/check/"+dir+"/test.sh\n\n"+content+"\n", out.String())
+				assert.Equal(t, "===== "+field+" / test.sh =====\nLastore-daemon destination: "+CheckBaseDir+"/"+dir+"/test.sh\n\n"+content+"\n", out.String())
 			})
 		}
 	}
@@ -51,6 +51,26 @@ func TestCurrentPackageScriptsEmpty(t *testing.T) {
 	var out bytes.Buffer
 	require.NoError(t, printCurrentPackageScripts(&out, &PreInstalledPkgMeta{}))
 	assert.Empty(t, out.String())
+}
+
+func TestCurrentPackageScriptsTerminalControls(t *testing.T) {
+	name := "bad\x1b[2J\n\r\t.sh"
+	content := "#!/bin/sh\n\techo 中文\n\x1b]52;c;clipboard\a\r\b\x00\x7f\u009b\u202e"
+	pkgs := &PreInstalledPkgMeta{PreCheck: []ShellCheck{{Name: name, Shell: base64.StdEncoding.EncodeToString([]byte(content))}}}
+	var out bytes.Buffer
+	require.NoError(t, printCurrentPackageScripts(&out, pkgs))
+	safeName := `bad\x1b[2J\n\r\t.sh`
+	assert.Contains(t, out.String(), "===== preCheck / "+safeName+" =====\n")
+	assert.Contains(t, out.String(), "destination: "+CheckBaseDir+"/pre_upgrade_check/"+safeName+"\n")
+	assert.Contains(t, out.String(), "#!/bin/sh\n\techo 中文\n"+`\x1b]52;c;clipboard\a\r\b\x00\x7f\u009b\u202e`)
+	for _, control := range []string{"\x1b", "\a", "\r", "\b", "\x00", "\x7f", "\u009b", "\u202e"} {
+		assert.NotContains(t, out.String(), control)
+	}
+	pkgs.PreCheck[0].Shell = "!invalid!"
+	err := printCurrentPackageScripts(io.Discard, pkgs)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), safeName)
+	assert.NotContains(t, err.Error(), "\x1b")
 }
 
 func TestRunGetCurrentPackagesBaselineRequired(t *testing.T) {
