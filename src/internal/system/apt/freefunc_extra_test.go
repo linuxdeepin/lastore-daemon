@@ -19,7 +19,7 @@ func prependFakeBin(t *testing.T, name, script string) string {
 	dir := t.TempDir()
 	path := filepath.Join(dir, name)
 	require.NoError(t, os.WriteFile(path, []byte("#!/bin/sh\n"+script), 0755))
-	t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return dir
 }
 

@@ -98,9 +98,20 @@ func TestUpgradeChecksEnvError(t *testing.T) {
 
 func TestPreUpgradeCheckInternal(t *testing.T) {
 	oldCache, oldSysPkg := ThisCacheInfo, SysPkgInfo
+	oldDyn, oldAPT := checkDynHookFn, checkAPTAndDPKGStateFn
+	oldLoad, oldDpkg := loadSysPkgInfoFn, checkDPKGVersionSupportFn
+	t.Cleanup(func() {
+		ThisCacheInfo, SysPkgInfo = oldCache, oldSysPkg
+		checkDynHookFn, checkAPTAndDPKGStateFn = oldDyn, oldAPT
+		loadSysPkgInfoFn, checkDPKGVersionSupportFn = oldLoad, oldDpkg
+	})
+
 	ThisCacheInfo = &cache.CacheInfo{}
 	SysPkgInfo = make(map[string]*cache.AppTinyInfo)
-	defer func() { ThisCacheInfo, SysPkgInfo = oldCache, oldSysPkg }()
+	checkDynHookFn = func(int8) error { return nil }
+	checkAPTAndDPKGStateFn = func() error { return nil }
+	loadSysPkgInfoFn = func(map[string]*cache.AppTinyInfo) error { return nil }
+	checkDPKGVersionSupportFn = func(map[string]*cache.AppTinyInfo) error { return nil }
 
 	err := preUpgradeCheck()
 	require.NoError(t, err)
@@ -110,8 +121,19 @@ func TestPreUpgradeCheckInternal(t *testing.T) {
 
 func TestMidUpgradeCheckInternal(t *testing.T) {
 	oldCache := ThisCacheInfo
+	oldAPT, oldDep := checkAPTAndDPKGStateFn, checkPkgDependencyFn
+	oldDisk, oldDyn := checkRootDiskFreeSpaceFn, checkDynHookFn
+	t.Cleanup(func() {
+		ThisCacheInfo = oldCache
+		checkAPTAndDPKGStateFn, checkPkgDependencyFn = oldAPT, oldDep
+		checkRootDiskFreeSpaceFn, checkDynHookFn = oldDisk, oldDyn
+	})
+
 	ThisCacheInfo = &cache.CacheInfo{}
-	defer func() { ThisCacheInfo = oldCache }()
+	checkAPTAndDPKGStateFn = func() error { return nil }
+	checkPkgDependencyFn = func() error { return nil }
+	checkRootDiskFreeSpaceFn = func(uint64) error { return nil }
+	checkDynHookFn = func(int8) error { return nil }
 
 	err := midUpgradeCheck()
 	require.NoError(t, err)

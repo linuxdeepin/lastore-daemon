@@ -213,7 +213,12 @@ func TestCheckImportantProcessInvalidStage(t *testing.T) {
 }
 
 func TestCheckAPTAndDPKGState(t *testing.T) {
-	// apt and dpkg should exist in the test environment
+	oldExist, oldState := checkAppIsExistFn, getSysPkgStateAndVersionFn
+	t.Cleanup(func() { checkAppIsExistFn, getSysPkgStateAndVersionFn = oldExist, oldState })
+
+	checkAppIsExistFn = func(string) (bool, error) { return true, nil }
+	getSysPkgStateAndVersionFn = func(string) (string, string, error) { return "ii", "1.0", nil }
+
 	err := CheckAPTAndDPKGState()
 	assert.NoError(t, err)
 }

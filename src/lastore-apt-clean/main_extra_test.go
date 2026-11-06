@@ -539,6 +539,15 @@ func writeFakeBin(t *testing.T, script string) string {
 	return fpath
 }
 
+// prependFakeBin creates a named fake binary and prepends its directory to PATH.
+func prependFakeBin(t *testing.T, name, script string) {
+	t.Helper()
+	dir := t.TempDir()
+	fpath := filepath.Join(dir, name)
+	require.NoError(t, os.WriteFile(fpath, []byte("#!/bin/sh\n"+script), 0755))
+	t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
+}
+
 func TestGetDebInfo(t *testing.T) {
 	orig := binDpkgDeb
 	defer func() { binDpkgDeb = orig }()
@@ -630,6 +639,7 @@ func TestAppendArchivesDirInfos(t *testing.T) {
 	defer func() { _archivesDirInfos = orig }()
 
 	t.Run("success", func(t *testing.T) {
+		prependFakeBin(t, "apt-config", `printf '%s\n' 'Dir=/' 'Dir::Cache=var/cache/apt/' 'Dir::Cache::archives=archives/'`)
 		_archivesDirInfos = nil
 		confPath := filepath.Join(t.TempDir(), "apt.conf")
 		content := "Dir \"/\";\nDir::Cache \"var/cache/apt/\";\nDir::Cache::archives \"archives/\";\n"
@@ -642,6 +652,7 @@ func TestAppendArchivesDirInfos(t *testing.T) {
 	})
 
 	t.Run("empty Dir triggers error", func(t *testing.T) {
+		prependFakeBin(t, "apt-config", `printf '%s\n' 'Dir='`)
 		_archivesDirInfos = nil
 		confPath := filepath.Join(t.TempDir(), "apt.conf")
 		// Empty Dir value makes system.GetArchivesDir return an error.

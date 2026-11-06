@@ -18,10 +18,15 @@ import (
 )
 
 func TestGetTokenFromAptConfig(t *testing.T) {
-	// apt-config should be available; the token may or may not be set
-	// Just verify it doesn't panic and returns a string
+	dir := t.TempDir()
+	script := filepath.Join(dir, "apt-config")
+	require.NoError(t, os.WriteFile(script, []byte(`#!/bin/sh
+printf '%s\n' 'Acquire::SmartMirrors::Token "test-token";'
+`), 0o755))
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
 	token := getTokenFromAptConfig()
-	_ = token
+	assert.Equal(t, "test-token", token)
 }
 
 func TestExtractMachineIDFromTokenEmpty(t *testing.T) {

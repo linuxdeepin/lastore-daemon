@@ -52,6 +52,7 @@ time.sleep(30)
 }
 
 func TestGetArchivesDirSuccessExtra(t *testing.T) {
+	prependFakeBin(t, "apt-config", `printf '%s\n' 'Dir=/aptroot' 'Dir::Cache=var/cache/apt' 'Dir::Cache::archives=archives/'`)
 	cfg := filepath.Join(t.TempDir(), "apt.conf")
 	content := "Dir \"/aptroot\";\nDir::Cache \"var/cache/apt\";\nDir::Cache::archives \"archives/\";\n"
 	require.NoError(t, os.WriteFile(cfg, []byte(content), 0644))

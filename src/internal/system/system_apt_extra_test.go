@@ -12,6 +12,16 @@ import (
 	"testing"
 )
 
+// prependFakeBin 在 PATH 前插入一个可执行假命令,返回目录。
+func prependFakeBin(t *testing.T, name, script string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, name)
+	require.NoError(t, os.WriteFile(path, []byte("#!/bin/sh\n"+script), 0755))
+	t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
+	return dir
+}
+
 func TestGuestBasePackageName(t *testing.T) {
 	tests := []struct {
 		input, want string
@@ -125,18 +135,21 @@ func TestQueryFileCacheSizeNonExistent(t *testing.T) {
 }
 
 func TestGetArchivesDirEmpty(t *testing.T) {
-	// With empty config path, apt-config may still work with defaults
-	// Just verify it doesn't panic and returns either a path or an error
+	const (
+		fakeDir      = "/"
+		fakeCacheDir = "var/cache/apt"
+		fakeArchives = "archives/"
+	)
+	prependFakeBin(t, "apt-config", `printf '%s\n' 'Dir=`+fakeDir+`' 'Dir::Cache=`+fakeCacheDir+`' 'Dir::Cache::archives=`+fakeArchives+`'`)
+
 	dir, err := GetArchivesDir("")
-	if err != nil {
-		assert.Empty(t, dir)
-	} else {
-		assert.NotEmpty(t, dir)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(fakeDir, fakeCacheDir, fakeArchives), dir,
+		"GetArchivesDir should join the directory values reported by apt-config")
 }
 
 func TestHandleDelayPackageHoldBash(t *testing.T) {
-	// Test hold and unhold on bash - should not panic
+	prependFakeBin(t, "apt-mark", "exit 0")
 	HandleDelayPackage(true, []string{"bash"})
 	HandleDelayPackage(false, []string{"bash"})
 }
