@@ -20,11 +20,20 @@ import (
 )
 
 func TestPostUpgrade(t *testing.T) {
-	// Empty data: no cache file, so the loop is skipped and the cache is removed.
+	// Empty data: with a non-existent cache file the loop is skipped and
+	// RemoveAll on the missing path is a no-op, so the function returns nil.
+	oldCache := postUpgradeCacheFile
+	t.Cleanup(func() { postUpgradeCacheFile = oldCache })
+	postUpgradeCacheFile = filepath.Join(t.TempDir(), "nonexistent.cache")
+
 	assert.NoError(t, postUpgrade(""))
 }
 
 func TestMainPostUpgrade(t *testing.T) {
+	oldCache := postUpgradeCacheFile
+	t.Cleanup(func() { postUpgradeCacheFile = oldCache })
+	postUpgradeCacheFile = filepath.Join(t.TempDir(), "nonexistent.cache")
+
 	set := flag.NewFlagSet("test", flag.ContinueOnError)
 	c := cli.NewContext(&cli.App{}, set, nil)
 	assert.NoError(t, MainPostUpgrade(c))

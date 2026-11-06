@@ -12,17 +12,17 @@ import (
 )
 
 func TestCheckPkgSystemErrorNoLock(t *testing.T) {
+	prependFakeBin(t, "apt-get", "exit 0")
 	noopIndicator := func(info system.JobProgressInfo) {}
-	// apt-get check with NoLocking should work on a properly configured system
 	err := CheckPkgSystemError(false, noopIndicator)
-	_ = err
+	assert.NoError(t, err)
 }
 
 func TestCheckPkgSystemErrorWithLock(t *testing.T) {
+	prependFakeBin(t, "apt-get", "exit 0")
 	noopIndicator := func(info system.JobProgressInfo) {}
-	// With lock=true, this needs remount permissions; may fail, just verify no panic
 	err := CheckPkgSystemError(true, noopIndicator)
-	_ = err
+	assert.NoError(t, err)
 }
 
 func TestParseProgressInfo_Dummy(t *testing.T) {
