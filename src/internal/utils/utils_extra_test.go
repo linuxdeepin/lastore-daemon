@@ -6,6 +6,7 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"github.com/linuxdeepin/go-lib/keyfile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,12 +48,12 @@ func TestValidURL(t *testing.T) {
 	assert.False(t, ValidURL(""))
 }
 
-func TestWriteFileSecurely(t *testing.T) {
+func TestWriteFileAtomic(t *testing.T) {
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "secure.txt")
 	content := []byte("secure content")
 
-	err := WriteFileSecurely(fp, content, 0644)
+	err := WriteFileAtomic(fp, content, 0644)
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(fp)
@@ -64,10 +65,10 @@ func TestWriteFileSecurely(t *testing.T) {
 	assert.Equal(t, os.FileMode(0644), info.Mode())
 }
 
-func TestWriteFileSecurelyNestedDir(t *testing.T) {
+func TestWriteFileAtomicNestedDir(t *testing.T) {
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "a", "b", "secure.txt")
-	err := WriteFileSecurely(fp, []byte("nested"), 0600)
+	err := WriteFileAtomic(fp, []byte("nested"), 0600)
 	require.NoError(t, err)
 	data, err := os.ReadFile(fp)
 	require.NoError(t, err)
@@ -193,32 +194,53 @@ func TestTeeToFileCreateError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestWriteFileSecurelyMkdirAllError(t *testing.T) {
+func TestWriteFileAtomicMkdirAllError(t *testing.T) {
 	// parent path is an existing file, so os.MkdirAll fails
 	dir := t.TempDir()
 	parentFile := filepath.Join(dir, "parent-is-file")
 	require.NoError(t, os.WriteFile(parentFile, []byte("x"), 0644))
 
-	err := WriteFileSecurely(filepath.Join(parentFile, "child", "out.txt"), []byte("data"), 0644)
+	err := WriteFileAtomic(filepath.Join(parentFile, "child", "out.txt"), []byte("data"), 0644)
 	assert.Error(t, err)
 }
 
-func TestWriteFileSecurelyRenameError(t *testing.T) {
+func TestWriteFileAtomicRenameError(t *testing.T) {
 	// Target path is an existing non-empty directory, so os.Rename fails.
 	dir := t.TempDir()
 	targetDir := filepath.Join(dir, "target")
 	require.NoError(t, os.MkdirAll(filepath.Join(targetDir, "child"), 0755))
 
-	err := WriteFileSecurely(targetDir, []byte("data"), 0644)
+	err := WriteFileAtomic(targetDir, []byte("data"), 0644)
 	assert.Error(t, err)
 }
 
-func TestWriteFileSecurelyCreateTempError(t *testing.T) {
+func TestWriteFileAtomicKeepsOldFileOnRenameError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "atomic.conf")
+	require.NoError(t, os.WriteFile(path, []byte("old"), 0600))
+
+	oldRename := renameFile
+	renameFile = func(string, string) error { return errors.New("rename failed") }
+	t.Cleanup(func() { renameFile = oldRename })
+
+	require.Error(t, WriteFileAtomic(path, []byte("new"), 0644))
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "old", string(data))
+
+	// The temporary file must be cleaned up on failure.
+	leftovers, err := filepath.Glob(filepath.Join(dir, ".*.tmp-*"))
+	require.NoError(t, err)
+	assert.Empty(t, leftovers)
+}
+
+func TestWriteFileAtomicCreateTempError(t *testing.T) {
 	// A base name longer than NAME_MAX (255) makes os.CreateTemp fail.
 	dir := t.TempDir()
 	longName := strings.Repeat("a", 300)
 
-	err := WriteFileSecurely(filepath.Join(dir, longName), []byte("data"), 0644)
+	err := WriteFileAtomic(filepath.Join(dir, longName), []byte("data"), 0644)
 	assert.Error(t, err)
 }
 

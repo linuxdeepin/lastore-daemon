@@ -1706,7 +1706,7 @@ func (m *UpdatePlatformManager) checkInReleaseFromPlatform() {
 			aptFile := filepath.Join(system.OnlineListPath, file)
 			defer os.Remove(lastoreFile)
 
-			err = internalutils.WriteFileSecurely(lastoreFile, data, 0644)
+			err = internalutils.WriteFileAtomic(lastoreFile, data, 0644)
 			if err != nil {
 				logger.Warning(err)
 				return

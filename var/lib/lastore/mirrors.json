@@ -276,18 +276,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "Dotsrc.",
-    "name": "dotsrc",
-    "url": "https://mirrors.dotsrc.org/deepin/",
-    "name_locale": {
-      "zh_CN": "dotsrc",
-      "zh_TW": "dotsrc"
-    },
-    "weight": 67,
-    "country": "DK",
-    "adjust_delay": 0
-  },
-  {
     "id": "ACC",
     "name": "Academic Computer Club",
     "url": "https://ftp.acc.umu.se/mirror/linuxdeepin/packages/",
@@ -324,48 +312,12 @@
     "adjust_delay": 0
   },
   {
-    "id": "CEDIA",
-    "name": "CEDIA",
-    "url": "https://mirror.cedia.org.ec/deepin/",
-    "name_locale": {
-      "zh_CN": "CEDIA",
-      "zh_TW": "CEDIA"
-    },
-    "weight": 59,
-    "country": "EC",
-    "adjust_delay": 0
-  },
-  {
-    "id": "sjtu-edu",
-    "name": "[CN] Shanghai Jiao Tong University",
-    "url": "https://ftp.sjtu.edu.cn/deepin/",
-    "name_locale": {
-      "zh_CN": "[CN] 上海交通大学",
-      "zh_TW": "[CN] 上海交通大学"
-    },
-    "weight": 59,
-    "country": "CN",
-    "adjust_delay": 0
-  },
-  {
     "id": "lzu",
     "name": "[CN] Lanzhou University",
     "url": "https://mirror.lzu.edu.cn/deepin/",
     "name_locale": {
       "zh_CN": "[CN] 兰州大学",
       "zh_TW": "[CN] 兰州大學"
-    },
-    "weight": 59,
-    "country": "CN",
-    "adjust_delay": 0
-  },
-  {
-    "id": "cqu",
-    "name": "[CN] Chongqing University",
-    "url": "https://mirrors.cqu.edu.cn/deepin/",
-    "name_locale": {
-      "zh_CN": "[CN] 重庆大学",
-      "zh_TW": "[CN] 重庆大學"
     },
     "weight": 59,
     "country": "CN",
@@ -405,30 +357,6 @@
     },
     "weight": 59,
     "country": "SG",
-    "adjust_delay": 0
-  },
-  {
-    "id": "Tuxinator",
-    "name": "Tuxinator",
-    "url": "https://mirror2.tuxinator.org/deepin/",
-    "name_locale": {
-      "zh_CN": "Tuxinator",
-      "zh_TW": "Tuxinator"
-    },
-    "weight": -1,
-    "country": "DE",
-    "adjust_delay": 0
-  },
-  {
-    "id": "GTlib",
-    "name": "[US] Georgia Institute of Technology",
-    "url": "http://www.gtlib.gatech.edu/pub/deepin/",
-    "name_locale": {
-      "zh_CN": "[US] 佐治亚理工学院",
-      "zh_TW": "[US] 佐治亞理工學院"
-    },
-    "weight": -1,
-    "country": "US",
     "adjust_delay": 0
   },
   {
@@ -492,42 +420,6 @@
     "adjust_delay": 0
   },
   {
-    "id": "CLUG",
-    "name": "[CZ] Czech Linux Users' Group",
-    "url": "https://ftp.linux.cz/pub/linux/deepin/",
-    "name_locale": {
-      "zh_CN": "[CZ] 捷克 Linux 用户组",
-      "zh_TW": "[CZ] 捷克 Linux 使用者群組"
-    },
-    "weight": 5000,
-    "country": "CZ",
-    "adjust_delay": 0
-  },
-  {
-    "id": "Foi",
-    "name": "[CZ] Faculty of Informatics",
-    "url": "https://ftp.fi.muni.cz/pub/linux/deepin/",
-    "name_locale": {
-      "zh_CN": "[CZ] 马萨里克大学信息学院",
-      "zh_TW": "[CZ] 馬薩里克大學資訊學院"
-    },
-    "weight": 5000,
-    "country": "CZ",
-    "adjust_delay": 0
-  },
-  {
-    "id": "CEDIA1",
-    "name": "[EC] CEDIA1",
-    "url": "https://mirror.ueb.edu.ec/deepin/",
-    "name_locale": {
-      "zh_CN": "CEDIA1",
-      "zh_TW": "CEDIA1"
-    },
-    "weight": 5000,
-    "country": "EC",
-    "adjust_delay": 0
-  },
-  {
     "id": "IRCAM",
     "name": "[FR] IRCAM",
     "url": "https://mirrors.ircam.fr/pub/deepin/",
@@ -537,18 +429,6 @@
     },
     "weight": 5000,
     "country": "FR",
-    "adjust_delay": 0
-  },
-  {
-    "id": "Hostsuisse",
-    "name": "[CH] Hostsuisse (ENIDAN Technologies GmbH)",
-    "url": "http://mirror.hostsuisse.com/deepin/packages",
-    "name_locale": {
-      "zh_CN": "Hostsuisse",
-      "zh_TW": "Hostsuisse"
-    },
-    "weight": 5000,
-    "country": "CH",
     "adjust_delay": 0
   },
   {
@@ -573,6 +453,258 @@
     },
     "weight": 5000,
     "country": "UK",
+    "adjust_delay": 0
+  },
+  {
+    "id": "TUNA",
+    "name": "[CN] Tsinghua University",
+    "url": "https://mirrors.tuna.tsinghua.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 清华大学",
+      "zh_TW": "[CN] 清華大學"
+    },
+    "weight": 60000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "NetEase",
+    "name": "[CN] NetEase",
+    "url": "https://mirrors.163.com/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 网易",
+      "zh_TW": "[CN] 網易"
+    },
+    "weight": 50000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "USTC",
+    "name": "[CN] USTC",
+    "url": "https://mirrors.ustc.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 中国科学技术大学",
+      "zh_TW": "[CN] 中國科學技術大學"
+    },
+    "weight": 40000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "SJTU",
+    "name": "[CN] Shanghai Jiao Tong University",
+    "url": "https://mirror.sjtu.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 上海交通大学",
+      "zh_TW": "[CN] 上海交通大學"
+    },
+    "weight": 25000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "Volcengine",
+    "name": "[CN] Volcano Engine",
+    "url": "https://mirrors.volces.com/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 火山引擎",
+      "zh_TW": "[CN] 火山引擎"
+    },
+    "weight": 20000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "HIT",
+    "name": "[CN] Harbin Institute of Technology",
+    "url": "https://mirrors.hit.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 哈尔滨工业大学",
+      "zh_TW": "[CN] 哈爾濱工業大學"
+    },
+    "weight": 12000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "ShanghaiTech",
+    "name": "[CN] ShanghaiTech University",
+    "url": "https://mirrors.shanghaitech.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 上海科技大学",
+      "zh_TW": "[CN] 上海科技大學"
+    },
+    "weight": 5000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "SYSU",
+    "name": "[CN] Sun Yat-sen University",
+    "url": "https://mirror.sysu.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 中山大学",
+      "zh_TW": "[CN] 中山大學"
+    },
+    "weight": 5000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "MirrorZOrg",
+    "name": "[CN] MirrorZ",
+    "url": "https://mirrors.mirrorz.org/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 联合镜像站（MirrorZ）",
+      "zh_TW": "[CN] 聯合鏡像站（MirrorZ）"
+    },
+    "weight": 5000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "OSSPLANET",
+    "name": "[FI] OSSPLANET",
+    "url": "https://mirror.eu.ossplanet.net/deepin/",
+    "name_locale": {
+      "zh_CN": "[FI] OSSPLANET",
+      "zh_TW": "[FI] OSSPLANET"
+    },
+    "weight": 3000,
+    "country": "FI",
+    "adjust_delay": 0
+  },
+  {
+    "id": "Netix",
+    "name": "[BG] Netix Ltd",
+    "url": "https://mirrors.netix.net/deepin/",
+    "name_locale": {
+      "zh_CN": "[BG] Netix",
+      "zh_TW": "[BG] Netix"
+    },
+    "weight": 3000,
+    "country": "BG",
+    "adjust_delay": 0
+  },
+  {
+    "id": "UNESP",
+    "name": "[BR] UNESP",
+    "url": "https://mirror.unesp.br/deepin/",
+    "name_locale": {
+      "zh_CN": "[BR] 圣保罗州立大学",
+      "zh_TW": "[BR] 聖保羅州立大學"
+    },
+    "weight": 3000,
+    "country": "BR",
+    "adjust_delay": 0
+  },
+  {
+    "id": "UNICAMP",
+    "name": "[BR] UNICAMP",
+    "url": "https://mirrors.ic.unicamp.br/deepin/",
+    "name_locale": {
+      "zh_CN": "[BR] 坎皮纳斯州立大学",
+      "zh_TW": "[BR] 坎皮納斯州立大學"
+    },
+    "weight": 3000,
+    "country": "BR",
+    "adjust_delay": 0
+  },
+  {
+    "id": "RIKEN",
+    "name": "[JP] RIKEN",
+    "url": "http://ftp.riken.go.jp/Linux/deepin/",
+    "name_locale": {
+      "zh_CN": "[JP] 理化学研究所",
+      "zh_TW": "[JP] 理化學研究所"
+    },
+    "weight": 3000,
+    "country": "JP",
+    "adjust_delay": 0
+  },
+  {
+    "id": "CQUPT",
+    "name": "[CN] Chongqing University of Posts and Telecommunications",
+    "url": "https://mirrors.cqupt.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 重庆邮电大学",
+      "zh_TW": "[CN] 重慶郵電大學"
+    },
+    "weight": 3000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "HA-EDU",
+    "name": "[CN] Henan Education Network",
+    "url": "https://mirrors.ha.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 河南省教育网",
+      "zh_TW": "[CN] 河南省教育網"
+    },
+    "weight": 3000,
+    "country": "CN",
+    "adjust_delay": 0
+  },
+  {
+    "id": "Yandex",
+    "name": "[RU] Yandex Linux Mirror",
+    "url": "http://mirror.yandex.ru/mirrors/deepin/packages/",
+    "name_locale": {
+      "zh_CN": "[RU] Yandex Linux 镜像",
+      "zh_TW": "[RU] Yandex Linux 鏡像"
+    },
+    "weight": 1500,
+    "country": "RU",
+    "adjust_delay": 0
+  },
+  {
+    "id": "XeonBD",
+    "name": "[BD] XeonBD",
+    "url": "http://mirror.xeonbd.com/deepin/",
+    "name_locale": {
+      "zh_CN": "[BD] XeonBD",
+      "zh_TW": "[BD] XeonBD"
+    },
+    "weight": 1000,
+    "country": "BD",
+    "adjust_delay": 0
+  },
+  {
+    "id": "dotsrc",
+    "name": "[DK] dotsrc.org",
+    "url": "https://mirror.dotsrc.org/deepin/",
+    "name_locale": {
+      "zh_CN": "[DK] dotsrc.org",
+      "zh_TW": "[DK] dotsrc.org"
+    },
+    "weight": 67,
+    "country": "DK",
+    "adjust_delay": 0
+  },
+  {
+    "id": "AARNET",
+    "name": "[AU] AARNet",
+    "url": "https://mirror.aarnet.edu.au/deepin/",
+    "name_locale": {
+      "zh_CN": "[AU] AARNet",
+      "zh_TW": "[AU] AARNet"
+    },
+    "weight": 66,
+    "country": "AU",
+    "adjust_delay": 0
+  },
+  {
+    "id": "bfsu-edu",
+    "name": "[CN] Beijing Foreign Studies University",
+    "url": "https://mirrors.bfsu.edu.cn/deepin/",
+    "name_locale": {
+      "zh_CN": "[CN] 北京外国语大学",
+      "zh_TW": "[CN] 北京外國語大學"
+    },
+    "weight": 59,
+    "country": "CN",
     "adjust_delay": 0
   }
 ]

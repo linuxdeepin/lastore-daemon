@@ -200,7 +200,7 @@ func TestConfigUseIncrementalUpdate(t *testing.T) {
 		getEditionNameFn = func() (string, error) { return "Community", nil }
 		isSmartMirrorEnabledFn = func() bool { return false }
 
-		c := &Config{IncrementalUpdate: true, MirrorSource: officialCDNMirrorSourceID}
+		c := &Config{IncrementalUpdate: true, MirrorSource: OfficialCDNMirrorSourceID}
 		assert.True(t, c.UseIncrementalUpdate())
 	})
 
@@ -208,7 +208,7 @@ func TestConfigUseIncrementalUpdate(t *testing.T) {
 		getEditionNameFn = func() (string, error) { return "Community", nil }
 		isSmartMirrorEnabledFn = func() bool { return true }
 
-		c := &Config{IncrementalUpdate: true, MirrorSource: officialCDNMirrorSourceID}
+		c := &Config{IncrementalUpdate: true, MirrorSource: OfficialCDNMirrorSourceID}
 		assert.False(t, c.UseIncrementalUpdate())
 	})
 
@@ -224,7 +224,7 @@ func TestConfigUseIncrementalUpdate(t *testing.T) {
 		getEditionNameFn = func() (string, error) { return "Community", nil }
 		isSmartMirrorEnabledFn = func() bool { return false }
 
-		c := &Config{IncrementalUpdate: false, MirrorSource: officialCDNMirrorSourceID}
+		c := &Config{IncrementalUpdate: false, MirrorSource: OfficialCDNMirrorSourceID}
 		assert.False(t, c.UseIncrementalUpdate())
 	})
 }

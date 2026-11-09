@@ -354,12 +354,12 @@ func (m *userAgentMap) saveRecordContent(recordFilePath string) {
 		return
 	}
 	// recordFilePath 位于 /run/lastore：先确保目录存在且为 root 独占
-	// （WriteFileSecurely 的兜底 MkdirAll 是 0755，不能作为 0700 的保证）
+	// （WriteFileAtomic 的兜底 MkdirAll 是 0755，不能作为 0700 的保证）
 	if err := utils.EnsureSecureDir(filepath.Dir(recordFilePath)); err != nil {
 		logger.Warning(err)
 		return
 	}
-	err = utils.WriteFileSecurely(recordFilePath, content, 0600)
+	err = utils.WriteFileAtomic(recordFilePath, content, 0600)
 	if err != nil {
 		logger.Warning(err)
 	}

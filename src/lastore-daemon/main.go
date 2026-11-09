@@ -87,6 +87,11 @@ func main() {
 		}()
 	}
 
+	// Resolve the mirror source before constructing the APT system: resetting a
+	// removed source changes UseIncrementalUpdate(), which is captured by
+	// dut.NewSystem.
+	resolveMirrorSource(config)
+
 	aptImpl := dut.NewSystem(config.NonUnknownList, config.OtherSourceList, config.UseIncrementalUpdate())
 	system.SetSystemUpdate(config.PlatformUpdate) // 设置是否通过平台更新
 	// 安装/卸载接口不再追加可执行路径白名单，改由 allow-caller、特殊 uid 和 polkit 共同鉴权。

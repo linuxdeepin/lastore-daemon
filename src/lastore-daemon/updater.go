@@ -20,6 +20,7 @@ import (
 	. "github.com/linuxdeepin/lastore-daemon/src/internal/config"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/system"
 	"github.com/linuxdeepin/lastore-daemon/src/internal/updateplatform"
+	internalutils "github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 
 	"github.com/godbus/dbus/v5"
 	systemd1 "github.com/linuxdeepin/go-dbus-factory/system/org.freedesktop.systemd1"
@@ -29,10 +30,14 @@ import (
 )
 
 const (
-	p2pService         = "uos-p2p.service"
-	defaultSpeedLimit  = 1024
-	deliveryMethodPath = "/usr/lib/apt/methods/delivery"
+	p2pService            = "uos-p2p.service"
+	defaultSpeedLimit     = 1024
+	deliveryMethodPath    = "/usr/lib/apt/methods/delivery"
+	smartMirrorConfigName = "99mirrors.conf"
 )
+
+// mirrorsJSONPath is a variable so tests can point it at a temporary file.
+var mirrorsJSONPath = filepath.Join(system.VarLibDir, "mirrors.json")
 
 type ApplicationUpdateInfo struct {
 	Id             string
@@ -94,6 +99,10 @@ type Updater struct {
 	P2PUpdateSupport bool // 是否支持p2p更新
 }
 
+// NewUpdater builds the Updater from the given config. It does not validate
+// the mirror source: callers must run resolveMirrorSource before constructing
+// the APT system (see main), so that the D-Bus property, config.json and the
+// captured incremental-update mode all use the final source.
 func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater {
 	u := &Updater{
 		manager:                     m,
@@ -122,6 +131,56 @@ func NewUpdater(service *dbusutil.Service, m *Manager, config *Config) *Updater 
 	return u
 }
 
+// resolveMirrorSource checks whether the configured MirrorSource ID still
+// exists in mirrors.json. If the stored ID has been removed (e.g. during a
+// mirror list update), it resets MirrorSource to the official default and
+// updates the apt config accordingly.
+//
+// It is called from main before the APT system is constructed, so that
+// UseIncrementalUpdate() sees the final MirrorSource value; NewUpdater
+// deliberately performs no mirror validation of its own.
+func resolveMirrorSource(config *Config) {
+	if config == nil || config.MirrorSource == "" {
+		return
+	}
+
+	var defaultURL string
+	for _, m := range loadMirrorSources("") {
+		if m.Id == config.MirrorSource {
+			return
+		}
+		if m.Id == OfficialCDNMirrorSourceID {
+			defaultURL = m.Url
+		}
+	}
+	if defaultURL == "" {
+		// mirrors.json may be missing or malformed. Without the default entry we
+		// cannot rewrite the apt config, so keep the current source instead of
+		// changing config.json while apt keeps using the old mirror.
+		logger.Warningf("configured MirrorSource %q not found and no usable default mirror in mirrors.json, keeping it", config.MirrorSource)
+		return
+	}
+	if err := validateMirrorURL(defaultURL); err != nil {
+		logger.Warningf("default mirror URL %q is invalid, keeping MirrorSource %q: %v", defaultURL, config.MirrorSource, err)
+		return
+	}
+
+	logger.Warningf("configured MirrorSource %q not found in mirrors.json, resetting to %q", config.MirrorSource, OfficialCDNMirrorSourceID)
+	// Write the apt config first: it is the switch that actually changes which
+	// mirror APT uses. Only after it succeeds do we update the persisted source,
+	// so a failed reset leaves config.json and apt consistent with each other.
+	if err := SetAPTSmartMirror(defaultURL); err != nil {
+		logger.Warningf("reset MirrorSource: SetAPTSmartMirror(%q) failed: %v", defaultURL, err)
+		return
+	}
+	// If SetMirrorSource fails the apt config already points to the default
+	// mirror while config.json keeps the old ID; the next restart will
+	// re-run resolveMirrorSource and self-heal the inconsistency.
+	if err := config.SetMirrorSource(OfficialCDNMirrorSourceID); err != nil {
+		logger.Warningf("reset MirrorSource: save config failed: %v", err)
+	}
+}
+
 func getStartupDownloadSpeedLimitConfig(config *Config) string {
 	startupConfig := strings.TrimSpace(config.DownloadSpeedLimitConfig)
 	if startupConfig != "" {
@@ -139,7 +198,7 @@ func getStartupDownloadSpeedLimitConfig(config *Config) string {
 	return startupConfig
 }
 
-// validateMirrorURL 验证镜像源 URL（只允许 http/https）
+// validateMirrorURL 验证镜像源 URL（只允许带主机名的 http/https 地址）
 func validateMirrorURL(rawURL string) error {
 	if rawURL == "" {
 		return fmt.Errorf("URL is empty")
@@ -154,14 +213,27 @@ func validateMirrorURL(rawURL string) error {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return fmt.Errorf("unsupported scheme: %s (only http/https allowed)", parsed.Scheme)
 	}
+	if parsed.Host == "" {
+		return fmt.Errorf("URL has no host: %q", rawURL)
+	}
 
 	return nil
 }
 
+func aptSmartMirrorConfig(url string) string {
+	return fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)
+}
+
+// SetAPTSmartMirror atomically replaces the APT smart-mirror config, keeping
+// the permissions of an existing file.
 func SetAPTSmartMirror(url string) error {
-	return os.WriteFile("/etc/apt/apt.conf.d/99mirrors.conf",
-		([]byte)(fmt.Sprintf("Acquire::SmartMirrors::MirrorSource %q;", url)),
-		0644) // #nosec G306
+	path := filepath.Join(aptConfDir, smartMirrorConfigName)
+
+	perm := os.FileMode(0644)
+	if info, err := os.Stat(path); err == nil {
+		perm = info.Mode().Perm()
+	}
+	return internalutils.WriteFileAtomic(path, []byte(aptSmartMirrorConfig(url)), perm)
 }
 
 func (u *Updater) setMirrorSource(id string) error {
@@ -170,7 +242,7 @@ func (u *Updater) setMirrorSource(id string) error {
 	}
 
 	found := false
-	for _, m := range u.listMirrorSources("") {
+	for _, m := range loadMirrorSources("") {
 		if m.Id != id {
 			continue
 		}
@@ -321,9 +393,9 @@ type LocaleMirrorSource struct {
 	Name string
 }
 
-func (u *Updater) listMirrorSources(lang string) []LocaleMirrorSource {
+func loadMirrorSources(lang string) []LocaleMirrorSource {
 	var raws []system.MirrorSource
-	_ = system.DecodeJson(filepath.Join(system.VarLibDir, "mirrors.json"), &raws)
+	_ = system.DecodeJson(mirrorsJSONPath, &raws)
 
 	makeLocaleMirror := func(lang string, m system.MirrorSource) LocaleMirrorSource {
 		ms := LocaleMirrorSource{

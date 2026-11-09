@@ -220,13 +220,24 @@ func EnsureRuntimeDir() error {
 	return EnsureSecureDir(RuntimeDirPath)
 }
 
-func WriteFileSecurely(path string, content []byte, perm os.FileMode) error {
+// renameFile is a seam for tests to exercise the rename failure path.
+var renameFile = os.Rename
+
+// WriteFileAtomic writes content to path atomically: missing parent
+// directories are created with 0755, then the data is written to a dot-prefixed
+// temporary file in the same directory, fsynced and closed, and renamed over
+// path. The rename is followed by a best-effort directory fsync. The target is
+// never truncated, so a failed write leaves the previous file untouched.
+//
+// Callers that need a stricter directory mode (e.g. 0700) must create the parent
+// directory themselves; MkdirAll is a no-op for directories that already exist.
+func WriteFileAtomic(path string, content []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	tmpFile, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
 		return err
 	}
@@ -252,11 +263,16 @@ func WriteFileSecurely(path string, content []byte, perm os.FileMode) error {
 	if err = tmpFile.Close(); err != nil {
 		return err
 	}
-	if err = os.Rename(tmpPath, path); err != nil {
+	if err = renameFile(tmpPath, path); err != nil {
 		return err
 	}
-
 	cleanup = false
+
+	// Best effort: make the rename itself durable across a crash.
+	if d, err := os.Open(dir); err == nil {
+		_ = d.Sync()
+		_ = d.Close()
+	}
 	return nil
 }
 
@@ -265,5 +281,5 @@ func SaveKeyFileSecurely(path string, kf *keyfile.KeyFile, perm os.FileMode) err
 	if err := kf.SaveToWriter(&buf); err != nil {
 		return err
 	}
-	return WriteFileSecurely(path, buf.Bytes(), perm)
+	return WriteFileAtomic(path, buf.Bytes(), perm)
 }
