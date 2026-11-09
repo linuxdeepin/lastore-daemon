@@ -56,12 +56,18 @@ func TestDistUpgradeFailingConn(t *testing.T) {
 
 func TestDistUpgradePartlyNoDistUpgradeMode(t *testing.T) {
 	// Fake bus reports the caller as uid 0, so GetConnUID succeeds without a
-	// real bus or polkit; the empty status manager then yields mode 0 and the
-	// method bails out before starting any upgrade.
+	// real bus or polkit. Clear every update status explicitly: the test
+	// config may inherit CanUpgrade/Upgrading states from the host dsettings,
+	// which would otherwise carry the call past the mode check into a real
+	// upgrade path where a minimally built Manager panics on nil fields.
+	sm := newTestStatusManager(t)
+	for _, typ := range system.AllInstallUpdateType() {
+		sm.updateModeStatusObj[typ.JobType()] = system.NotDownload
+	}
 	m := &Manager{
 		service:        newRootConnService(t),
 		updatePlatform: &updateplatform.UpdatePlatformManager{},
-		statusManager:  newTestStatusManager(t),
+		statusManager:  sm,
 	}
 	_, busErr := m.distUpgradePartly(ifcTestSender, system.SystemUpdate, false)
 	assert.NotNil(t, busErr)
