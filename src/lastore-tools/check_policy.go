@@ -98,7 +98,7 @@ func writeCheckPolicyCache(cacheFile, sum string, t time.Time) error {
 		return err
 	}
 	content := sum + "\n" + t.Format(time.RFC3339) + "\n"
-	return utils.WriteFileSecurely(cacheFile, []byte(content), 0600)
+	return utils.WriteFileAtomic(cacheFile, []byte(content), 0600)
 }
 
 // MainCheckPolicy 检查更新策略，策略变化拉起lastore-daemon处理

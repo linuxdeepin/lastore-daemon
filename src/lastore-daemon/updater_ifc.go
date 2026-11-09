@@ -88,7 +88,7 @@ func (u *Updater) ListMirrorSources(sender dbus.Sender, lang string) (mirrorSour
 	if err := u.manager.checkInvokePermission(sender); err != nil {
 		return nil, dbusutil.ToError(err)
 	}
-	return u.listMirrorSources(lang), nil
+	return loadMirrorSources(lang), nil
 }
 
 // SetMirrorSource sets the mirror source used to download packages.

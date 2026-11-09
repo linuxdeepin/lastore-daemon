@@ -152,7 +152,7 @@ func (m *Manager) saveCacheJob() {
 		logger.Warning(err)
 		return
 	}
-	err = utils.WriteFileSecurely(lastoreJobCacheJson, b, 0600)
+	err = utils.WriteFileAtomic(lastoreJobCacheJson, b, 0600)
 	if err != nil {
 		logger.Warning(err)
 	}

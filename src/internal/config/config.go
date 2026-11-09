@@ -1019,7 +1019,10 @@ func (c *Config) SetIncrementalUpdate(enable bool) error {
 	return c.save(DSettingsKeyIncrementalUpdate, enable)
 }
 
-const officialCDNMirrorSourceID = "default"
+// OfficialCDNMirrorSourceID is the mirror source ID of the official CDN
+// mirror. It is also the fallback used when a configured source disappears
+// from mirrors.json.
+const OfficialCDNMirrorSourceID = "default"
 
 type smartMirrorConfig struct {
 	Enable bool
@@ -1050,7 +1053,7 @@ func (c *Config) UseIncrementalUpdate() bool {
 	}
 
 	if edition == "Community" {
-		return !isSmartMirrorEnabledFn() && c.MirrorSource == officialCDNMirrorSourceID
+		return !isSmartMirrorEnabledFn() && c.MirrorSource == OfficialCDNMirrorSourceID
 	}
 
 	return true
@@ -1301,12 +1304,12 @@ func (c *Config) SetClassifiedUpdatablePackages(pkgMap map[string][]string) erro
 		return err
 	}
 	c.ClassifiedUpdatablePackages = pkgMap
-	return utils.WriteFileSecurely(classifiedCachePath, content, 0644)
+	return utils.WriteFileAtomic(classifiedCachePath, content, 0644)
 }
 
 func (c *Config) SetOnlineCache(cache string) error {
 	c.OnlineCache = cache
-	return utils.WriteFileSecurely(onlineCachePath, []byte(cache), 0644)
+	return utils.WriteFileAtomic(onlineCachePath, []byte(cache), 0644)
 }
 
 func (c *Config) GetPlatformStatusDisable(status DisabledStatus) bool {

@@ -182,7 +182,7 @@ func (m *Manager) startOfflineTask() {
 	}
 
 	// lastoreUnitCache 位于 /run/lastore：先确保目录存在且为 root 独占
-	// （SaveKeyFileSecurely 的兜底 MkdirAll 是 0755，不能作为 0700 的保证）
+	// （WriteFileAtomic 的兜底 MkdirAll 是 0755，不能作为 0700 的保证）
 	if err := utils.EnsureSecureDir(filepath.Dir(lastoreUnitCache)); err != nil {
 		logger.Warning(err)
 		return

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	nativesmartmirror "github.com/linuxdeepin/lastore-daemon/src/internal/smartmirror"
+	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
 const (
@@ -144,30 +145,10 @@ func persistQualityData(mq *MirrorQuality, fpath string) error {
 	if err != nil {
 		return err
 	}
-	return atomicQualityWrite(fpath, data)
-}
-
-func atomicQualityWrite(fpath string, data []byte) error {
-	dir := filepath.Dir(fpath)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	// The state directory is normally created by systemd; keep the 0700
+	// fallback here because the util creates directories with 0755.
+	if err := os.MkdirAll(filepath.Dir(fpath), 0700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".smartmirror-quality-")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	defer func() { _ = os.Remove(tmpName) }()
-	if _, err = tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err = tmp.Chmod(0644); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err = tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmpName, fpath)
+	return utils.WriteFileAtomic(fpath, data, 0644)
 }

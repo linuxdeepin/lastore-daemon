@@ -89,7 +89,7 @@ func TestGenerateApplications(t *testing.T) {
 func TestGenerateApplicationsWriteError(t *testing.T) {
 	dir := t.TempDir()
 	// fpath is a non-empty directory: the cache decode succeeds, then the
-	// final os.Rename in WriteFileSecurely fails, exercising the error branch.
+	// final os.Rename in WriteFileAtomic fails, exercising the error branch.
 	fpath := filepath.Join(dir, "apps.json")
 	require.NoError(t, os.MkdirAll(filepath.Join(fpath, "child"), 0755))
 

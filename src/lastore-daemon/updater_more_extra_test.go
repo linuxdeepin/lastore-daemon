@@ -4,6 +4,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -26,8 +28,16 @@ func TestUpdaterNewUpdater(t *testing.T) {
 }
 
 func TestSetAPTSmartMirror(t *testing.T) {
-	// Writes a config file; permission may be denied in test env, but must not panic.
-	_ = SetAPTSmartMirror("http://example.com/mirror")
+	dir := t.TempDir()
+	old := aptConfDir
+	aptConfDir = dir
+	t.Cleanup(func() { aptConfDir = old })
+
+	require.NoError(t, SetAPTSmartMirror("http://example.com/mirror"))
+
+	data, err := os.ReadFile(filepath.Join(dir, smartMirrorConfigName))
+	require.NoError(t, err)
+	assert.Equal(t, aptSmartMirrorConfig("http://example.com/mirror"), string(data))
 }
 
 func TestUpdaterSetMirrorSourceEmptyID(t *testing.T) {
@@ -46,10 +56,21 @@ func TestUpdaterRefreshUpgradeDeliveryService(t *testing.T) {
 }
 
 func TestUpdaterListMirrorSources(t *testing.T) {
-	u := &Updater{}
-	// /var/lib/lastore/mirrors.json may or may not exist on the host; just
-	// exercise the decode path without asserting emptiness.
-	_ = u.listMirrorSources("zh_CN")
+	path := filepath.Join(t.TempDir(), "mirrors.json")
+	require.NoError(t, os.WriteFile(path, []byte(`[
+		{"id": "Aliyun", "url": "https://aliyun.example.com/deepin/", "weight": 10,
+		 "name_locale": {"zh_CN": "阿里云"}},
+		{"id": "Disabled", "url": "https://disabled.example.com/deepin/", "weight": -1}
+	]`), 0644))
+	old := mirrorsJSONPath
+	mirrorsJSONPath = path
+	t.Cleanup(func() { mirrorsJSONPath = old })
+
+	got := loadMirrorSources("zh_CN")
+	require.Len(t, got, 1, "negative-weight sources must be filtered out")
+	assert.Equal(t, "Aliyun", got[0].Id)
+	assert.Equal(t, "https://aliyun.example.com/deepin/", got[0].Url)
+	assert.Equal(t, "阿里云", got[0].Name)
 }
 
 func TestUpdaterSetInstallUpdateTimePermissionDenied(t *testing.T) {
