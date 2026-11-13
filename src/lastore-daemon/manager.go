@@ -1009,6 +1009,47 @@ const (
 	actionRebootShutdownFront = "dbus-send,--session,--print-reply,--dest=org.deepin.dde.ShutdownFront1,/org/deepin/dde/ShutdownFront1,org.deepin.dde.ShutdownFront1.Restart"
 )
 
+// formatNotificationActions renders notification actions as a GVariant
+// literal. The type annotation keeps gdbus parseable even when it cannot
+// introspect the notification service. json.Marshal must not be applied to a
+// nil slice here: it produces "null", which is not a valid "as" value.
+func formatNotificationActions(actions []string) string {
+	if len(actions) == 0 {
+		return "@as []"
+	}
+	actionsJSON, err := json.Marshal(actions)
+	if err != nil {
+		logger.Warningf("failed to marshal notification actions: %v", err)
+		return "@as []"
+	}
+	return "@as " + string(actionsJSON)
+}
+
+// formatNotificationHints renders notification hints as a GVariant "a{sv}"
+// literal, with an explicit type for the empty case.
+func formatNotificationHints(hints map[string]dbus.Variant) string {
+	var hintsList []string
+	for key, value := range hints {
+		s, ok := value.Value().(string)
+		if !ok {
+			logger.Warningf(
+				"unexpected hint value type: key=%s type=%T",
+				key,
+				value.Value(),
+			)
+			continue
+		}
+
+		keyJSON, _ := json.Marshal(key)
+		valueJSON, _ := json.Marshal(s)
+		hintsList = append(hintsList, string(keyJSON)+`:<`+string(valueJSON)+`>`)
+	}
+	if len(hintsList) == 0 {
+		return "@a{sv} {}"
+	}
+	return "@a{sv} {" + strings.Join(hintsList, `,`) + "}"
+}
+
 func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) uint32 {
 	if !m.updater.UpdateNotify {
 		logger.Info("UpdateNotify is false")
@@ -1034,26 +1075,8 @@ func (m *Manager) sendNotify(appName string, replacesId uint32, appIcon string, 
 		if app == updateNotifyShowOptional {
 			app = updateNotifyShow
 		}
-		actionsJSON, _ := json.Marshal(actions)
-		actionsArg := string(actionsJSON)
-
-		var hintsList []string
-		for key, value := range hints {
-			s, ok := value.Value().(string)
-			if !ok {
-				logger.Warningf(
-					"unexpected hint value type: key=%s type=%T",
-					key,
-					value.Value(),
-				)
-				continue
-			}
-
-			keyJSON, _ := json.Marshal(key)
-			valueJSON, _ := json.Marshal(s)
-			hintsList = append(hintsList, string(keyJSON)+`:<`+string(valueJSON)+`>`)
-		}
-		hintsArg := "{" + strings.Join(hintsList, `,`) + "}"
+		actionsArg := formatNotificationActions(actions)
+		hintsArg := formatNotificationHints(hints)
 		timeout := expireTimeout
 		if timeout < 0 {
 			timeout = 5000 // -1: default 5s
