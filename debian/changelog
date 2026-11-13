@@ -1,3 +1,17 @@
+lastore-daemon (6.2.74) unstable; urgency=medium
+
+  * fix(smartmirror): reset removed mirror source before building APT system
+  * test: make no-dist-upgrade-mode case deterministic
+  * test: mock apt commands and system checks in test cases
+  * fix(update-tools): restore missing check configuration
+  * fix(iup-tool): escape terminal controls in script output
+  * feat(iup-tool): display check scripts and deployment paths
+  * fix: separate unstable config reading from conversion
+  * test: disable flaky GetUpdateDetailsRealtime case (#508)
+  * test: skip flaky unit tests on the mips64el builder (#507)
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Fri, 13 Nov 2026 13:14:36 +0800
+
 lastore-daemon (6.2.73) unstable; urgency=medium
 
   * fix(security): move root temp files from /tmp to /run/lastore (#503)
