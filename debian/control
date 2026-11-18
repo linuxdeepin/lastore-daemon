@@ -25,7 +25,6 @@ Build-Depends:
  golang-github-google-uuid-dev,
  golang-github-spf13-cobra-dev,
  golang-github-stretchr-testify-dev,
- libsystemd-dev,
  libapt-pkg-dev,
  nlohmann-json3-dev,
 Standards-Version: 4.1.3
