@@ -6,6 +6,8 @@ package main
 import (
 	"errors"
 	"testing"
+
+	nativesmartmirror "github.com/linuxdeepin/lastore-daemon/src/internal/smartmirror"
 )
 
 func TestPickStableProbeURIPrefersMainNativeArch(t *testing.T) {
@@ -164,5 +166,63 @@ func TestProbeBaseDiscoversAgainForAnotherOfficialPrefix(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("discovery calls = %d, want 2", calls)
+	}
+}
+
+func TestSniffStatusReadsFailReason(t *testing.T) {
+	tests := []struct {
+		name string
+		done nativesmartmirror.Message
+		want int
+	}{
+		{
+			name: "http 404 from fail reason",
+			done: nativesmartmirror.Message{Code: 400, Text: "URI Failure", Fields: []nativesmartmirror.Field{
+				{Key: "FailReason", Value: "HttpError404"},
+				{Key: "Message", Value: "404  Not Found [IP: 127.0.0.1 80]"},
+			}},
+			want: 404,
+		},
+		{
+			name: "http 410 from fail reason",
+			done: nativesmartmirror.Message{Code: 400, Text: "URI Failure", Fields: []nativesmartmirror.Field{
+				{Key: "FailReason", Value: "HttpError410"},
+			}},
+			want: 410,
+		},
+		{
+			name: "http 503 is not treated as success",
+			done: nativesmartmirror.Message{Code: 400, Text: "URI Failure", Fields: []nativesmartmirror.Field{
+				{Key: "FailReason", Value: "HttpError503"},
+				{Key: "Transient-Failure", Value: "true"},
+			}},
+			want: 503,
+		},
+		{
+			name: "message fallback when fail reason is missing",
+			done: nativesmartmirror.Message{Code: 400, Text: "URI Failure", Fields: []nativesmartmirror.Field{
+				{Key: "Message", Value: "429  Too Many Requests"},
+			}},
+			want: 429,
+		},
+		{
+			name: "transport error has no status",
+			done: nativesmartmirror.Message{Code: 400, Text: "URI Failure", Fields: []nativesmartmirror.Field{
+				{Key: "Message", Value: "Could not connect to mirror.example:80"},
+			}},
+			want: 0,
+		},
+		{
+			name: "empty message",
+			done: nativesmartmirror.Message{Code: 400, Text: "URI Failure"},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sniffStatus(tt.done); got != tt.want {
+				t.Fatalf("sniffStatus = %d, want %d", got, tt.want)
+			}
+		})
 	}
 }

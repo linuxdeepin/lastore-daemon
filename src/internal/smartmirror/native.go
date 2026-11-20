@@ -64,6 +64,11 @@ func (n Native) Fetch(ctx context.Context, req Message, budget Budget, emit func
 		sample.Endpoint = target
 		if budget.Bytes > 0 && totalBytes >= budget.Bytes {
 			sample.Capped = true
+			// Reaching the byte budget is a success for a probe: the transfer is
+			// ended on purpose at this point, so the native method never reports
+			// its completion (Done) and a failure that happens afterwards cannot
+			// be observed. Callers that need full-object integrity must not rely
+			// on this result; see aptProbe.sniff.
 			res.Err = nil
 			return Transfer{Sample: sample, Done: res.Done}
 		}
