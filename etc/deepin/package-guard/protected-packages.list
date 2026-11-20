@@ -1,0 +1,5 @@
+# Example real packages; adapt this list to the OEM project.
+lightdm
+dde-shell
+dde-desktop
+redshift

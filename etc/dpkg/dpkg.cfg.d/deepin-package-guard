@@ -1,0 +1,1 @@
+pre-invoke=/usr/libexec/lastore-daemon/dpkg-package-guard
