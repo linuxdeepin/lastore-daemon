@@ -89,11 +89,35 @@ func TestSmartMirrorSetEnableUnchanged(t *testing.T) {
 }
 
 func TestSmartMirrorQueryDisabled(t *testing.T) {
-	s := &SmartMirror{service: dbusutil.NewService(nil), Enable: false}
+	// Enable=false is a pure static rewrite of the caller's explicit mirror
+	// choice. It must not perform any availability check: Query is reachable
+	// from the system bus and the replacement host is caller supplied, so an
+	// outbound request here would be an SSRF primitive.
+	old := sniffResourceFn
+	t.Cleanup(func() { sniffResourceFn = old })
+	sniffed := 0
+	sniffResourceFn = func(*aptProbe, string) sniffResult {
+		sniffed++
+		return sniffNotFound
+	}
 
-	url, err := s.Query("https://official/pool/x.deb", "https://official", "https://mirror")
+	s := &SmartMirror{service: dbusutil.NewService(nil), Enable: false}
+	const original = "https://official/pool/x.deb"
+	const official = "https://official"
+	const mirror = "https://mirror"
+
+	url, err := s.Query(original, official, mirror)
 	assert.Nil(t, err)
 	assert.Equal(t, "https://mirror/pool/x.deb", url)
+
+	// A URL that merely contains the official prefix but does not start with
+	// it must not be rewritten.
+	const embedded = "https://proxy/?target=https://official/pool/x.deb"
+	url, err = s.Query(embedded, official, mirror)
+	assert.Nil(t, err)
+	assert.Equal(t, embedded, url)
+
+	assert.Zero(t, sniffed, "Enable=false must not run an availability check")
 }
 
 func TestSmartMirrorGetExportedMethods(t *testing.T) {

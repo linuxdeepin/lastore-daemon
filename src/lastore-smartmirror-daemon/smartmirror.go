@@ -34,6 +34,32 @@ const (
 	// hundreds of downloads and the file only needs the latest sample of every
 	// mirror, so one write per burst keeps the D-Bus handler off disk I/O.
 	qualityFlushDelay = 500 * time.Millisecond
+
+	// sniffCandidates bounds how many ranked mirrors one request checks before
+	// it falls back to the official URL. The ranked head already holds the
+	// fastest mirrors and the official CDN is authoritative, so walking the
+	// whole mirror list would only add latency.
+	sniffCandidates = 4
+
+	// sniffBlockTTL keeps a mirror that returned a definitive miss out of the
+	// selection. The block is deliberately keyed by mirror only, not by mirror
+	// and object: a 404 for one archive path normally means the site's whole
+	// archive is behind on sync (or its proxy/ACL rejects the path), so the
+	// objects that follow are expected to miss there for the same reason.
+	// Blocking the site briefly avoids one failed check per object during
+	// exactly that window, while 15 minutes is short enough for a mirror that
+	// finishes syncing to come back without a daemon restart.
+	sniffBlockTTL = 15 * time.Minute
+
+	// sniffUnavailableTTL keeps a mirror that failed the availability check
+	// with a transport error out of the selection for a short while. Such a
+	// failure does not prove the object is missing, so it must not use the
+	// 15-minute 404 block, and it must not mark the 4 KiB gate failed: that
+	// would exclude the mirror for qualityProbeTTL. The short cooldown only
+	// stops every object in the same burst from re-paying the sniff timeout
+	// while a blackholed or temporarily broken mirror is still ranked ahead
+	// of healthy ones.
+	sniffUnavailableTTL = 5 * time.Minute
 )
 
 // The STATE_DIRECTORY environment variable is set by systemd when starting this service.
@@ -62,6 +88,14 @@ type SmartMirror struct {
 	probeStableMu       sync.Mutex
 	probeStableURI      string
 	probeStableOfficial string
+
+	// sniffBlockedAt holds mirrors that returned a definitive miss recently,
+	// keyed by mirror URL. The site-wide scope is intentional; see
+	// blockMirrorForSniff. sniffUnavailableAt holds the separate, much shorter
+	// cooldown for transport errors; see sniffUnavailableTTL.
+	sniffMu            sync.Mutex
+	sniffBlockedAt     map[string]time.Time
+	sniffUnavailableAt map[string]time.Time
 }
 
 type probeRequest struct {
@@ -86,6 +120,9 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 		},
 		qualityPath:  path.Join(stateDirectory, qualityDataFilepath),
 		qualityDirty: make(chan struct{}, 1),
+
+		sniffBlockedAt:     make(map[string]time.Time),
+		sniffUnavailableAt: make(map[string]time.Time),
 	}
 	s.prober = newAPTProbe(stateDirectory)
 	go s.qualityWriter()
@@ -149,6 +186,18 @@ func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (url st
 	s.service.DelayAutoQuit()
 	if !s.Enable {
 		source := strings.Replace(original, officialMirror, mirrorHost, 1)
+		// The static replacement only applies to URLs inside the official
+		// archive. This mode is the caller's explicit mirror choice, so Query
+		// must not contact mirrorHost, or any other host, here: Query is
+		// reachable from the system bus by any local user, and a caller-supplied
+		// replacement host would otherwise turn this handler into an outbound
+		// request primitive (blind SSRF against loopback or private services).
+		// Availability of the object is verified only in the enabled mode, where
+		// the candidates come from the configured mirror list.
+		if source != original && !strings.HasPrefix(original, officialMirror) {
+			logger.Warningf("smartmirror Query[%d] static replace rejected original=%q replaced=%q reason=outside-official-archive fallback=official", id, original, source)
+			return original, nil
+		}
 		logger.Infof("smartmirror Query[%d] result=%q mode=disabled changed=%t", id, source, source != original)
 		return source, nil
 	}
@@ -208,14 +257,121 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 	s.beginTask()
 	defer s.endTask()
 	s.runProbeBatch(original, officialMirror)
+	// Probe results order the mirrors, but they only prove that a mirror
+	// answered for some object at some earlier time. Before handing apt a
+	// mirror URL, confirm that this mirror starts serving this exact object: a
+	// mirror that has not synced the newest packages returns 404 while the
+	// official index already lists them. The first mirror that answers wins;
+	// after sniffCandidates misses the official URL is the authoritative
+	// fallback.
+	attempts := 0
 	for _, mirror := range s.mirrorQuality.rank(s.sourcesURL, time.Now()) {
-		if target, ok := probeURI(original, officialMirror, mirror); ok {
-			logger.Infof("smartmirror select source=%q original=%q result=%q", mirror, original, target)
+		if attempts >= sniffCandidates {
+			break
+		}
+		if s.sniffBlocked(mirror) || s.sniffUnavailableRecently(mirror) {
+			continue
+		}
+		target, ok := probeURI(original, officialMirror, mirror)
+		if !ok {
+			continue
+		}
+		attempts++
+		switch s.sniff(target) {
+		case sniffOK:
+			logger.Infof("smartmirror select source=%q original=%q result=%q sniff=ok", mirror, original, target)
 			return target
+		case sniffNotFound:
+			// A definitive miss: the site's archive is behind on sync (or its
+			// proxy/ACL rejects the path). Block the whole site for a while
+			// instead of only this object: the objects that follow are expected
+			// to miss for the same reason, so re-checking each one would only
+			// add latency and reproduce the 404 storm this check exists to
+			// stop.
+			s.blockMirrorForSniff(mirror)
+			logger.Debugf("smartmirror select source=%q original=%q result=%q sniff=not-found fallback=next", mirror, original, target)
+		case sniffUnavailable:
+			// Network error/timeout: a mirror may only be temporarily slow, so
+			// this is not a definitive miss. A short cooldown is enough to stop
+			// every object in the same burst from re-paying the sniff timeout.
+			s.coolDownMirrorForSniff(mirror)
+			logger.Debugf("smartmirror select source=%q original=%q result=%q sniff=unavailable cooldown=%s fallback=next", mirror, original, target, sniffUnavailableTTL)
+		case sniffLocalUnavailable:
+			// The local APT methods are unusable, which says nothing about this
+			// mirror, so it must not be cached.
+			logger.Debugf("smartmirror select source=%q original=%q result=%q sniff=local-unavailable fallback=next", mirror, original, target)
 		}
 	}
 	logger.Infof("smartmirror select source=%q original=%q result=%q fallback=official", "", original, original)
 	return original
+}
+
+// sniff runs the per-request availability check through the native APT probe so
+// the check shares the proxy, TLS and authentication configuration of the
+// download it gates. The seam keeps tests independent of the system apt methods.
+func (s *SmartMirror) sniff(uri string) sniffResult {
+	return sniffResourceFn(s.prober, uri)
+}
+
+// sniffBlocked reports whether mirror returned a definitive miss recently. The
+// entry is per mirror by design; see blockMirrorForSniff for why.
+func (s *SmartMirror) sniffBlocked(mirror string) bool {
+	s.sniffMu.Lock()
+	defer s.sniffMu.Unlock()
+	at, ok := s.sniffBlockedAt[mirror]
+	if !ok {
+		return false
+	}
+	if time.Since(at) >= sniffBlockTTL {
+		delete(s.sniffBlockedAt, mirror)
+		return false
+	}
+	return true
+}
+
+// blockMirrorForSniff records that mirror could not serve the file just
+// requested, keeping the site out of the selection for sniffBlockTTL. A single
+// definitive miss is treated as evidence that the site is currently syncing its
+// archive (or rejecting the path through a proxy/ACL), so the next objects are
+// expected to miss there too. Keying the entry by object would re-run one native
+// transfer per object during exactly that window, which is the burst of failing
+// checks this block is meant to prevent.
+func (s *SmartMirror) blockMirrorForSniff(mirror string) {
+	s.sniffMu.Lock()
+	defer s.sniffMu.Unlock()
+	if s.sniffBlockedAt == nil {
+		s.sniffBlockedAt = make(map[string]time.Time)
+	}
+	s.sniffBlockedAt[mirror] = time.Now()
+}
+
+// sniffUnavailableRecently reports whether mirror failed the availability check
+// with a transport error recently. The cooldown is separate from the 404 block:
+// a transport error does not prove the object is missing, so it must not keep
+// the mirror out for sniffBlockTTL or mark the 4 KiB gate failed.
+func (s *SmartMirror) sniffUnavailableRecently(mirror string) bool {
+	s.sniffMu.Lock()
+	defer s.sniffMu.Unlock()
+	at, ok := s.sniffUnavailableAt[mirror]
+	if !ok {
+		return false
+	}
+	if time.Since(at) >= sniffUnavailableTTL {
+		delete(s.sniffUnavailableAt, mirror)
+		return false
+	}
+	return true
+}
+
+// coolDownMirrorForSniff records that mirror failed the availability check with
+// a transport error. See sniffUnavailableTTL for why this is not the 404 block.
+func (s *SmartMirror) coolDownMirrorForSniff(mirror string) {
+	s.sniffMu.Lock()
+	defer s.sniffMu.Unlock()
+	if s.sniffUnavailableAt == nil {
+		s.sniffUnavailableAt = make(map[string]time.Time)
+	}
+	s.sniffUnavailableAt[mirror] = time.Now()
 }
 
 // runProbeBatch queues one evaluation for this Query and waits for it. Query
