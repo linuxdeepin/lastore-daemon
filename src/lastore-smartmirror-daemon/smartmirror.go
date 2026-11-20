@@ -34,6 +34,18 @@ const (
 	// hundreds of downloads and the file only needs the latest sample of every
 	// mirror, so one write per burst keeps the D-Bus handler off disk I/O.
 	qualityFlushDelay = 500 * time.Millisecond
+
+	// sniffCandidates bounds how many ranked mirrors one request checks before
+	// it falls back to the official URL. The ranked head already holds the
+	// fastest mirrors and the official CDN is authoritative, so walking the
+	// whole mirror list would only add latency.
+	sniffCandidates = 4
+
+	// sniffBlockTTL keeps a mirror that could not serve one file out of the
+	// selection. Mirrors usually resync within minutes, so a short penalty is
+	// enough to stop the 404 storm while still letting a repaired mirror come
+	// back without waiting for a daemon restart.
+	sniffBlockTTL = 15 * time.Minute
 )
 
 // The STATE_DIRECTORY environment variable is set by systemd when starting this service.
@@ -62,6 +74,9 @@ type SmartMirror struct {
 	probeStableMu       sync.Mutex
 	probeStableURI      string
 	probeStableOfficial string
+
+	sniffMu        sync.Mutex
+	sniffBlockedAt map[string]time.Time
 }
 
 type probeRequest struct {
@@ -86,6 +101,8 @@ func newSmartMirror(service *dbusutil.Service) *SmartMirror {
 		},
 		qualityPath:  path.Join(stateDirectory, qualityDataFilepath),
 		qualityDirty: make(chan struct{}, 1),
+
+		sniffBlockedAt: make(map[string]time.Time),
 	}
 	s.prober = newAPTProbe(stateDirectory)
 	go s.qualityWriter()
@@ -149,6 +166,24 @@ func (s *SmartMirror) Query(original, officialMirror, mirrorHost string) (url st
 	s.service.DelayAutoQuit()
 	if !s.Enable {
 		source := strings.Replace(original, officialMirror, mirrorHost, 1)
+		// The static replacement only applies to URLs inside the official
+		// archive, and only while the selected mirror can actually serve the
+		// object. Without the check a mirror whose archive has not synced turns
+		// every download into a 404.
+		if source != original {
+			if !strings.HasPrefix(original, officialMirror) {
+				logger.Warningf("smartmirror Query[%d] static replace rejected original=%q replaced=%q fallback=official", id, original, source)
+				return original, nil
+			}
+			// Only a definitive 404/410 overrides the user's explicit choice.
+			// When the check itself cannot run (timeout, unsupported scheme,
+			// missing native methods) the mirror may still serve apt, so keep
+			// the replacement instead of silently switching to the official URL.
+			if s.sniff(source) == sniffNotFound {
+				logger.Warningf("smartmirror Query[%d] static replace rejected original=%q replaced=%q sniff=not-found fallback=official", id, original, source)
+				return original, nil
+			}
+		}
 		logger.Infof("smartmirror Query[%d] result=%q mode=disabled changed=%t", id, source, source != original)
 		return source, nil
 	}
@@ -208,14 +243,75 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 	s.beginTask()
 	defer s.endTask()
 	s.runProbeBatch(original, officialMirror)
+	// Probe results order the mirrors, but they only prove that a mirror
+	// answered for some object at some earlier time. Before handing apt a
+	// mirror URL, confirm that this exact object is downloadable: a mirror that
+	// has not synced the newest packages returns 404 while the official index
+	// already lists them. The first mirror that answers wins; after
+	// sniffCandidates misses the official URL is the authoritative fallback.
+	attempts := 0
 	for _, mirror := range s.mirrorQuality.rank(s.sourcesURL, time.Now()) {
-		if target, ok := probeURI(original, officialMirror, mirror); ok {
-			logger.Infof("smartmirror select source=%q original=%q result=%q", mirror, original, target)
+		if attempts >= sniffCandidates {
+			break
+		}
+		if s.sniffBlocked(mirror) {
+			continue
+		}
+		target, ok := probeURI(original, officialMirror, mirror)
+		if !ok {
+			continue
+		}
+		attempts++
+		switch s.sniff(target) {
+		case sniffOK:
+			logger.Infof("smartmirror select source=%q original=%q result=%q sniff=ok", mirror, original, target)
 			return target
+		case sniffNotFound:
+			// A definitive miss: the mirror does not serve this object. Keep it
+			// out of the next selections instead of re-checking every download.
+			s.blockMirrorForSniff(mirror)
+			logger.Debugf("smartmirror select source=%q original=%q result=%q sniff=not-found fallback=next", mirror, original, target)
+		default:
+			// Network error/timeout: try the next candidate but do not blacklist
+			// a mirror that may only be temporarily slow.
+			logger.Debugf("smartmirror select source=%q original=%q result=%q sniff=unavailable fallback=next", mirror, original, target)
 		}
 	}
 	logger.Infof("smartmirror select source=%q original=%q result=%q fallback=official", "", original, original)
 	return original
+}
+
+// sniff runs the per-request availability check through the native APT probe so
+// the check shares the proxy, TLS and authentication configuration of the
+// download it gates. The seam keeps tests independent of the system apt methods.
+func (s *SmartMirror) sniff(uri string) sniffResult {
+	return sniffResourceFn(s.prober, uri)
+}
+
+// sniffBlocked reports whether mirror failed the per-request check recently.
+func (s *SmartMirror) sniffBlocked(mirror string) bool {
+	s.sniffMu.Lock()
+	defer s.sniffMu.Unlock()
+	at, ok := s.sniffBlockedAt[mirror]
+	if !ok {
+		return false
+	}
+	if time.Since(at) >= sniffBlockTTL {
+		delete(s.sniffBlockedAt, mirror)
+		return false
+	}
+	return true
+}
+
+// blockMirrorForSniff records that mirror could not serve the file just
+// requested, keeping it out of the selection for sniffBlockTTL.
+func (s *SmartMirror) blockMirrorForSniff(mirror string) {
+	s.sniffMu.Lock()
+	defer s.sniffMu.Unlock()
+	if s.sniffBlockedAt == nil {
+		s.sniffBlockedAt = make(map[string]time.Time)
+	}
+	s.sniffBlockedAt[mirror] = time.Now()
 }
 
 // runProbeBatch queues one evaluation for this Query and waits for it. Query

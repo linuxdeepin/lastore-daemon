@@ -89,11 +89,38 @@ func TestSmartMirrorSetEnableUnchanged(t *testing.T) {
 }
 
 func TestSmartMirrorQueryDisabled(t *testing.T) {
-	s := &SmartMirror{service: dbusutil.NewService(nil), Enable: false}
+	old := sniffResourceFn
+	t.Cleanup(func() { sniffResourceFn = old })
 
-	url, err := s.Query("https://official/pool/x.deb", "https://official", "https://mirror")
+	s := &SmartMirror{service: dbusutil.NewService(nil), Enable: false}
+	const original = "https://official/pool/x.deb"
+	const official = "https://official"
+	const mirror = "https://mirror"
+
+	// The selected mirror serves the object: the static replacement applies.
+	sniffResourceFn = func(*aptProbe, string) sniffResult { return sniffOK }
+	url, err := s.Query(original, official, mirror)
 	assert.Nil(t, err)
 	assert.Equal(t, "https://mirror/pool/x.deb", url)
+
+	// The mirror does not serve the object yet: keep the official URL so the
+	// download does not turn into a 404.
+	sniffResourceFn = func(*aptProbe, string) sniffResult { return sniffNotFound }
+	url, err = s.Query(original, official, mirror)
+	assert.Nil(t, err)
+	assert.Equal(t, original, url)
+
+	// An inconclusive check must not override the user's explicit mirror choice:
+	// native apt may be unavailable, or the mirror may just be slow.
+	checkURI := ""
+	sniffResourceFn = func(_ *aptProbe, uri string) sniffResult {
+		checkURI = uri
+		return sniffUnavailable
+	}
+	url, err = s.Query(original, official, mirror)
+	assert.Nil(t, err)
+	assert.Equal(t, "https://mirror/pool/x.deb", url)
+	assert.Equal(t, "https://mirror/pool/x.deb", checkURI)
 }
 
 func TestSmartMirrorGetExportedMethods(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,21 +20,41 @@ var httpClient = http.Client{
 	Timeout: time.Second * 2,
 }
 
+// userAgent returns the value sent in the User-Agent header. It is cached
+// because it is built for every probe and sniff request and lsb_release is a
+// short-lived child process.
+var (
+	userAgentOnce  sync.Once
+	userAgentValue string
+)
+
 // userAgent fill local info to string
 func userAgent() string {
-	const DetectVersion = "detector/0.1.1 " + runtime.GOARCH
-
-	r, _ := exec.Command("lsb_release", "-ds").Output()
-	if len(r) == 0 {
-		return DetectVersion + " " + "deepin unknown"
-	}
-	return DetectVersion + " " + strings.TrimSpace(string(r))
+	userAgentOnce.Do(func() {
+		const DetectVersion = "detector/0.1.1 " + runtime.GOARCH
+		r, _ := exec.Command("lsb_release", "-ds").Output()
+		if len(r) == 0 {
+			userAgentValue = DetectVersion + " " + "deepin unknown"
+			return
+		}
+		userAgentValue = DetectVersion + " " + strings.TrimSpace(string(r))
+	})
+	return userAgentValue
 }
 
-// machineID return content of /etc/machine-id
+// machineID returns the content of /etc/machine-id. It is cached for the same
+// reason as userAgent: the value does not change while the daemon runs.
+var (
+	machineIDOnce  sync.Once
+	machineIDValue string
+)
+
 func machineID() string {
-	bs, _ := os.ReadFile("/etc/machine-id")
-	return strings.TrimSpace(string(bs))
+	machineIDOnce.Do(func() {
+		bs, _ := os.ReadFile("/etc/machine-id")
+		machineIDValue = strings.TrimSpace(string(bs))
+	})
+	return machineIDValue
 }
 
 func makeHeader() map[string]string {
