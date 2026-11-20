@@ -1,0 +1,342 @@
+#!/usr/bin/python3
+import configparser
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+CONFIG_PATH = Path("/etc/deepin/package-guard/guard.conf")
+PACKAGES_PATH = Path("/etc/deepin/package-guard/protected-packages.list")
+PACKAGE_NAME = re.compile(r"[a-z0-9][a-z0-9+.-]+", re.ASCII)
+
+
+def load_protected_packages(config_path=CONFIG_PATH, packages_path=PACKAGES_PATH):
+    """Read the policy on every invocation; configuration errors fail open."""
+    try:
+        config = configparser.ConfigParser(interpolation=None, strict=False)
+        config.optionxform = str
+        with open(config_path, encoding="utf-8") as stream:
+            config.read_file(stream)
+        if not config.has_section("guard") or "enabled" not in config["guard"]:
+            raise ValueError("missing [guard] enabled setting")
+        enabled = config["guard"]["enabled"]
+        if enabled not in {"true", "false"}:
+            raise ValueError("enabled must be true or false")
+        if enabled == "false":
+            return set()
+    except (OSError, UnicodeError, configparser.Error, ValueError) as error:
+        print(f"dpkg-package-guard: warning: {config_path}: {error}; "
+              "protection skipped for this invocation", file=sys.stderr)
+        return set()
+
+    protected = set()
+    try:
+        with open(packages_path, encoding="utf-8") as stream:
+            for number, line in enumerate(stream, 1):
+                package = line.strip()
+                if not package or package.startswith("#"):
+                    continue
+                if PACKAGE_NAME.fullmatch(package) is None:
+                    print(f"dpkg-package-guard: warning: {packages_path}: "
+                          f"ignoring invalid package name on line {number}: {package!r}",
+                          file=sys.stderr)
+                    continue
+                protected.add(package)
+    except (OSError, UnicodeError) as error:
+        print(f"dpkg-package-guard: warning: {packages_path}: {error}; "
+              "protection skipped for this invocation", file=sys.stderr)
+        return set()
+    return protected
+
+
+MAX_PARENT_DEPTH = 16
+
+
+def read_cmdline(pid):
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as stream:
+            raw = stream.read()
+    except OSError:
+        return []
+    return [os.fsdecode(arg) for arg in raw.split(b"\0") if arg]
+
+
+def read_ppid(pid):
+    try:
+        with open(f"/proc/{pid}/stat", encoding="ascii") as stream:
+            stat = stream.read()
+    except OSError:
+        return None
+    fields = stat[stat.rfind(")") + 2 :].split()
+    try:
+        return int(fields[1])
+    except (IndexError, ValueError):
+        return None
+
+
+def find_dpkg_argv():
+    pid = os.getppid()
+    for _ in range(MAX_PARENT_DEPTH):
+        argv = read_cmdline(pid)
+        if argv and os.path.basename(argv[0]) == "dpkg":
+            return argv
+        parent = read_ppid(pid)
+        if parent is None or parent <= 1 or parent == pid:
+            break
+        pid = parent
+    return None
+
+
+def operation_context(argv, strict=False):
+    admindir = os.environ.get("DPKG_ADMINDIR", "/var/lib/dpkg")
+    pending = False
+    recursive = False
+    operands = []
+    value_options = {
+        "--admindir", "--root", "--instdir", "--log", "--status-fd", "--abort-after",
+        "--status-logger", "--pre-invoke", "--post-invoke", "--debug",
+        "--ignore-depends", "--path-exclude", "--path-include",
+    }
+    index = 1
+    while index < len(argv):
+        arg = argv[index]
+        if arg == "--":
+            operands.extend(argv[index + 1:])
+            break
+        if not arg.startswith("-"):
+            operands.append(arg)
+            index += 1
+            continue
+        option, separator, value = arg.partition("=")
+        if option in value_options:
+            if not separator:
+                index += 1
+                if index >= len(argv):
+                    raise ValueError("missing option value")
+                value = argv[index]
+            if option == "--admindir":
+                admindir = value
+            elif option == "--root":
+                admindir = os.path.join(value, "var/lib/dpkg")
+        elif arg == "--pending":
+            pending = True
+        elif arg == "--recursive":
+            recursive = True
+        elif arg.startswith("-") and not arg.startswith("--"):
+            shorts = arg[1:]
+            if shorts.startswith("D"):
+                if len(shorts) == 1:
+                    index += 1
+                    if index >= len(argv):
+                        raise ValueError("missing debug option value")
+            elif set(shorts) <= set("irPaROBEG"):
+                pending = pending or "a" in shorts
+                recursive = recursive or "R" in shorts
+            elif strict:
+                raise ValueError("unsupported option: " + arg)
+        elif arg not in {
+            "--remove", "--purge", "--install", "--unpack",
+            "--no-act", "--dry-run", "--simulate", "--no-triggers", "--triggers",
+            "--no-pager", "--selected-only", "--skip-same-version",
+            "--auto-deconfigure", "--no-debsig", "--robot",
+        } and not arg.startswith(("--force-", "--refuse-", "--no-force-")):
+            if strict:
+                raise ValueError("unsupported option: " + arg)
+        index += 1
+    return admindir, pending, recursive, operands
+
+
+def removal_context(argv):
+    admindir, pending, _, operands = operation_context(argv)
+    return admindir, pending, operands
+
+
+def pending_removals(action, admindir, protected):
+    result = subprocess.run(
+        ["dpkg-query", "--admindir=" + admindir, "-W",
+         "-f=${binary:Package}\t${db:Status-Want}\t${db:Status-Status}\n"],
+        text=True, capture_output=True, check=True, timeout=15,
+    )
+    blocked = set()
+    selections = {"deinstall", "purge"} if action == "remove" else {"purge"}
+    for line in result.stdout.splitlines():
+        package, want, status = line.split("\t")
+        package = package.split(":", 1)[0]
+        eligible = status != "not-installed"
+        if action == "remove":
+            eligible = eligible and status != "config-files"
+        if package in protected and want in selections and eligible:
+            blocked.add(package)
+    return blocked
+
+
+def protected_removals(action, argv, protected):
+    if action not in {"remove", "purge"} or not argv:
+        return set()
+    admindir, pending, operands = removal_context(argv)
+    if pending:
+        return pending_removals(action, admindir, protected)
+    if not operands:
+        raise ValueError("cannot determine removal targets")
+    return {arg.split(":", 1)[0] for arg in operands} & protected
+
+
+def checked_output(args):
+    return subprocess.run(
+        args, text=True, capture_output=True, check=True, timeout=15,
+    ).stdout
+
+
+def control_fields(deb):
+    # Read metadata only; do not extract files or execute maintainer scripts.
+    output = checked_output(["dpkg-deb", "--field", str(deb)])
+    fields = {}
+    current = None
+    for line in output.splitlines():
+        if line.startswith((" ", "\t")) and current:
+            fields[current] += " " + line.strip()
+        elif line:
+            key, separator, value = line.partition(":")
+            if not separator or key.lower() in fields:
+                raise ValueError("invalid control metadata: " + str(deb))
+            current = key.lower()
+            fields[current] = value.strip()
+    if not fields.get("package") or not fields.get("architecture"):
+        raise ValueError("missing Package/Architecture: " + str(deb))
+    return fields
+
+
+def installed_protected(admindir, protected):
+    output = checked_output([
+        "dpkg-query", "--admindir=" + admindir, "-W",
+        "-f=${Package}\t${Architecture}\t${Version}\t${db:Status-Status}\n",
+    ])
+    installed = []
+    for line in output.splitlines():
+        package, architecture, version, status = line.split("\t")
+        if package in protected and status not in {"not-installed", "config-files"}:
+            if not version or not architecture:
+                raise ValueError("incomplete installed metadata: " + package)
+            installed.append((package, architecture, version))
+    return installed
+
+
+RELATION = re.compile(
+    r"\s*([a-z0-9][a-z0-9+.-]*)(?::([a-z0-9][a-z0-9-]*))?"
+    r"\s*(?:\(\s*(<<|<=|=|>=|>>)\s*([^()\s]+)\s*\))?\s*"
+)
+
+
+def conflict_relations(value):
+    if not value:
+        return []
+    relations = []
+    for part in value.split(","):
+        match = RELATION.fullmatch(part)
+        if match is None:
+            raise ValueError("cannot parse Conflicts: " + part)
+        relations.append(match.groups())
+    return relations
+
+
+def version_matches(version, operator, required):
+    if operator is None:
+        return True
+    result = subprocess.run(
+        ["dpkg", "--compare-versions", version, operator, required],
+        text=True, capture_output=True, timeout=15,
+    )
+    if result.returncode not in (0, 1):
+        raise ValueError("cannot compare versions: " + result.stderr.strip())
+    return result.returncode == 0
+
+
+def installation_conflicts(argv, protected):
+    admindir, pending, recursive, operands = operation_context(argv, strict=True)
+    if pending or not operands:
+        raise ValueError("cannot determine installation archives")
+    archives = []
+    for operand in operands:
+        path = Path(operand)
+        if recursive:
+            if not path.is_dir():
+                raise ValueError("not an archive directory: " + operand)
+            # os.walk's error callback prevents unreadable subdirectories being skipped.
+            def walk_error(error):
+                raise error
+            for directory, _, names in os.walk(path, onerror=walk_error):
+                archives.extend(Path(directory) / name for name in sorted(names)
+                                if name.endswith(".deb"))
+        else:
+            archives.append(path)
+    if not archives:
+        raise ValueError("no installation archives found")
+    installed = installed_protected(admindir, protected)
+    blocked = set()
+    native_architecture = None
+    for archive in archives:
+        # Absolute paths also prevent a filename beginning with '-' being an option.
+        fields = control_fields(archive.absolute())
+        for name, qualifier, operator, required in conflict_relations(fields.get("conflicts", "")):
+            for package, architecture, version in installed:
+                if name != package:
+                    continue
+                if qualifier == "native":
+                    if native_architecture is None:
+                        native_architecture = checked_output([
+                            "dpkg", "--admindir=" + admindir, "--print-architecture",
+                        ]).strip()
+                        if not native_architecture:
+                            raise ValueError("cannot determine native architecture")
+                    if architecture != native_architecture:
+                        continue
+                elif qualifier not in (None, "any", architecture):
+                    continue
+                # Same binary package upgrades are not replacement removals.
+                if fields["package"] == package and fields["architecture"] == architecture:
+                    continue
+                if version_matches(version, operator, required):
+                    relation = name + (":" + qualifier if qualifier else "")
+                    if operator:
+                        relation += " (" + operator + " " + required + ")"
+                    blocked.add(str(archive) + ": Conflicts: " + relation
+                                + " [installed " + architecture + " " + version + "]")
+    return blocked
+
+
+def main(config_path=CONFIG_PATH, packages_path=PACKAGES_PATH):
+    action = os.environ.get("DPKG_HOOK_ACTION", "")
+    if action not in {"remove", "purge", "install", "unpack"}:
+        return 0
+
+    protected = load_protected_packages(config_path, packages_path)
+    if not protected:
+        return 0
+
+    argv = find_dpkg_argv()
+    if argv is None:
+        print(
+            "dpkg-package-guard: cannot determine dpkg arguments; refusing operation",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        blocked = (installation_conflicts(argv, protected) if action in {"install", "unpack"}
+                   else protected_removals(action, argv, protected))
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print("dpkg-package-guard: refusing operation: " + str(error), file=sys.stderr)
+        return 1
+    if blocked:
+        print(
+            "dpkg-package-guard: refusing operation affecting protected package(s): "
+            + ", ".join(sorted(blocked)),
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

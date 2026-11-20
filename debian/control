@@ -13,6 +13,7 @@ Build-Depends:
  golang-github-fsnotify-fsnotify-dev,
  golang-go | gccgo-5,
  pkg-config,
+ python3,
  golang-ginkgo-dev,
  golang-gomega-dev,
  golang-gopkg-check.v1-dev,
@@ -36,6 +37,7 @@ Provides:
  update-notifier,
 Depends:
  dbus,
+ python3,
  procps,
  binutils,
  xz-utils,
