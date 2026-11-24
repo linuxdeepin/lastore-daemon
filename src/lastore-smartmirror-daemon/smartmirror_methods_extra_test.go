@@ -96,9 +96,9 @@ func TestSmartMirrorQueryDisabled(t *testing.T) {
 	old := sniffResourceFn
 	t.Cleanup(func() { sniffResourceFn = old })
 	sniffed := 0
-	sniffResourceFn = func(*aptProbe, string) sniffResult {
+	sniffResourceFn = func(*aptProbe, string) (sniffResult, int64) {
 		sniffed++
-		return sniffNotFound
+		return sniffNotFound, 0
 	}
 
 	s := &SmartMirror{service: dbusutil.NewService(nil), Enable: false}

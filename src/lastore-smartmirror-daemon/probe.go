@@ -136,24 +136,25 @@ func (p *aptProbe) run(uri string, bytes int64) (nativesmartmirror.Sample, error
 	return res.Sample, err
 }
 
-// sniff reports whether uri serves data right now. The check goes through the
-// native APT method so it sees the same proxy, TLS, authentication and rate
-// limit configuration as the real download; a plain HTTP client would disagree
-// with apt on exactly the deployments that need the check.
+// sniff reports whether uri serves data right now, and the object size the
+// server declared in its 200 response (0 when it did not send one). The check
+// goes through the native APT method so it sees the same proxy, TLS,
+// authentication and rate limit configuration as the real download; a plain
+// HTTP client would disagree with apt on exactly the deployments that need the
+// check.
 //
-// The 4 KiB budget makes this an availability probe, not an integrity check: it
-// proves that the server answered 200 and started sending the object. A
-// transfer that breaks after those first 4 KiB cannot be distinguished from a
-// healthy one, because reaching the cap ends the native transfer on purpose
-// (RLIMIT_FSIZE) and leaves no completion status to inspect. Full-object
-// integrity remains the real download's job.
-func (p *aptProbe) sniff(uri string) sniffResult {
+// The 4 KiB budget makes this an availability probe, not an integrity check. The
+// declared size is what apt would compare with the archive Size, so the caller
+// can reject an object of the wrong size before apt starts; bytes of the same
+// size remain the real download's job to verify.
+func (p *aptProbe) sniff(uri string) (sniffResult, int64) {
 	if p == nil {
-		return sniffLocalUnavailable
+		return sniffLocalUnavailable, 0
 	}
 	res, err := p.fetch(uri, nativesmartmirror.Budget{Bytes: probe4KBytes, Total: sniffTotal})
+	declared := res.Sample.ExpectedBytes
 	if err == nil {
-		return sniffOK
+		return sniffOK, declared
 	}
 	status := sniffStatus(res.Done)
 	switch {
@@ -161,15 +162,15 @@ func (p *aptProbe) sniff(uri string) sniffResult {
 		// The environment has no usable native methods; warning for every URL
 		// would drown the log.
 		logger.Debugf("smartmirror sniff skipped uri=%q: %v", uri, err)
-		return sniffLocalUnavailable
+		return sniffLocalUnavailable, 0
 	case status == http.StatusNotFound || status == http.StatusGone:
 		logger.Warningf("smartmirror sniff uri=%q status=%d error=%v", uri, status, err)
-		return sniffNotFound
+		return sniffNotFound, declared
 	default:
 		// 401/403/408/429/5xx and transport errors do not prove the object is
 		// missing, so the mirror is tried again instead of being blocked.
 		logger.Warningf("smartmirror sniff uri=%q status=%d transient error=%v", uri, status, err)
-		return sniffUnavailable
+		return sniffUnavailable, declared
 	}
 }
 
