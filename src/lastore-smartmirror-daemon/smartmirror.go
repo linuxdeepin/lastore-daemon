@@ -85,6 +85,12 @@ type SmartMirror struct {
 	taskCount      int
 	queryID        atomic.Uint64
 
+	// expectedOnce guards the lazy metadata resolver used to compare the size a
+	// mirror declares with the size the archive publishes. The resolver has its
+	// own lock and cache.
+	expectedOnce sync.Once
+	expected     *expectedResolver
+
 	probeStableMu       sync.Mutex
 	probeStableURI      string
 	probeStableOfficial string
@@ -277,9 +283,23 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 			continue
 		}
 		attempts++
-		switch s.sniff(target) {
+		result, declared := s.sniff(target)
+		switch result {
 		case sniffOK:
-			logger.Infof("smartmirror select source=%q original=%q result=%q sniff=ok", mirror, original, target)
+			// The object exists, but a mirror that is behind on sync or has a
+			// damaged copy can serve an object of the wrong size. apt would
+			// reject it against the archive Size, so reject it here instead and
+			// let the next candidate or the official URL take the download.
+			// Without a declared size there is nothing to compare, so the
+			// metadata lookup is skipped entirely.
+			if declared > 0 {
+				if expected, ok := s.expectedSize(original); ok && declared != expected {
+					s.blockMirrorForSniff(mirror)
+					logger.Warningf("smartmirror select source=%q original=%q result=%q sniff=size-mismatch declared=%d expected=%d fallback=next", mirror, original, target, declared, expected)
+					continue
+				}
+			}
+			logger.Infof("smartmirror select source=%q original=%q result=%q sniff=ok declared=%d", mirror, original, target, declared)
 			return target
 		case sniffNotFound:
 			// A definitive miss: the site's archive is behind on sync (or its
@@ -308,9 +328,25 @@ func (s *SmartMirror) makeChoice(original, officialMirror string) string {
 
 // sniff runs the per-request availability check through the native APT probe so
 // the check shares the proxy, TLS and authentication configuration of the
-// download it gates. The seam keeps tests independent of the system apt methods.
-func (s *SmartMirror) sniff(uri string) sniffResult {
+// download it gates. It also returns the object size the server declared, which
+// makeChoice compares with the archive metadata. The seam keeps tests
+// independent of the system apt methods.
+func (s *SmartMirror) sniff(uri string) (sniffResult, int64) {
 	return sniffResourceFn(s.prober, uri)
+}
+
+// expectedSize returns the size the archive publishes for rawURL. A false
+// result means the metadata is unavailable and no size comparison can be made;
+// it must not make the mirror unusable.
+func (s *SmartMirror) expectedSize(rawURL string) (int64, bool) {
+	return expectedSizeFn(s.resolver(), rawURL)
+}
+
+func (s *SmartMirror) resolver() *expectedResolver {
+	s.expectedOnce.Do(func() {
+		s.expected = newExpectedResolver()
+	})
+	return s.expected
 }
 
 // sniffBlocked reports whether mirror returned a definitive miss recently. The

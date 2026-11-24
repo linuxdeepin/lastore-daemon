@@ -41,8 +41,8 @@ func TestSniffUnavailableCooldownExpires(t *testing.T) {
 func TestSniffLocalUnavailableNotCached(t *testing.T) {
 	old := sniffResourceFn
 	t.Cleanup(func() { sniffResourceFn = old })
-	sniffResourceFn = func(*aptProbe, string) sniffResult {
-		return sniffLocalUnavailable
+	sniffResourceFn = func(*aptProbe, string) (sniffResult, int64) {
+		return sniffLocalUnavailable, 0
 	}
 
 	now := time.Now()
