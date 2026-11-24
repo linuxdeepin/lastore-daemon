@@ -285,7 +285,7 @@
       "visibility": "private"
     },
     "non-unknown-sources": {
-      "value": ["appstore.list","security.list","driver.list","deepin-unstable-source.list","hwe.list"],
+      "value": ["appstore.list","appstore_intranet.list","security.list","driver.list","deepin-unstable-source.list","hwe.list"],
       "serial": 0,
       "flags": [
         "global"
