@@ -1,3 +1,12 @@
+lastore-daemon (6.2.75) unstable; urgency=medium
+
+  * fix(smartmirror): reject mirrors that serve the wrong object size
+  * fix(smartmirror): verify per-file availability before selecting a mirror
+  * fix: add appstore_intranet.list to non-unknown-sources (#519)
+  * refactor(agent): remove obsolete lastore-agent (#516)
+
+ -- xiamengliang <xiamengliang@uniontech.com>  Wed, 25 Nov 2026 11:32:15 +0800
+
 lastore-daemon (6.2.74) unstable; urgency=medium
 
   * fix(smartmirror): reset removed mirror source before building APT system
