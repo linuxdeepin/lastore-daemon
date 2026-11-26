@@ -268,6 +268,16 @@ func getConfigFromDSettings() *Config {
 	systemSigLoop := dbusutil.NewSignalLoop(sysBus, 10)
 	systemSigLoop.Start()
 	c.dsLastoreManager.InitSignalExt(systemSigLoop, true)
+	c.loadFromDSettings()
+
+	_, err = c.dsLastoreManager.ConnectValueChanged(c.handleValueChanged)
+	if err != nil {
+		logger.Warning(err)
+	}
+	return c
+}
+
+func (c *Config) loadFromDSettings() {
 	// 从DSettings获取所有内容，更新config
 	v, err := c.dsLastoreManager.Value(0, dSettingsKeyUseDSettings)
 	if err != nil {
@@ -782,12 +792,6 @@ func getConfigFromDSettings() *Config {
 	}
 	c.OtherSourceList = append(c.OtherSourceList, "/etc/apt/sources.list.d/driver.list")
 	c.SecuritySourceList = append(c.SecuritySourceList, system.SecuritySourceFile)
-
-	_, err = c.dsLastoreManager.ConnectValueChanged(c.handleValueChanged)
-	if err != nil {
-		logger.Warning(err)
-	}
-	return c
 }
 
 func (c *Config) updateLastoreDaemonStatus() {
@@ -1028,9 +1032,11 @@ type smartMirrorConfig struct {
 	Enable bool
 }
 
+var smartMirrorConfigPath = filepath.Join(system.VarLibDir, "smartmirror_config.json")
+
 func isSmartMirrorEnabled() bool {
 	var cfg smartMirrorConfig
-	err := system.DecodeJson(filepath.Join(system.VarLibDir, "smartmirror_config.json"), &cfg)
+	err := system.DecodeJson(smartMirrorConfigPath, &cfg)
 	if err != nil {
 		// 文件不存在或读取失败时，智能镜像源默认为开启状态
 		return true

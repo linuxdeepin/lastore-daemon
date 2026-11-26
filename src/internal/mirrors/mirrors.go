@@ -18,8 +18,10 @@ import (
 	"github.com/linuxdeepin/lastore-daemon/src/internal/utils"
 )
 
+var generateMirrorsURL = ""
+
 func GenerateMirrors(repository string, fpath string) error {
-	ms, err := LoadMirrorSources("")
+	ms, err := LoadMirrorSources(generateMirrorsURL)
 	if err != nil {
 		return err
 	}

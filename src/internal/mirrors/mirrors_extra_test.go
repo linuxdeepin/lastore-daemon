@@ -308,3 +308,39 @@ func TestLoadMirrorSourcesEmptyURL(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, ms)
 }
+
+func TestGenerateMirrorsSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `[{"id":"m1","name":"Mirror One","weight":10,"urlHttp":"http://m1/repo"}]`)
+	}))
+	defer srv.Close()
+
+	oldURL := generateMirrorsURL
+	generateMirrorsURL = srv.URL
+	t.Cleanup(func() { generateMirrorsURL = oldURL })
+
+	fpath := filepath.Join(t.TempDir(), "mirrors.json")
+	err := GenerateMirrors("", fpath)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(fpath)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "m1")
+}
+
+func TestGenerateMirrorsWriteError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `[{"id":"m2","name":"Mirror Two","weight":5}]`)
+	}))
+	defer srv.Close()
+
+	oldURL := generateMirrorsURL
+	generateMirrorsURL = srv.URL
+	t.Cleanup(func() { generateMirrorsURL = oldURL })
+
+	// fpath is a directory, so WriteData fails
+	err := GenerateMirrors("", t.TempDir())
+	assert.Error(t, err)
+}
