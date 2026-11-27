@@ -93,6 +93,9 @@ func (n Native) Fetch(ctx context.Context, req Message, budget Budget, emit func
 	return Transfer{Sample: sample, Err: fmt.Errorf("too many redirects")}
 }
 
+// defaultMethodsDir is where the apt package installs its acquire methods.
+const defaultMethodsDir = "/usr/lib/apt/methods"
+
 func (n Native) once(ctx context.Context, req Message, budget Budget, emit func(Message), slow func(int64, time.Duration) bool) (out Transfer) {
 	u, err := url.Parse(req.Get("URI"))
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
@@ -101,7 +104,7 @@ func (n Native) once(ctx context.Context, req Message, budget Budget, emit func(
 	}
 	dir := n.MethodsDir
 	if dir == "" {
-		dir = "/usr/lib/apt/methods"
+		dir = defaultMethodsDir
 	}
 	method := filepath.Join(dir, u.Scheme)
 	ctx, cancel := context.WithCancel(ctx)
@@ -272,6 +275,12 @@ func (n Native) once(ctx context.Context, req Message, budget Budget, emit func(
 				return
 			case 101, 102:
 				// Do not leak rewritten URIs or credentials into normal progress.
+			case 104:
+				// Warnings are advisory. APT reports a missing system trust
+				// store this way ("No system certificates available...") and
+				// then carries on with the remaining configuration, such as
+				// Verify-Peer=false, so aborting here would break HTTPS on
+				// hosts without ca-certificates.
 			default:
 				out.Err = fmt.Errorf("unsupported native message %d", m.Code)
 				return
