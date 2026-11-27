@@ -1,0 +1,5 @@
+DPkg::Pre-Install-Pkgs {
+    "/usr/libexec/lastore-daemon/apt-package-guard";
+};
+DPkg::Tools::Options::/usr/libexec/lastore-daemon/apt-package-guard::Version "2";
+DPkg::Tools::Options::/usr/libexec/lastore-daemon/apt-package-guard::InfoFD "0";

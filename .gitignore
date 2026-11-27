@@ -14,3 +14,4 @@ debian/tmp/
 gopath/
 locale/mo/
 locale_categories/mo/
+__pycache__/

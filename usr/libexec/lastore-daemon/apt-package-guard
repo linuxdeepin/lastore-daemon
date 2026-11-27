@@ -1,0 +1,93 @@
+#!/usr/bin/python3
+import configparser
+from pathlib import Path
+import re
+import sys
+
+CONFIG_PATH = Path("/etc/deepin/package-guard/guard.conf")
+PACKAGES_PATH = Path("/etc/deepin/package-guard/protected-packages.list")
+PACKAGE_NAME = re.compile(r"[a-z0-9][a-z0-9+.-]+", re.ASCII)
+
+
+def load_protected_packages(config_path=CONFIG_PATH, packages_path=PACKAGES_PATH):
+    """Read the policy on every invocation; configuration errors fail open."""
+    try:
+        config = configparser.ConfigParser(interpolation=None, strict=False)
+        config.optionxform = str
+        with open(config_path, encoding="utf-8") as stream:
+            config.read_file(stream)
+        if not config.has_section("guard") or "enabled" not in config["guard"]:
+            raise ValueError("missing [guard] enabled setting")
+        enabled = config["guard"]["enabled"]
+        if enabled not in {"true", "false"}:
+            raise ValueError("enabled must be true or false")
+        if enabled == "false":
+            return set()
+    except (OSError, UnicodeError, configparser.Error, ValueError) as error:
+        print(f"apt-package-guard: warning: {config_path}: {error}; "
+              "protection skipped for this invocation", file=sys.stderr)
+        return set()
+
+    protected = set()
+    try:
+        with open(packages_path, encoding="utf-8") as stream:
+            for number, line in enumerate(stream, 1):
+                package = line.strip()
+                if not package or package.startswith("#"):
+                    continue
+                if PACKAGE_NAME.fullmatch(package) is None:
+                    print(f"apt-package-guard: warning: {packages_path}: "
+                          f"ignoring invalid package name on line {number}: {package!r}",
+                          file=sys.stderr)
+                    continue
+                protected.add(package)
+    except (OSError, UnicodeError) as error:
+        print(f"apt-package-guard: warning: {packages_path}: {error}; "
+              "protection skipped for this invocation", file=sys.stderr)
+        return set()
+    return protected
+
+
+def check_actions(stream, protected):
+    version = stream.readline().strip()
+    if version != "VERSION 2":
+        print(f"apt-package-guard: unsupported protocol: {version!r}", file=sys.stderr)
+        return 1
+
+    for line in stream:
+        if not line.strip():
+            break
+    else:
+        print("apt-package-guard: missing configuration terminator", file=sys.stderr)
+        return 1
+
+    blocked = set()
+    for line in stream:
+        fields = line.split()
+        if len(fields) != 5:
+            print("apt-package-guard: invalid action record", file=sys.stderr)
+            return 1
+        package, old_version, direction, target_version, action = fields
+        if action == "**REMOVE**" and package.split(":", 1)[0] in protected:
+            blocked.add(package)
+    if blocked:
+        print("apt-package-guard: refusing removal of: " + ", ".join(sorted(blocked)),
+              file=sys.stderr)
+        return 1
+    return 0
+
+
+def main(config_path=CONFIG_PATH, packages_path=PACKAGES_PATH, stream=None):
+    if stream is None:
+        stream = sys.stdin
+    protected = load_protected_packages(config_path, packages_path)
+    if not protected:
+        # Drain even malformed input when no protection applies, without buffering it.
+        while stream.read(65536):
+            pass
+        return 0
+    return check_actions(stream, protected)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

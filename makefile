@@ -42,7 +42,7 @@ fetch-base-metadata:
 	./bin/lastore-tools update -r desktop -j mirrors -o var/lib/lastore/mirrors.json
 
 
-test:
+test: package-guard-test
 	NO_TEST_NETWORK=$(shell \
 	if which dpkg >/dev/null;then \
 		if dpkg -s ${PBUILDER_PKG} 2>/dev/null|grep 'Status:.*installed' >/dev/null;then \
@@ -50,6 +50,9 @@ test:
 		fi; \
 	fi) \
 	${GoPath} ${GOTEST} ${TEST} -count=1 -v
+
+package-guard-test:
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s package-guard/tests -p 'test_*.py' -v
 
 test-coverage:
 	env ${GoPath} go test -cover -v ./src/... | awk '$$1 ~ "^(ok|\\?)" {print $$2","$$5}' | sed "s:${CURDIR}::g" | sed 's/files\]/0\.0%/g' > coverage.csv
@@ -67,6 +70,7 @@ install: gen_mo
 	cp bin/lastore-smartmirror-daemon ${DESTDIR}${PREFIX}/usr/libexec/lastore-daemon
 
 	mkdir -p ${DESTDIR}${PREFIX}/usr && cp -rf usr ${DESTDIR}${PREFIX}/
+	find ${DESTDIR}${PREFIX}/usr -type d -name __pycache__ -prune -exec rm -rf {} +
 	cp -rf etc ${DESTDIR}${PREFIX}/
 
 	mkdir -p ${DESTDIR}${PREFIX}/var/lib/lastore/
