@@ -5,12 +5,20 @@ package smartmirror
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -30,6 +38,24 @@ func probeBudget() Budget {
 	return Budget{Total: 2 * time.Second, Body: 500 * time.Millisecond, Bytes: 2 << 20}
 }
 
+// requireAPTMethod skips tests that exercise the real apt method when apt is not
+// installed, so a minimal build container does not fail; the daemon itself
+// always runs with apt.
+func requireAPTMethod(t *testing.T, scheme string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(defaultMethodsDir, scheme)); err != nil {
+		t.Skipf("APT %s method not installed: %v", scheme, err)
+	}
+}
+
+// requirePrlimit skips tests that rely on the kernel-enforced byte cap.
+func requirePrlimit(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("prlimit"); err != nil {
+		t.Skip("prlimit not installed (util-linux)")
+	}
+}
+
 func request(t *testing.T, uri string, data []byte) Message {
 	t.Helper()
 	m := Message{Code: 600, Text: "URI Acquire", Fields: []Field{{"URI", uri}, {"Filename", filepath.Join(t.TempDir(), "download")}}}
@@ -41,6 +67,8 @@ func request(t *testing.T, uri string, data []byte) Message {
 }
 
 func TestNativeDownloadAndRedirect(t *testing.T) {
+	requireAPTMethod(t, "http")
+
 	data := []byte(strings.Repeat("native apt download\n", 1024))
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/redirect" {
@@ -69,6 +97,9 @@ func TestNativeDownloadAndRedirect(t *testing.T) {
 }
 
 func TestNativeProbeHardLimitIgnoringRange(t *testing.T) {
+	requireAPTMethod(t, "http")
+	requirePrlimit(t)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "16777216")
 		io.CopyN(w, strings.NewReader(strings.Repeat("x", 16<<20)), 16<<20)
@@ -85,6 +116,9 @@ func TestNativeProbeHardLimitIgnoringRange(t *testing.T) {
 }
 
 func TestNativeProbeHardLimitAcrossRedirects(t *testing.T) {
+	requireAPTMethod(t, "http")
+	requirePrlimit(t)
+
 	data := strings.Repeat("r", 16<<20)
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", fmt.Sprint(len(data)))
@@ -103,6 +137,8 @@ func TestNativeProbeHardLimitAcrossRedirects(t *testing.T) {
 }
 
 func TestNativeStallAndShortRead(t *testing.T) {
+	requireAPTMethod(t, "http")
+
 	for _, mode := range []string{"headers", "body", "short"} {
 		t.Run(mode, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +167,9 @@ func TestNativeStallAndShortRead(t *testing.T) {
 }
 
 func TestNativeProbeBodyWindow(t *testing.T) {
+	requireAPTMethod(t, "http")
+	requirePrlimit(t)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "4194304")
 		for i := 0; i < 4096; i++ {
@@ -157,6 +196,9 @@ func TestNativeProbeBodyWindow(t *testing.T) {
 }
 
 func TestNativeProbeTimeoutAfterPartialBodyRemainsFailure(t *testing.T) {
+	requireAPTMethod(t, "http")
+	requirePrlimit(t)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", fmt.Sprint(2<<20))
 		_, _ = w.Write(make([]byte, 256<<10))
@@ -172,18 +214,102 @@ func TestNativeProbeTimeoutAfterPartialBodyRemainsFailure(t *testing.T) {
 	}
 }
 
+// trustFile stores cert as a PEM trust anchor. The HTTPS tests configure APT's
+// CaInfo option with it so trust comes from the test itself rather than from
+// the build host's ca-certificates package.
+func trustFile(t *testing.T, cert *x509.Certificate) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "trust.pem")
+	data := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write trust anchor: %v", err)
+	}
+	return path
+}
+
+// unrelatedCertificate returns a self-signed certificate that cannot have
+// signed the test server's certificate.
+func unrelatedCertificate(t *testing.T) *x509.Certificate {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "unrelated test CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create certificate: %v", err)
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatalf("parse certificate: %v", err)
+	}
+	return cert
+}
+
 func TestNativeHTTPSUsesAPTTrustConfiguration(t *testing.T) {
+	requireAPTMethod(t, "https")
+
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("tls")) }))
 	defer srv.Close()
-	cfg := nativeConfig()
-	res := (Native{Config: cfg, Stderr: io.Discard}).Fetch(context.Background(), request(t, srv.URL, nil), Budget{Total: time.Second}, nil, nil)
-	if res.Err == nil {
-		t.Fatal("untrusted TLS certificate accepted")
+
+	cases := []struct {
+		name          string
+		ca            string
+		disableVerify bool
+		wantSuccess   bool
+	}{
+		{"CA configured through APT", trustFile(t, srv.Certificate()), false, true},
+		{"unrelated CA rejected", trustFile(t, unrelatedCertificate(t)), false, false},
+		{"verification disabled without a system store", "", true, true},
 	}
-	cfg.Fields = append(cfg.Fields, Field{"Config-Item", "Acquire::https::Verify-Peer=false"}, Field{"Config-Item", "Acquire::https::Verify-Host=false"})
-	res = (Native{Config: cfg, Stderr: io.Discard}).Fetch(context.Background(), request(t, srv.URL, nil), Budget{Total: time.Second}, nil, nil)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := nativeConfig()
+			if tc.ca != "" {
+				cfg.Fields = append(cfg.Fields, Field{"Config-Item", "Acquire::https::CaInfo=" + tc.ca})
+			}
+			if tc.disableVerify {
+				cfg.Fields = append(cfg.Fields, Field{"Config-Item", "Acquire::https::Verify-Peer=false"}, Field{"Config-Item", "Acquire::https::Verify-Host=false"})
+			}
+			res := (Native{Config: cfg, Stderr: io.Discard}).Fetch(context.Background(), request(t, srv.URL, nil), Budget{Total: time.Second}, nil, nil)
+			if tc.wantSuccess {
+				if res.Err != nil || res.Done.Code != 201 {
+					t.Fatalf("APT TLS configuration not applied: %+v", res)
+				}
+				return
+			}
+			if res.Err == nil {
+				t.Fatalf("untrusted TLS certificate accepted: %+v", res)
+			}
+		})
+	}
+}
+
+// APT reports a missing system trust store as a 104 Warning and then continues.
+// Warnings must not abort the transfer, or HTTPS fails on hosts without
+// ca-certificates even when verification is disabled.
+func TestNativeWarningDoesNotAbortTransfer(t *testing.T) {
+	dir := t.TempDir()
+	method := filepath.Join(dir, "https")
+	script := "#!/bin/sh\n" +
+		"printf '104 Warning\\nMessage: No system certificates available. Try installing ca-certificates.\\n\\n'\n" +
+		"printf '201 URI Done\\nURI: https://127.0.0.1:1/file\\nSize: 3\\n\\n'\n"
+	if err := os.WriteFile(method, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake method: %v", err)
+	}
+	res := (Native{MethodsDir: dir, Config: nativeConfig(), Stderr: io.Discard}).
+		Fetch(context.Background(), request(t, "https://127.0.0.1:1/file", nil), Budget{Total: time.Second}, nil, nil)
 	if res.Err != nil || res.Done.Code != 201 {
-		t.Fatalf("APT TLS configuration not applied: %+v", res)
+		t.Fatalf("warning aborted the transfer: %+v", res)
 	}
 }
 
@@ -192,6 +318,9 @@ func TestNativeHTTPSUsesAPTTrustConfiguration(t *testing.T) {
 // object. The size is announced in 200 URI Start when the server sends a
 // Content-Length, and only in 201 URI Done when it does not.
 func TestNativeProbeReportsObjectSize(t *testing.T) {
+	requireAPTMethod(t, "http")
+	requirePrlimit(t)
+
 	data := []byte(strings.Repeat("z", 2972))
 	large := make([]byte, 64<<10)
 
